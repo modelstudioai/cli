@@ -30,12 +30,42 @@ const DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES = [
   "bailian.deployment.file.mount_path.duplicate",
 ];
 const projectDirectories: string[] = [];
+const RUNTIME_BINDING_YAML = `version: "1"
+providers:
+  bailian:
+    api_key: \${DASHSCOPE_API_KEY}
+    base_url: \${BAILIAN_BASE_URL}
+defaults:
+  provider: bailian
+environments:
+  dev:
+    config:
+      type: cloud
+      networking:
+        type: unrestricted
+vaults:
+  secrets:
+    display_name: Secrets
+    credentials: []
+`;
+const RUNTIME_BINDING_ENV = {
+  DASHSCOPE_API_KEY: "sk-e2e-agent-runtime-binding",
+  BAILIAN_BASE_URL: "http://127.0.0.1:1/api/v1/agentstudio",
+};
 
 afterEach(async () => {
   for (const directory of projectDirectories.splice(0)) {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+async function writeRuntimeBindingProject(): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), "bl-agent-runtime-binding-e2e-"));
+  projectDirectories.push(directory);
+  const configPath = join(directory, "agents.yaml");
+  await writeFile(configPath, RUNTIME_BINDING_YAML, "utf8");
+  return configPath;
+}
 
 async function writeLocalSkillDirectory(parentDirectory: string): Promise<string> {
   const skillDirectory = join(parentDirectory, "local-report");
@@ -540,7 +570,11 @@ agents:
     expect(stderr).toMatch(/--name|--model|--instructions|--skill|--skill-dir|--type|--yes/i);
     expect(stderr).toMatch(/remote Skill ID/i);
     expect(stderr).toMatch(/local Skill directory/i);
-    expect(stderr).not.toMatch(/--key|--environment|--vault/i);
+    expect(stderr).toMatch(/--environment <yaml-key>/);
+    expect(stderr).toMatch(/--vault <yaml-key>/);
+    expect(stderr).toMatch(/--mcp <server-code>/);
+    expect(stderr).toMatch(/MCP market server code/i);
+    expect(stderr).not.toMatch(/--key/i);
   });
 
   test("managed-agent agent create 缺少 --name 时退出为用法错误 (2)", async () => {
@@ -559,9 +593,37 @@ agents:
   });
 
   test.each([
-    ["--environment", "dev"],
-    ["--vault", "secrets"],
-  ])("managed-agent agent create 不接受运行时参数 %s", async (flag, value) => {
+    ["--environment", /Environment 'missing' is not declared/],
+    ["--vault", /Vault 'missing' is not declared/],
+  ])("managed-agent agent create 拒绝未声明的 %s key", async (flag, message) => {
+    const configPath = await writeRuntimeBindingProject();
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "agent",
+        "create",
+        "--name",
+        "Runtime Binding Agent",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "help",
+        flag,
+        "missing",
+        "--file",
+        configPath,
+        "--dry-run",
+        "--quiet",
+      ],
+      RUNTIME_BINDING_ENV,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(message);
+    expect(await readFile(configPath, "utf8")).toBe(RUNTIME_BINDING_YAML);
+  });
+
+  test("managed-agent agent create 拒绝空的 --mcp", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "agent",
@@ -572,12 +634,107 @@ agents:
       "qwen3.8-max",
       "--instructions",
       "help",
-      flag,
-      value,
+      "--mcp",
+      " ",
       "--quiet",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/Unknown option|unknown flag|unexpected/i);
+    expect(stderr).toMatch(/--mcp values must not be empty/);
+  });
+
+  test("managed-agent agent create --dry-run 回显运行时绑定且不改 YAML", async () => {
+    const configPath = await writeRuntimeBindingProject();
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "agent",
+        "create",
+        "--name",
+        "Runtime Binding Agent",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "help",
+        "--environment",
+        "dev",
+        "--vault",
+        "secrets",
+        "--mcp",
+        "market-a",
+        "--mcp",
+        "market-a",
+        "--mcp",
+        "market-b",
+        "--file",
+        configPath,
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      RUNTIME_BINDING_ENV,
+    );
+    expect(exitCode, stderr).toBe(0);
+    expect(parseStdoutJson(stdout)).toMatchObject({
+      agent: {
+        key: "runtime-binding-agent",
+        environment: "dev",
+        vault: "secrets",
+        mcp: ["market-a", "market-b"],
+      },
+      yaml_written: false,
+    });
+    expect(await readFile(configPath, "utf8")).toBe(RUNTIME_BINDING_YAML);
+  });
+
+  test("managed-agent agent create --yes 将运行时绑定和 MCP 写入 Agent 声明", async () => {
+    const configPath = await writeRuntimeBindingProject();
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "agent",
+        "create",
+        "--name",
+        "Runtime Binding Agent",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "help",
+        "--environment",
+        "dev",
+        "--vault",
+        "secrets",
+        "--mcp",
+        "market-a",
+        "--file",
+        configPath,
+        "--yes",
+      ],
+      RUNTIME_BINDING_ENV,
+    );
+    // dev and secrets are declared but never created, so create-only blocks after the YAML write.
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Reconcile first/i);
+    const config = parse(await readFile(configPath, "utf8")) as {
+      agents?: Record<string, Record<string, unknown>>;
+    };
+    const agent = config.agents?.["runtime-binding-agent"];
+    expect(agent).toMatchObject({
+      environment: "dev",
+      vault: "secrets",
+      tools: {
+        mcp: [
+          {
+            type: "mcp_toolkit",
+            mcp_server_name: "market-a",
+            default_config: { enabled: true },
+            configs: [],
+          },
+        ],
+      },
+    });
+    expect(agent?.mcp_servers).toEqual([{ name: "market-a", type: "official" }]);
   });
 
   test("managed-agent agent create 将 official Skill ID 写为外部引用", async () => {

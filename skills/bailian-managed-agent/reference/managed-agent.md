@@ -107,12 +107,12 @@ Index: [index.md](index.md)
 
 ### `bl managed-agent agent create`
 
-| Field              | Value                                                                                                                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent agent create`                                                                                                                                                                                                    |
-| **Description**    | Declare and create one Managed Agent through an isolated YAML apply                                                                                                                                                             |
-| **Authentication** | API Key                                                                                                                                                                                                                         |
-| **Usage**          | `bl managed-agent agent create --name <name> --model <model> --instructions <text\|path> [--description <text>] [--skill <id>...] [--type custom\|official] [--skill-dir <path>...] [--tool <name>...] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent agent create`                                                                                                                                                                                                                                                                             |
+| **Description**    | Declare and create one Managed Agent through an isolated YAML apply                                                                                                                                                                                                                                      |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                                                  |
+| **Usage**          | `bl managed-agent agent create --name <name> --model <model> --instructions <text\|path> [--description <text>] [--skill <id>...] [--type custom\|official] [--skill-dir <path>...] [--tool <name>...] [--environment <yaml-key>] [--vault <yaml-key>] [--mcp <server-code>...] [--file <path>] [--yes]` |
 
 #### Flags
 
@@ -126,6 +126,9 @@ Index: [index.md](index.md)
 | `--skill-dir <path>`          | array  | no       | Local Skill directory or ZIP to declare, upload, and attach through the same scoped create (repeatable) |
 | `--type <custom\|official>`   | string | no       | Type applied to every --skill value (default: custom)                                                   |
 | `--tool <name>`               | array  | no       | Builtin tool name (repeatable)                                                                          |
+| `--environment <yaml-key>`    | string | no       | Existing Environment key from agents.yaml, used as the default Session/Deployment environment           |
+| `--vault <yaml-key>`          | string | no       | Existing Vault key from agents.yaml, used as the default Session/Deployment vault                       |
+| `--mcp <server-code>`         | array  | no       | MCP market server code; all of its tools are enabled (repeatable)                                       |
 | `--file <path>`               | string | no       | Config file path (default: agents.yaml)                                                                 |
 | `--yes`                       | switch | no       | Write YAML and run the scoped remote create                                                             |
 | `--api-key <key>`             | string | no       | API key                                                                                                 |
@@ -139,6 +142,8 @@ Index: [index.md](index.md)
 - Without --yes, previews the generated YAML key and scoped plan. --dry-run stays offline. Unrelated resources are not refreshed or drift-checked.
 - --skill writes an external Skill reference directly into the Agent declaration. --type defaults to custom; use --type official for platform Skills. These Skills are not managed through the top-level skills map.
 - --skill-dir accepts a local Skill directory or ZIP, writes it as a top-level custom Skill declaration, and writes its generated YAML key into the Agent skills list. Skill and Agent are created together in dependency order. --type applies only to --skill IDs.
+- --environment and --vault write existing YAML keys into the Agent declaration as default runtime bindings; they are not sent to the Agent API. session create|run and deployment create use them unless those commands pass their own. The referenced Environment and Vault must already be created.
+- --mcp accepts MCP market server codes (see mcp list) and enables all of their tools. To toggle individual tools, edit tools.mcp in YAML and run a full apply.
 
 #### Examples
 
@@ -156,6 +161,10 @@ bl managed-agent agent create --name slides --model qwen3.8-max --instructions .
 
 ```bash
 bl managed-agent agent create --name reviewer --model qwen3.8-max --instructions ./prompts/reviewer.md --skill-dir ./skills/code-review --yes
+```
+
+```bash
+bl managed-agent agent create --name researcher --model qwen3.8-max --instructions ./prompts/researcher.md --environment dev --vault secrets --mcp market-cmgjmcp00074952 --yes
 ```
 
 ### `bl managed-agent agent get`

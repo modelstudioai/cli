@@ -11,6 +11,7 @@ import type { E2eRouteExports } from "./topic-routes.ts";
 const ROUTES: E2eRouteExports = {
   "managed-agent validate": "managedAgentValidate",
   "managed-agent apply": "managedAgentApply",
+  "managed-agent agent create": "managedAgentAgentCreate",
 };
 const API_PATH = "/api/v1/agentstudio";
 const MCP_SERVER = "market-cmgjmcp00074952";
@@ -213,6 +214,47 @@ describe("e2e: managed-agent MCP defaults without placeholder tool configs (loca
     const mutations = received.filter((request) => request.method === "POST");
     expect(mutations).toHaveLength(1);
     expect(mutations[0]).toMatchObject({ path: `${API_PATH}/agents/${AGENT_ID}` });
+    expectMcpToolkit(mutations[0]!.body, []);
+  });
+
+  test("agent create --mcp sends the market server with every tool enabled", async () => {
+    const { origin, received } = await gateway();
+    const environment = setup(origin);
+    writeFileSync(
+      environment.configPath,
+      stringify({
+        version: "1",
+        providers: { bailian: { base_url: environment.baseUrl } },
+        defaults: { provider: "bailian" },
+      }),
+    );
+
+    const created = await run(
+      [
+        "agent",
+        "create",
+        "--name",
+        "Finance Assistant",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "Use the financial data MCP tools.",
+        "--mcp",
+        MCP_SERVER,
+        "--mcp",
+        MCP_SERVER,
+        "--yes",
+      ],
+      environment,
+    );
+    expect(created.exitCode, created.stderr).toBe(0);
+    expect(parseStdoutJson(created.stdout)).toMatchObject({
+      status: "completed",
+      agent: { key: "finance-assistant", remote_id: AGENT_ID, mcp: [MCP_SERVER] },
+    });
+    const mutations = received.filter((request) => request.method === "POST");
+    expect(mutations).toHaveLength(1);
+    expect(mutations[0]).toMatchObject({ path: `${API_PATH}/agents` });
     expectMcpToolkit(mutations[0]!.body, []);
   });
 });
