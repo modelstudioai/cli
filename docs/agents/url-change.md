@@ -56,9 +56,9 @@ grep -rnE "https://dashscope[a-z-]*\.aliyuncs\.com" packages/ --include="*.ts" \
 
 ### C. 渠道追踪参数
 
-- [ ] **当前现状**:TS 源码不带 `source_channel=...`;README / package README 中保留 `cli_github` / `key_github` 等用户入口追踪参数
-- [ ] 如未来调整追踪参数,统一评估 README、`packages/cli/README*`、`packages/core/README*` 与 package homepage,不要单点改造成不一致
-- [ ] grep `source_channel=`,确认每个残留都属于预期用户面文档或已批准的追踪入口
+- [ ] **当前现状**:TS 源码不带追踪参数;用户可点击的 `https://bailian.console.aliyun.com` 跳转(README、package README、skill setup 正文链接)统一带 `spm=a2ty07.github`。行内代码、站点标识、代码块里的域名没有跳转,不加
+- [ ] 如未来调整追踪参数,统一评估上述用户面文档,不要单点改造成不一致
+- [ ] grep `source_channel=` / `spm=`,确认每个残留都属于预期用户面文档或已批准的追踪入口
 
 ## 完成后自查
 

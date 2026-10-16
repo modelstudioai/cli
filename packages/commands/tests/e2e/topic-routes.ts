@@ -16,6 +16,8 @@ export const UPDATE_ROUTES: E2eRouteExports = {
 
 export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 
+export const DECISION_ROUTES: E2eRouteExports = { decision: "decisionPredict" };
+
 export const CONFIG_ROUTES: E2eRouteExports = {
   "config show": "configShow",
   "config set": "configSet",
@@ -274,6 +276,14 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune export": "finetuneExport",
   "finetune watch": "finetuneWatch",
   "finetune capability": "finetuneCapability",
+  "finetune compress templates": "finetuneCompressTemplates",
+  "finetune compress create": "finetuneCompressCreate",
+  "finetune compress list": "finetuneCompressList",
+  "finetune compress get": "finetuneCompressGet",
+  "finetune compress watch": "finetuneCompressWatch",
+  "finetune compress logs": "finetuneCompressLogs",
+  "finetune compress cancel": "finetuneCompressCancel",
+  "finetune compress delete": "finetuneCompressDelete",
 };
 
 export const CONSOLE_FLAGS_DRY_RUN_ROUTES: E2eRouteExports = {

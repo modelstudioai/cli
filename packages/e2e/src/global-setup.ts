@@ -1,15 +1,21 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join } from "path";
 import { parseEnv } from "util";
+import { ISO_ROOT_KEY } from "./iso-root-keys.ts";
+import { cleanupIsolationSessionRootAt, createIsolationSessionRoot } from "./isolation.ts";
 import { monorepoRoot } from "./monorepo-root.ts";
 
-/** Vitest globalSetup 写入的会话标记文件名 */
-export const E2E_RUN_SESSION_FILENAME = ".e2e-run-session";
+/** Marker filename written by Vitest globalSetup for the E2E output session id. */
+export const RUN_SESSION_FILE = ".e2e-run-session";
+
+type GlobalSetupProvide = (key: string, value: string) => void;
 
 /**
- * Vitest 在所有 worker 启动前执行一次：加载 `.env` 并写入共享 E2E 输出会话 id。
+ * Runs once before Vitest workers: load `.env`, write the shared E2E output session id,
+ * and create this run's isolation parent dir (provide → setupFiles → BL_ISO_ROOT).
+ * Teardown deletes only the closed-over path; workers never own cleanup.
  */
-export default function vitestGlobalSetup(): () => void {
+export default function vitestGlobalSetup(context?: { provide?: GlobalSetupProvide }): () => void {
   const root = monorepoRoot();
   const rootEnv = join(root, ".env");
   if (existsSync(rootEnv)) {
@@ -53,13 +59,19 @@ BAILIAN_E2E_CHAT_AGENT_ID=
   const runId = `e2e-run-${dateStr} ${timeStr}`;
   const outDir = join(root, "test", "output");
   mkdirSync(outDir, { recursive: true });
-  const marker = join(outDir, E2E_RUN_SESSION_FILENAME);
+  const marker = join(outDir, RUN_SESSION_FILE);
   writeFileSync(marker, `${runId}\n`, "utf8");
+
+  // Close over this run's root; teardown deletes only this path.
+  const isolationSessionRoot = createIsolationSessionRoot();
+  context?.provide?.(ISO_ROOT_KEY, isolationSessionRoot);
+
   return () => {
+    cleanupIsolationSessionRootAt(isolationSessionRoot);
     try {
       unlinkSync(marker);
     } catch {
-      /* 忽略 */
+      /* ignore */
     }
   };
 }

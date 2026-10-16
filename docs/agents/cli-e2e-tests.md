@@ -2,14 +2,14 @@
 
 ## 架构分层
 
-| 层级            | 路径                                                  | 测什么                                                                                  |
-| --------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| **共享基建**    | `packages/e2e`                                        | gating、子进程 runner、registry help 捕获、output、globalSetup（`private`，不发布）     |
-| **命令 E2E**    | `packages/commands/tests/e2e`                         | 进程内 help、子进程缺参/dry-run/live（gated）；每用例最小路由                           |
-| **Journey E2E** | `packages/commands/tests/e2e/knowledge/journeys`      | 用户旅程全链路（跨命令回路 + 标记词召回闭环），全部 live gated；见 `journeys/README.md` |
-| **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path/分组的进程内 help；根 help、鉴权域等代表性子进程冒烟                 |
-| **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | map 全部 path/分组的进程内 help；`--version`、`search --help` 等代表性子进程冒烟        |
-| **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                                                     |
+| 层级            | 路径                                                  | 测什么                                                                                       |
+| --------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **共享基建**    | `packages/e2e`                                        | gating、子进程 / 进程内 runner、registry help 捕获、output、globalSetup（`private`，不发布） |
+| **命令 E2E**    | `packages/commands/tests/e2e`                         | 进程内 help / 离线校验 / dry-run、代表性子进程、live（gated）；每用例最小路由                |
+| **Journey E2E** | `packages/commands/tests/e2e/knowledge/journeys`      | 用户旅程全链路（跨命令回路 + 标记词召回闭环），全部 live gated；见 `journeys/README.md`      |
+| **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path/分组的进程内 help；根 help、鉴权域等代表性子进程冒烟                      |
+| **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | map 全部 path/分组的进程内 help；`--version`、`search --help` 等代表性子进程冒烟             |
+| **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                                                          |
 
 **依赖边界**：`e2e` → `core`；`commands/tests` → `e2e` + `commands/src`；产品 tests → `e2e` + 各自 `src` + `runtime` 公共 API。**禁止**产品 import `commands/tests/**`（子进程 spawn harness 路径除外）。
 
@@ -30,7 +30,10 @@
 
 - 路径：`packages/commands/tests/e2e/<kebab-topic>.e2e.test.ts`；knowledge 领域集中在 `packages/commands/tests/e2e/knowledge/` 子目录（新增 knowledge 命令测试放这里）
 - help：`runCommandHelp(routes, [...path, "--help"])` from `./helpers.ts`（当前 Vitest worker 内用真实 command + `CommandRegistry` 渲染，不启动子进程）
-- 子进程：缺参、dry-run、live 使用 `runCommandE2e(routes, args)`（spawn `harness/main.ts`，`routes` 为本 topic 最小 path → export 映射）
+- 离线校验 / dry-run：确认用例不依赖进程初始化、真实请求或持久化后，可显式使用 `runCommandInProcess(routes, args, envOverrides)`；走真实 `createCli`、middleware 和 command，捕获 stdout / stderr / 退出码，执行后恢复进程环境。worker 内串行捕获，禁止与其他操作全局状态的并发用例混用
+- 子进程：`runCommandE2e(routes, args)` 保留给 live、实际写盘、进程隔离及 shell / stdio / env 契约；每个 topic 保留代表性子进程用例。`NODE_OPTIONS` / HTTP(S) 代理配置存在时，`runCommandInProcess` 自动回退子进程
+- 路由加载：harness 按 command 库公开导出名加载 topic 所需模块，不整体求值命令 barrel；新增导出形式需扩展 loader 并保留与公开导出对象一致性的测试
+- 更新检查：未发布的 harness 包 `latest` 查询固定返回本地 404，避免重复访问 npm；只拦截这个精确 URL，业务 fetch 和生产 updater 测试仍走原逻辑
 - fixtures：`packages/commands/tests/e2e/fixtures/`
 - 路由常量：`topic-routes.ts`（按 topic 维护，**非**全量产品 map）
 
@@ -40,10 +43,11 @@
 - kscli：`runKscli` from `packages/kscli/tests/e2e/helpers.ts`
 - 全量 leaf/group help 使用产品 `commands` 创建 `CommandRegistry`，先通过 `resolve([...path, "--help"])` 检查 help 路由，再用 `captureRegistryHelp` 检查完整 Usage；禁止在 `test.each(commandPaths/groupPaths)` 中逐条启动 `tsx` 子进程
 - 真实子进程只保留根 help/version、产品身份、代表性叶子 help/鉴权域和缺参退出码等 shell/stdio/env 契约
+- 子进程的 parser 错误和 help 文案遵循 Profile 语言；语义断言应兼容中英文，同时检查参数名和退出码，并使用独立的中英文配置复跑，避免依赖本机 Profile
 
 ### 共享
 
-- gating / output / runner：`e2e/gating`、`e2e/output`、`e2e/runner`；runner 使用 `node --import tsx` 执行 TypeScript 入口，不启动 tsx CLI IPC server
+- gating / output / runner：`e2e/gating`、`e2e/output`、`e2e/runner`、`e2e/in-process`；runner 使用 `node --import tsx` 执行 TypeScript 入口，不启动 tsx CLI IPC server
 - globalSetup：根 `vite.config.ts` → `packages/e2e/src/global-setup.ts`
 - 解析 JSON stdout：`parseStdoutJson`；输出目录：`makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url))`
 - 长任务：`cliTimeoutPrefix()`；视频用例加 `test(..., 3_600_000)` 等显式超时
@@ -71,7 +75,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 | 场景                    | 条件                                                                                                       |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 文本/搜索/配置          | `isDashScopeE2EReady()`                                                                                    |
+| 文本/搜索/配置          | `isDashScopeE2EReady()`（`.env` 中的 `DASHSCOPE_API_KEY`）                                                 |
 | 图像/语音               | `isBailianE2EMediaEnabled() && isDashScopeE2EReady()`                                                      |
 | 视频                    | `isBailianE2EVideoEnabled() && isDashScopeE2EReady()`                                                      |
 | OpenAPI AK/SK           | `isOpenApiE2EReady()`（`.env` 中必须同时提供完整 AK/SK）                                                   |
@@ -110,6 +114,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 - **禁止破坏真实用户配置**：`auth logout` 和 `config set` 默认只用 `--dry-run`；只有验证持久化契约时，才允许通过
   `BAILIAN_CONFIG_DIR` 指向每个用例独占的临时目录实际落盘，并必须在 `finally` 中清理；禁止写入或复用真实 `~/.bailian`
+- **默认测试隔离**：`runNodeMain` / `runCommandE2e` / `runCommandInProcess` / `runCli` / `runKscli` 默认走 `e2e/isolation`（HOME 与 `XDG_CONFIG_HOME` 隔离、强制 `language: en-US`、关闭 HOME 外的系统/项目目录探测、清空 Agent 覆盖 env）。`runCommandInProcess` 经 `buildIsolatedCliEnv` 后把完整 env 快照交给 `runInProcess`（与子进程 `env` 同语义）。DashScope / OpenAPI 凭证继续走环境变量；Console live 用例用 `runConsoleCommandE2e` / `runConsoleCli` 带上 `access_token`。进程内单测用 `withIsolatedHome` / `enterIsolatedHome`，**禁止**各文件自写 `inFakeHome`。完整约定见 [test-isolation.md](test-isolation.md)。
 - **不加 dry-run**：`dryRun` 在 `resolveFileUrl` / `resolveCredential` / 上传**之后**的命令（如 `image edit`、`speech recognize` 带 `--url`）
 - **`--list-voices` 等旁路**：先于 `--text` 校验的 flag，缺参用例勿带该 flag
 - 新增 required option → 至少一条缺参用例；改 dry-run 输出 → 更新对应断言

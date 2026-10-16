@@ -5,16 +5,10 @@ export function isBailianE2EEnabled(): boolean {
   return process.env.BAILIAN_E2E === "1";
 }
 
-/** 可调 DashScope 的 API Key：环境变量优先，否则读 ~/.bailian/config.json */
+/** 可调 DashScope 的 API Key。只认 `.env` / 进程环境里的 `DASHSCOPE_API_KEY`。 */
 export function isDashScopeE2EReady(): boolean {
   if (!isBailianE2EEnabled()) return false;
-  if (process.env.DASHSCOPE_API_KEY?.trim()) return true;
-  try {
-    const config = buildSources({}).file;
-    return typeof config.api_key === "string" && config.api_key.length > 0;
-  } catch {
-    return false;
-  }
+  return !!process.env.DASHSCOPE_API_KEY?.trim();
 }
 
 /** Console-gateway 命令 E2E 就绪检查 */

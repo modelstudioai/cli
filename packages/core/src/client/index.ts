@@ -31,6 +31,7 @@ export {
   sandboxTemplatePath,
   sandboxTemplateBuildStatusPath,
   responsesPath,
+  decisionPath,
   agentStudioHost,
   securityOverviewEndpoint,
   securityAgentLogsEndpoint,

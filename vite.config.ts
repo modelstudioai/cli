@@ -35,6 +35,7 @@ function restrictCommandCapabilities(
 export default defineConfig({
   test: {
     globalSetup: "./packages/e2e/src/global-setup.ts",
+    setupFiles: ["./packages/e2e/src/iso-root-setup.ts"],
     testTimeout: 60_000,
     hookTimeout: 60_000,
   },

@@ -7,7 +7,7 @@ Internal SDK for [`bailian-cli`](https://www.npmjs.com/package/bailian-cli).
 Not intended for direct use. For installation, usage, and documentation, see the CLI package:
 
 - npm: <https://www.npmjs.com/package/bailian-cli>
-- Homepage: <https://bailian.console.aliyun.com/cli?source_channel=cli_github&>
+- Homepage: <https://bailian.console.aliyun.com/cli?spm=a2ty07.github>
 
 ## License
 

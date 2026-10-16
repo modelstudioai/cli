@@ -154,6 +154,7 @@ export class Client {
     return resolveFileUrl(source, this.requireApi().token, model, {
       ...opts,
       identity: this.deps.identity,
+      timeout: this.deps.settings.timeout,
     });
   }
 

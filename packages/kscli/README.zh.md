@@ -153,7 +153,7 @@ kscli chat \
 
 ## 认证方式
 
-推荐使用 DashScope API Key 进行认证。前往 [DashScope 控制台](https://bailian.console.aliyun.com/?tab=app#/api-key) 获取。
+推荐使用 DashScope API Key 进行认证。前往 [DashScope 控制台](https://bailian.console.aliyun.com/?spm=a2ty07.github&tab=app#/api-key) 获取。
 
 ```bash
 # 方式一：环境变量
@@ -206,7 +206,7 @@ kscli update
 | :---------------------- | :-------------------------------------------------------------------------------------------------------- |
 | Knowledge Studio 控制台 | https://rag.console.aliyun.com/                                                                           |
 | DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                                  |
-| 获取 API Key            | https://bailian.console.aliyun.com/?tab=app#/api-key                                                      |
+| 获取 API Key            | https://bailian.console.aliyun.com/?spm=a2ty07.github&tab=app#/api-key                                    |
 | 完整 CLI 指南           | [docs/knowledge-cli-guide.md](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md) |
 
 ## 参与贡献

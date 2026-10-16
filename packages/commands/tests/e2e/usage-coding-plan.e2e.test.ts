@@ -4,7 +4,7 @@ import {
   isConsoleE2EReady,
   parseStdoutJson,
   runCommandHelp,
-  runCommandE2e,
+  runConsoleCommandE2e,
 } from "./helpers.ts";
 import { USAGE_ROUTES } from "./topic-routes.ts";
 
@@ -32,7 +32,7 @@ describe("e2e: usage coding-plan", () => {
 
 describe.skipIf(!isConsoleE2EReady())("e2e: usage coding-plan（Console）", () => {
   test("usage coding-plan --dry-run 输出网关请求计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "coding-plan",
       "--dry-run",
@@ -52,7 +52,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage coding-plan（Console）", () 
   });
 
   test("usage coding-plan --output json 返回窗口结构", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, ["usage", "coding-plan", "--output", "json"]);
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
+      "usage",
+      "coding-plan",
+      "--output",
+      "json",
+    ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
     const data = parseStdoutJson<{
@@ -69,7 +74,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage coding-plan（Console）", () 
   });
 
   test("usage coding-plan 默认渲染生成时间与额度窗口或无订阅提示", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, ["usage", "coding-plan"]);
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, ["usage", "coding-plan"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
     if (result.stdout.includes("No active Coding Plan subscription found.")) return;

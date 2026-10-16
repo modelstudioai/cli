@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { BailianError, ExitCode } from "bailian-cli-core";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import yaml from "yaml";
+import { getPiAgentDir } from "../config/agent/pi-home.ts";
 import {
   backup,
   stripJsonc,
@@ -25,6 +26,7 @@ export const MCP_AGENT_IDS = [
   "deepseek-harness",
   "zcode",
   "workbuddy",
+  "pi",
 ] as const;
 
 const DSH_MCP_PLUGIN = "@deepseek-ai/dsh-mcp-client";
@@ -345,6 +347,11 @@ function jsonMcpAdapter(options: {
 }
 
 const adapters: Record<NativeMcpAgent, AgentAdapter> = {
+  pi: jsonMcpAdapter({
+    path: (home) => join(getPiAgentDir(home), "mcp.json"),
+    installed: (home) => existsSync(getPiAgentDir(home)),
+    supports: (transport) => transport === "streamable-http",
+  }),
   codex: {
     path: (home) => join(process.env.CODEX_HOME || join(home, ".codex"), "config.toml"),
     installed: (home) =>
