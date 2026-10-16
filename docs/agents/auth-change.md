@@ -77,6 +77,14 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 禁止命令层直接 `readConfigFile` 裸读凭证；Bailian 字段以 CLI 鉴权链为唯一信源。SDK bootstrap 期间读取到的兼容凭证变量也会在配置解析后统一清扫。
 
+### 例外:工作空间 Webhook 的轻量 SDK context
+
+`managed-agent webhook` 是工作空间 API，使用 `auth: "apiKey"`，不加载 `agents.yaml`、项目 `.env` 或 State，也不走上述项目凭证 bootstrap。命令通过 `managed-agent/_engine/**` 的轻量 context，将 `ctx.client.exportApiCredential()`、解析后的 Base URL 与工作空间作用域仅在内存中交给 SDK，固定 `provider: "bailian"`，并按 runtime 的 `settings.timeout` 构造请求 `AbortSignal`。不得用 YAML 临时文件拼接 Provider，也不得另建一条 HTTP 或凭证解析链。
+
+- `--workspace-id` 由命令自声明，读取 `ctx.flags.workspaceId` 后回退 `ctx.settings.workspaceId`；Base URL 和 API Key 复用 CLI 的 flags → env → Profile 优先级。
+- 所有 Webhook 写操作声明 `risk: "high"`；`--dry-run` 在创建 SDK context、读取项目文件或请求远端前返回，不要求 API Key。
+- `create` / `reset-secret` 成功响应中的 `signing_secret` 保留在用户请求的结果中；verbose 诊断和错误输出必须脱敏，不得把成功响应的密钥复制到日志。服务端错误的普通 message 仍原样透传。
+
 ## 必查清单
 
 ### A. core 层(类型 + 解析)

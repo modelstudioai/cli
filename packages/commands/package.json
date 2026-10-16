@@ -40,7 +40,7 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@openagentpack/sdk": "0.7.1",
+    "@openagentpack/sdk": "0.8.0-beta-38d63c6-3c1de954-20261015",
     "bailian-cli-core": "workspace:*",
     "bailian-cli-runtime": "workspace:*",
     "boxen": "catalog:",

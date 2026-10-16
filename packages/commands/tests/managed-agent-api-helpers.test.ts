@@ -72,3 +72,26 @@ test("session export ZIP is valid-shaped and redacts credential-like values", ()
   expect(decoded).toContain("events.json");
   expect(Array.from(zip.slice(-22, -18))).toEqual([0x50, 0x4b, 0x05, 0x06]);
 });
+
+test("session diagnostics redact every environment value while preserving names and input", () => {
+  const variables = { LOG_LEVEL: "debug", CUSTOM_VALUE: "private-value", EMPTY: "" };
+  const session = {
+    environment_variables: variables,
+    attributes: { environment_variables: variables },
+  };
+  const masked = { LOG_LEVEL: "[REDACTED]", CUSTOM_VALUE: "[REDACTED]", EMPTY: "[REDACTED]" };
+  const redacted = redactSensitiveValues(session);
+
+  expect(redacted).toEqual({
+    environment_variables: masked,
+    attributes: { environment_variables: masked },
+  });
+  expect(variables.CUSTOM_VALUE).toBe("private-value");
+  const zip = createZip([
+    { name: "session.json", content: new TextEncoder().encode(JSON.stringify(redacted)) },
+  ]);
+  const decoded = new TextDecoder().decode(zip);
+  expect(decoded).toContain("CUSTOM_VALUE");
+  expect(decoded).toContain("[REDACTED]");
+  expect(decoded).not.toContain("private-value");
+});

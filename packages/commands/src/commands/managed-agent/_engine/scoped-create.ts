@@ -24,7 +24,13 @@ import { createFileStateScope } from "./file-state-manager.ts";
 import { installSdkTransport } from "./transport.ts";
 
 export type ScopedCreateHost = Pick<CommandContext, "client" | "identity" | "settings">;
-export type ScopedCreateGroup = "agents" | "environments" | "skills" | "vaults" | "deployments";
+export type ScopedCreateGroup =
+  | "agents"
+  | "environments"
+  | "skills"
+  | "vaults"
+  | "deployments"
+  | "memory_stores";
 
 export interface LoadedScopedCreateProject {
   configPath: string;
@@ -54,7 +60,7 @@ export interface ScopedTopLevelCreateInput {
   host: ScopedCreateHost;
   project: LoadedScopedCreateProject;
   group: Exclude<ScopedCreateGroup, "agents">;
-  resourceType: "environment" | "skill" | "vault" | "deployment";
+  resourceType: "environment" | "skill" | "vault" | "deployment" | "memory_store";
   displayName: string;
   rawDeclaration: Record<string, unknown>;
   resolvedDeclaration: Record<string, unknown>;
@@ -104,7 +110,12 @@ export function selectResourceKey(options: {
       .filter(
         (resource) =>
           resource.address.provider === options.provider &&
-          options.resourceTypes.includes(resource.address.type),
+          options.resourceTypes.includes(resource.address.type) &&
+          !(
+            resource.address.type === "memory_store" &&
+            resource.remote_id &&
+            resource.memory_initialization
+          ),
       )
       .map((resource) => resource.address.name),
   );

@@ -279,6 +279,18 @@ export {
   managedAgentFileSearch,
   managedAgentFileUpload,
 } from "./commands/managed-agent/file.ts";
+export {
+  managedAgentWebhookCreate,
+  managedAgentWebhookList,
+  managedAgentWebhookGet,
+  managedAgentWebhookUpdate,
+  managedAgentWebhookDelete,
+  managedAgentWebhookEnable,
+  managedAgentWebhookDisable,
+  managedAgentWebhookTest,
+  managedAgentWebhookResetSecret,
+  managedAgentWebhookEvents,
+} from "./commands/managed-agent/webhook.ts";
 export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";
@@ -308,3 +320,17 @@ export {
   sandboxTemplateList,
   sandboxTemplateUpdate,
 } from "./commands/sandbox/template.ts";
+
+export { default as managedAgentMemoryStoreCreate } from "./commands/managed-agent/memory-store/create.ts";
+export {
+  managedAgentMemoryStoreList,
+  managedAgentMemoryStoreGet,
+  managedAgentMemoryCreate,
+  managedAgentMemoryList,
+  managedAgentMemoryGet,
+  managedAgentMemoryUpdate,
+  managedAgentMemoryDelete,
+  managedAgentMemoryVersionList,
+  managedAgentMemoryVersionGet,
+  managedAgentMemoryVersionRedact,
+} from "./commands/managed-agent/memory-store/api.ts";
