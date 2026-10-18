@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.3.2] - 2026-10-16
+
+### 修复
+
+- **CLI 更新** —— `bl update` 在升级失败或无法获取最新版本时返回非零退出码，便于脚本和 Agent 正确识别失败。
+
 ## [2.3.1] - 2026-10-16
 
 ### 修复
