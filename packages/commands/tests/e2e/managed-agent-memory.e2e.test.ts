@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { LocalFileStateBackend, StateManager } from "@openagentpack/sdk";
 import { runNodeMain } from "e2e/runner";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 import { parse } from "yaml";
@@ -432,6 +434,175 @@ describe("e2e: managed-agent memory offline preview and confirmation", () => {
         notes: { name: "Notes", description: "", provider: "bailian" },
       },
     });
+  });
+  test("Store initialization retries the same Store with 20-item pages and preserves existing content", async () => {
+    const store = {
+      id: "memstore_initializing",
+      type: "memory_store",
+      name: "Notes",
+      description: "",
+      metadata: {},
+      archived_at: null,
+    };
+    const entries = [
+      { key: "alpha.md", content: "Initial alpha" },
+      { key: "beta.md", content: "Initial beta" },
+      { key: "gamma.md", content: "Initial gamma" },
+    ];
+    const memories = new Map<string, { id: string; content: string }>();
+    const received: { method: string; path: string; page: string | null; limit: string | null }[] =
+      [];
+    const createdPaths: string[] = [];
+    const nextPage = "opaque+/=cursor";
+    let storeCreates = 0;
+    let failBeta = true;
+    const server = createServer((request, response) => {
+      const chunks: Buffer[] = [];
+      request.on("data", (chunk: Buffer) => chunks.push(chunk));
+      request.on("end", () => {
+        const url = new URL(request.url!, "http://localhost");
+        const method = request.method!;
+        const rawBody = Buffer.concat(chunks).toString("utf8");
+        const body = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
+        const reply = (status: number, value: unknown) => {
+          response.writeHead(status, { "content-type": "application/json" });
+          response.end(JSON.stringify(value));
+        };
+        received.push({
+          method,
+          path: url.pathname,
+          page: url.searchParams.get("page"),
+          limit: url.searchParams.get("limit"),
+        });
+        if (method === "POST" && url.pathname === BASE_PATH) {
+          storeCreates += 1;
+          reply(200, store);
+          return;
+        }
+        if (
+          (method === "GET" || method === "POST") &&
+          url.pathname === `${BASE_PATH}/${store.id}`
+        ) {
+          reply(200, store);
+          return;
+        }
+        if (url.pathname === `${BASE_PATH}/${store.id}/memories`) {
+          if (method === "GET") {
+            if (url.searchParams.get("limit") !== "20") {
+              reply(400, { message: "limit must be between 1 and 20" });
+              return;
+            }
+            const page = url.searchParams.get("page");
+            if (page !== null && page !== nextPage) {
+              reply(400, { message: "Invalid opaque cursor" });
+              return;
+            }
+            const offset = page === nextPage ? 20 : 0;
+            const all = [...memories].map(([path, memory]) => ({
+              id: memory.id,
+              type: "memory",
+              path,
+              content_sha256: createHash("sha256").update(memory.content).digest("hex"),
+            }));
+            reply(200, {
+              data: all.slice(offset, offset + 20),
+              next_page: offset + 20 < all.length ? nextPage : null,
+            });
+            return;
+          }
+          if (method === "POST") {
+            const path = body.path as string;
+            if (path === "/beta.md" && failBeta) {
+              reply(503, { message: "Injected beta initialization failure" });
+              return;
+            }
+            createdPaths.push(path);
+            const memory = { id: `memory_${memories.size + 1}`, content: body.content as string };
+            memories.set(path, memory);
+            reply(200, { id: memory.id, type: "memory", path });
+            return;
+          }
+        }
+        reply(500, { message: `Unexpected request: ${method} ${url.pathname}` });
+      });
+    });
+    servers.push(server);
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string")
+      throw new Error("Expected a local server address.");
+    const origin = `http://127.0.0.1:${address.port}`;
+    const environment = setup({ base_url: origin, api_key: "test-key" });
+    const configPath = join(environment.directory, "agents.yaml");
+    writeFileSync(
+      configPath,
+      [
+        'version: "1"',
+        "providers:",
+        "  bailian:",
+        '    api_key: "test-key"',
+        `    base_url: ${origin}/api/v1/agentstudio`,
+        "",
+      ].join("\n"),
+    );
+    const args = [
+      "managed-agent",
+      "memory-store",
+      "create",
+      "--name",
+      "Notes",
+      ...entries.flatMap((entry) => ["--entry", JSON.stringify(entry)]),
+      "--yes",
+    ];
+    const first = await run(args, environment);
+    expect(first.exitCode).toBe(1);
+    expect(first.stderr).toContain("Injected beta initialization failure");
+    expect(`${first.stdout}${first.stderr}`).toContain("503");
+    expect(`${first.stdout}${first.stderr}`).not.toContain("limit must be between 1 and 20");
+    expect(createdPaths).toEqual(["/alpha.md"]);
+    const backend = new LocalFileStateBackend({ configPath });
+    const statePath = backend.getStatePath({ projectId: basename(environment.directory) });
+    const resourceAddress = { provider: "bailian", type: "memory_store" as const, name: "notes" };
+    const checkpoint = await StateManager.load(statePath);
+    expect(checkpoint.getResource(resourceAddress)).toMatchObject({
+      remote_id: store.id,
+      memory_initialization: {
+        pending_entries: entries.slice(1).map((entry) => ({
+          path: `/${entry.key}`,
+          content_sha256: createHash("sha256").update(entry.content).digest("hex"),
+        })),
+      },
+    });
+
+    memories.get("/alpha.md")!.content = "Agent updated alpha";
+    for (let index = 0; index < 20; index += 1) {
+      memories.set(`/filler-${index}.md`, { id: `filler_${index}`, content: "Keep filler" });
+    }
+    memories.set("/beta.md", { id: "memory_agent_beta", content: "Agent supplied beta" });
+    failBeta = false;
+    const resumed = await run(args, environment);
+    expect(resumed.exitCode, resumed.stderr).toBe(0);
+    expect(parseStdoutJson(resumed.stdout)).toMatchObject({
+      resource: { type: "memory_store", key: "notes", remote_id: store.id },
+      reused_pending: true,
+    });
+    expect(storeCreates).toBe(1);
+    expect(createdPaths).toEqual(["/alpha.md", "/gamma.md"]);
+    expect(memories.get("/alpha.md")?.content).toBe("Agent updated alpha");
+    expect(memories.get("/beta.md")?.content).toBe("Agent supplied beta");
+    expect(memories.get("/gamma.md")?.content).toBe("Initial gamma");
+    const listRequests = received.filter(
+      ({ method, path }) => method === "GET" && path.endsWith("/memories"),
+    );
+    expect(listRequests.every(({ limit }) => limit === "20")).toBe(true);
+    expect(listRequests.some(({ page }) => page === nextPage)).toBe(true);
+    const completed = await StateManager.load(statePath);
+    expect(completed.getResource(resourceAddress)?.remote_id).toBe(store.id);
+    expect(completed.getResource(resourceAddress)?.memory_initialization).toBeUndefined();
+    expect(Object.keys(parse(readFileSync(configPath, "utf8")).memory_stores)).toEqual(["notes"]);
   });
   test("content-file preview reads an empty UTF-8 file", async () => {
     const environment = setup({ base_url: "http://127.0.0.1:1" });

@@ -190,8 +190,8 @@ importers:
   packages/commands:
     dependencies:
       '@openagentpack/sdk':
-        specifier: 0.8.0-beta-38d63c6-3c1de954-20261015
-        version: 0.8.0-beta-38d63c6-3c1de954-20261015
+        specifier: 0.9.0
+        version: 0.9.0
       bailian-cli-core:
         specifier: workspace:*
         version: link:../core
@@ -1113,8 +1113,8 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
-  '@openagentpack/sdk@0.8.0-beta-38d63c6-3c1de954-20261015':
-    resolution: {integrity: sha512-cIigQe9lmCxR7vZbeKUADpHFn6eyqFGcprNPgH7cnhedNzTNPVUbtp6z+snA9wj8RROYdrLHF3GcaZEIOkr4AQ==}
+  '@openagentpack/sdk@0.9.0':
+    resolution: {integrity: sha512-Y99LtN1gpXK8vSnvHx/4NspL0BJtFYwJNkpwhMzBMY8rRwkmP4QOSUX24ovboBzQTXAgEU3n3QFusjHDbxdeQg==}
     engines: {node: '>=18.17.0'}
 
   '@oxc-project/runtime@0.150.0':
@@ -3580,7 +3580,7 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
-  '@openagentpack/sdk@0.8.0-beta-38d63c6-3c1de954-20261015':
+  '@openagentpack/sdk@0.9.0':
     dependencies:
       jszip: 3.10.1
       yaml: 2.9.0

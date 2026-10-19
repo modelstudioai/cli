@@ -6,6 +6,15 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.4.0] - 2026-10-19
+
+### 新增
+
+- **Managed Agent 记忆管理** —— 支持管理 Memory Store、记忆内容和历史版本，并将记忆挂载到 Session。
+- **工作空间 Webhook** —— 支持管理和测试 Webhook、重置签名密钥及查询投递事件。
+- **Agent 资源绑定** —— 创建 Agent 时可通过 `--environment`、`--vault` 和 `--mcp` 绑定默认 Environment、Vault 及 MCP 市场服务。
+- **运行时环境变量** —— 创建 Session、运行 Session 和创建 Deployment 时可重复传入 `--environment_variables KEY=VALUE`。
+
 ## [2.3.1] - 2026-10-16
 
 ### 修复

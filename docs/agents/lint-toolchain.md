@@ -37,6 +37,7 @@
 - [ ] 检查 workspace 内部依赖在 `dependencies` 里仍是 `"workspace:*"`(不要手改成实际版本号;发布时由 pack/publish 流程解析)
 - [ ] 升级后跑 `vp check && vp test`
 - [ ] 升级 `@types/node` 时注意 Node API 变化(如 fs.existsSync 行为)
+- [ ] 使用 pnpm dependency patch 时提交补丁、注册配置和 lockfile，并用 frozen install 验证；如果依赖在构建中是 external，workspace 补丁不会随 npm 包传递，发布前必须更新到包含修复的上游版本
 
 ### E. git hooks / pre-commit
 
