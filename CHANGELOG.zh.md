@@ -15,6 +15,12 @@
 - **Agent 资源绑定** —— 创建 Agent 时可通过 `--environment`、`--vault` 和 `--mcp` 绑定默认 Environment、Vault 及 MCP 市场服务。
 - **运行时环境变量** —— 创建 Session、运行 Session 和创建 Deployment 时可重复传入 `--environment_variables KEY=VALUE`。
 
+## [2.3.2] - 2026-10-16
+
+### 修复
+
+- **CLI 更新** —— `bl update` 在升级失败或无法获取最新版本时返回非零退出码，便于脚本和 Agent 正确识别失败。
+
 ## [2.3.1] - 2026-10-16
 
 ### 修复

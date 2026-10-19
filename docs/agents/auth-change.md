@@ -183,3 +183,4 @@ pnpm -F bailian-cli exec tsx src/main.ts usage stats --dry-run --output json --w
 - ✗ token mask 显示完整 token,日志泄漏
 - ✗ `auth: "console"` 命令误用 `apiKey` 域,config 只有 API key 时会把 `sk-...` 发到网关
 - ✗ 新增 core resolver hint 时写死产品命令,导致 `kscli` 等入口提示错误
+- ✗ Windows 上用 `cmd /c start` 打开带 `&` 的 URL 时没把整段目标括起来。`auth login --console` 的 `needapikey=true` 会被 cmd 当成下一条命令,浏览器只拿到控制台会话。打开参数走 `packages/commands/src/commands/shared/local-server.ts` 的 `buildOpenInvocation`（dsh 插件里有一份同步实现）

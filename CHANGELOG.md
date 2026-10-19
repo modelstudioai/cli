@@ -15,6 +15,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Agent resource bindings** — Agent creation supports default Environment and Vault bindings and MCP market servers through `--environment`, `--vault` and `--mcp`.
 - **Runtime environment variables** — Session creation, Session runs and Deployment creation accept repeatable `--environment_variables KEY=VALUE`.
 
+## [2.3.2] - 2026-10-16
+
+### Fixed
+
+- **CLI update** — `bl update` now exits with a non-zero status when an upgrade fails or the latest version cannot be determined, allowing scripts and agents to detect the failure.
+
 ## [2.3.1] - 2026-10-16
 
 ### Fixed
