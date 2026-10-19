@@ -77,6 +77,8 @@ function extractParams(flags: Record<string, unknown>): Record<string, unknown> 
     if (GLOBAL_FLAG_KEYS.has(key)) continue;
     if (!PARAM_ALLOWLIST.has(key)) continue;
     if (value === undefined || value === false) continue;
+    // Some commands use page for an opaque cursor rather than a numeric page.
+    if (key === "page" && (typeof value !== "number" || !Number.isFinite(value))) continue;
     params[key] = value;
   }
   return params;

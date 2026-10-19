@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises";
 import { dirname, extname, relative, sep } from "node:path";
 import {
+  type AgentMcpBuildInput,
   type BackendRuntimeInput,
   buildAgentDecl,
   type IStateManager,
@@ -100,6 +101,31 @@ const CREATE_FLAGS = {
       "zh-CN": "内置工具名称（可重复）",
     },
   },
+  environment: {
+    type: "string",
+    valueHint: "<yaml-key>",
+    description: {
+      "en-US":
+        "Existing Environment key from agents.yaml, used as the default Session/Deployment environment",
+      "zh-CN": "agents.yaml 中已有的 Environment key，作为 Session/Deployment 的默认环境",
+    },
+  },
+  vault: {
+    type: "string",
+    valueHint: "<yaml-key>",
+    description: {
+      "en-US": "Existing Vault key from agents.yaml, used as the default Session/Deployment vault",
+      "zh-CN": "agents.yaml 中已有的 Vault key，作为 Session/Deployment 的默认 Vault",
+    },
+  },
+  mcp: {
+    type: "array",
+    valueHint: "<server-code>",
+    description: {
+      "en-US": "MCP market server code; all of its tools are enabled (repeatable)",
+      "zh-CN": "MCP 市场服务 code，启用其全部工具（可重复）",
+    },
+  },
   file: {
     type: "string",
     valueHint: "<path>",
@@ -186,6 +212,35 @@ export function buildAgentSkillRefs(
     refs.push({ type, skill_id: skillId });
   }
   return refs;
+}
+
+export function buildAgentMcpBindings(serverCodes: string[] | undefined): AgentMcpBuildInput[] {
+  const seen = new Set<string>();
+  const bindings: AgentMcpBuildInput[] = [];
+  for (const rawCode of serverCodes ?? []) {
+    const serverCode = rawCode.trim();
+    if (!serverCode) {
+      throw new BailianError("--mcp values must not be empty.", ExitCode.USAGE);
+    }
+    if (seen.has(serverCode)) continue;
+    seen.add(serverCode);
+    bindings.push({ serverName: serverCode, serverType: "official", defaultEnabled: true });
+  }
+  return bindings;
+}
+
+function assertDeclaredReference(
+  label: "Environment" | "Vault",
+  key: string | undefined,
+  declarations: Record<string, unknown> | undefined,
+  configPath: string,
+): void {
+  if (key === undefined || declarations?.[key] !== undefined) return;
+  throw new BailianError(
+    `${label} '${key}' is not declared in ${configPath}.`,
+    ExitCode.USAGE,
+    `Create the ${label} first with the managed-agent ${label.toLowerCase()} create command, then pass its YAML key.`,
+  );
 }
 
 function canonicalJson(value: unknown): string {
@@ -336,13 +391,14 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--name <name> --model <model> --instructions <text|path> [--description <text>] [--skill <id>...] [--type custom|official] [--skill-dir <path>...] [--tool <name>...] [--file <path>] [--yes]",
+    "--name <name> --model <model> --instructions <text|path> [--description <text>] [--skill <id>...] [--type custom|official] [--skill-dir <path>...] [--tool <name>...] [--environment <yaml-key>] [--vault <yaml-key>] [--mcp <server-code>...] [--file <path>] [--yes]",
   flags: CREATE_FLAGS,
   exampleArgs: [
     '--name assistant --model qwen3.8-max --instructions "You are helpful."',
     "--name assistant --model qwen3.8-max --instructions ./prompts/assistant.md --skill skill_abc --yes",
     "--name slides --model qwen3.8-max --instructions ./prompts/slides.md --skill skill_pptx --type official --yes",
     "--name reviewer --model qwen3.8-max --instructions ./prompts/reviewer.md --skill-dir ./skills/code-review --yes",
+    "--name researcher --model qwen3.8-max --instructions ./prompts/researcher.md --environment dev --vault secrets --mcp market-cmgjmcp00074952 --yes",
   ],
   notes: [
     ...CREDENTIALS_NOTE,
@@ -364,6 +420,18 @@ export default defineCommand({
       "zh-CN":
         "--skill-dir 接收本地 Skill 目录或 ZIP，将其写为顶层 custom Skill 声明，并把生成的 YAML key 写入 Agent 的 skills 列表；Skill 与 Agent 按依赖顺序一并创建。--type 只作用于 --skill ID。",
     },
+    {
+      "en-US":
+        "--environment and --vault write existing YAML keys into the Agent declaration as default runtime bindings; they are not sent to the Agent API. session create|run and deployment create use them unless those commands pass their own. The referenced Environment and Vault must already be created.",
+      "zh-CN":
+        "--environment 与 --vault 把已有的 YAML key 写入 Agent 声明，作为默认运行时绑定，不会发送给 Agent API；session create|run 与 deployment create 未显式传入时使用它们。引用的 Environment 与 Vault 必须已创建。",
+    },
+    {
+      "en-US":
+        "--mcp accepts MCP market server codes (see mcp list) and enables all of their tools. To toggle individual tools, edit tools.mcp in YAML and run a full apply.",
+      "zh-CN":
+        "--mcp 接收 MCP 市场服务 code（见 mcp list），并启用其全部工具；如需按工具开关，修改 YAML 中的 tools.mcp 后执行全量 apply。",
+    },
   ],
   validate: (flags) => {
     if (!flags.name.trim()) return "--name must not be empty.";
@@ -376,6 +444,13 @@ export default defineCommand({
     if (flags.skillDir?.some((source) => !source.trim())) {
       return "--skill-dir values must not be empty.";
     }
+    if (flags.environment !== undefined && !flags.environment.trim()) {
+      return "--environment must not be empty.";
+    }
+    if (flags.vault !== undefined && !flags.vault.trim()) return "--vault must not be empty.";
+    if (flags.mcp?.some((serverCode) => !serverCode.trim())) {
+      return "--mcp values must not be empty.";
+    }
     return undefined;
   },
   async run(ctx) {
@@ -384,6 +459,21 @@ export default defineCommand({
     const file = flags.file ?? "agents.yaml";
     const project = await loadScopedCreateProject(ctx, file);
     const provider = project.provider;
+    const environmentKey = flags.environment?.trim();
+    const vaultKey = flags.vault?.trim();
+    assertDeclaredReference(
+      "Environment",
+      environmentKey,
+      project.config.environments,
+      project.configPath,
+    );
+    assertDeclaredReference("Vault", vaultKey, project.config.vaults, project.configPath);
+    const mcpBindings = buildAgentMcpBindings(flags.mcp);
+    const runtimeBindings = {
+      environment: environmentKey,
+      vault: vaultKey,
+      mcp: mcpBindings.map((binding) => binding.serverName),
+    };
     const externalSkillRefs = buildAgentSkillRefs(flags.skill, agentSkillType(flags.type));
     const localSkills = await prepareLocalSkillSources(project, flags.skillDir);
     const skillRefs: AgentSkillDecl[] = [
@@ -396,8 +486,11 @@ export default defineCommand({
       description: flags.description,
       model: flags.model,
       instructions: flags.instructions,
+      environment: environmentKey,
+      vault: vaultKey,
       provider,
       builtinTools: flags.tool,
+      mcp: mcpBindings,
     }).agent;
     rawAgent.skills = skillRefs;
     const candidateConfig = structuredClone(project.config);
@@ -468,7 +561,13 @@ export default defineCommand({
         (diagnostic) => diagnostic.severity === "error",
       );
       const result = {
-        agent: { key: agentKey, name: flags.name.trim(), provider, skills: skillRefs },
+        agent: {
+          key: agentKey,
+          name: flags.name.trim(),
+          provider,
+          skills: skillRefs,
+          ...runtimeBindings,
+        },
         local_skills: localSkills.map((skill) => ({
           key: skill.key,
           name: skill.name,
@@ -548,6 +647,7 @@ export default defineCommand({
         provider,
         remote_id: remoteResources.agentId,
         skills: skillRefs,
+        ...runtimeBindings,
       },
       local_skills: localSkills.map((skill) => ({
         key: skill.key,

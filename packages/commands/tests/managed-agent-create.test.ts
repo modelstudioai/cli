@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { buildAgentDecl, StateManager } from "@openagentpack/sdk";
 import { expect, test } from "vite-plus/test";
 import {
+  buildAgentMcpBindings,
   buildAgentSkillRefs,
   normalizeAgentKey,
   replaceConfigAtomically,
@@ -103,6 +104,15 @@ test("Agent Skill ID 可生成 official 外部引用", () => {
     { type: "official", skill_id: "skill_pptx" },
   ]);
   expect(() => buildAgentSkillRefs([" "])).toThrow(/must not be empty/);
+});
+
+test("MCP server code 去重并默认启用全部工具", () => {
+  expect(buildAgentMcpBindings([" market-a ", "market-a", "market-b"])).toEqual([
+    { serverName: "market-a", serverType: "official", defaultEnabled: true },
+    { serverName: "market-b", serverType: "official", defaultEnabled: true },
+  ]);
+  expect(buildAgentMcpBindings(undefined)).toEqual([]);
+  expect(() => buildAgentMcpBindings([" "])).toThrow(/--mcp values must not be empty/);
 });
 
 test("本地 Skill 来源复用同声明的待创建或已跟踪 key", () => {

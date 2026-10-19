@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.4.0] - 2026-10-19
+
+### Added
+
+- **Managed Agent memory** — Manage Memory Stores, memory contents and historical versions, and mount memory into Sessions.
+- **Workspace Webhooks** — Manage and test Webhooks, rotate signing secrets, and inspect delivery events.
+- **Agent resource bindings** — Agent creation supports default Environment and Vault bindings and MCP market servers through `--environment`, `--vault` and `--mcp`.
+- **Runtime environment variables** — Session creation, Session runs and Deployment creation accept repeatable `--environment_variables KEY=VALUE`.
+
 ## [2.3.3] - 2026-10-19
 
 ### Fixed
