@@ -58,6 +58,7 @@ describe("npm tag cleanup", () => {
           delete registry.get(packageName)[tag];
         },
         report: () => {},
+        wait: async () => {},
       },
     };
   }
@@ -86,6 +87,35 @@ describe("npm tag cleanup", () => {
     expect(registry.get("bailian-cli-core")).toEqual({ latest: "2.3.0" });
   });
 
+  test("waits for stale registry reads without repeating deletion", async () => {
+    const { registry, operations } = registryFixture();
+    const originalReadTags = operations.readTags;
+    const originalRemoveTag = operations.removeTag;
+    const staleTags = { ...registry.get("bailian-cli") };
+    let deletionCount = 0;
+    let staleReads = 0;
+    operations.removeTag = async (packageName, tag) => {
+      deletionCount += 1;
+      await originalRemoveTag(packageName, tag);
+      staleReads = 2;
+    };
+    operations.readTags = async (packageName) => {
+      if (staleReads > 0) {
+        staleReads -= 1;
+        return { ...staleTags };
+      }
+      return originalReadTags(packageName);
+    };
+    const results = await cleanupNpmTags(
+      { packages: ["bailian-cli"], tags: ["skill"], dryRun: false },
+      operations,
+    );
+    expect(results[0].status).toBe("deleted");
+    expect(deletionCount).toBe(1);
+    expect(staleReads).toBe(0);
+    expect(registry.get("bailian-cli")).toEqual({ latest: "2.3.0" });
+  });
+
   test("an unreadable package aborts preflight before deleting from any package", async () => {
     const { registry, operations } = registryFixture();
     const readTags = operations.readTags;
@@ -105,9 +135,14 @@ describe("npm tag cleanup", () => {
   test("failed deletion verification is not reported as success", async () => {
     const { operations } = registryFixture();
     operations.removeTag = async () => {};
+    const delays = [];
+    operations.wait = async (delay) => {
+      delays.push(delay);
+    };
     await expect(
       cleanupNpmTags({ packages: ["bailian-cli"], tags: ["skill"], dryRun: false }, operations),
     ).rejects.toThrow(/still exists/i);
+    expect(delays).toEqual([1000, 2000, 4000, 8000]);
   });
 
   test("direct callers cannot bypass latest and package protections", async () => {

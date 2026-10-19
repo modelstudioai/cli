@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
+import { setTimeout as waitForDelay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
 const REGISTRY = "https://registry.npmjs.org";
@@ -75,6 +76,16 @@ function removeRegistryTag(packageName, tag) {
   });
 }
 
+async function verifyTagRemoved(packageName, tag, readTags, wait) {
+  // Registry reads can lag a successful DELETE. Retry reads only, never the mutation.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const currentTags = await readTags(packageName);
+    if (!Object.hasOwn(currentTags, tag)) return;
+    if (attempt < 4) await wait(1000 * 2 ** attempt);
+  }
+  throw new Error(`Tag still exists after deletion: ${packageName} / ${tag}`);
+}
+
 function reportEntry({ packageName, tag, version, status }) {
   const message = `${status}: ${packageName} / ${tag} / ${version ?? "not present"}`;
   console.log(message);
@@ -84,7 +95,12 @@ function reportEntry({ packageName, tag, version, status }) {
 
 export async function cleanupNpmTags(
   selection,
-  { readTags = readRegistryTags, removeTag = removeRegistryTag, report = reportEntry } = {},
+  {
+    readTags = readRegistryTags,
+    removeTag = removeRegistryTag,
+    report = reportEntry,
+    wait = waitForDelay,
+  } = {},
 ) {
   validateSelection(selection);
   const { packages, tags, dryRun } = selection;
@@ -111,9 +127,7 @@ export async function cleanupNpmTags(
         if (currentTags[entry.tag] !== entry.version)
           throw new Error(`Tag changed since preflight: ${entry.packageName} / ${entry.tag}`);
         await removeTag(entry.packageName, entry.tag);
-        const afterTags = await readTags(entry.packageName);
-        if (Object.hasOwn(afterTags, entry.tag))
-          throw new Error(`Tag still exists after deletion: ${entry.packageName} / ${entry.tag}`);
+        await verifyTagRemoved(entry.packageName, entry.tag, readTags, wait);
         status = "deleted";
       }
     }

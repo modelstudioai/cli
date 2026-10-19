@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.3.2] - 2026-10-16
+
+### Fixed
+
+- **CLI update** — `bl update` now exits with a non-zero status when an upgrade fails or the latest version cannot be determined, allowing scripts and agents to detect the failure.
+
+## [2.3.1] - 2026-10-16
+
+### Fixed
+
+- **Request timeout** — Requests configured with a timeout longer than 300 seconds are no longer interrupted by the default response-header timeout.
+
 ## [2.3.0] - 2026-10-14
 
 ### Added
