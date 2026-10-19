@@ -167,6 +167,10 @@ test("foo bar --dry-run 仅输出计划", async () => {
 });
 ```
 
+## Memory 发布前审计
+
+发布判断应包含命令契约、风险到测试的映射和安装产物验证，不能只看用例总数或源代码 harness 全绿。参考 [Memory CLI 发布审计](../memory/2026-10-19-cli-release-audit.md)。`tools/smoke-memory-package.mjs` 接受本地 tarball 目录，使用隔离配置安装并执行产物 bin；`--live` 只对随机测试身份执行自清理 CRUD。服务 fixture 未配置的分组必须在报告中列为未运行，不能当作通过。真实 dsh/Skill 宿主是否作为门槛按当次用户明确的范围决定。
+
 ## 与批量压测的关系
 
 - **E2E**：单条/少量调用、断言固定、可进 `vp test`（见上文 skip 条件）

@@ -1,3 +1,5 @@
+import { UsageError } from "../errors/base.ts";
+
 // API path builders — return the path only; the Client prepends the
 // credential's baseUrl. Commands never see baseUrl.
 //
@@ -11,6 +13,11 @@
  * it is spelled out exactly once here.
  */
 function workspaceEndpoint(workspaceId: string, path: string): string {
+  if (!/^[a-zA-Z0-9_-]+$/.test(workspaceId)) {
+    throw new UsageError(
+      "Workspace ID must contain only letters, digits, hyphens or underscores. / Workspace ID 只能包含字母、数字、连字符或下划线。",
+    );
+  }
   return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
 }
 

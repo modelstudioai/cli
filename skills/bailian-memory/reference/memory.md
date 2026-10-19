@@ -111,6 +111,7 @@ bl memory add --user-id user1 --content "Attended WAIC" --wait 0
 #### Notes
 
 - The memory API lives on a workspace-specific host, so --workspace-id is required; it can also come from BAILIAN_WORKSPACE_ID or the workspace_id config field.
+- This deletes only the selected memory node. It does not delete extracted user profile values or the profile schema.
 - Deleted nodes may remain readable with status=delete. Run `memory list` first to confirm the node ID.
 
 #### Examples
@@ -406,6 +407,7 @@ bl memory profile show --schema-id schema_xxx --output json
 #### Notes
 
 - The memory API lives on a workspace-specific host, so --workspace-id is required; it can also come from BAILIAN_WORKSPACE_ID or the workspace_id config field.
+- Attribute operations change the shared schema, not one user's profile values. An explicit delete operation removes an attribute definition; inspect the schema and use --dry-run before applying it.
 - Each operation needs "op": add (requires name), update / delete (require attribute_id). Run `memory profile show` first to get attribute IDs.
 
 #### Examples
@@ -435,7 +437,7 @@ bl memory profile update --schema-id schema_xxx --attributes-operations '[{"op":
 | `--query <text>`                      | string | no       | Search text; sent as a single user message                                             |
 | `--messages <json>`                   | string | no       | Messages JSON array for context-based search; overrides --query                        |
 | `--top-k <n>`                         | number | no       | Max results, 1-100 (default: 10)                                                       |
-| `--min-score <score>`                 | number | no       | Minimum similarity score, 0-1 (default: 0.3)                                           |
+| `--min-score <score>`                 | number | no       | Minimum similarity score, 0-1 (default: 0.3; only effective with pro)                  |
 | `--memory-types <observation\|skill>` | array  | no       | Memory types to search (repeatable; server default: observation only)                  |
 | `--memory-type <observation\|skill>`  | string | no       | Deprecated alias for --memory-types; cannot be combined with --memory-types            |
 | `--project-ids <id>`                  | array  | no       | Memory fragment rule ID (repeatable)                                                   |
@@ -464,7 +466,7 @@ bl memory search --user-id user1 --messages '[{"role":"user","content":"recommen
 ```
 
 ```bash
-bl memory search --user-id user1 --query "reminders" --plan-version lite --min-score 0
+bl memory search --user-id user1 --query "reminders" --plan-version pro --min-score 0
 ```
 
 ```bash

@@ -75,7 +75,7 @@ test("finite wait exits TIMEOUT for pending tasks", async () => {
   const fixture = setup(1);
   fixture.requestJson.mockResolvedValue({ events: [{ status: "RUNNING" }] });
   const result = expect(fixture.run()).rejects.toMatchObject({ exitCode: ExitCode.TIMEOUT });
-  await vi.advanceTimersByTimeAsync(3000);
+  await vi.advanceTimersByTimeAsync(1000);
   await result;
 });
 
@@ -84,4 +84,23 @@ test("transport errors propagate unchanged", async () => {
   const failure = new Error("service unavailable");
   fixture.requestJson.mockRejectedValueOnce(failure);
   await expect(fixture.run()).rejects.toBe(failure);
+});
+
+test("default wait rejects a receipt without event ID and never resubmits", async () => {
+  const fixture = setup();
+  delete (fixture.receipt as { event_id?: string }).event_id;
+  await expect(fixture.run()).rejects.toMatchObject({
+    exitCode: ExitCode.GENERAL,
+    message: expect.stringContaining("event_id"),
+  });
+  expect(fixture.requestJson).toHaveBeenCalledTimes(1);
+  expect(fixture.output()).toEqual(fixture.receipt);
+});
+
+test.each([Infinity, NaN, -1])("wait rejects an invalid polling budget: %s", (wait) => {
+  expect(
+    memoryAdd.validate?.({ userId: "user1", content: "fact", wait } as Parameters<
+      NonNullable<typeof memoryAdd.validate>
+    >[0]),
+  ).toMatch(/--wait/);
 });

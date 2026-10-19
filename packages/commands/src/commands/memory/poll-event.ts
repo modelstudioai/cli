@@ -33,12 +33,12 @@ export function isMemoryEventSuccess(status: string | undefined): boolean {
 function defaultSleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
-      reject(new Error("aborted"));
+      reject(signal?.reason);
       return;
     }
     const onAbort = () => {
       clearTimeout(timer);
-      reject(new Error("aborted"));
+      reject(signal?.reason);
     };
     const timer = setTimeout(() => {
       signal?.removeEventListener("abort", onAbort);
@@ -77,8 +77,8 @@ export interface PollMemoryEventsResult {
  * the time budget is spent. Internal implementation of `memory add --wait`;
  * deliberately not exposed as a user command (design doc §2.2).
  *
- * HTTP failures propagate as-is (server errors are never translated). An empty
- * events list is treated as terminal to avoid waiting on a malformed response.
+ * HTTP failures propagate as-is (server errors are never translated). Empty
+ * events do not prove completion and are polled until the budget expires.
  */
 export async function pollMemoryEvents(
   options: PollMemoryEventsOptions,
@@ -90,22 +90,60 @@ export async function pollMemoryEvents(
   let events: MemoryEvent[] = [];
   let round = 0;
 
-  for (;;) {
-    const response = await options.client.requestJson<MemoryEventResponse>({
-      path: url,
-      method: "GET",
-      signal: options.signal,
-    });
-    events = response.events ?? [];
-    round += 1;
-    options.onPoll?.(round, events);
+  options.signal?.throwIfAborted();
+  const controller = new AbortController();
+  const timeoutReason = new Error("Memory polling budget exhausted");
+  const onExternalAbort = () => controller.abort(options.signal?.reason);
+  options.signal?.addEventListener("abort", onExternalAbort, { once: true });
+  // Node timers overflow above 2^31 - 1 ms; re-arm long budgets in safe chunks.
+  const scheduleDeadline = (): ReturnType<typeof setTimeout> => {
+    const remainingMs = options.timeoutMs - (now() - startedAt);
+    return setTimeout(
+      () => {
+        if (now() - startedAt >= options.timeoutMs) controller.abort(timeoutReason);
+        else timer = scheduleDeadline();
+      },
+      Math.min(Math.max(remainingMs, 0), 2_147_483_647),
+    );
+  };
+  let timer = scheduleDeadline();
+  let onAbort: () => void = () => {};
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () => reject(controller.signal.reason);
+    controller.signal.addEventListener("abort", onAbort, { once: true });
+  });
 
-    if (events.every((event) => isMemoryEventTerminal(event.status))) {
-      return { timedOut: false, events };
+  const poll = async (): Promise<PollMemoryEventsResult> => {
+    for (;;) {
+      controller.signal.throwIfAborted();
+      if (now() - startedAt >= options.timeoutMs) return { timedOut: true, events };
+      const response = await options.client.requestJson<MemoryEventResponse>({
+        path: url,
+        method: "GET",
+        signal: controller.signal,
+      });
+      controller.signal.throwIfAborted();
+      events = response.events ?? [];
+      round += 1;
+      options.onPoll?.(round, events);
+
+      if (events.length > 0 && events.every((event) => isMemoryEventTerminal(event.status))) {
+        return { timedOut: false, events };
+      }
+      const remainingMs = options.timeoutMs - (now() - startedAt);
+      if (remainingMs <= 0) return { timedOut: true, events };
+      await sleep(Math.min(options.intervalMs, remainingMs), controller.signal);
     }
-    if (now() - startedAt >= options.timeoutMs) {
-      return { timedOut: true, events };
-    }
-    await sleep(options.intervalMs, options.signal);
+  };
+
+  try {
+    return await Promise.race([poll(), aborted]);
+  } catch (error) {
+    if (controller.signal.reason === timeoutReason) return { timedOut: true, events };
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener("abort", onExternalAbort);
+    controller.signal.removeEventListener("abort", onAbort);
   }
 }

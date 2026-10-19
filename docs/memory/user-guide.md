@@ -116,7 +116,7 @@ bl memory add --user-id demo_user \
 ```bash
 # 默认只检索 observation，限制结果数量与最低分数
 bl memory search --user-id demo_user --query '周末活动偏好' \
-  --top-k 5 --min-score 0.3 --plan-version lite --output json
+  --top-k 5 --min-score 0.3 --plan-version pro --output json
 
 # 同时检索事实和技能
 bl memory search --user-id demo_user --query '如何整理会议记录' \
@@ -135,7 +135,7 @@ bl memory list --user-id demo_user --project-id '<project-id>' \
 
 `search --messages '<JSON数组>'` 支持结合对话上下文检索，并优先于 `--query`。不传 `--project-id` 的 `list` 只查默认规则，不会汇总其他 observation 或 skill 规则。
 
-检索的服务端默认值为 top_k=10、min_score=0.3；CLI 校验范围分别为 1–100 和 0–1。
+检索的服务端默认值为 top_k=10、min_score=0.3；CLI 校验范围分别为 1–100 和 0–1。min_score 仅在 plan_version=pro 时生效（省略 plan_version 时默认为 pro）；lite 不按该阈值过滤结果。
 
 通过 `--plan-version` 选择检索策略：
 

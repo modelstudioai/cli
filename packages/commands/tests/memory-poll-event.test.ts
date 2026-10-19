@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { afterEach, expect, test, vi } from "vite-plus/test";
 import type { Client, MemoryEvent, MemoryEventResponse } from "bailian-cli-core";
 import {
   isMemoryEventSuccess,
@@ -95,8 +95,8 @@ test("pollMemoryEvents reports timeout with the last pending snapshot", async ()
   });
   expect(result.timedOut).toBe(true);
   expect(result.events[0]?.status).toBe("PENDING");
-  // t=0 poll → t=3000 poll → t=6000 poll → t=9000 poll → budget spent
-  expect(calls).toHaveLength(4);
+  // No additional request starts once the budget has expired.
+  expect(calls).toHaveLength(3);
 });
 
 test("pollMemoryEvents treats FAILED and UNRECORDED as terminal", async () => {
@@ -116,12 +116,59 @@ test("pollMemoryEvents treats FAILED and UNRECORDED as terminal", async () => {
   expect(calls).toHaveLength(1);
 });
 
-test("pollMemoryEvents returns immediately on an empty events list", async () => {
-  const { client, calls } = mockClient([{ request_id: "r1", events: [] }]);
-  const result = await pollMemoryEvents({ ...BASE_OPTIONS, client });
-  expect(result.timedOut).toBe(false);
-  expect(result.events).toEqual([]);
-  expect(calls).toHaveLength(1);
+afterEach(() => vi.useRealTimers());
+
+test.each([{ events: [] }, { events: undefined }])(
+  "empty or missing events do not prove completion: $events",
+  async ({ events }) => {
+    const clock = fakeClock();
+    const { client, calls } = mockClient([{ request_id: "r1", events }]);
+    const result = await pollMemoryEvents({ ...BASE_OPTIONS, client, timeoutMs: 1000, ...clock });
+    expect(result).toEqual({ timedOut: true, events: [] });
+    expect(clock.current).toBe(1000);
+    expect(calls).toHaveLength(1);
+  },
+);
+
+test("polling budget aborts an in-flight request even if the client ignores cancellation", async () => {
+  vi.useFakeTimers();
+  const requestJson = vi.fn(() => new Promise(() => {}));
+  const pending = pollMemoryEvents({
+    ...BASE_OPTIONS,
+    timeoutMs: 1000,
+    client: { requestJson } as unknown as Client,
+  });
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(pending).resolves.toEqual({ timedOut: true, events: [] });
+  expect(requestJson.mock.calls).toHaveLength(1);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+test("external cancellation interrupts an in-flight request unchanged", async () => {
+  const controller = new AbortController();
+  const failure = new Error("cancelled by caller");
+  const requestJson = vi.fn(() => new Promise(() => {}));
+  const pending = pollMemoryEvents({
+    ...BASE_OPTIONS,
+    signal: controller.signal,
+    client: { requestJson } as unknown as Client,
+  });
+  const assertion = expect(pending).rejects.toBe(failure);
+  controller.abort(failure);
+  await assertion;
+});
+
+test("an already cancelled poll never sends a request", async () => {
+  const failure = new Error("cancelled by caller");
+  const requestJson = vi.fn();
+  await expect(
+    pollMemoryEvents({
+      ...BASE_OPTIONS,
+      signal: AbortSignal.abort(failure),
+      client: { requestJson } as unknown as Client,
+    }),
+  ).rejects.toBe(failure);
+  expect(requestJson).not.toHaveBeenCalled();
 });
 
 test("event status predicates accept the SUCCESS wire variant", () => {
@@ -136,4 +183,43 @@ test("event status predicates accept the SUCCESS wire variant", () => {
   expect(isMemoryEventSuccess("SUCCESS")).toBe(true);
   expect(isMemoryEventSuccess("FAILED")).toBe(false);
   expect(isMemoryEventSuccess("UNRECORDED")).toBe(false);
+});
+
+test("cancellation during the sleep stops polling and cleans up timers", async () => {
+  vi.useFakeTimers();
+  const controller = new AbortController();
+  const failure = new Error("cancelled during sleep");
+  const { client, calls } = mockClient([{ request_id: "r1", events: [eventWith("RUNNING")] }]);
+  const pending = pollMemoryEvents({ ...BASE_OPTIONS, client, signal: controller.signal });
+  const assertion = expect(pending).rejects.toBe(failure);
+  await vi.advanceTimersByTimeAsync(100);
+  controller.abort(failure);
+  await assertion;
+  expect(calls).toHaveLength(1);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+test("a service error during polling is propagated unchanged", async () => {
+  const failure = new Error("server detail");
+  const requestJson = vi.fn().mockRejectedValue(failure);
+  await expect(
+    pollMemoryEvents({ ...BASE_OPTIONS, client: { requestJson } as unknown as Client }),
+  ).rejects.toBe(failure);
+});
+
+test("large budgets do not overflow the Node timer into an immediate timeout", async () => {
+  vi.useFakeTimers();
+  const controller = new AbortController();
+  const failure = new Error("cancel long poll");
+  const requestJson = vi.fn(() => new Promise(() => {}));
+  const pending = pollMemoryEvents({
+    ...BASE_OPTIONS,
+    timeoutMs: 3_000_000_000,
+    signal: controller.signal,
+    client: { requestJson } as unknown as Client,
+  });
+  const assertion = expect(pending).rejects.toBe(failure);
+  await vi.advanceTimersByTimeAsync(10);
+  controller.abort(failure);
+  await assertion;
 });
