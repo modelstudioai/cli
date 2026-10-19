@@ -160,16 +160,53 @@ async function extractCredentials(
   return pickCallbackCredentials(Object.fromEntries(url.searchParams), body);
 }
 
-/** Open a URL with the OS default handler; never routed through a shell. */
+/**
+ * Quote a value for `cmd.exe`. `%` is doubled because cmd expands variables even
+ * inside quotes; embedded `"` becomes `""`.
+ * Keep in sync with `buildOpenInvocation` in
+ * `packages/commands/src/commands/shared/local-server.ts`.
+ */
+function quoteForCmd(value: string): string {
+  return `"${value.replaceAll("%", "%%").replaceAll('"', '""')}"`;
+}
+
+/**
+ * Command that opens `target` with the OS default handler.
+ * On Windows, `cmd.exe` splits an unquoted `&`, so `needapikey=true` never
+ * reaches the browser. See `buildOpenInvocation` in the commands package.
+ */
+export function buildOpenInvocation(
+  target: string,
+  platform = process.platform,
+): { command: string; args: string[]; windowsVerbatimArguments?: boolean } {
+  if (platform === "win32") {
+    const inner = `start "" ${quoteForCmd(target)}`;
+    return {
+      command: "cmd",
+      args: ["/d", "/v:off", "/s", "/c", `"${inner}"`],
+      windowsVerbatimArguments: true,
+    };
+  }
+  if (platform === "darwin") return { command: "open", args: [target] };
+  return { command: "xdg-open", args: [target] };
+}
+
+/** Open a URL with the OS default handler. */
 function openInBrowser(url: string): Promise<void> {
-  const cmd =
-    process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
-  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+  const invocation = buildOpenInvocation(url);
   return new Promise((resolve, reject) => {
-    execFile(cmd, args, { windowsHide: true }, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
+    execFile(
+      invocation.command,
+      invocation.args,
+      {
+        windowsHide: true,
+        windowsVerbatimArguments: invocation.windowsVerbatimArguments,
+      },
+      (err) => {
+        if (err) reject(err);
+        else resolve();
+      },
+    );
   });
 }
 

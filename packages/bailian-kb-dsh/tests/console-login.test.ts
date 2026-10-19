@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  buildOpenInvocation,
   consoleLoginState,
   parseCallbackBody,
   pickCallbackCredentials,
@@ -66,5 +67,16 @@ describe("pickCallbackCredentials", () => {
 describe("consoleLoginState", () => {
   it("starts idle, carrying no secret", () => {
     expect(consoleLoginState()).toEqual({ phase: "idle" });
+  });
+});
+
+describe("buildOpenInvocation", () => {
+  it("quotes a Windows start target so & stays inside the URL", () => {
+    const url =
+      "https://bailian.console.aliyun.com/console-login?notice=127.0.0.1:1?state=abc&needapikey=true";
+    const invocation = buildOpenInvocation(url, "win32");
+    const command = invocation.args.at(-1) ?? "";
+    expect(invocation.windowsVerbatimArguments).toBe(true);
+    expect(command.slice(1, -1)).toBe(`start "" "${url}"`);
   });
 });

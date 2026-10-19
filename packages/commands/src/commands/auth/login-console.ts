@@ -8,6 +8,7 @@ import {
   type AuthStore,
   type ConfigFile,
   type Identity,
+  type LocalizedText,
   type Settings,
 } from "bailian-cli-core";
 import { listenLocalServer, openInBrowser } from "../shared/local-server.ts";
@@ -18,6 +19,13 @@ export interface LoginDeps {
   identity: Identity;
   settings: Settings;
   authStore: AuthStore;
+  /** 缺省时用户可见新文案回退到 en-US。 */
+  localize?: (text: LocalizedText) => string;
+}
+
+function localizeLogin(deps: LoginDeps, text: LocalizedText): string {
+  if (typeof text === "string") return text;
+  return deps.localize ? deps.localize(text) : text["en-US"];
 }
 
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
@@ -371,6 +379,7 @@ export async function runConsoleLogin(
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
   let callbackError: unknown;
+  let savedSessionWithoutApiKey = false;
   const server = http.createServer(async (req, res) => {
     try {
       if (req.method === "OPTIONS") {
@@ -423,6 +432,7 @@ export async function runConsoleLogin(
               ...callbackPatch,
               base_url: baseUrl || undefined,
             });
+            savedSessionWithoutApiKey = true;
             process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
           }
         } catch (err: unknown) {
@@ -505,5 +515,15 @@ export async function runConsoleLogin(
 
   if (callbackError) {
     throw callbackError;
+  }
+
+  if (opts?.needApiKey && savedSessionWithoutApiKey) {
+    const binName = deps.identity.binName;
+    process.stderr.write(
+      `${localizeLogin(deps, {
+        "en-US": `Saved the console session only. Model commands still need an API key: ${binName} auth login --console, or ${binName} auth login --api-key <key>`,
+        "zh-CN": `仅保存了控制台会话。模型命令仍需要 API Key：${binName} auth login --console，或 ${binName} auth login --api-key <key>`,
+      })}\n`,
+    );
   }
 }
