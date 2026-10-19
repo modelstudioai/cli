@@ -81,7 +81,8 @@ async function runProbe(
     [scriptPath, `${serverUrl}${path}`, String(timeoutMs), dispatcher, mode],
     {
       cwd: runtimeRoot,
-      timeout: 10_000,
+      // Full-suite process startup can exceed the scaled request deadline.
+      timeout: 30_000,
       env: {
         ...process.env,
         HTTP_PROXY: "",
@@ -112,6 +113,10 @@ test("existing custom dispatchers do not need a compose method", async () => {
   expect(await runProbe("/headers", 6000, "custom")).toBe("done");
 });
 
-test("body idle timeout remains active after headers arrive", async () => {
-  expect(await runProbe("/body", 6000)).toBe("UND_ERR_BODY_TIMEOUT");
+test("body idle timeout follows the request setting beyond the transport limit", async () => {
+  expect(await runProbe("/body", 6000)).toBe("firstdone");
+});
+
+test("the upper body idle timeout aborts stalled responses", async () => {
+  expect(await runProbe("/body", 150)).toBe("BailianError");
 });
