@@ -22,3 +22,14 @@ it("enables memory without looking up or creating a profile schema", async () =>
   expect(state.markActive).toHaveBeenCalledExactlyOnceWith();
   expect(result.status).toBe("active");
 });
+
+it("startup preserves a paused identity without making service requests", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const entry = await readFile(new URL("../src/index.ts", import.meta.url), "utf8");
+  expect(entry).toContain("void ensureInitialized(client).catch");
+  state.config.status = "paused";
+  const list = vi.fn();
+  const result = await ensureInitialized({ list } as unknown as MemoryClient);
+  expect(result.status).toBe("paused");
+  expect(list).not.toHaveBeenCalled();
+});

@@ -92,6 +92,7 @@ describe("task store idempotency", () => {
       userId: "u1",
       messages: [{ role: "user", content: "住杭州" }],
       note: "t1",
+      operationId: "session:call",
     });
     expect(first.eventId).toBe("evt-1");
     expect(addAsync).toHaveBeenCalledOnce();
@@ -104,6 +105,7 @@ describe("task store idempotency", () => {
       userId: "u1",
       messages: [{ role: "user", content: "住杭州" }],
       note: "t1",
+      operationId: "session:call",
     });
     expect(second.intentId).toBe(first.intentId);
     expect(addAsync).toHaveBeenCalledOnce();
@@ -197,11 +199,21 @@ it("gates extraction and resolves a fresh schema for each new write", async () =
   expect(getProfileSchemaId).not.toHaveBeenCalled();
   expect(addAsync.mock.calls[0]?.[0]).toMatchObject({ profileSchema: undefined });
   await submitAddIntent({ ...input, extractProfile: true, note: "first" });
-  await submitAddIntent({ ...input, extractProfile: true, note: "second" });
+  await submitAddIntent({
+    ...input,
+    extractProfile: true,
+    note: "second",
+    operationId: "session:second",
+  });
   expect(getProfileSchemaId).toHaveBeenCalledTimes(2);
   expect(addAsync.mock.calls[1]?.[0]).toMatchObject({ profileSchema: "schema-one" });
   expect(addAsync.mock.calls[2]?.[0]).toMatchObject({ profileSchema: "schema-two" });
-  await submitAddIntent({ ...input, extractProfile: true, note: "second" });
+  await submitAddIntent({
+    ...input,
+    extractProfile: true,
+    note: "second",
+    operationId: "session:second",
+  });
   expect(getProfileSchemaId).toHaveBeenCalledTimes(2);
 });
 
@@ -243,4 +255,36 @@ it("passes only the selected profile rule and treats a changed selection as a ne
     "chosen-one",
     "chosen-two",
   ]);
+});
+
+it("allows identical independent remembers after a successful write", async () => {
+  const store = new InMemoryTaskStore();
+  const addAsync = vi.fn(async () => ({ event_id: "event" }));
+  const input = {
+    store,
+    client: { addAsync } as unknown as MemoryClient,
+    userId: "user",
+    messages: [{ role: "user" as const, content: "same fact" }],
+    note: "explicit-remember",
+  };
+  const first = await submitAddIntent(input);
+  await store.put({ ...first, status: "succeeded_with_change" });
+  const second = await submitAddIntent(input);
+  expect(second.intentId).not.toBe(first.intentId);
+  expect(addAsync).toHaveBeenCalledTimes(2);
+});
+
+it("coalesces simultaneous retries of the same operation", async () => {
+  const store = new InMemoryTaskStore();
+  const addAsync = vi.fn(async () => ({ event_id: "event" }));
+  const input = {
+    store,
+    client: { addAsync } as unknown as MemoryClient,
+    userId: "user",
+    messages: [{ role: "user" as const, content: "same fact" }],
+    operationId: "session:tool-call",
+  };
+  const [first, second] = await Promise.all([submitAddIntent(input), submitAddIntent(input)]);
+  expect(first.intentId).toBe(second.intentId);
+  expect(addAsync).toHaveBeenCalledOnce();
 });

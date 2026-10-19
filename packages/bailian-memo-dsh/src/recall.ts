@@ -177,8 +177,20 @@ export function installAutomaticRecall(ctx: Context, deps: RecallDeps): void {
       const query = extractQueryText(messages);
       if (!query) return decision;
 
-      signal.throwIfAborted();
+      if (signal.aborted) return decision;
+      const controller = new AbortController();
+      const abort = () => controller.abort(signal.reason);
+      signal.addEventListener("abort", abort, { once: true });
+      const timer = setTimeout(() => controller.abort(new Error("Recall deadline exceeded")), 5000);
+      let rejectAbort: () => void = () => undefined;
+      const aborted = new Promise<never>((_resolve, reject) => {
+        rejectAbort = () => reject(controller.signal.reason);
+        controller.signal.addEventListener("abort", rejectAbort, { once: true });
+      });
+      const bounded = <Result>(operation: Promise<Result>): Promise<Result> =>
+        Promise.race([operation, aborted]);
       try {
+        controller.signal.throwIfAborted();
         const searchInput: MemorySearchInput = {
           userId: personal.user_id!,
           query,
@@ -187,23 +199,26 @@ export function installAutomaticRecall(ctx: Context, deps: RecallDeps): void {
           memoryTypes: ["observation"],
           planVersion: "pro",
         };
-        const [search, profile] = await Promise.all([
-          deps.client.search(searchInput),
-          deps.client
-            .getCurrentProfile(personal.user_id!, pluginConfig.profileSchemaId)
-            .catch((error: unknown) => {
-              agent.session.append("bailian-memo/profile-recall-failed", {
-                turn,
-                reason: error instanceof Error ? error.message : "Profile recall failed",
-              });
-              return { profile: { attributes: [] } };
-            }),
-        ]);
-        signal.throwIfAborted();
+        const [search, profile] = await bounded(
+          Promise.all([
+            deps.client.search(searchInput, controller.signal),
+            deps.client
+              .getCurrentProfile(personal.user_id!, pluginConfig.profileSchemaId, controller.signal)
+              .catch((error: unknown) => {
+                if (controller.signal.aborted) throw error;
+                agent.session.append("bailian-memo/profile-recall-failed", {
+                  turn,
+                  reason: error instanceof Error ? error.message : "Profile recall failed",
+                });
+                return { profile: { attributes: [] } };
+              }),
+          ]),
+        );
+        controller.signal.throwIfAborted();
         const hits = search.memory_nodes ?? [];
         const profileLines = formatProfile(profile.profile?.attributes ?? []);
         if (hits.length === 0 && profileLines.length === 0) {
-          const scope = await deps.client.describeSearchScope(searchInput);
+          const scope = await bounded(deps.client.describeSearchScope(searchInput));
           agent.session.append("bailian-memo/recall-empty", {
             turn,
             scope,
@@ -224,6 +239,11 @@ export function installAutomaticRecall(ctx: Context, deps: RecallDeps): void {
       } catch {
         // Fail-open: never block the user's turn on memory outages.
         return decision;
+      } finally {
+        controller.abort();
+        clearTimeout(timer);
+        signal.removeEventListener("abort", abort);
+        controller.signal.removeEventListener("abort", rejectAbort);
       }
     },
   );

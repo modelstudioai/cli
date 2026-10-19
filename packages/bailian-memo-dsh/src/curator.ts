@@ -331,6 +331,7 @@ export function installAuxiliaryCurator(ctx: Context, deps: CuratorDeps): void {
         extractProfile: deps.resolveConfig().extractProfile,
         profileSchemaId: deps.resolveConfig().profileSchemaId,
         note: `turn:${turn}`,
+        operationId: JSON.stringify([agent.session.id, "curator", turn]),
       });
       agent.session.append("bailian-memo/curator-finished", {
         turn,

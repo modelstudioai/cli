@@ -24,6 +24,9 @@ export interface PersonalMemoryConfig {
   consented_at: string | null;
   sensitive_memory_policy: "explicit_only";
   last_error?: string | null;
+  /** Shared skill metadata; plugin selection lives independently in dsh settings. */
+  profile_schema_id?: string | null;
+  profile_schema_version?: number;
 }
 
 /** Legacy v1 shape (enabled flag instead of status). */
@@ -68,8 +71,6 @@ export function migrateLegacyConfig(raw: LegacyPersonalMemoryConfig): PersonalMe
     typeof (raw as PersonalMemoryConfig).status === "string"
   ) {
     const identity = { ...raw };
-    delete identity.profile_schema_id;
-    delete identity.profile_schema_version;
     return {
       ...base,
       ...(identity as PersonalMemoryConfig),
@@ -99,6 +100,10 @@ export function migrateLegacyConfig(raw: LegacyPersonalMemoryConfig): PersonalMe
     status,
     workspace_id: raw.workspace_id ?? null,
     user_id: raw.user_id ?? null,
+    ...(raw.profile_schema_id !== undefined ? { profile_schema_id: raw.profile_schema_id } : {}),
+    ...(raw.profile_schema_version !== undefined
+      ? { profile_schema_version: raw.profile_schema_version }
+      : {}),
     consent_version: raw.consent_version ?? CONSENT_VERSION,
     consented_at: raw.consented_at ?? null,
   };

@@ -2,7 +2,7 @@
  * Recoverable async add-async task polling via Storage Domain (when mounted).
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Context } from "@deepseek-ai/cordis";
 import { defineDomain, domainTable, type Domain } from "@deepseek-ai/dsh-storage-domain";
 import { z } from "zod";
@@ -277,7 +277,7 @@ export function installTaskPoller(ctx: Context, store: TaskStore, client: Memory
   );
 }
 
-export async function submitAddIntent(input: {
+interface SubmitAddIntentInput {
   store: TaskStore;
   client: MemoryClient;
   userId: string;
@@ -285,8 +285,40 @@ export async function submitAddIntent(input: {
   extractProfile?: boolean;
   profileSchemaId?: string;
   note?: string;
-}): Promise<MemoTaskRecord> {
+  /** Stable session/tool-call or session/turn identity for retries of one operation. */
+  operationId?: string;
+}
+
+const submissions = new WeakMap<TaskStore, Map<string, Promise<MemoTaskRecord>>>();
+
+export async function submitAddIntent(input: SubmitAddIntentInput): Promise<MemoTaskRecord> {
+  const operationId = input.operationId ?? randomUUID();
+  const key = payloadDigest({
+    operationId,
+    userId: input.userId,
+    messages: input.messages,
+    extractProfile: input.extractProfile,
+    profileSchemaId: input.profileSchemaId,
+  });
+  let active = submissions.get(input.store);
+  if (!active) {
+    active = new Map();
+    submissions.set(input.store, active);
+  }
+  const existing = active.get(key);
+  if (existing) return existing;
+  const pending = submitOperation({ ...input, operationId });
+  active.set(key, pending);
+  try {
+    return await pending;
+  } finally {
+    active.delete(key);
+  }
+}
+
+async function submitOperation(input: SubmitAddIntentInput): Promise<MemoTaskRecord> {
   const digest = payloadDigest({
+    operationId: input.operationId,
     userId: input.userId,
     messages: input.messages,
     extractProfile: input.extractProfile === true,

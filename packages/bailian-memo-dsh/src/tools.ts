@@ -181,6 +181,7 @@ export function createMemoTools(deps: MemoToolDeps) {
         extractProfile: deps.resolveConfig().extractProfile,
         profileSchemaId: deps.resolveConfig().profileSchemaId,
         note: "explicit-remember",
+        operationId: exec.agent ? JSON.stringify([exec.agent.session.id, exec.callId]) : undefined,
       });
       if (task.eventId && task.status !== "failed" && task.status !== "abandoned") {
         exec.agent?.session.append("bailian-memo/remember-submitted", {

@@ -78,3 +78,7 @@ When extraction is enabled, select a profile rule by name and schemaId in the au
 Personal identity format v3 drops the obsolete `profile_schema_id` / `profile_schema_version` fields on read and subsequent writes while retaining user identity, consent, binding and pause state. Existing cloud schemas and profile data are not deleted. Initialization only performs a read-only connection check and no longer depends on a profile schema.
 
 When `remember` successfully submits in a turn, automatic curation skips that entire turn to avoid writing the same facts twice. Later turns are unaffected; failed submissions do not suppress curation.
+
+Automatic recall has a five-second deadline and stops when the turn is cancelled. A paused identity stays paused across plugin restarts. Repeated retries of one remember tool call share an intent, while a later independent call can remember the same fact again (including after forgetting it).
+
+The shared personal config accepts v2/v3 and preserves optional Skill-owned profile schema fields. The plugin selects its profile rule independently through dsh settings.

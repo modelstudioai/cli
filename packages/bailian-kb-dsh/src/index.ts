@@ -219,7 +219,7 @@ async function activate(ctx: Context, config: Config, isActive: () => boolean): 
         return { apiKey: apiKey.value, workspaceId: requireWorkspace(workspaceFromConfig()) };
       },
       onSuccess: () => {
-        serviceCache.invalidate();
+        void serviceCache.refreshAfterMutation();
       },
     }),
   );
@@ -229,8 +229,7 @@ async function activate(ctx: Context, config: Config, isActive: () => boolean): 
     if (result.isError) return;
     const args = JSON.stringify((_exec as { arguments?: unknown }).arguments ?? "");
     if (!/bl\s+knowledge\s+service\s+(create|deploy|delete|copy)/.test(args)) return;
-    serviceCache.invalidate();
-    void serviceCache.refresh();
+    void serviceCache.refreshAfterMutation();
   });
 
   ctx.inject(["agents"], (actx) => {

@@ -1,5 +1,6 @@
 import {
   mkdtempSync,
+  rmSync,
   readFileSync,
   readdirSync,
   statSync,
@@ -133,6 +134,41 @@ function cacheWith(home: string, onPost: () => Promise<unknown>, now: () => numb
 
 describe("ServiceCache", () => {
   const emptyPage = { code: "Success", data: { total_count: 0, rows: [] } };
+
+  it("fetches after mutation even if a pre-mutation refresh is still outstanding", async () => {
+    const home = tempHome();
+    let releaseOld: (() => void) | undefined;
+    const oldRequest = new Promise<void>((resolve) => {
+      releaseOld = resolve;
+    });
+    let requests = 0;
+    const { cache } = cacheWith(home, async () => {
+      requests += 1;
+      if (requests === 1) {
+        await oldRequest;
+        return {
+          code: "Success",
+          data: {
+            total_count: 1,
+            rows: [{ agent_id: "deleted-service", agent_name: "old", agent_status: "deployed" }],
+          },
+        };
+      }
+      return emptyPage;
+    });
+    try {
+      const beforeMutation = cache.refresh();
+      await vi.waitFor(() => expect(requests).toBe(1));
+      const afterMutation = cache.refreshAfterMutation();
+      releaseOld!();
+      await Promise.all([beforeMutation, afterMutation]);
+      expect(requests).toBe(4);
+      expect(readServiceCache(serviceCachePath("llm-a", home), "llm-a", HOST)?.entries).toEqual([]);
+    } finally {
+      releaseOld?.();
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
 
   it("treats a missing document as stale and a fresh one as current", () => {
     const home = tempHome();

@@ -23,11 +23,11 @@
 
 ## 配置格式
 
-路径：`~/.bailian/personal-memory/config.json`（Windows 使用当前用户主目录）。这是 Skill 自己的文件，不是 `bl config set` 的配置键。使用宿主可用的文件工具，尽可能限制为当前用户可读写；不存进工作仓库或 Skill 安装目录。
+路径：`~/.bailian/personal-memory/config.json`（Windows 使用当前用户主目录）。这是 Skill 与 dsh memo 插件共享的身份文件，不是 `bl config set` 的配置键。使用宿主可用的文件工具，尽可能限制为当前用户可读写；不存进工作仓库或 Skill 安装目录。
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "initializing",
   "workspace_id": "<用户确认的 Workspace ID>",
   "user_id": "<首次生成并持久保存的 UUID>",
@@ -52,9 +52,11 @@
 | `active`             | 范围、身份、Schema 和授权完整，允许约定范围内自动读写                                             |
 | `paused`             | 用户暂停或遗忘限制导致暂停；只接受明确的恢复请求，不自动续接                                      |
 
-v2 用 status 作为唯一状态，不同时维护 enabled。initializing 只允许已授权的配置验证和初始化操作，不自动抽取日常聊天。用户在初始化途中要求暂停也设 paused；再次明确恢复后，如初始化条件不齐，则转 initializing 完成缺失步骤。
+v2 / v3 都是受支持格式，用 status 作为唯一状态，不同时维护 enabled。initializing 只允许已授权的配置验证和初始化操作，不自动抽取日常聊天。用户在初始化途中要求暂停也设 paused；再次明确恢复后，如初始化条件不齐，则转 initializing 完成缺失步骤。
 
-旧 schema_version=1：保留身份和资源 ID。enabled=true 且必要字段完整时可迁移为 v2 active；enabled=false 无法单独区分初始化未完成和主动暂停。若当前上下文有明确状态证据，按证据迁移；否则保持停止自动操作，询问用户要继续初始化还是保持暂停，不能猜测恢复。迁移成功后移除 enabled。未知版本、字段不全却标记 active、非法状态或配置损坏时停止并修复，不能另建身份掩盖问题。
+旧 schema_version=1：保留身份和资源 ID。enabled=true 且必要字段完整时可迁移为 v3 active；enabled=false 无法单独区分初始化未完成和主动暂停。若当前上下文有明确状态证据，按证据迁移；否则保持停止自动操作，询问用户要继续初始化还是保持暂停，不能猜测恢复。迁移成功后移除 enabled。未知版本、字段不全却标记 active、非法状态或配置损坏时停止并修复，不能另建身份掩盖问题。
+
+v3 中 profile_schema_id / profile_schema_version 是可选的 Skill 元数据。读写和状态切换必须保留已有值；不要将它们删除，也不要降级版本。dsh 插件独立使用其 settings.profileSchemaId，不能拿插件选项覆盖 Skill 的模板引用。已有 v3 active 身份即使没有这两个字段也不是未配置：复用原 user_id、workspace_id、授权及暂停状态，先完成普通记忆操作；只有需要 Skill 画像且用户授权涵盖该操作时，按下面步骤补齐 Skill 模板引用，不重新启用或生成另一身份。dsh 启动不会恢复 paused，只有明确恢复请求才允许恢复。
 
 ## 完成启用
 

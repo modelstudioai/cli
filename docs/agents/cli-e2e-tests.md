@@ -99,6 +99,8 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## Journey 层（用户旅程全链路）
 
+- Memory 主干：`packages/commands/tests/e2e/memory/journeys`（J1–J5 CLI）与 `packages/bailian-memo-dsh/tests/journeys`（J6–J8 受控宿主）；严格入口 `node tools/test-memory-journeys.mjs`。默认库只要求 Key/Workspace，缺环境或跳过必跑项不能当作通过。真实 Agent 会话验收与受控宿主分开报告，见 [Memory live 验收](../memory/live-acceptance.md)。
+
 - **定位**：命令 E2E 验单命令契约；journey 验“用户带着目标跨命令走通回路”，结构性断言不在 journey 重复
 - **闭环断言**：fixture 埋独特标记词，以“标记词能否被召回”判定回路闭合；硬断言 fail，软断言 `recordSoft` 落报告人工复核
 - **日志产物**：`createJourneyReporter` 在 `test/output/<session>/` 落盘 `journey-report.md`、分步 stdout/stderr、`resources.json`（未清理资源警示）

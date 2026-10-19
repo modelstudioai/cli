@@ -2,6 +2,8 @@ import { Context } from "@deepseek-ai/cordis";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { apply, type Config } from "../src/index.js";
 import type { KbClientOptions } from "../src/client.js";
+import { ServiceCache } from "../src/service-cache.js";
+import { createManagementTool } from "../src/management.js";
 
 const state = vi.hoisted(() => ({
   client: undefined as KbClientOptions | undefined,
@@ -17,7 +19,56 @@ vi.mock("../src/client.js", async (original) => ({
   },
 }));
 vi.mock("../src/skill.js", () => ({ registerSkill: vi.fn() }));
-afterEach(() => vi.clearAllMocks());
+vi.mock("../src/management.js", async (original) => {
+  const actual = await original<typeof import("../src/management.js")>();
+  return {
+    ...actual,
+    createManagementTool: (deps: Parameters<typeof actual.createManagementTool>[0]) =>
+      actual.createManagementTool({
+        ...deps,
+        execute: async () => ({ stdout: "{}", stderr: "", exitCode: 0 }),
+      }),
+  };
+});
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.restoreAllMocks();
+});
+
+it("requests post-mutation service discovery after successful kb_manage", async () => {
+  const refresh = vi.spyOn(ServiceCache.prototype, "refreshAfterMutation").mockResolvedValue();
+  const root = new Context();
+  const values: Record<string, unknown> = { workspaceId: "test-ws", configInitialized: true };
+  const config = Object.fromEntries(
+    [
+      "workspaceId",
+      "configInitialized",
+      "defaultRetrieveAgentId",
+      "defaultChatAgentId",
+      "agentVersion",
+      "chatTimeoutMs",
+    ].map((field) => [field, { get: () => values[field] }]),
+  ) as unknown as Config;
+  const register = vi.fn();
+  root.provide("settings", { configure: () => () => undefined, update: vi.fn() });
+  root.provide("credentials", { resolve: async () => ({ value: "test-key" }), set: vi.fn() });
+  root.provide("tools", { register });
+  const plugin = root.plugin((ctx) => apply(ctx, config));
+  try {
+    await plugin.await();
+    await vi.waitFor(() => expect(register).toHaveBeenCalledTimes(3));
+    const management = register.mock.calls
+      .map(([tool]) => tool)
+      .find((tool) => tool.name === "kb_manage") as ReturnType<typeof createManagementTool>;
+    await management.execute(
+      { args: ["service", "delete", "--agent-id", "test-service", "--yes"] },
+      { signal: new AbortController().signal } as Parameters<typeof management.execute>[1],
+    );
+    expect(refresh).toHaveBeenCalledOnce();
+  } finally {
+    await plugin.dispose();
+  }
+});
 
 it("awaits initialization and then reads only live dsh settings and credentials", async () => {
   const values: Record<string, unknown> = {};
