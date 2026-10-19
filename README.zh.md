@@ -36,7 +36,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
-    <img src="https://img.alicdn.com/imgextra/i1/O1CN01Q5052k232Hd36NodG_!!6000000007197-0-tps-2940-1656.jpg" alt="点击播放演示视频" width="720" />
+    <img src="https://img.alicdn.com/imgextra/i4/O1CN01YRqEiQMN7tJ2b87U_!!6000000004549-0-videocover-1280-744.jpg" alt="点击播放演示视频" width="720" />
   </a>
 </p>
 
