@@ -172,14 +172,19 @@ export async function loadScopedCreateProject(
 }
 
 export async function resolveCandidateDeclaration(options: {
-  project: LoadedScopedCreateProject;
+  project: Pick<LoadedScopedCreateProject, "config" | "configPath" | "projectName">;
   group: ScopedCreateGroup;
   rawDeclaration: Record<string, unknown>;
 }): Promise<Record<string, unknown>> {
   const temporaryKey = "__bailian_cli_create_candidate__";
-  const rawConfig = structuredClone(options.project.config) as unknown as Record<string, unknown>;
-  const declarations = (rawConfig[options.group] ?? {}) as Record<string, unknown>;
-  rawConfig[options.group] = { ...declarations, [temporaryKey]: options.rawDeclaration };
+  // Existing resources already have resolved file contents. Resolve only the new
+  // declaration here; scoped planning checks its references against the full project.
+  const rawConfig = {
+    version: options.project.config.version,
+    providers: options.project.config.providers,
+    defaults: options.project.config.defaults,
+    [options.group]: { [temporaryKey]: options.rawDeclaration },
+  };
   const resolved = await withAgentErrors(() =>
     resolveProjectConfigFromObject(rawConfig, {
       projectName: options.project.projectName,

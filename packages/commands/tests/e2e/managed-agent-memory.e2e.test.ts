@@ -376,6 +376,59 @@ describe("e2e: managed-agent memory offline preview and confirmation", () => {
     expect(readFileSync(path, "utf8")).toBe(source);
     expect(readdirSync(environment.directory).sort()).toEqual(["agents.yaml", "config.json"]);
   });
+  test("Store create does not reinterpret existing entry content as another file", async () => {
+    const environment = setup();
+    const path = join(environment.directory, "agents.yaml");
+    const source = [
+      'version: "1"',
+      "providers:",
+      "  bailian:",
+      '    api_key: ""',
+      "    workspace_id: ws-test",
+      "memory_stores:",
+      "  existing:",
+      '    description: ""',
+      "    entries:",
+      "      - key: existing.md",
+      "        content: ./existing.md",
+      "",
+    ].join("\n");
+    writeFileSync(path, source);
+    writeFileSync(join(environment.directory, "existing.md"), "./missing-second-file.md");
+    writeFileSync(join(environment.directory, "new.md"), "../literal-new-entry.md");
+
+    const result = await run(
+      [
+        "managed-agent",
+        "memory-store",
+        "create",
+        "--name",
+        "Other",
+        "--entry",
+        JSON.stringify({ key: "new.md", content: "./new.md" }),
+        "--dry-run",
+      ],
+      environment,
+    );
+
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(parseStdoutJson(result.stdout)).toMatchObject({
+      resource: { type: "memory_store", key: "other" },
+      yaml_written: false,
+      ready_to_create: true,
+      actions: [{ action: "create", address: { type: "memory_store", name: "other" } }],
+    });
+    expect(readFileSync(path, "utf8")).toBe(source);
+    expect(readFileSync(join(environment.directory, "existing.md"), "utf8")).toBe(
+      "./missing-second-file.md",
+    );
+    expect(readdirSync(environment.directory).sort()).toEqual([
+      "agents.yaml",
+      "config.json",
+      "existing.md",
+      "new.md",
+    ]);
+  });
   test("Store create defaults to a preview, then --yes writes YAML and creates only that store", async () => {
     const { origin, received } = await gateway({
       id: "memstore_created",
