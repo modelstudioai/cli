@@ -11,18 +11,14 @@ export const PACKAGES = [
   { key: "cli", dir: "packages/cli", name: "bailian-cli" },
 ];
 
-// knowledge-studio-cli shares the same library deps as bailian-cli.
-// Published via publish.yml with package=knowledge-studio-cli (passes --knowledge flag).
 export const KSCLI_PACKAGE = { key: "kscli", dir: "packages/kscli", name: "knowledge-studio-cli" };
-export const ALL_PACKAGES = [...PACKAGES, KSCLI_PACKAGE];
+export const DSH_PACKAGES = [
+  { key: "kb-dsh", dir: "packages/bailian-kb-dsh", name: "bailian-kb-dsh" },
+  { key: "memo-dsh", dir: "packages/bailian-memo-dsh", name: "bailian-memo-dsh" },
+];
 
-// Deliberately absent from every list above: packages/bailian-kb-dsh (bailian-kb-dsh).
-// It is a dsh plugin — a downstream host adapter, not part of the bl release closure:
-// its version tracks the dsh rc cadence instead of the locked core/runtime/commands/cli/kscli
-// version, and it ships through publish.yml's separate `package=bailian-kb-dsh`
-// job (tools/release/publish-kb-dsh.mjs). So it is exempt from
-// loadAndValidatePackages' version-consistency check and from packAndScan. Not an oversight;
-// see docs/agents/dsh-plugin.md before adding it here.
+// All seven packages share one version and one release pipeline.
+export const ALL_PACKAGES = [...PACKAGES, KSCLI_PACKAGE, ...DSH_PACKAGES];
 
 export function readJson(path) {
   return JSON.parse(readFileSync(path, "utf-8"));

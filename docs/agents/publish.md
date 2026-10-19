@@ -9,7 +9,7 @@
 
 发版**必须**通过 CI 完成，不要本地手动 `pnpm publish`。
 
-入口：GitHub Actions → **Publish** workflow（`.github/workflows/publish.yml`）→ Run workflow。
+入口：GitHub Actions → **Publish** workflow（`.github/workflows/publish.yml`）→ Run workflow。只选择 `mode` 和 channel 模式下的 `channel`；统一发布 bailian-cli、knowledge-studio-cli 及两个 dsh 插件，没有 package 选择或单独补发入口。
 
 **编排关系（重要）：**
 
@@ -18,10 +18,10 @@ publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
         ├─ binary 先走（lib/binary-release
         │     → binary-build → gh-release
         │     → oss-direct-upload → FC release 通道）
-        └─ OSS 成功后再 npm（pnpm publish）
+        └─ OSS 成功后再 npm（core/runtime/commands/cli/kscli/kb 插件/memo 插件）
 ```
 
-bailian-cli 的二进制（GitHub Release + OSS）在 npm 之前。OSS 上传受网络波动可能失败；若 npm 先成功，会出现 latest 已发出但 CDN 没有对应二进制。stable 仍要先推 `v<version>` tag，因为 GitHub Release 首次创建带 `--verify-tag`。`knowledge-studio-cli` / `--skip-binary` 没有二进制，仍只发 npm。
+bailian-cli 的二进制（GitHub Release + OSS）在 npm 之前。OSS 上传受网络波动可能失败；若 npm 先成功，会出现 latest 已发出但 CDN 没有对应二进制。stable 仍要先推 `v<version>` tag，因为 GitHub Release 首次创建带 `--verify-tag`。kscli 随 CLI 发布，没有独立二进制；底层 `--skip-binary` 仍可跳过 bl 二进制。
 
 `tools/release/lib/binary-release.mjs` 等是实现，一般不要单独当发版入口（调试可用）。
 
@@ -47,9 +47,9 @@ bailian-cli 的二进制（GitHub Release + OSS）在 npm 之前。OSS 上传受
 改动 FC 侧逻辑（验签策略 / 对账 / manifest 守卫）去 bailian-docs-llm-wiki-crawl 仓库；
 本仓库只维护 client（`tools/release/lib/oss-direct-upload.mjs`）。
 
-### bailian-kb-dsh（独立版本、npm-only）
+### dsh 插件（统一版本与发布）
 
-同一个 Publish 入口，`package=bailian-kb-dsh`。它走单独的 `tools/release/publish-kb-dsh.mjs`，不复用 `publish-stable.mjs` / `publish-channel.mjs`（版本独立、无 binary、无 OSS CDN）。详见 [dsh-plugin.md](dsh-plugin.md#发布)。
+两个插件加入 `ALL_PACKAGES`，与 CLI、kscli 一起升版、校验、pack、扫描和发布 npm。它们保留自己的构建命令，但不再有独立版本、发布脚本或插件专属跳过逻辑；stable 共用 `v<version>` tag。详见 [dsh-plugin.md](dsh-plugin.md#发布)。
 
 两种模式：
 
@@ -73,14 +73,14 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 
 1. 在 GitHub 触发 Publish workflow，mode 选 `channel`，channel 填 npm dist-tag 名：
    - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`。**先发二进制（zip+tar.gz 上齐）再发静态仓 `install.sh`**，避免新脚本去拉还不存在的 `.tar.gz`。
-   - **`knowledge-studio-cli`**：仅 npm（自动跳过 binary，不碰 `sync-release.json`）
+   - **`knowledge-studio-cli` 和两个 dsh 插件**：随上述流程发布 npm，七包使用同一个临时 beta 版本。
 2. CI 自动：生成 `0.0.0-beta-<sha7>-<YYYYMMDDHHMM>`（UTC 到分钟；同 commit 同分钟重跑会覆盖同号）→ 临时 bump → 自检 →（bailian-cli）**Bun 编二进制 + GH prerelease + 覆盖 `sync-release.json`** → **npm 发到 dist-tag** → 还原 package.json
 3. 对应脚本：`tools/release/publish-channel.mjs`
 
 ### stable 发布
 
-1. 确保当前 release tooling 覆盖的包(`tools/release/lib/packages.mjs`)已升到目标版本且一致;当前基础集合为 `packages/core` / `packages/runtime` / `packages/commands` / `packages/cli`，`knowledge-studio-cli` 发布会额外包含 `packages/kscli`
-2. 在 GitHub 触发 Publish workflow，package 选目标包集合，mode 选 `stable`
+1. 确保当前 release tooling 覆盖的包(`tools/release/lib/packages.mjs`)已升到目标版本且一致;CLI 发布集合固定为 `packages/core` / `packages/runtime` / `packages/commands` / `packages/cli` / `packages/kscli` / `packages/bailian-kb-dsh` / `packages/bailian-memo-dsh`
+2. 在 GitHub 触发 Publish workflow，mode 选 `stable`
 3. 需要 production environment 审批人批准
 4. CI 自动：自检 → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release**（每平台 `.zip`，darwin/linux 额外 `.tar.gz`）→（bailian-cli）维护 CDN **`manifest.json`**（unix 资产含 `tar` / `tarSha256`，`file` 仍为 zip）→ **npm 发到 latest** → 完成
 5. 如果所选发布集合的当前版本已全部存在于 npm，stable 发布会失败并提示先升级版本号；如果只有部分包已发布，CI 会继续补发缺失包
@@ -96,7 +96,7 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 | README 同步                      | `packages/cli/README.md` 与根 README 一致                                                                       |
 | 版本号一致                       | `tools/release/lib/packages.mjs` 中待发布包集合 version 相同                                                    |
 | `workspace:*` 替换               | 发布包间 workspace 依赖解析为真实版本号                                                                         |
-| 构建                             | 基础发布构建 core/runtime/commands 依赖和 cli;`--knowledge` 额外构建 `knowledge-studio-cli`                     |
+| 构建                             | 统一构建 core/runtime/commands 依赖、cli、kscli 和两个 dsh 插件                                                 |
 | 生成资产                         | 重建各 `skills/<skill>/reference/`;非 channel 模式还同步各 `skills/*/SKILL.md` version（含 `bailian-protocol`） |
 | pnpm pack                        | 打 tarball                                                                                                      |
 | publint                          | 包元数据校验                                                                                                    |
@@ -106,7 +106,6 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 
 ```sh
 node tools/release/publish-channel.mjs --channel test --dry-run
-node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 ```
 
 ## CI 基础设施
@@ -136,8 +135,8 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 ### 版本号目标（仅 stable）
 
 - [ ] `tools/release/lib/packages.mjs` 覆盖的目标包集合已升到目标版本且一致
-- [ ] 源码包 `packages/core/package.json`、`packages/runtime/package.json`、`packages/commands/package.json`、`packages/cli/package.json`、`packages/kscli/package.json` 是否需要同步升版已人工确认;当前仓库通常保持五包版本一致
-- [ ] `tools/release/lib/packages.mjs` 的 `PACKAGES` 覆盖基础发布包;`KSCLI_PACKAGE` / `ALL_PACKAGES` 覆盖 `knowledge-studio-cli` 发布路径;如果新增发布包,同步 `publish-stable.mjs` / `publish-channel.mjs` 的 bump、publish、idempotency 逻辑和 `.github/workflows/publish.yml` 的 package 选项
+- [ ] 源码包 `packages/core/package.json`、`packages/runtime/package.json`、`packages/commands/package.json`、`packages/cli/package.json`、`packages/kscli/package.json`、`packages/bailian-kb-dsh/package.json`、`packages/bailian-memo-dsh/package.json` 已一起升版，七包版本一致
+- [ ] `tools/release/lib/packages.mjs` 的 `PACKAGES` 覆盖基础发布包;`ALL_PACKAGES` 是 stable/channel 固定发布集合;如果新增发布包,同步 `publish-stable.mjs` / `publish-channel.mjs` 的 bump、publish、idempotency 逻辑和 `.github/workflows/publish.yml` 的发布步骤
 - [ ] pre-release 格式正确（`1.0.0-beta.0` / `1.0.0-rc.1`，**不要直接用 `1.0.0` 当 beta**）
 
 ### CHANGELOG（仅 stable）
@@ -161,19 +160,19 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 ## 常见漏点（基于历史踩坑）
 
-| 漏点                                                                | 后果                                                                               |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 只升部分包,漏升 runtime/commands/kscli                              | 当前 check.mjs 按所选发布集合校验,但未选择 `knowledge-studio-cli` 时不会覆盖 kscli |
-| 新增发布包但没加 `tools/release/lib/packages.mjs`                   | CI 不会 bump/publish/校验该包                                                      |
-| cli 升版号但 core 没升                                              | check.mjs 会拦下                                                                   |
-| 发版漏更 CHANGELOG，或分类写成规范外的 `优化`/`Improved`            | 用户看不到本次变更，分类与历史不一致                                               |
-| `1.0.0` 当 beta 直接发                                              | 占了 `latest` tag，所有用户被强升，撤回成本极高                                    |
-| README 写的 bin 名实际 `package.json.bin` 没注册                    | 用户复制命令报 `command not found`                                                 |
-| Node 徽章与 `cli/package.json.engines` 不一致（当前应为 `>=18.17`） | 用户在声明外的 Node 上 `npm i` 被 engine 警告或直接失败                            |
-| npm Trusted Publisher 的 workflow filename 改了没同步               | OIDC 匹配不上，publish 报 404                                                      |
-| CI 用 Node 22（npm 10）跑 publish                                   | npm 10 不支持 OIDC token 交换，publish 报 404                                      |
-| stable 发布前没有升级版本号                                         | 所选发布集合的版本已全部存在于 npm，CI 明确报错并要求先升级版本号                  |
-| channel job 缺少 `contents: write`                                  | `gh release create` 失败                                                           |
-| darwin 二进制编完后没有 ad-hoc 重签                                 | Apple Silicon / macOS 27 对失效的 linker 签名直接 SIGKILL（`Killed: 9`）           |
-| npm 先于二进制 / OSS 成功                                           | latest 已发出，CDN 上没有对应 zip/tar.gz；OSS 网络失败时无法回滚 npm               |
-| stable 未先推 tag 就建 Release                                      | `--verify-tag` 失败                                                                |
+| 漏点                                                                | 后果                                                                                       |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 只升部分包,漏升 runtime/commands/kscli                              | 当前 check.mjs 按所选发布集合校验,但现在 stable/channel 均固定覆盖 kscli，七包必须一起升版 |
+| 新增发布包但没加 `tools/release/lib/packages.mjs`                   | CI 不会 bump/publish/校验该包                                                              |
+| cli 升版号但 core 没升                                              | check.mjs 会拦下                                                                           |
+| 发版漏更 CHANGELOG，或分类写成规范外的 `优化`/`Improved`            | 用户看不到本次变更，分类与历史不一致                                                       |
+| `1.0.0` 当 beta 直接发                                              | 占了 `latest` tag，所有用户被强升，撤回成本极高                                            |
+| README 写的 bin 名实际 `package.json.bin` 没注册                    | 用户复制命令报 `command not found`                                                         |
+| Node 徽章与 `cli/package.json.engines` 不一致（当前应为 `>=18.17`） | 用户在声明外的 Node 上 `npm i` 被 engine 警告或直接失败                                    |
+| npm Trusted Publisher 的 workflow filename 改了没同步               | OIDC 匹配不上，publish 报 404                                                              |
+| CI 用 Node 22（npm 10）跑 publish                                   | npm 10 不支持 OIDC token 交换，publish 报 404                                              |
+| stable 发布前没有升级版本号                                         | 所选发布集合的版本已全部存在于 npm，CI 明确报错并要求先升级版本号                          |
+| channel job 缺少 `contents: write`                                  | `gh release create` 失败                                                                   |
+| darwin 二进制编完后没有 ad-hoc 重签                                 | Apple Silicon / macOS 27 对失效的 linker 签名直接 SIGKILL（`Killed: 9`）                   |
+| npm 先于二进制 / OSS 成功                                           | latest 已发出，CDN 上没有对应 zip/tar.gz；OSS 网络失败时无法回滚 npm                       |
+| stable 未先推 tag 就建 Release                                      | `--verify-tag` 失败                                                                        |

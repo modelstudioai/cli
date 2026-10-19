@@ -11,8 +11,8 @@ monorepo 现在按"纯逻辑 → 运行时框架 → 命令库 → 产品入口"
 - `packages/commands` — `bailian-cli-commands`,可复用命令实现库,只导出 command,不决定产品路径
 - `packages/cli` — `bailian-cli`,完整 `bl` 产品入口;`src/commands.ts` 组装 `bl` 暴露的命令路径
 - `packages/kscli` — `knowledge-studio-cli`,Knowledge Studio 专用入口;`src/main.ts` 复用 commands 并重映射为 `kscli` 路径
-- `packages/bailian-kb-dsh` — `bailian-kb-dsh`,**下游宿主适配层**(依赖方向朝外):百炼知识库的 DeepSeek Harness (dsh) 插件,消费 `bl` CLI 与知识库 API,不在上面这条分层链上;版本、构建、发布都独立,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)
-- `packages/bailian-memo-dsh` — `bailian-memo-dsh`,**下游宿主适配层**:百炼个人记忆 dsh 插件(dsh 0.2.1 Volatile Config / SettingsForms);身份在 `~/.bailian/personal-memory/config.json`;版本、构建、发布独立,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md) 与 [docs/memo-dsh/](docs/memo-dsh/)
+- `packages/bailian-kb-dsh` — `bailian-kb-dsh`,**下游宿主适配层**(依赖方向朝外):百炼知识库的 DeepSeek Harness (dsh) 插件,消费 `bl` CLI 与知识库 API,不在上面这条分层链上;构建独立，版本与发布跟随 bailian-cli,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)
+- `packages/bailian-memo-dsh` — `bailian-memo-dsh`,**下游宿主适配层**:百炼个人记忆 dsh 插件(dsh 0.2.1 Volatile Config / SettingsForms);身份在 `~/.bailian/personal-memory/config.json`;构建独立，版本与发布跟随 bailian-cli,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md) 与 [docs/memo-dsh/](docs/memo-dsh/)
 
 ### 关键文件
 
@@ -86,9 +86,9 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 
 ### 1. 发布包版本号同步
 
-源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/kscli`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
+源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/kscli`、`packages/bailian-kb-dsh`、`packages/bailian-memo-dsh`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
 
-**例外**: `packages/bailian-kb-dsh` / `packages/bailian-memo-dsh` 不参与这个锁步(各自独立 `0.1.x`,跟随 dsh 节奏),也不在 release 白名单里;它们走 `publish.yml` 里 `package=bailian-*-dsh` 的独立 job(`tools/release/publish-dsh-plugin.mjs`)。
+两个 dsh 插件也纳入七包锁步版本和统一发布，仅构建方式保留各自的 `tsc` / `tsdown`。
 
 ### 2. 分层边界
 

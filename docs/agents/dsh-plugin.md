@@ -12,12 +12,12 @@
 
 它们是**下游宿主适配层**：依赖方向朝外（消费百炼 API / 本地身份文件，装进 DeepSeek Harness 运行），不是 `core → runtime → commands → 产品入口` 这条链上的一环。
 
-| 项       | dsh 插件包                                        | 其他包                               | 原因                                                                            |
-| -------- | ------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
-| 版本     | 各自独立（kb `0.1.x`，memo `0.1.x`）              | core/runtime/commands/cli/kscli 锁步 | 跟随 dsh 节奏，与 `bl` 发版无关；不在 `tools/release/lib/packages.mjs` 白名单里 |
-| 构建     | `tsc` + `tsdown`                                  | `vp pack`                            | 浏览器半需要 `__ModuleLoader__` banner/footer 与 lightningcss CSS Modules 内联  |
-| 发布     | `publish.yml` 选包名，走 `publish-dsh-plugin.mjs` | `publish-stable/channel.mjs`         | 不在 `bailian-cli` 依赖闭包内                                                   |
-| tsconfig | 三个                                              | 一个                                 | 见下                                                                            |
+| 项       | dsh 插件包                 | 其他包    | 原因                                                                           |
+| -------- | -------------------------- | --------- | ------------------------------------------------------------------------------ |
+| 版本     | 与 bailian-cli 相同        | 七包锁步  | 同一次发布使用相同版本                                                         |
+| 构建     | `tsc` + `tsdown`           | `vp pack` | 浏览器半需要 `__ModuleLoader__` banner/footer 与 lightningcss CSS Modules 内联 |
+| 发布     | publish-stable/channel.mjs | 同左      | 共用校验、npm 发布与 git tag                                                   |
+| tsconfig | 三个                       | 一个      | 见下                                                                           |
 
 当前包：
 
@@ -110,23 +110,17 @@ dsh --profile dev --dump-config
 
 ## 发布
 
-入口：Actions → **Publish** → `package=bailian-kb-dsh|bailian-memo-dsh` + `mode=stable|channel`。
+入口：Actions → **Publish** → `mode=stable|channel`。两个插件与 CLI、kscli 共用 `publish-stable.mjs` / `publish-channel.mjs`，不提供独立发布入口。
 
-共享脚本：`tools/release/publish-dsh-plugin.mjs`（`publish-kb-dsh.mjs` / `publish-memo-dsh.mjs` 为薄包装）。
-
-|           | stable                               | channel                                         |
-| --------- | ------------------------------------ | ----------------------------------------------- |
-| 版本      | `package.json` 当前值（先手动 bump） | 临时 `0.0.0-beta-<sha>-<stamp>`，`finally` 还原 |
-| npm tag   | `latest`                             | 传入的 `channel`                                |
-| preflight | 工作区干净 + `main`                  | 无                                              |
-| git tag   | `<package>-v<version>`               | 不打 tag                                        |
-| 审批      | `environment: production`            | 无                                              |
+- 七个包的 package.json 版本必须一致，升版时一起修改；统一发布前检查，任何版本不一致都会失败。
+- channel 使用同一次生成的临时 beta 版本，完成或失败后统一还原。
+- 插件保留 `tsc` / `tsdown` 构建，由 `check.mjs` 构建并 pack / 扫描，随后进入统一 npm 发布循环。
+- stable 使用统一 `v<version>` tag，不再创建插件专属 tag；审批及发布顺序见 [publish.md](publish.md)。
 
 本地 dry-run：
 
 ```sh
-node tools/release/publish-dsh-plugin.mjs --package bailian-memo-dsh --dry-run
-node tools/release/publish-kb-dsh.mjs --dry-run
+node tools/release/publish-channel.mjs --channel test --dry-run
 ```
 
 ### 首发前的 npm 侧前置（仓外，一次性）
