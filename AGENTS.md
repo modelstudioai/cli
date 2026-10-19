@@ -62,6 +62,7 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 | 命令增删改        | 增加 / 删除 / 重命名 `bl xxx` 或入口命令路径     | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)       |
 | E2E 测试维护      | 新增/改命令或 e2e 用例、补 help/缺参/dry-run     | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)                 |
 | 批量压测          | 改/跑多能力并发压测、`test:stress`、fixtures     | [docs/agents/stress-batch-tests.md](docs/agents/stress-batch-tests.md)       |
+| 输出契约          | 新增输出、quiet/verbose、JSON 错误或流式输出     | [docs/agents/output-contract.md](docs/agents/output-contract.md)             |
 | 选项变更          | 给已有命令加 `--flag` 或改默认值                 | [docs/agents/command-flag-change.md](docs/agents/command-flag-change.md)     |
 | 模型上下架        | 增加新模型 / 改默认模型 / 废弃旧模型             | [docs/agents/model-add-remove.md](docs/agents/model-add-remove.md)           |
 | Skill 文案 / 路由 | 改 SKILL 路由、安装约定、hand-off、hub/领域边界  | [docs/agents/skill-change.md](docs/agents/skill-change.md)                   |

@@ -427,7 +427,7 @@ test("default*Model / outputDir:仅 file 源", () => {
   expect(resolve({}).defaultTextModel).toBeUndefined();
 });
 
-test("quiet/dryRun:仅 flag 源,直通", () => {
+test("quiet/dryRun:flag 开启、缺省关闭", () => {
   const on = resolve({
     flags: { quiet: true, dryRun: true },
   });
@@ -440,4 +440,21 @@ test("quiet/dryRun:仅 flag 源,直通", () => {
     quiet: false,
     dryRun: false,
   });
+});
+
+test.each([
+  { envValue: undefined, expected: false },
+  { envValue: "0", expected: false },
+  { envValue: "1", expected: true },
+  { envValue: "true", expected: false },
+  { envValue: "", expected: false },
+])("DASHSCOPE_QUIET=$envValue resolves to $expected", ({ envValue, expected }) => {
+  const env: Record<string, string> = envValue === undefined ? {} : { DASHSCOPE_QUIET: envValue };
+  expect(resolve({ env }).quiet).toBe(expected);
+  // Switches absent from argv are materialized as false by parseFlags.
+  expect(resolve({ flags: { quiet: false }, env }).quiet).toBe(expected);
+});
+
+test("explicit --quiet overrides DASHSCOPE_QUIET=0", () => {
+  expect(resolve({ flags: { quiet: true }, env: { DASHSCOPE_QUIET: "0" } }).quiet).toBe(true);
 });

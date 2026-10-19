@@ -1,5 +1,6 @@
 import type {
   AnyCommand,
+  CommandOutput,
   ApiKeyCredential,
   AuthStore,
   ConfigStore,
@@ -42,6 +43,7 @@ import { ConfirmationRequiredError, confirmationHint } from "./confirm.ts";
 export interface RunContext {
   /** 静态产品身份(binName/version/npmPackage/clientName)。 */
   readonly identity: Identity;
+  readonly output: CommandOutput;
   /** The matched command path, e.g. ["speech","recognize"]. */
   readonly path: string[];
   readonly command: AnyCommand;

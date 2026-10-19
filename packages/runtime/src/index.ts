@@ -102,3 +102,6 @@ export { initPipelineSteps } from "./pipeline/init.ts";
 export { executePipeline, streamPipelineEvents } from "./pipeline/executor.ts";
 export { collectPipelineIssues, collectPipelineHints } from "./pipeline/validation.ts";
 export type { PipelineDefinition, PipelineLifecycleEvent } from "./pipeline/types.ts";
+
+export { createOutputReporter } from "./output/reporter.ts";
+export type { OutputReporter, OutputReporterOptions, OutputWriter } from "./output/reporter.ts";

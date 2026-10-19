@@ -1,3 +1,4 @@
+import { createOutputReporter } from "../src/output/reporter.ts";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,6 +55,7 @@ function makeContext(
       npmPackage: "bailian-cli",
       clientName: "bailian-cli-test",
     },
+    output: createOutputReporter({ settings }).output,
     path,
     command,
     flags: {},

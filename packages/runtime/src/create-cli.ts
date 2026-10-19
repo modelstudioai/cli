@@ -33,6 +33,7 @@ import {
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
+import { createOutputReporter } from "./output/reporter.ts";
 import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
 import type { CommandPackPolicy } from "./command-packs/types.ts";
@@ -210,6 +211,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           const settings = buildSettings(sources);
           const ctx: RunContext = {
             identity,
+            output: createOutputReporter({ settings, localize, binName: identity.binName }).output,
             path: res.path,
             command: res.command,
             flags: ownFlags,

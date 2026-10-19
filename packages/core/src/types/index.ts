@@ -86,3 +86,10 @@ export type {
 } from "./api.ts";
 export type * from "./knowledge-admin.ts";
 export type * from "./security.ts";
+
+export type {
+  CommandOutput,
+  OutputResultOptions,
+  OutputDiagnostic,
+  OutputMessage,
+} from "./output.ts";

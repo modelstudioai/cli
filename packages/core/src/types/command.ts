@@ -1,3 +1,4 @@
+import type { CommandOutput } from "./output.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import type { ConfigStore } from "../config/store.ts";
 import type { AuthStore } from "../auth/store.ts";
@@ -238,6 +239,8 @@ export function credentialFlagDefs(cmd: { auth: AuthRequirement }): FlagsDef {
 export interface CommandContext<F extends FlagsDef = FlagsDef> {
   /** 静态产品身份(binName/version/npmPackage/clientName)。 */
   identity: Identity;
+  /** Unified per-invocation result and diagnostic output. */
+  output: CommandOutput;
   /**
    * Locale selector for user-facing output: picks the `en-US` / `zh-CN` variant
    * of a {@link LocalizedText} per the resolved language. Supplied by the runtime

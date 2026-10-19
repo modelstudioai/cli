@@ -285,7 +285,7 @@ export function buildSettings(s: ResolutionSources): Settings {
     consoleSite: (flags.consoleSite as Settings["consoleSite"]) || file.console_site || undefined,
     consoleSwitchAgent: flags.consoleSwitchAgent || file.console_switch_agent || undefined,
     verbose: flags.verbose || env.DASHSCOPE_VERBOSE === "1",
-    quiet: flags.quiet || false,
+    quiet: flags.quiet || env.DASHSCOPE_QUIET === "1",
     dryRun: flags.dryRun || false,
     telemetry: env.DO_NOT_TRACK === "1" ? false : (file.telemetry ?? true),
   };
