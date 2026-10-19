@@ -15,6 +15,15 @@
 - **Agent 资源绑定** —— 创建 Agent 时可通过 `--environment`、`--vault` 和 `--mcp` 绑定默认 Environment、Vault 及 MCP 市场服务。
 - **运行时环境变量** —— 创建 Session、运行 Session 和创建 Deployment 时可重复传入 `--environment_variables KEY=VALUE`。
 
+## [2.3.3] - 2026-10-19
+
+### 修复
+
+- **二进制 CLI 请求** —— 修复二进制 CLI 的模型 API 请求失败问题，包括语音和视频生成。
+- **请求超时** —— 修复核心 API 长请求在配置的 `--timeout` 之前提前超时的问题；补充流式响应空闲保护，并在流结束时释放连接。
+- **Windows 控制台登录** —— 修复 Windows 打开浏览器时控制台登录链接的查询参数丢失问题。
+- **登录提示** —— 控制台登录后或执行 `bl auth status` 时，若未配置模型 API Key，会明确提示模型调用仍需配置 Key，并给出配置命令。
+
 ## [2.3.2] - 2026-10-16
 
 ### 修复
