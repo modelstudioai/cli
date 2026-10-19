@@ -79,4 +79,11 @@ describe("buildOpenInvocation", () => {
     expect(invocation.windowsVerbatimArguments).toBe(true);
     expect(command.slice(1, -1)).toBe(`start "" "${url}"`);
   });
+
+  it("leaves percent-encoded characters unchanged for cmd /c", () => {
+    const url = "https://example.com/a%20b";
+    const command = buildOpenInvocation(url, "win32").args.at(-1) ?? "";
+    expect(command).toContain("%20");
+    expect(command).not.toContain("%%");
+  });
 });

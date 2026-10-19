@@ -14,6 +14,18 @@ function commandExecutedByCmd(args: string[]): string {
   return remainder.slice(1, -1);
 }
 
+/**
+ * Target `start` receives after cmd quote parsing: one outer quote pair is
+ * removed, and each `""` inside it is one literal `"`. `%` is not rewritten.
+ */
+function targetReceivedByStart(executed: string): string {
+  const prefix = 'start "" ';
+  if (!executed.startsWith(prefix)) throw new Error("not a start command");
+  const quoted = executed.slice(prefix.length);
+  if (!quoted.startsWith('"') || !quoted.endsWith('"')) throw new Error("target not quoted");
+  return quoted.slice(1, -1).replaceAll('""', '"');
+}
+
 /** Split on `&` that is not inside double quotes, the way `cmd.exe` does. */
 function splitUnquotedAmpersand(command: string): string[] {
   const parts: string[] = [];
@@ -45,13 +57,15 @@ test("win32 打开带 & 的登录 URL 时，needapikey 留在同一条 start 命
   const executed = commandExecutedByCmd(invocation.args);
   expect(executed).toBe(`start "" "${LOGIN_URL}"`);
   expect(splitUnquotedAmpersand(executed)).toEqual([executed]);
-  expect(executed).toContain("&needapikey=true");
+  expect(targetReceivedByStart(executed)).toBe(LOGIN_URL);
 });
 
-test("win32 转义 cmd 会展开的 % 和引号", () => {
-  const invocation = buildOpenInvocation('https://example.com/a%20b?"q"', "win32");
-  const executed = commandExecutedByCmd(invocation.args);
-  expect(executed).toBe('start "" "https://example.com/a%%20b?""q"""');
+test("win32 传给 start 的目标保持原样，% 不会被写成 %%", () => {
+  const target = 'https://example.com/a%20b?"q"&x=1';
+  const executed = commandExecutedByCmd(buildOpenInvocation(target, "win32").args);
+  expect(executed).not.toContain("%%");
+  expect(targetReceivedByStart(executed)).toBe(target);
+  expect(splitUnquotedAmpersand(executed)).toEqual([executed]);
 });
 
 test("darwin / linux 直接把目标交给系统打开命令", () => {

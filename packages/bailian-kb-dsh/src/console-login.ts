@@ -161,13 +161,14 @@ async function extractCredentials(
 }
 
 /**
- * Quote a value for `cmd.exe`. `%` is doubled because cmd expands variables even
- * inside quotes; embedded `"` becomes `""`.
+ * Quote a value for `cmd /c`. An embedded `"` is written as `""`.
+ * Do not double `%`: that substitution only happens inside batch files, and
+ * `cmd /c` would otherwise open a target that still contains `%%`.
  * Keep in sync with `buildOpenInvocation` in
  * `packages/commands/src/commands/shared/local-server.ts`.
  */
 function quoteForCmd(value: string): string {
-  return `"${value.replaceAll("%", "%%").replaceAll('"', '""')}"`;
+  return `"${value.replaceAll('"', '""')}"`;
 }
 
 /**

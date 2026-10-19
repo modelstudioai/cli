@@ -30,11 +30,15 @@ export interface OpenInvocation {
 }
 
 /**
- * Quote a value for `cmd.exe`. `%` is doubled because cmd expands variables even
- * inside quotes; embedded `"` becomes `""`.
+ * Quote a value for `cmd /c`. An embedded `"` is written as `""`, which cmd
+ * reads as one literal quote.
+ *
+ * Do not double `%`. `%%` → `%` is a batch-file rule and does not apply when
+ * Node starts `cmd /c` directly. Doubling would make `start` open a different
+ * target (`%20` would stay `%20` with two percent signs).
  */
 function quoteForCmd(value: string): string {
-  return `"${value.replaceAll("%", "%%").replaceAll('"', '""')}"`;
+  return `"${value.replaceAll('"', '""')}"`;
 }
 
 /**
