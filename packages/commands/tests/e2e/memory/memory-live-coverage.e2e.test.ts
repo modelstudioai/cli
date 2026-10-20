@@ -125,7 +125,7 @@ describe.skipIf(!isMemoryE2EReady())("memory positive scenarios (live)", () => {
   );
 
   test.each(["lite", "pro", "default"])(
-    "messages search with %s strategy enforces top-k and score",
+    "messages search with %s strategy enforces top-k and plan-specific score semantics",
     async (tier) => {
       const journey = memoryJourney();
       const content = `${journey.userId} 最喜欢的运动是游泳`;
@@ -158,13 +158,22 @@ describe.skipIf(!isMemoryE2EReady())("memory positive scenarios (live)", () => {
         ]);
         for (const node of filtered) {
           expect(typeof node.score).toBe("number");
-          expect(node.score!, `Trace: ${journey.traceFile}`).toBeGreaterThanOrEqual(threshold);
+          if (tier !== "lite") {
+            expect(node.score!, `Trace: ${journey.traceFile}`).toBeGreaterThanOrEqual(threshold);
+          }
           expect(written.map((item) => item.memory_node_id)).toContain(node.memory_node_id);
         }
         // Empty results are only evidence of filtering when baseline contains below-threshold scores.
         expect(all.every((node) => typeof node.score === "number")).toBe(true);
-        for (const node of all.filter((item) => item.score! < threshold)) {
-          expect(filtered.map((item) => item.memory_node_id)).not.toContain(node.memory_node_id);
+        if (tier === "lite") {
+          // min_score only applies to pro; lite retains the same nodes at either threshold.
+          expect(new Set(filtered.map((node) => node.memory_node_id))).toEqual(
+            new Set(all.map((node) => node.memory_node_id)),
+          );
+        } else {
+          for (const node of all.filter((item) => item.score! < threshold)) {
+            expect(filtered.map((item) => item.memory_node_id)).not.toContain(node.memory_node_id);
+          }
         }
       } finally {
         await journey.cleanup();

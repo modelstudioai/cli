@@ -16,6 +16,8 @@ export const UPDATE_ROUTES: E2eRouteExports = {
 
 export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 
+export const DECISION_ROUTES: E2eRouteExports = { decision: "decisionPredict" };
+
 export const CONFIG_ROUTES: E2eRouteExports = {
   "config show": "configShow",
   "config set": "configSet",
@@ -274,6 +276,14 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune export": "finetuneExport",
   "finetune watch": "finetuneWatch",
   "finetune capability": "finetuneCapability",
+  "finetune compress templates": "finetuneCompressTemplates",
+  "finetune compress create": "finetuneCompressCreate",
+  "finetune compress list": "finetuneCompressList",
+  "finetune compress get": "finetuneCompressGet",
+  "finetune compress watch": "finetuneCompressWatch",
+  "finetune compress logs": "finetuneCompressLogs",
+  "finetune compress cancel": "finetuneCompressCancel",
+  "finetune compress delete": "finetuneCompressDelete",
 };
 
 export const CONSOLE_FLAGS_DRY_RUN_ROUTES: E2eRouteExports = {
@@ -315,6 +325,19 @@ export const SANDBOX_ROUTES: E2eRouteExports = {
   "sandbox template update": "sandboxTemplateUpdate",
   "sandbox template build-status": "sandboxTemplateBuildStatus",
   "sandbox template delete": "sandboxTemplateDelete",
+};
+
+export const MANAGED_AGENT_WEBHOOK_ROUTES: E2eRouteExports = {
+  "managed-agent webhook create": "managedAgentWebhookCreate",
+  "managed-agent webhook list": "managedAgentWebhookList",
+  "managed-agent webhook get": "managedAgentWebhookGet",
+  "managed-agent webhook update": "managedAgentWebhookUpdate",
+  "managed-agent webhook delete": "managedAgentWebhookDelete",
+  "managed-agent webhook enable": "managedAgentWebhookEnable",
+  "managed-agent webhook disable": "managedAgentWebhookDisable",
+  "managed-agent webhook test": "managedAgentWebhookTest",
+  "managed-agent webhook reset-secret": "managedAgentWebhookResetSecret",
+  "managed-agent webhook events": "managedAgentWebhookEvents",
 };
 
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
@@ -571,4 +594,20 @@ export const JOURNEY_J5_ROUTES: E2eRouteExports = {
 
 export const KNOWLEDGE_DOC_IMPORT_ROUTES: E2eRouteExports = {
   "knowledge doc import": "knowledgeDocImport",
+};
+
+export const MANAGED_AGENT_MEMORY_ROUTES: E2eRouteExports = {
+  "managed-agent memory-store create": "managedAgentMemoryStoreCreate",
+  "managed-agent memory-store list": "managedAgentMemoryStoreList",
+  "managed-agent memory-store get": "managedAgentMemoryStoreGet",
+  "managed-agent memory-store memories create": "managedAgentMemoryCreate",
+  "managed-agent memory-store memories list": "managedAgentMemoryList",
+  "managed-agent memory-store memories get": "managedAgentMemoryGet",
+  "managed-agent memory-store memories update": "managedAgentMemoryUpdate",
+  "managed-agent memory-store memories delete": "managedAgentMemoryDelete",
+  "managed-agent memory-store versions list": "managedAgentMemoryVersionList",
+  "managed-agent memory-store versions get": "managedAgentMemoryVersionGet",
+  "managed-agent memory-store versions redact": "managedAgentMemoryVersionRedact",
+  "managed-agent session create": "managedAgentSessionCreate",
+  "managed-agent session run": "managedAgentSessionRun",
 };

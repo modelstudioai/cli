@@ -200,3 +200,128 @@ export interface GetFineTuneResponse {
   output?: FineTuneJob;
   data?: FineTuneJob;
 }
+
+// ---- Model Compression (DashScope /api/v1/fine-tunes/compress) ----
+
+/** A tunable hyper-parameter declared by a compression template. */
+export interface CompressHyperParameter {
+  name?: string;
+  /** `number` (data_range / step) or `string` (support_values). */
+  type?: string;
+  display_name?: string;
+  description?: string;
+  defaultValue?: string;
+  recommend_value?: string;
+  required?: boolean;
+  support_values?: string[];
+  data_range?: string[];
+  step?: number;
+  [k: string]: unknown;
+}
+
+/** A compression template bound to a quantizable model. */
+export interface CompressTemplate {
+  template_id?: string;
+  template_name?: string;
+  description?: string;
+  /** Currently always `quantization`. */
+  compress_type?: string;
+  hyper_parameters?: CompressHyperParameter[];
+  [k: string]: unknown;
+}
+
+/** A quantizable custom model and the templates it supports. */
+export interface CompressModel {
+  model?: string;
+  model_name?: string;
+  base_model?: string;
+  templates?: CompressTemplate[];
+  [k: string]: unknown;
+}
+
+/** GET /api/v1/fine-tunes/compress/templates response. */
+export interface ListCompressTemplatesResponse {
+  request_id?: string;
+  output?: {
+    base_models?: string[];
+    custom_models?: CompressModel[];
+    [k: string]: unknown;
+  };
+}
+
+/** POST /api/v1/fine-tunes/compress/jobs request body. */
+export interface CreateCompressJobRequest {
+  /** Source custom (full-parameter fine-tuned) model ID. */
+  model: string;
+  template_id: string;
+  job_name?: string;
+  job_description?: string;
+  /** Key-value overrides; only the keys to override. */
+  hyper_parameters?: Record<string, unknown>;
+  /** Calibration dataset file IDs; only effective when `calib_input=true`. */
+  custom_calibration_file_ids?: string[];
+  /** Output model name suffix (≤ 8 chars, lowercase letters and digits). */
+  output_model_suffix?: string;
+}
+
+/** A compression job record as returned by the platform. */
+export interface CompressJob {
+  job_id?: string;
+  job_name?: string;
+  job_description?: string;
+  /** PENDING | QUEUING | RUNNING | CANCELING | SUCCEEDED | FAILED | CANCELED */
+  status?: string;
+  model?: string;
+  base_model?: string;
+  template_id?: string;
+  template_name?: string;
+  template_description?: string;
+  training_type?: string;
+  compress_type?: string;
+  hyper_parameters?: Record<string, unknown>;
+  custom_calibration_file_ids?: string[];
+  /** Quantized output model ID (only set on SUCCEEDED). */
+  quantized_output?: string | null;
+  create_time?: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  error?: { code?: string; message?: string; [k: string]: unknown } | null;
+  group?: string;
+  /** GPU seconds; present on SUCCEEDED / CANCELED. */
+  usage?: number;
+  [k: string]: unknown;
+}
+
+/** POST /api/v1/fine-tunes/compress/jobs and GET /jobs/{job_id} response. */
+export interface CompressJobResponse {
+  request_id?: string;
+  output?: CompressJob;
+}
+
+/** GET /api/v1/fine-tunes/compress/jobs response. */
+export interface ListCompressJobsResponse {
+  request_id?: string;
+  output?: {
+    total?: number;
+    page_no?: number;
+    page_size?: number;
+    jobs?: CompressJob[];
+    [k: string]: unknown;
+  };
+}
+
+/** GET /api/v1/fine-tunes/compress/jobs/{job_id}/logs response. */
+export interface GetCompressJobLogsResponse {
+  request_id?: string;
+  output?: {
+    total?: number;
+    logs?: string[];
+    [k: string]: unknown;
+  };
+}
+
+/** POST /jobs/{job_id}/cancel and DELETE /jobs/{job_id} response. */
+export interface CompressJobActionResponse {
+  request_id?: string;
+  output?: { status?: string; [k: string]: unknown };
+}

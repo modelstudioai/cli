@@ -12,19 +12,19 @@
 
 它们是**下游宿主适配层**：依赖方向朝外（消费百炼 API / 本地身份文件，装进 DeepSeek Harness 运行），不是 `core → runtime → commands → 产品入口` 这条链上的一环。
 
-| 项       | dsh 插件包                                        | 其他包                               | 原因                                                                            |
-| -------- | ------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
-| 版本     | 各自独立（kb `0.1.x`，memo `0.1.x`）              | core/runtime/commands/cli/kscli 锁步 | 跟随 dsh 节奏，与 `bl` 发版无关；不在 `tools/release/lib/packages.mjs` 白名单里 |
-| 构建     | `tsc` + `tsdown`                                  | `vp pack`                            | 浏览器半需要 `__ModuleLoader__` banner/footer 与 lightningcss CSS Modules 内联  |
-| 发布     | `publish.yml` 选包名，走 `publish-dsh-plugin.mjs` | `publish-stable/channel.mjs`         | 不在 `bailian-cli` 依赖闭包内                                                   |
-| tsconfig | 三个                                              | 一个                                 | 见下                                                                            |
+| 项       | dsh 插件包                 | 其他包    | 原因                                                                           |
+| -------- | -------------------------- | --------- | ------------------------------------------------------------------------------ |
+| 版本     | 与 bailian-cli 相同        | 七包锁步  | 同一次发布使用相同版本                                                         |
+| 构建     | `tsc` + `tsdown`           | `vp pack` | 浏览器半需要 `__ModuleLoader__` banner/footer 与 lightningcss CSS Modules 内联 |
+| 发布     | publish-stable/channel.mjs | 同左      | 共用校验、npm 发布与 git tag                                                   |
+| tsconfig | 三个                       | 一个      | 见下                                                                           |
 
 当前包：
 
-| 包                 | 职责                                       | 目标 dsh                                  | 设计文档                       |
-| ------------------ | ------------------------------------------ | ----------------------------------------- | ------------------------------ |
-| `bailian-kb-dsh`   | 知识库 `kb_search` / `kb_chat` + skill     | **0.2.1** Volatile Config + SettingsForms | [docs/kb-dsh/](../kb-dsh/)     |
-| `bailian-memo-dsh` | 个人记忆自动召回 / 静默筛选 / 工具与设置页 | **0.2.1** Volatile Config + SettingsForms | [docs/memo-dsh/](../memo-dsh/) |
+| 包                 | 职责                                       | 目标 dsh                                  | 用户文档                                                     |
+| ------------------ | ------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------ |
+| `bailian-kb-dsh`   | 知识库 `kb_search` / `kb_chat` + skill     | **0.2.1** Volatile Config + SettingsForms | [README.zh.md](../../packages/bailian-kb-dsh/README.zh.md)   |
+| `bailian-memo-dsh` | 个人记忆自动召回 / 静默筛选 / 工具与设置页 | **0.2.1** Volatile Config + SettingsForms | [README.zh.md](../../packages/bailian-memo-dsh/README.zh.md) |
 
 ## tsconfig 三件套（改动前先读）
 
@@ -83,7 +83,7 @@
 ### E. 文档
 
 - [ ] 用户可见行为变了 → `README.md` 与 `README.zh.md` 一起改
-- [ ] 设计/门槛写进 `docs/<插件短名>/`，不要回流 README
+- [ ] 维护约定留在本文；不再另建 `docs/kb-dsh`、`docs/memo-dsh` 一类内部设计目录
 - [ ] 包根保留 `LICENSE`
 
 ### F. 依赖与测试
@@ -110,23 +110,17 @@ dsh --profile dev --dump-config
 
 ## 发布
 
-入口：Actions → **Publish** → `package=bailian-kb-dsh|bailian-memo-dsh` + `mode=stable|channel`。
+入口：Actions → **Publish** → `mode=stable|channel`。两个插件与 CLI、kscli 共用 `publish-stable.mjs` / `publish-channel.mjs`，不提供独立发布入口。
 
-共享脚本：`tools/release/publish-dsh-plugin.mjs`（`publish-kb-dsh.mjs` / `publish-memo-dsh.mjs` 为薄包装）。
-
-|           | stable                               | channel                                         |
-| --------- | ------------------------------------ | ----------------------------------------------- |
-| 版本      | `package.json` 当前值（先手动 bump） | 临时 `0.0.0-beta-<sha>-<stamp>`，`finally` 还原 |
-| npm tag   | `latest`                             | 传入的 `channel`                                |
-| preflight | 工作区干净 + `main`                  | 无                                              |
-| git tag   | `<package>-v<version>`               | 不打 tag                                        |
-| 审批      | `environment: production`            | 无                                              |
+- 七个包的 package.json 版本必须一致，升版时一起修改；统一发布前检查，任何版本不一致都会失败。
+- channel 使用同一次生成的临时 beta 版本，完成或失败后统一还原。
+- 插件保留 `tsc` / `tsdown` 构建，由 `check.mjs` 构建并 pack / 扫描，随后进入统一 npm 发布循环。
+- stable 使用统一 `v<version>` tag，不再创建插件专属 tag；审批及发布顺序见 [publish.md](publish.md)。
 
 本地 dry-run：
 
 ```sh
-node tools/release/publish-dsh-plugin.mjs --package bailian-memo-dsh --dry-run
-node tools/release/publish-kb-dsh.mjs --dry-run
+node tools/release/publish-channel.mjs --channel test --dry-run
 ```
 
 ### 首发前的 npm 侧前置（仓外，一次性）
@@ -134,14 +128,14 @@ node tools/release/publish-kb-dsh.mjs --dry-run
 1. 占住包名（OIDC Trusted Publishing 无法给不存在的包首发）
 2. npm 包设置绑 Trusted Publisher：仓库 `modelstudioai/cli`、workflow `publish.yml`
 
-### memo 发布硬门槛
+### memo 发布验收范围
 
-见 [docs/memo-dsh/2026-10-08-bailian-memo-dsh-design.md](../memo-dsh/2026-10-08-bailian-memo-dsh-design.md) 第 7 节：Memory GA、画像值精确删除 live 验证、dsh 0.2.1 实机安装。未通过前不要 stable。
+2.5.0按维护者确认与CLI整体发布；本轮明确不包含dsh/Skill实际宿主验收，不将其列为本轮发布前置，也不能将未执行的实机验证写成通过。构建、类型检查、单测及发布包检查仍由统一GitHub流程执行。
+
+历史首发清单中的Memory服务可用性、画像值精确删除live和宿主实机安装不等同于CI通过。发布说明不得据此承诺服务GA、画像删除实链路或宿主实机已验收；未有证据的能力保持未验证状态。后续版本按实际约定更新验收范围。
 
 ## 相关文档
 
-- memo 设计：[docs/memo-dsh/](../memo-dsh/)
-- kb 设计 / 运行时：[docs/kb-dsh/](../kb-dsh/)
 - 用户面：各包 `README.md` / `README.zh.md`
 
 ### Memo 画像规则
@@ -150,4 +144,4 @@ node tools/release/publish-kb-dsh.mjs --dry-run
 - 不创建画像模板；用户所选 `profileSchemaId` 保存在 memo dsh settings；每次实际提交画像抽取或读取画像前查询已有规则，普通 search 无需查询。
 - 列表/详情实测都没有默认标记和创建时间；按用户约定，未选择时默认完整列表最后一项。UI 在开启抽取时显示选择框，保存时持久化所选 ID；已有 ID 不可用必须提示重选。不能将列表顺序解释为创建时间。
 - 抽取关闭不删除或停止召回已有画像；画像读取失败不阻断普通记忆召回。画像删除全过程必须使用同一个已解析 ID。
-- 个人配置 v3 去掉旧画像引用，保留身份/授权/暂停/绑定；回归测试必须隔离 homedir 或显式传入临时路径，禁止真实个人配置读写。
+- 个人配置 v3 保留 Skill 使用的可选画像引用及身份/授权/暂停/绑定；插件选择仍保存在 dsh settings，不能删除共享文件中其他宿主需要的字段。回归测试必须隔离 homedir 或显式传入临时路径，禁止真实个人配置读写。

@@ -681,6 +681,47 @@ describe("e2e: auth", () => {
     expect(stderr).not.toContain("Cleared api_key");
   });
 
+  test("auth status 在只有控制台会话时标明模型 API Key 仍未配置", async () => {
+    const configDir = makeE2eOutputDir("auth-status-console-only");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        language: "zh-CN",
+        access_token: "console-token-placeholder",
+        console_region: "cn-beijing",
+        console_site: "domestic",
+      }),
+    );
+    const env = {
+      BAILIAN_CONFIG_DIR: configDir,
+      DASHSCOPE_API_KEY: undefined,
+      DASHSCOPE_BASE_URL: undefined,
+      ALIBABA_CLOUD_ACCESS_KEY_ID: undefined,
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: undefined,
+      ALIBABA_CLOUD_SECURITY_TOKEN: undefined,
+    };
+
+    const json = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "json"], env);
+    expect(json.exitCode, json.stderr).toBe(0);
+    const data = parseStdoutJson<{
+      authenticated?: boolean;
+      api_key?: unknown;
+      console?: { region?: string };
+      hint?: string;
+    }>(json.stdout);
+    expect(data.authenticated).toBe(true);
+    expect(data.api_key).toBeUndefined();
+    expect(data.console?.region).toBe("cn-beijing");
+    expect(data.hint).toContain("尚未配置模型 API Key");
+    expect(data.hint).toContain("bl auth login --api-key <key>");
+    expect(json.stdout).not.toContain("console-token-placeholder");
+
+    const text = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "text"], env);
+    expect(text.exitCode, text.stderr).toBe(0);
+    expect(text.stdout).toContain("API key (model):  not configured");
+    expect(text.stdout).toContain("尚未配置模型 API Key");
+  });
+
   test("auth logout 清除当前 Config 的全部凭证和 Base URL，保留普通配置", async () => {
     const configDir = makeE2eOutputDir("auth-logout-all");
     writeFileSync(
@@ -764,8 +805,8 @@ describe("e2e: auth", () => {
       "--base-url",
       "https://x.test",
     ]);
-    expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/Unknown flag.*--base-url/);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/(?:Unknown flag|未知参数).*--base-url/);
   });
 
   test("auth status 展示 env OpenAPI AK/SK 且不接受 OpenAPI flag 覆盖", async () => {
@@ -788,8 +829,8 @@ describe("e2e: auth", () => {
     expect(data.openapi?.access_key_secret).not.toBe("secret-e2e-placeholder");
 
     const denied = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--access-key-id", "ak"]);
-    expect(denied.exitCode).not.toBe(0);
-    expect(denied.stderr).toMatch(/Unknown flag.*--access-key-id/);
+    expect(denied.exitCode).toBe(2);
+    expect(denied.stderr).toMatch(/(?:Unknown flag|未知参数).*--access-key-id/);
   });
 
   test.skipIf(!isOpenApiE2EReady())(

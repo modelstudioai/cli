@@ -24,6 +24,7 @@
 ### B. 鉴权 / 全局选项
 
 - [ ] 如果是**全局 flag**(所有命令通用),改 `packages/core/src/types/command.ts` 的 `GLOBAL_FLAGS`
+- [ ] 全局参数支持完整命令路径前置或后置；命令专属参数和凭证域参数只支持后置，路径各级之间不插入参数。改路由解析时，覆盖根/分组/显式 help 的无效参数校验、前后重复参数、Profile 选择和激活状态不变；纯裸命令与合法分组帮助仍返回 0，参数错误返回 2
 - [ ] 如果是凭证域 flag,优先确认是否属于 `MODEL_AUTH_FLAGS` 或 `CONSOLE_AUTH_FLAGS`;不要在单个命令里重复声明
 - [ ] 如果新 flag 影响有效配置面,改 `packages/core/src/config/schema.ts` 的 `Settings` 接口
 - [ ] 如果对应 env var 或 config 文件字段,改 `packages/core/src/config/loader.ts` 的 `buildSettings`
@@ -54,6 +55,9 @@ pnpm -F bailian-cli exec tsx src/main.ts <command> --new-flag x   # 实测一遍
 
 ## 常见漏点
 
+- SDK 的通用参数解析器可能接受其他 Provider 的资源类型；产品命令应在鉴权和 dry-run 输出前限制支持的类型，错误文案不得回显资源凭证或任意输入值。
+- 定向创建仅解析新增资源声明；已有项目中的 instructions / Memory 正文已完成文件读取，不能再把它们当作原始文件路径解析。跨资源引用继续交给完整项目的定向 plan 校验。
+- 修改请求超时时，检查底层 HTTP 限制：core 的公共 HTTP 请求层仅为已设置超时计时器的请求关闭 `headersTimeout`，由请求 `AbortSignal` 控制响应头等待；保留 `bodyTimeout` 空闲保护，不全局关闭其他请求的超时。仅设置 Agent 默认值会被 Node `fetch` 的逐请求默认值覆盖。流式读取的总时长另由调用方管理，不能据此宣称 `--timeout` 覆盖整个流。
 - ✗ 加了 array 型 flag 但没考虑用户可能传多次
 - ✗ 改默认值忘记更新 description 里的 "(default: xxx)" 文案
 - ✗ 在 `usageArgs` / `exampleArgs` 里写死 `bl <path>`,导致其它产品入口复用时 help 错

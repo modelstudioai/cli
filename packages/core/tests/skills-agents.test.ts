@@ -2,14 +2,13 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   readlinkSync,
   rmSync,
   writeFileSync,
 } from "fs";
-import { tmpdir } from "os";
 import { join } from "path";
+import { withIsolatedHome } from "./helpers/isolation.ts";
 import { expect, test, vi } from "vite-plus/test";
 import {
   detectInstalledAgents,
@@ -47,7 +46,8 @@ test.each([
 ])(
   "agents: system marker %s detects %s without a user config directory",
   async (marker, agentId, configName) => {
-    await inFakeHome(async (home) => {
+    await withIsolatedHome(async (home) => {
+      delete process.env.BL_SKIP_HOST_AGENTS;
       systemMarkers.set(marker, true);
       try {
         const detected = detectInstalledAgents();
@@ -61,54 +61,6 @@ test.each([
   },
 );
 
-/**
- * Isolated environment: HOME/XDG_CONFIG_HOME/BAILIAN_CONFIG_DIR all point to a temp dir,
- * so agent detection and the canonical dir never touch the real home.
- */
-async function inFakeHome(fn: (home: string) => Promise<void>): Promise<void> {
-  const saved = {
-    HOME: process.env.HOME,
-    XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
-    BAILIAN_CONFIG_DIR: process.env.BAILIAN_CONFIG_DIR,
-    CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR,
-    CODEX_HOME: process.env.CODEX_HOME,
-    VIBE_HOME: process.env.VIBE_HOME,
-    HERMES_HOME: process.env.HERMES_HOME,
-    AUTOHAND_HOME: process.env.AUTOHAND_HOME,
-    GROK_HOME: process.env.GROK_HOME,
-    DSH_HOME: process.env.DSH_HOME,
-    APPDATA: process.env.APPDATA,
-    FLATPAK_XDG_CONFIG_HOME: process.env.FLATPAK_XDG_CONFIG_HOME,
-  };
-  const home = mkdtempSync(join(tmpdir(), "bl-skill-agents-"));
-  process.env.HOME = home;
-  process.env.XDG_CONFIG_HOME = join(home, ".config");
-  process.env.BAILIAN_CONFIG_DIR = join(home, ".bailian");
-  // Agent config-dir overrides must not leak in from the dev machine
-  for (const key of [
-    "CLAUDE_CONFIG_DIR",
-    "CODEX_HOME",
-    "VIBE_HOME",
-    "HERMES_HOME",
-    "AUTOHAND_HOME",
-    "GROK_HOME",
-    "DSH_HOME",
-    "APPDATA",
-    "FLATPAK_XDG_CONFIG_HOME",
-  ]) {
-    delete process.env[key];
-  }
-  try {
-    await fn(home);
-  } finally {
-    for (const [key, value] of Object.entries(saved)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-    rmSync(home, { recursive: true, force: true });
-  }
-}
-
 /** Create an installed skill in canonical */
 function seedCanonicalSkill(name: string): string {
   const dir = join(getSkillsDir(), name);
@@ -118,7 +70,7 @@ function seedCanonicalSkill(name: string): string {
 }
 
 test("agents: registry mirrors upstream agent list minus non-symlinkable agents", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     const ids = getAgentTargets().map((agent) => agent.id);
     expect(ids).toContain("universal");
     expect(ids).toContain("universal-xdg");
@@ -140,7 +92,7 @@ test("agents: registry mirrors upstream agent list minus non-symlinkable agents"
 });
 
 test("agents: expanded registry detects per-agent config dirs", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".roo"), { recursive: true });
     mkdirSync(join(home, ".trae"), { recursive: true });
     mkdirSync(join(home, ".traecli"), { recursive: true });
@@ -163,7 +115,7 @@ test("agents: expanded registry detects per-agent config dirs", async () => {
 });
 
 test("agents: WorkBuddy/Trae CLI/DSH use their official global skills dirs", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".workbuddy"), { recursive: true });
     mkdirSync(join(home, ".traecli"), { recursive: true });
     mkdirSync(join(home, ".dsh"), { recursive: true });
@@ -190,7 +142,7 @@ test("agents: WorkBuddy/Trae CLI/DSH use their official global skills dirs", asy
 });
 
 test("agents: shared-dir agents (Warp/Zed/Kimi/…) light up the universal target", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".warp"), { recursive: true });
     mkdirSync(join(home, ".config", "zed"), { recursive: true });
 
@@ -207,7 +159,7 @@ test("agents: shared-dir agents (Warp/Zed/Kimi/…) light up the universal targe
 });
 
 test("agents: Replit project marker in cwd lights up universal-xdg", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     const previousCwd = process.cwd();
     process.chdir(home);
     try {
@@ -223,7 +175,7 @@ test("agents: Replit project marker in cwd lights up universal-xdg", async () =>
 });
 
 test("agents: OpenClaw historical alias dirs are detected and link into the existing home", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     // Only the legacy .clawdbot home exists → links must land there, not in .openclaw
     mkdirSync(join(home, ".clawdbot"), { recursive: true });
     const openclaw = detectInstalledAgents().find((agent) => agent.id === "openclaw");
@@ -237,7 +189,7 @@ test("agents: OpenClaw historical alias dirs are detected and link into the exis
 });
 
 test("agents: VIBE_HOME/HERMES_HOME/AUTOHAND_HOME/GROK_HOME/DSH_HOME relocate their agents", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     const customDirs = {
       "mistral-vibe": join(home, "custom-vibe"),
       hermes: join(home, "custom-hermes"),
@@ -264,7 +216,7 @@ test("agents: VIBE_HOME/HERMES_HOME/AUTOHAND_HOME/GROK_HOME/DSH_HOME relocate th
 });
 
 test("agents: fan-out creates symlink to canonical; does not create dirs for uninstalled agents", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     const target = seedCanonicalSkill("demo");
 
@@ -283,7 +235,7 @@ test("agents: fan-out creates symlink to canonical; does not create dirs for uni
 });
 
 test("agents: existing unmanaged dir is skipped; managed stale link is rebuilt", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     seedCanonicalSkill("demo");
 
@@ -305,7 +257,7 @@ test("agents: existing unmanaged dir is skipped; managed stale link is rebuilt",
 });
 
 test("agents: unlink reclaims managed links, leaves foreign content untouched", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     mkdirSync(join(home, ".agents"), { recursive: true });
     seedCanonicalSkill("demo");
@@ -324,7 +276,7 @@ test("agents: unlink reclaims managed links, leaves foreign content untouched", 
 });
 
 test("agents: planUnlink includes historical managed symlinks missing from lock", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     mkdirSync(join(home, ".agents"), { recursive: true });
     const canonical = seedCanonicalSkill("demo");
@@ -349,7 +301,7 @@ test("agents: planUnlink includes historical managed symlinks missing from lock"
 });
 
 test("agents: official config-dir env vars relocate detection and fan-out", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     const customClaude = join(home, "relocated-claude");
     const customCodex = join(home, "relocated-codex");
     mkdirSync(customClaude, { recursive: true });
@@ -379,7 +331,7 @@ test("agents: official config-dir env vars relocate detection and fan-out", asyn
 });
 
 test("agents: Amp-style XDG config dir lights up the universal-xdg shared target", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".config", "amp"), { recursive: true });
     const xdg = detectInstalledAgents().find((agent) => agent.id === "universal-xdg");
     expect(xdg?.skillsDir).toBe(join(home, ".config", "agents", "skills"));
@@ -392,7 +344,7 @@ test("agents: Amp-style XDG config dir lights up the universal-xdg shared target
 });
 
 test("agents: foreign skill dir (contains SKILL.md) is replaced even without lock record", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     const canonical = seedCanonicalSkill("demo");
     const copyPath = join(home, ".claude", "skills", "demo");
@@ -411,7 +363,7 @@ test("agents: foreign skill dir (contains SKILL.md) is replaced even without loc
 });
 
 test("agents: foreign non-skill dir (no SKILL.md) stays skipped", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     seedCanonicalSkill("demo");
     const foreignPath = join(home, ".claude", "skills", "demo");
@@ -428,7 +380,7 @@ test("agents: foreign non-skill dir (no SKILL.md) stays skipped", async () => {
 });
 
 test("agents: recorded copy-fallback artifact is replaced with symlink", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     const canonical = seedCanonicalSkill("demo");
     const copyPath = join(home, ".claude", "skills", "demo");
@@ -452,7 +404,7 @@ test("agents: recorded copy-fallback artifact is replaced with symlink", async (
 });
 
 test("agents: recorded plain file (not a copy dir) is never replaced", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude", "skills"), { recursive: true });
     seedCanonicalSkill("demo");
     const filePath = join(home, ".claude", "skills", "demo");
@@ -466,7 +418,7 @@ test("agents: recorded plain file (not a copy dir) is never replaced", async () 
 });
 
 test("agents: unlink removes recorded copy-fallback directories", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     seedCanonicalSkill("demo");
     const copyPath = join(home, ".claude", "skills", "demo");
@@ -480,7 +432,7 @@ test("agents: unlink removes recorded copy-fallback directories", async () => {
 });
 
 test("fanout: recorded path of an unvisited agent stays in the ledger", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     seedCanonicalSkill("demo");
     // Simulate a copy artifact left by an agent that is no longer detected (e.g. uninstalled
@@ -497,7 +449,7 @@ test("fanout: recorded path of an unvisited agent stays in the ledger", async ()
 });
 
 test("fanout: recorded path confirmed foreign this run is dropped from the ledger", async () => {
-  await inFakeHome(async (home) => {
+  await withIsolatedHome(async (home) => {
     mkdirSync(join(home, ".claude", "skills"), { recursive: true });
     seedCanonicalSkill("demo");
     // User replaced our artifact with their own plain file → scanned, skipped as unmanaged;

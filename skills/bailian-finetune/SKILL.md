@@ -1,14 +1,14 @@
 ---
 name: bailian-finetune
 metadata:
-  version: "2.1.0"
+  version: "2.5.0"
   requires:
     bins: ["bl"]
 description: >-
   阿里云百炼模型精调训练入口：用户要精调、微调、训练自己的模型（fine-tune，支持 SFT / SFT-LoRA / DPO / DPO-LoRA / CPT，
   覆盖文本、语音、图像）、校验或上传训练数据集、看训练进度和日志、挑 checkpoint、导出精调产物、
   把专属模型部署成服务时使用 `bl dataset` / `bl finetune` / `bl deploy`。链路是 validate 校验数据 →
-  upload 拿 file-id → finetune create 建任务 → watch 看进度 → export 导出 → deploy 上线，需要 API key；
+  upload 拿 file-id → finetune create 建任务 → watch 看进度 → export 导出 → 可选 compress 量化压缩 → deploy 上线，需要 API key；
   写操作先用 `--dry-run` 预览。反触发：用户点名火山方舟/ark 的精调不走本 skill；只是要选哪个模型走
   bailian-model-recommend；用现成模型生图生视频走 bailian-gen；百炼其他资源管理走 bailian-cli。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
@@ -27,7 +27,10 @@ description: >-
 4. Watch progress  bl finetune watch --job-id ft-xxx             # or get / logs
 5. Pick artifact   bl finetune checkpoints --job-id ft-xxx
 6. Export model    bl finetune export --job-id ft-xxx --checkpoint ckpt-N --model-name my-model
-7. Deploy service  bl deploy text|audio|image create --model-name my-model --display-name my-svc
+7. Compress model  bl finetune compress templates --model my-model       # optional; full-parameter models only
+                   bl finetune compress create --model my-model --template-id <template-id>
+                   bl finetune compress watch --job-id quant-xxx --follow
+8. Deploy service  bl deploy text|audio|image create --model-name <my-model|quantized-output> --display-name my-svc
 ```
 
 - Unsure which training methods a base model supports → `bl finetune capability --base-model <base>` or `--training-type sft|sft-lora|dpo|cpt`.
@@ -44,7 +47,9 @@ description: >-
 | Create a fine-tuning job               | `bl finetune text\|audio\|image create`                                                          |
 | Job list / detail / follow             | `bl finetune list` / `get` / `watch` / `logs`                                                    |
 | Artifacts and export                   | `bl finetune checkpoints` / `export`                                                             |
-| Cancel / delete a job                  | `bl finetune cancel` / `delete`                                                                  |
+| Quantize / compress a full model       | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                  |
+| Cancel / delete a compression job      | `bl finetune compress cancel` / `delete`                                                         |
+| Cancel / delete a fine-tuning job      | `bl finetune cancel` / `delete`                                                                  |
 | Trainable capability lookup            | `bl finetune capability`                                                                         |
 | Deploy / lifecycle                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models` |
 | Query throughput reservations          | `bl deploy list --plan ptu` / `bl deploy get`                                                    |
@@ -68,7 +73,11 @@ bl dataset upload --file train.jsonl
 bl finetune text create --base-model qwen3-8b --training-type sft-lora --datasets file-xxx
 bl finetune watch --job-id ft-xxx
 bl finetune export --job-id ft-xxx --checkpoint ckpt-3 --model-name my-qwen-sft
-bl deploy text create --model-name my-qwen-sft --display-name my-svc
+# Optional quantization (Beijing region; full-parameter fine-tuned models only)
+bl finetune compress templates --model my-qwen-sft
+bl finetune compress create --model my-qwen-sft --template-id quant-xxx --suffix int4
+bl finetune compress watch --job-id quant-xxx --follow
+bl deploy text create --model-name <my-qwen-sft-or-quantized-output> --display-name my-svc
 ```
 
 ## Common hand-offs

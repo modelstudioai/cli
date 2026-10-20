@@ -1,3 +1,4 @@
+import { getEventListeners } from "node:events";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -639,4 +640,53 @@ test("Sandbox validation errors use CLI usage exit codes", async () => {
   await expect(buildSandboxCreateBody({ showCredentials: false })).rejects.toBeInstanceOf(
     BailianError,
   );
+});
+
+describe("Sandbox unused response cleanup", () => {
+  test.each([
+    { name: "pause instance", command: sandboxPause, flags: { sandboxId: "sandbox-test" } },
+    { name: "delete instance", command: sandboxDelete, flags: { sandboxId: "sandbox-test" } },
+    {
+      name: "delete template",
+      command: sandboxTemplateDelete,
+      flags: { templateId: "template-test" },
+    },
+  ])("$name releases complete and stalled response bodies", async ({ command, flags }) => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const client = new Client({
+      identity: {
+        binName: "bl",
+        version: "test",
+        npmPackage: "bailian-cli",
+        clientName: "bailian-cli",
+      },
+      settings: SETTINGS,
+      baseUrl: "https://dashscope.aliyuncs.com",
+      apiCred: {
+        token: "local-test-only",
+        baseUrl: "https://dashscope.aliyuncs.com",
+        source: "flag",
+      },
+    });
+    for (const complete of [true, false]) {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("unused response"));
+          if (complete) controller.close();
+        },
+      });
+      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(body));
+      await command.run({
+        identity: { binName: "bl" },
+        settings: SETTINGS,
+        flags: { workspaceId: "ws-test", ...flags },
+        client,
+      } as never);
+      const signal = fetchMock.mock.calls[0][1]!.signal!;
+      expect(signal.aborted).toBe(true);
+      expect(getEventListeners(signal, "abort")).toHaveLength(0);
+      expect(body.locked).toBe(false);
+      fetchMock.mockRestore();
+    }
+  });
 });

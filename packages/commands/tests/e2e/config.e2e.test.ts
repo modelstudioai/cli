@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "fs
 import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import { CONFIG_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -39,7 +39,7 @@ describe("e2e: config", () => {
   });
 
   test("config ui --dry-run 打印计划不起服务", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "ui",
       "--dry-run",
@@ -199,7 +199,7 @@ describe("e2e: config", () => {
     try {
       const configPath = join(configDir, "config.json");
       writeFileSync(configPath, JSON.stringify({ dev: { output: "json" } }, null, 2) + "\n");
-      const result = await runCommandE2e(
+      const result = await runCommandInProcess(
         CONFIG_ROUTES,
         ["config", "use", "--name", "dev", "--dry-run", "--output", "json"],
         { BAILIAN_CONFIG_DIR: configDir },
@@ -386,7 +386,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 不落盘（仅输出 would_set）", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -403,7 +403,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持连字符别名 key", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -422,7 +422,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持图生视频默认模型别名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -441,7 +441,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持参考生视频默认模型别名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -460,7 +460,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 展示归一化后的 Base URL", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -477,7 +477,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持 AccessKey 短字段别名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -547,7 +547,7 @@ describe("e2e: config", () => {
   });
 
   test("config agent --key 非法值时报用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "agent",
       "--agent",
@@ -567,7 +567,7 @@ describe("e2e: config", () => {
   test("config agent --key 合法值 --dry-run 解码成功且输出脱敏", async () => {
     const home = mkdtempSync(join(tmpdir(), "bl-config-agent-key-"));
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
         CONFIG_ROUTES,
         [
           "config",
@@ -602,7 +602,7 @@ describe("e2e: config", () => {
   test("config agent --region 转为 base URL，--dry-run 成功", async () => {
     const home = mkdtempSync(join(tmpdir(), "bl-config-agent-region-"));
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
         CONFIG_ROUTES,
         [
           "config",
@@ -686,7 +686,7 @@ describe("e2e: config", () => {
   test("config agent --dry-run 输出脱敏信息且不写盘", async () => {
     const home = mkdtempSync(join(tmpdir(), "bl-config-agent-dry-"));
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
         CONFIG_ROUTES,
         [
           "config",

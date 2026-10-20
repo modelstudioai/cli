@@ -248,8 +248,8 @@ export default defineCommand({
       return `--content must be at most ${MAX_CUSTOM_CONTENT_LENGTH} characters.`;
     const skillError = checkSkillMetadataFlags(flags);
     if (skillError) return skillError;
-    if (flags.wait !== undefined && flags.wait < 0)
-      return "--wait must be a non-negative number of seconds.";
+    if (flags.wait !== undefined && (!Number.isFinite(flags.wait) || flags.wait < 0))
+      return "--wait must be a finite, non-negative number of seconds. / --wait 必须是有限的非负秒数。";
     return undefined;
   },
   async run(ctx) {
@@ -303,8 +303,7 @@ export default defineCommand({
     const waitSeconds = flags.wait ?? DEFAULT_WAIT_SECONDS;
     const eventId = submission.event_id;
 
-    // --wait 0 (or a submission without event_id): print the receipt and let
-    // the caller track the result via the result-side commands.
+    // Preserve the submission receipt even when completion cannot be tracked.
     if (waitSeconds === 0 || !eventId) {
       if (settings.quiet || format === "text") {
         emitBare(
@@ -314,6 +313,13 @@ export default defineCommand({
         );
       } else {
         emitResult(submission, format);
+      }
+      if (waitSeconds !== 0) {
+        throw new BailianError(
+          "The submission returned no event_id; extraction completion cannot be confirmed. / 提交响应未返回 event_id，无法确认抽取完成。",
+          ExitCode.GENERAL,
+          "Check results with `memory list`, `memory search` or `memory profile get` before submitting again. / 再次提交前，请使用 `memory list`、`memory search` 或 `memory profile get` 检查结果。",
+        );
       }
       return;
     }
@@ -336,9 +342,9 @@ export default defineCommand({
 
     if (poll.timedOut) {
       throw new BailianError(
-        `Memory extraction timed out after ${waitSeconds}s (event ${eventId}); it may still be running in the background.`,
+        `Memory extraction timed out after ${waitSeconds}s (event ${eventId}); it may still be running in the background. / 记忆抽取等待 ${waitSeconds} 秒后超时（事件 ${eventId}），后台任务可能仍在运行。`,
         ExitCode.TIMEOUT,
-        "Check results later with `memory list`, `memory search --memory-types skill` or `memory profile get`.",
+        "Check results later with `memory list`, `memory search --memory-types skill` or `memory profile get`. / 稍后使用 `memory list`、`memory search --memory-types skill` 或 `memory profile get` 检查结果。",
       );
     }
 

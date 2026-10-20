@@ -181,6 +181,12 @@ export function assertAttributeFieldLengths(
   position: string,
   attribute: { name?: string; description?: string; default_value?: string | null },
 ): void {
+  for (const field of ["name", "description", "default_value"] as const) {
+    const value = attribute[field];
+    if (value === undefined || (field === "default_value" && value === null)) continue;
+    if (typeof value !== "string")
+      throw new UsageError(`${position}.${field} must be a string. / 该属性字段必须是字符串。`);
+  }
   if (attribute.name !== undefined && attribute.name.length > MAX_ATTRIBUTE_NAME_LENGTH) {
     throw new UsageError(
       `${position}.name must be at most ${MAX_ATTRIBUTE_NAME_LENGTH} characters`,
@@ -238,5 +244,12 @@ export function parseJsonArrayFlag<T>(flagName: string, raw: string): T[] {
   if (!Array.isArray(parsed)) {
     throw new UsageError(`${flagName} must be a JSON array`);
   }
+  parsed.forEach((entry: unknown, index: number) => {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new UsageError(
+        `${flagName}[${index}] must be a JSON object. / 数组中的每一项必须是 JSON 对象。`,
+      );
+    }
+  });
   return parsed as T[];
 }

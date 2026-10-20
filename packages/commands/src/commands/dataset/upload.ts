@@ -6,6 +6,7 @@ import {
   formatIssue,
   MAX_DATASET_BYTES,
   MAX_CPT_BYTES,
+  MAX_DECISION_DATASET_BYTES,
   MAX_MEDIA_ZIP_BYTES,
   BailianError,
   ExitCode,
@@ -18,9 +19,10 @@ const UPLOAD_FLAGS = {
     type: "string",
     valueHint: "<path>",
     description: {
-      "en-US": "Local dataset file (.jsonl or .zip; ≤200MB SFT/DPO, ≤300MB CPT, ≤2GB media zip)",
+      "en-US":
+        "Local dataset file (.jsonl or .zip; ≤200MB SFT/DPO, ≤300MB CPT/decision, ≤2GB media zip)",
       "zh-CN":
-        "本地数据集文件（.jsonl 或 .zip；SFT/DPO 不超过 200MB，CPT 不超过 300MB，媒体 ZIP 不超过 2GB）",
+        "本地数据集文件（.jsonl 或 .zip；SFT/DPO 不超过 200MB，CPT/决策模型不超过 300MB，媒体 ZIP 不超过 2GB）",
     },
     required: true,
   },
@@ -37,9 +39,9 @@ const UPLOAD_FLAGS = {
     valueHint: "<s>",
     description: {
       "en-US":
-        'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record.',
+        'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "decision" (state/questions), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record.',
       "zh-CN":
-        '记录 Schema："chatml"（SFT）、"dpo"（chosen/rejected）、"cpt"（原始文本）、"tts"（音频）、"image"（图片生成）或 "video"（视频生成）。默认逐条自动识别。',
+        '记录 Schema："chatml"（SFT）、"dpo"（chosen/rejected）、"cpt"（原始文本）、"decision"（state/questions 决策数据）、"tts"（音频）、"image"（图片生成）或 "video"（视频生成）。默认逐条自动识别。',
     },
   },
   noValidate: {
@@ -65,12 +67,13 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|tts|image|video>] [--no-validate] [--full-validate]",
+    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|decision|tts|image|video>] [--no-validate] [--full-validate]",
   flags: UPLOAD_FLAGS,
   exampleArgs: [
     "--file train.jsonl",
     "--file dpo.jsonl --schema dpo",
     "--file cpt.jsonl --schema cpt",
+    "--file decision.jsonl --schema decision",
     "--file audio.zip --schema tts",
     "--file eval.jsonl --purpose evaluation",
     "--file train.jsonl --full-validate",
@@ -79,21 +82,21 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        'Supports .jsonl (text) and .zip (audio/image/video archives with a data.jsonl manifest). Six record schemas are recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation); video = {first_frame_path:...} (video generation).',
+        'Supports .jsonl (text/decision) and .zip (audio/image/video archives with a data.jsonl manifest). Seven record schemas are recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."}; decision = {state:{content}, questions:{...}}; tts = {wav_fn:"train/xxx.wav", text:"..."}; image = {img_path:"..."}; video = {first_frame_path:...}.',
       "zh-CN":
-        '支持 .jsonl（文本）和 .zip（包含 data.jsonl 清单的音频、图片或视频归档）。可识别六种记录 Schema：chatml = {messages:[...]}（SFT）；dpo = {messages:[...], chosen, rejected}；cpt = {text:"..."}（持续预训练，原始文本）；tts = {wav_fn:"train/xxx.wav", text:"..."}（音频微调）；image = {img_path:"..."}（图片生成）；video = {first_frame_path:...}（视频生成）。',
+        '支持 .jsonl（文本/决策）和 .zip（包含 data.jsonl 清单的音频、图片或视频归档）。可识别七种记录 Schema：chatml = {messages:[...]}（SFT）；dpo = {messages:[...], chosen, rejected}；cpt = {text:"..."}；decision = {state:{content}, questions:{...}}；tts = {wav_fn:"train/xxx.wav", text:"..."}；image = {img_path:"..."}；video = {first_frame_path:...}。',
     },
     {
       "en-US":
-        "With no --schema, a record carrying wav_fn is validated as TTS, img_path as image, chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML.",
+        "With no --schema, state/questions is validated as decision data, wav_fn as TTS, img_path as image, chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML.",
       "zh-CN":
-        "未指定 --schema 时，包含 wav_fn 的记录按 TTS 验证，包含 img_path 的按 image 验证，包含 chosen/rejected 的按 DPO 验证，仅含 text（无 messages）的按 CPT 验证，其他记录按 ChatML 验证。",
+        "未指定 --schema 时，state/questions 记录按 decision 验证，包含 wav_fn 的按 TTS 验证，包含 img_path 的按 image 验证，包含 chosen/rejected 的按 DPO 验证，仅含 text（无 messages）的按 CPT 验证，其他记录按 ChatML 验证。",
     },
     {
       "en-US":
-        "Upload cap: 200MB SFT/DPO text, 300MB CPT, 2GB media zip. Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is persisted (the DashScope-native /api/v1/files drops it).",
+        "Upload cap: 200MB SFT/DPO text, 300MB CPT/decision data, 2GB media zip. For decision files over 200MB, pass --schema decision so the correct cap is applied. Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is persisted.",
       "zh-CN":
-        "上传上限：SFT/DPO 文本 200MB、CPT 300MB、媒体 ZIP 2GB。上传使用 OpenAI 兼容的 /compatible-mode/v1/files Endpoint，以便保留 purpose 标签；DashScope 原生 /api/v1/files 会丢弃该标签。",
+        "上传上限：SFT/DPO 文本 200MB、CPT/决策模型数据 300MB、媒体 ZIP 2GB。决策数据超过 200MB 时请显式传入 --schema decision，以应用正确上限。上传使用 OpenAI 兼容的 /compatible-mode/v1/files 接口，以确保持久化 purpose 标签。",
     },
   ],
   async run(ctx) {
@@ -101,13 +104,15 @@ export default defineCommand({
     const filePath = flags.file;
     const purpose = flags.purpose || "fine-tune";
     const schema = parseDatasetSchemaFlag(flags.schema);
-    // Size caps differ per training type: SFT/DPO 200MB, CPT 300MB, media ZIP 2GB.
+    // 大小上限按平台数据类型区分；自动识别仍采用保守的文本上限，避免放宽已有格式。
     const isMediaSchema = schema === "image" || schema === "video";
     const maxBytes = isMediaSchema
       ? MAX_MEDIA_ZIP_BYTES
-      : schema === "cpt"
-        ? MAX_CPT_BYTES
-        : MAX_DATASET_BYTES;
+      : schema === "decision"
+        ? MAX_DECISION_DATASET_BYTES
+        : schema === "cpt"
+          ? MAX_CPT_BYTES
+          : MAX_DATASET_BYTES;
 
     if (!flags.noValidate) {
       const result = await validateDataset(filePath, {

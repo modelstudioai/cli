@@ -6,7 +6,7 @@
 
 提供顶层回合自动召回、静默辅助筛选与可恢复异步写入、显式记住/遗忘工具，以及 Plugins 设置页。身份与授权保存在 `~/.bailian/personal-memory/config.json`（与 `bailian-memory` skill 共享）。API Key 使用 dsh credentials（`BAILIAN_MEMO_API_KEY`）。
 
-> **发布门槛：** stable 发布前需确认 Memory 主能力上线、画像值精确删除（`need_detail` + `PATCH profile_values`）实链路，以及 dsh 0.2.1 实机安装验证。此前仅用于内部 / channel 验证。
+> **2.5.0验收范围：** 本插件跟随CLI统一发布，本轮发布准备不包含dsh/Skill实际宿主验收。CI构建及单测不代表宿主安装、Memory服务GA或画像值精确删除live已验证；没有独立证据时不能将这些检查标记为通过。
 
 ## 安装
 
@@ -80,3 +80,7 @@ Apache-2.0
 个人身份文件升级为 v3，读取及后续写入时去掉旧 `profile_schema_id` / `profile_schema_version`，保留身份、授权、绑定和暂停状态；不删除已有云端模板或画像。初始化仅做只读连接检查，不再依赖画像模板。
 
 同一回合中 `remember` 成功提交后，自动筛选跳过整个回合，避免重复写入相同事实。后续回合不受影响；提交失败不会阻止自动筛选。
+
+自动召回总时限为五秒，取消当前轮次会停止等待。插件重启后仍保持暂停状态。同一次记忆工具调用的重试共用一个 intent；后续独立调用可以再次记住相同事实（包括遗忘后重新记忆）。
+
+共享个人配置兼容 v2/v3，并保留可选的 Skill 画像模板字段。插件的画像规则仍由 dsh 设置独立选择。

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vite-plus/test";
@@ -18,9 +19,12 @@ test("runNodeMain 通过 Node 的 tsx loader 执行 TypeScript 入口", async ()
     args: string[];
     execArgv: string[];
     marker: string | null;
+    configDir: string | null;
   };
   expect(output.args).toEqual(["alpha", "beta"]);
   expect(output.marker).toBe("forwarded");
+  expect(output.configDir).toBeTruthy();
+  expect(existsSync(output.configDir!)).toBe(false);
   const importFlagIndex = output.execArgv.indexOf("--import");
   expect(importFlagIndex).toBeGreaterThanOrEqual(0);
   expect(output.execArgv[importFlagIndex + 1]).toMatch(/tsx/);

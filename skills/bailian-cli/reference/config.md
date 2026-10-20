@@ -29,16 +29,16 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                                                                  | Type   | Required | Description                                                                                       |
-| --------------------------------------------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------- |
-| `--agent <claude-code\|qwen-code\|opencode\|openclaw\|hermes\|codex>` | string | yes      | Target agent: claude-code, qwen-code, opencode, openclaw, hermes, codex                           |
-| `--base-url <url>`                                                    | string | no       | API base URL                                                                                      |
-| `--region <region>`                                                   | string | no       | Model Studio region (e.g. cn-beijing, ap-southeast-1); converted into --base-url. Token Plan only |
-| `--api-key <key>`                                                     | string | no       | API key                                                                                           |
-| `--key <encoded>`                                                     | string | no       | Obfuscated API key from the web console (starts with "o1_"); decoded into --api-key               |
-| `--model <model>`                                                     | string | yes      | Default model name                                                                                |
-| `--context-window <tokens>`                                           | number | no       | OpenClaw only: model context window in tokens (default: 256000)                                   |
-| `--wire-api <chat\|responses>`                                        | string | no       | Codex only: wire protocol (default: responses). "chat" only works with legacy Codex <= 0.80.0     |
+| Flag                                                                      | Type   | Required | Description                                                                                       |
+| ------------------------------------------------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------- |
+| `--agent <claude-code\|qwen-code\|opencode\|openclaw\|hermes\|codex\|pi>` | string | yes      | Target agent: claude-code, qwen-code, opencode, openclaw, hermes, codex, pi                       |
+| `--base-url <url>`                                                        | string | no       | API base URL                                                                                      |
+| `--region <region>`                                                       | string | no       | Model Studio region (e.g. cn-beijing, ap-southeast-1); converted into --base-url. Token Plan only |
+| `--api-key <key>`                                                         | string | no       | API key                                                                                           |
+| `--key <encoded>`                                                         | string | no       | Obfuscated API key from the web console (starts with "o1_"); decoded into --api-key               |
+| `--model <model>`                                                         | string | yes      | Default model name                                                                                |
+| `--context-window <tokens>`                                               | number | no       | OpenClaw only: model context window in tokens (default: 256000)                                   |
+| `--wire-api <chat\|responses>`                                            | string | no       | Codex only: wire protocol (default: responses). "chat" only works with legacy Codex <= 0.80.0     |
 
 #### Examples
 

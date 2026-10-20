@@ -155,7 +155,7 @@ The assistant first reads `kscli --introspect` to check the installed capabiliti
 
 ## Authentication
 
-A DashScope API Key is recommended. Get yours from the [DashScope Console](https://bailian.console.aliyun.com/?tab=app#/api-key).
+A DashScope API Key is recommended. Get yours from the [DashScope Console](https://bailian.console.aliyun.com/?spm=a2ty07.github&tab=app#/api-key).
 
 ```bash
 # Option 1: Environment variable
@@ -203,7 +203,7 @@ All commands support these common flags:
 | :----------------------- | :------------------------------------------------------------------------------------------------------------------ |
 | Knowledge Studio Console | https://rag.console.aliyun.com/                                                                                     |
 | DashScope API Docs       | https://help.aliyun.com/zh/model-studio/                                                                            |
-| Get API Key              | https://bailian.console.aliyun.com/?tab=app#/api-key                                                                |
+| Get API Key              | https://bailian.console.aliyun.com/?spm=a2ty07.github&tab=app#/api-key                                              |
 | Full CLI Guide           | [docs/knowledge-cli-guide.md](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md) |
 
 ## Contributing

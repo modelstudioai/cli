@@ -11,8 +11,8 @@ monorepo 现在按"纯逻辑 → 运行时框架 → 命令库 → 产品入口"
 - `packages/commands` — `bailian-cli-commands`,可复用命令实现库,只导出 command,不决定产品路径
 - `packages/cli` — `bailian-cli`,完整 `bl` 产品入口;`src/commands.ts` 组装 `bl` 暴露的命令路径
 - `packages/kscli` — `knowledge-studio-cli`,Knowledge Studio 专用入口;`src/main.ts` 复用 commands 并重映射为 `kscli` 路径
-- `packages/bailian-kb-dsh` — `bailian-kb-dsh`,**下游宿主适配层**(依赖方向朝外):百炼知识库的 DeepSeek Harness (dsh) 插件,消费 `bl` CLI 与知识库 API,不在上面这条分层链上;版本、构建、发布都独立,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)
-- `packages/bailian-memo-dsh` — `bailian-memo-dsh`,**下游宿主适配层**:百炼个人记忆 dsh 插件(dsh 0.2.1 Volatile Config / SettingsForms);身份在 `~/.bailian/personal-memory/config.json`;版本、构建、发布独立,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md) 与 [docs/memo-dsh/](docs/memo-dsh/)
+- `packages/bailian-kb-dsh` — `bailian-kb-dsh`,**下游宿主适配层**(依赖方向朝外):百炼知识库的 DeepSeek Harness (dsh) 插件,消费 `bl` CLI 与知识库 API,不在上面这条分层链上;构建独立，版本与发布跟随 bailian-cli,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)
+- `packages/bailian-memo-dsh` — `bailian-memo-dsh`,**下游宿主适配层**:百炼个人记忆 dsh 插件(dsh 0.2.1 Volatile Config / SettingsForms);身份在 `~/.bailian/personal-memory/config.json`;构建独立，版本与发布跟随 bailian-cli,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)
 
 ### 关键文件
 
@@ -62,6 +62,7 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 | ----------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 命令增删改        | 增加 / 删除 / 重命名 `bl xxx` 或入口命令路径                          | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)       |
 | E2E 测试维护      | 新增/改命令或 e2e 用例、补 help/缺参/dry-run                          | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)                 |
+| 测试隔离          | 单测/E2E 受本地 HOME、语言、系统目录干扰；统一隔离基建                | [docs/agents/test-isolation.md](docs/agents/test-isolation.md)               |
 | 批量压测          | 改/跑多能力并发压测、`test:stress`、fixtures                          | [docs/agents/stress-batch-tests.md](docs/agents/stress-batch-tests.md)       |
 | 选项变更          | 给已有命令加 `--flag` 或改默认值                                      | [docs/agents/command-flag-change.md](docs/agents/command-flag-change.md)     |
 | 模型上下架        | 增加新模型 / 改默认模型 / 废弃旧模型                                  | [docs/agents/model-add-remove.md](docs/agents/model-add-remove.md)           |
@@ -85,9 +86,9 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 
 ### 1. 发布包版本号同步
 
-源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/kscli`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
+源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/kscli`、`packages/bailian-kb-dsh`、`packages/bailian-memo-dsh`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
 
-**例外**: `packages/bailian-kb-dsh` / `packages/bailian-memo-dsh` 不参与这个锁步(各自独立 `0.1.x`,跟随 dsh 节奏),也不在 release 白名单里;它们走 `publish.yml` 里 `package=bailian-*-dsh` 的独立 job(`tools/release/publish-dsh-plugin.mjs`)。
+两个 dsh 插件也纳入七包锁步版本和统一发布，仅构建方式保留各自的 `tsc` / `tsdown`。
 
 ### 2. 分层边界
 

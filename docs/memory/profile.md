@@ -1,14 +1,12 @@
-# 画像命令手册
+# 画像模板与用户画像命令手册
 
-画像模板（profile schema）定义要抽取的属性。用户画像是某个 `--user-id` 在该模板下已经抽出的属性值。创建或更新模板不会自动重算已有用户的画像。
+覆盖profile的6条命令。模板定义“抽取什么”，用户画像保存“某个用户的属性值”；两者不能混用。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](./memory-cli-guide.md#通用约定)。
+> 鉴权、Workspace、输出格式、确认机制和退出码见[总览指南的通用约定](memory-cli-guide.md#通用约定)。示例沿用已配置的 API Key 和 Workspace；请替换尖括号中的 ID。命令参数表不重复全局参数，array 类型通过重复 flag 传入。
 
----
+## `bl memory profile create`
 
-#### `bl memory profile create`
-
-创建画像模板。
+创建用于记忆画像的用户 Profile Schema。接口：`POST /profile_schemas`（路径省略 `/api/v2/apps/memory`）。
 
 **用法**
 
@@ -18,49 +16,40 @@ bl memory profile create --name <name> --attributes <json> [flags]
 
 **参数**
 
-| 参数                                       | 类型   | 必填 | 说明                                                |
-| ------------------------------------------ | ------ | ---- | --------------------------------------------------- |
-| `--name <name>`                            | string | 是   | 模板名称，最长 32                                   |
-| `--description <text>`                     | string | 否   | 模板描述。长度由服务端决定                          |
-| `--attributes <json>`                      | string | 是   | 属性定义 JSON 数组                                  |
-| `--plan-version <pro\|lite>`               | string | 否   | `pro` 开启 rerank，`lite` 关闭 rerank。两者计费不同 |
-| `--extract-scene <efficient\|intelligent>` | string | 否   | 抽取场景。创建时默认 `efficient`                    |
-| `--library-id <id>`                        | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库            |
+| 参数                                       | 类型   | 必填 | 说明                                                                       |
+| ------------------------------------------ | ------ | ---- | -------------------------------------------------------------------------- |
+| `--name <name>`                            | string | 是   | Schema 名称（必填）                                                        |
+| `--description <text>`                     | string | 否   | Schema 描述                                                                |
+| `--attributes <json>`                      | string | 是   | 属性 JSON 数组：[{"name":"age","description":"年龄","default_value":"18"}] |
+| `--plan-version <pro\|lite>`               | string | 否   | 策略版本：pro（开启 Rerank）或 lite（关闭 Rerank），计费单价不同           |
+| `--extract-scene <efficient\|intelligent>` | string | 否   | 抽取场景：efficient 或 intelligent（创建时默认 efficient）                 |
+| `--library-id <id>`                        | string | 否   | 记忆库 ID（默认：账号的默认记忆库）                                        |
 
 **参数约束**
 
-- `--attributes` 是 JSON 数组。每项必须有 `name`（最长 32）；`description` 和 `default_value` 可选，各最长 128。
-- 清空 `default_value` 时传空字符串。
-- `efficient` 可搭配 `lite` 或 `pro`。`intelligent` 搭配 `pro`。`intelligent` 与 `lite` 会被服务端拒绝。
-- 创建模板不生成任何用户的画像值。
+- name最长32；attributes是非空JSON对象数组，每项name必填且最长32。
+- 属性description/default_value最长128；description须为字符串，default_value可为字符串或null。模板description不套用属性的128限制。
+- extract-scene默认efficient；efficient支持pro/lite，intelligent需要pro，组合兼容性由服务端校验。
 
 **输出**
 
-text / quiet：
+json保留 `profile_schema_id` 等响应字段；text / quiet输出模板创建确认和ID。
 
-```
-Profile schema created: schema-xxx
-```
+**注意事项**
 
-json 模式：返回含 `profile_schema_id` 的响应。后续命令使用这个 ID。
+创建后用add --profile-schema传入此ID，才会抽取该模板的用户画像。模板可被多个用户共享；library-id应与后续写入和读取保持一致。
 
 **示例**
 
 ```bash
-bl memory profile create --name user_basic \
-  --attributes '[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]' \
-  --workspace-id ws-xxx
-
-bl memory profile create --name user_basic \
-  --attributes '[{"name":"age"}]' \
-  --plan-version lite --extract-scene efficient --library-id lib-xxx
+bl memory profile create --name travel_profile --attributes '[{"name":"city","description":"常住城市"},{"name":"hobby","description":"兴趣爱好"}]' --plan-version lite --extract-scene efficient --output json
 ```
 
 ---
 
-#### `bl memory profile list`
+## `bl memory profile list`
 
-分页列出画像模板。
+列出画像模板。接口：`GET /profile_schemas`（路径省略 `/api/v2/apps/memory`）。
 
 **用法**
 
@@ -70,40 +59,35 @@ bl memory profile list [flags]
 
 **参数**
 
-| 参数                | 类型   | 必填 | 说明                                     |
-| ------------------- | ------ | ---- | ---------------------------------------- |
-| `--page <n>`        | number | 否   | 页码，至少 1，默认 1。不自动翻页         |
-| `--page-size <n>`   | number | 否   | 每页条数，至少 1，默认 10                |
-| `--library-id <id>` | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库 |
+| 参数                | 类型   | 必填 | 说明                                |
+| ------------------- | ------ | ---- | ----------------------------------- |
+| `--page-size <n>`   | number | 否   | 每页结果数（默认：10）              |
+| `--page <n>`        | number | 否   | 页码（默认：1）                     |
+| `--library-id <id>` | string | 否   | 记忆库 ID（默认：账号的默认记忆库） |
+
+**参数约束**
+
+- page/page-size至少1；默认第1页、每页10条。library-id最长32。
 
 **输出**
 
-text / quiet：
+json返回 `profile_schemas` / `total`；text / quiet显示模板ID、名称、档位、描述及总数（如有）。
 
-```
-[schema-xxx] user_basic (lite)
-  用户基础资料
+**注意事项**
 
-Total: 1
-```
-
-无模板时输出 `No profile schemas found.`
-
-json 模式：返回 `profile_schemas` 和 `total`。
+返回单页模板定义列表，不返回各个用户的画像值。
 
 **示例**
 
 ```bash
-bl memory profile list --workspace-id ws-xxx
-
-bl memory profile list --page-size 20 --page 2 --output json
+bl memory profile list --page 1 --page-size 20 --output json
 ```
 
 ---
 
-#### `bl memory profile show`
+## `bl memory profile show`
 
-查看模板定义，包括后续更新要用的 `attribute_id`。
+查看画像模板定义及属性 ID。接口：`GET /profile_schemas/{schema_id}`（路径省略 `/api/v2/apps/memory`）。
 
 **用法**
 
@@ -113,46 +97,34 @@ bl memory profile show --schema-id <id> [flags]
 
 **参数**
 
-| 参数                | 类型   | 必填 | 说明                                     |
-| ------------------- | ------ | ---- | ---------------------------------------- |
-| `--schema-id <id>`  | string | 是   | 画像模板 ID                              |
-| `--library-id <id>` | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库 |
+| 参数                | 类型   | 必填 | 说明                                |
+| ------------------- | ------ | ---- | ----------------------------------- |
+| `--schema-id <id>`  | string | 是   | Profile Schema ID（必填）           |
+| `--library-id <id>` | string | 否   | 记忆库 ID（默认：账号的默认记忆库） |
+
+**参数约束**
+
+- schema-id必填；library-id最长32。
 
 **输出**
 
-text / quiet：
-
-```
-Name: user_basic
-Description: 用户基础资料
-Attributes:
-  [attr-xxx] city
-    desc: 用户常住城市
-    default:
-```
-
-无属性时输出 `No attributes.`
-
-json 模式：返回完整模板，包括服务端给出的 `plan_version` 和 `extract_scene`。
+json保留模板详情；text / quiet显示模板名称、描述和属性定义（包括attribute_id、描述、默认值等）。
 
 **注意事项**
 
-- 这里的 `attribute_id` 是模板字段句柄。`profile update` 的 update / delete 操作用它定位，不用属性名。
-- 用户的具体取值用 `profile get` 读取。
+这里获取的attribute_id用于更新模板属性。读取某用户已抽取的属性值请用profile get。
 
 **示例**
 
 ```bash
-bl memory profile show --schema-id schema-xxx --workspace-id ws-xxx
-
-bl memory profile show --schema-id schema-xxx --output json
+bl memory profile show --schema-id '<schema-id>' --output json
 ```
 
 ---
 
-#### `bl memory profile update`
+## `bl memory profile update`
 
-更新模板名称、描述、属性、策略档位或抽取场景。
+更新画像模板、抽取场景或计费档位。接口：`PATCH /profile_schemas/{schema_id}`（路径省略 `/api/v2/apps/memory`）。
 
 **用法**
 
@@ -162,53 +134,44 @@ bl memory profile update --schema-id <id> [flags]
 
 **参数**
 
-| 参数                                       | 类型   | 必填 | 说明                                     |
-| ------------------------------------------ | ------ | ---- | ---------------------------------------- |
-| `--schema-id <id>`                         | string | 是   | 画像模板 ID                              |
-| `--name <name>`                            | string | 否¹  | 新名称，最长 32                          |
-| `--description <text>`                     | string | 否¹  | 新描述                                   |
-| `--attributes-operations <json>`           | string | 否¹  | 属性操作 JSON 数组                       |
-| `--plan-version <pro\|lite>`               | string | 否¹  | 策略档位                                 |
-| `--extract-scene <efficient\|intelligent>` | string | 否¹  | 抽取场景                                 |
-| `--library-id <id>`                        | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库 |
-
-> ¹ 至少提供 `--name`、`--description`、`--attributes-operations`、`--plan-version`、`--extract-scene` 之一。
+| 参数                                       | 类型   | 必填 | 说明                                                             |
+| ------------------------------------------ | ------ | ---- | ---------------------------------------------------------------- |
+| `--schema-id <id>`                         | string | 是   | Profile Schema ID（必填）                                        |
+| `--name <name>`                            | string | 否   | 新的 Schema 名称                                                 |
+| `--description <text>`                     | string | 否   | 新的 Schema 描述                                                 |
+| `--attributes-operations <json>`           | string | 否   | 属性操作 JSON 数组：[{"op":"add","name":"plan"}]                 |
+| `--plan-version <pro\|lite>`               | string | 否   | 策略版本：pro（开启 Rerank）或 lite（关闭 Rerank），计费单价不同 |
+| `--extract-scene <efficient\|intelligent>` | string | 否   | 抽取场景：efficient 或 intelligent（创建时默认 efficient）       |
+| `--library-id <id>`                        | string | 否   | 记忆库 ID（默认：账号的默认记忆库）                              |
 
 **参数约束**
 
-- 属性操作的 `op` 使用小写 `add`、`update`、`delete`。
-- `add` 必须有 `name`。`update` 和 `delete` 必须有 `profile show` 返回的 `attribute_id`。
-- 属性 name 最长 32，description 与 default_value 最长 128。
-- 本命令修改模板定义。它不直接改某个用户已经抽出的画像值，也不保证历史数据会自动重抽。
+- schema-id必填，还需至少一个更新字段：name、description、attributes-operations、plan-version或extract-scene。
+- attributes-operations是对象数组，op用小写add/update/delete；add需name，update/delete需attribute_id。
+- 属性名称最长32，属性description/default_value最长128；清空default_value传空字符串，不能只依赖null。
 
 **输出**
 
-text / quiet：
+json保留服务响应；text / quiet输出模板更新确认。
 
-```
-Profile schema schema-xxx updated.
-```
+**注意事项**
+
+修改的是共享模板，不是某个用户的画像值。显式op=delete删除模板属性定义；该命令没有额外--yes确认门，操作前用show及dry-run核对影响范围。修改模板不保证历史数据自动重抽取。
 
 **示例**
 
 ```bash
-bl memory profile update --schema-id schema-xxx --name "user_basic_v2" --workspace-id ws-xxx
-
-bl memory profile update --schema-id schema-xxx \
-  --attributes-operations '[{"op":"add","name":"travel_style","description":"旅行方式偏好"}]'
-
-bl memory profile update --schema-id schema-xxx \
-  --attributes-operations '[{"op":"update","attribute_id":"attr-xxx","description":"长期稳定的兴趣"}]'
-
-bl memory profile update --schema-id schema-xxx \
-  --plan-version pro --extract-scene intelligent
+bl memory profile update --schema-id '<schema-id>' --attributes-operations '[{"op":"add","name":"travel_style","description":"旅行偏好"}]' --output json
+bl memory profile update --schema-id '<schema-id>' --attributes-operations '[{"op":"update","attribute_id":"<attribute-id>","description":"长期稳定的兴趣"}]' --output json
+# 先审阅删除模板属性的请求；这不是删除某个用户的值
+bl memory profile update --schema-id '<schema-id>' --attributes-operations '[{"op":"delete","attribute_id":"<attribute-id>"}]' --dry-run --output json
 ```
 
 ---
 
-#### `bl memory profile delete`
+## `bl memory profile delete`
 
-删除画像模板及其属性定义。
+删除画像模板。接口：`DELETE /profile_schemas/{schema_id}`（路径省略 `/api/v2/apps/memory`）。
 
 **用法**
 
@@ -218,42 +181,37 @@ bl memory profile delete --schema-id <id> [flags]
 
 **参数**
 
-| 参数                | 类型   | 必填 | 说明                                     |
-| ------------------- | ------ | ---- | ---------------------------------------- |
-| `--schema-id <id>`  | string | 是   | 画像模板 ID                              |
-| `--library-id <id>` | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库 |
-| `--yes`             | switch | 否   | 确认这次高风险操作                       |
+| 参数                | 类型   | 必填         | 说明                                |
+| ------------------- | ------ | ------------ | ----------------------------------- |
+| `--schema-id <id>`  | string | 是           | Profile Schema ID（必填）           |
+| `--library-id <id>` | string | 否           | 记忆库 ID（默认：账号的默认记忆库） |
+| `--yes`             | switch | 实际执行时是 | 确认删除；dry-run 不要求            |
+
+**参数约束**
+
+- schema-id必填；实际执行需--yes，dry-run无需确认；library-id最长32。
 
 **输出**
 
-text / quiet：
-
-```
-Profile schema schema-xxx deleted.
-```
-
-未带 `--yes` 时返回 exit code 7，类型为 `requires_confirmation`，不删除模板。
+json保留服务响应；text / quiet输出模板删除确认。
 
 **注意事项**
 
-- 删除的是整份模板。依赖该模板的用户画像随后无法再按这个 schema 读取。
-- 它不会只清空某一个用户的画像，记忆节点也不受影响。
-- 先 `--dry-run` 核对 schema ID，确认影响范围后再加 `--yes`。
+删除整个模板及其属性定义，已抽取的关联画像变得不可访问。会影响所有依赖此模板的用户，不是清空单个用户画像的替代方式。
 
 **示例**
 
 ```bash
-bl memory profile delete --schema-id schema-xxx --dry-run --workspace-id ws-xxx
-
-# 确认影响范围后执行
-bl memory profile delete --schema-id schema-xxx --yes
+bl memory profile delete --schema-id '<schema-id>' --dry-run --output json
+# 确认共享模板影响范围后执行
+bl memory profile delete --schema-id '<schema-id>' --yes --output json
 ```
 
 ---
 
-#### `bl memory profile get`
+## `bl memory profile get`
 
-读取某个用户在指定模板下已经抽出的画像。
+获取某个 Schema 下已提取的用户画像。接口：`GET /profile_schemas/{schema_id}/user_profile`（路径省略 `/api/v2/apps/memory`）。
 
 **用法**
 
@@ -263,41 +221,27 @@ bl memory profile get --schema-id <id> --user-id <id> [flags]
 
 **参数**
 
-| 参数                | 类型   | 必填 | 说明                                     |
-| ------------------- | ------ | ---- | ---------------------------------------- |
-| `--schema-id <id>`  | string | 是   | 画像模板 ID                              |
-| `--user-id <id>`    | string | 是   | 画像所属的记忆实体 ID，最长 64           |
-| `--library-id <id>` | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库 |
+| 参数                | 类型   | 必填 | 说明                                  |
+| ------------------- | ------ | ---- | ------------------------------------- |
+| `--schema-id <id>`  | string | 是   | Profile Schema ID（必填）             |
+| `--user-id <id>`    | string | 是   | 记忆实体 ID，标识画像归属对象（必填） |
+| `--library-id <id>` | string | 否   | 记忆库 ID（默认：账号的默认记忆库）   |
+
+**参数约束**
+
+- schema-id和user-id均必填；user-id最长64，library-id最长32。
 
 **输出**
 
-text / quiet：有 `value_items` 时每个值项一行，否则打印属性的 `value`。
-
-```
-city: 杭州
-hobby: 骑行 (item item-xxx, active)
-```
-
-没有画像数据时输出 `No profile data found.` 空属性可能没有 value，显示为 `(empty)`。
-
-json 模式：画像在 `profile.attributes`。多值可能合并进 `value` 字符串。
+json中的 `profile.attributes` 包含用户属性，服务返回的value/status等字段保留；text / quiet显示属性及值，无画像数据时显示提示。字段可能缺省，不能假定每个属性都有value。
 
 **注意事项**
 
-- 值只在某次 `memory add --profile-schema` 使用了同一个模板 ID 并成功抽取后出现。
-- CLI 不提供画像值项的单独编辑或删除。值的变化通过后续消息抽取产生。
-- 模板字段定义用 `profile show` 查看。
+必须先通过add将消息与同一个profile-schema关联并等待抽取。没有单用户画像直接编辑、单值项删除或清空命令。
 
 **示例**
 
 ```bash
-bl memory profile get --schema-id schema-xxx --user-id user1 --workspace-id ws-xxx
-
-bl memory profile get --schema-id schema-xxx --user-id user1 --output json
+bl memory add --user-id demo_user --profile-schema '<schema-id>' --extract-mode profile_only --messages '[{"role":"user","content":"我常住杭州，喜欢骑行。"}]' --output json
+bl memory profile get --schema-id '<schema-id>' --user-id demo_user --output json
 ```
-
-画像抽取示例见 [记忆节点 / add](node.md#bl-memory-add)。
-
----
-
-← [返回总览](./memory-cli-guide.md)

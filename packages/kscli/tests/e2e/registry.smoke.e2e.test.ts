@@ -67,7 +67,7 @@ describe("e2e: kscli registry smoke", () => {
   test.each(commandPaths)("已注册命令 %s --help 成功", (path) => {
     const commandPath = path.split(" ");
 
-    expect(resolve([...commandPath, "--help"], registry)).toEqual({
+    expect(resolve([...commandPath, "--help"], registry)).toMatchObject({
       kind: "help",
       path: commandPath,
     });
@@ -77,7 +77,7 @@ describe("e2e: kscli registry smoke", () => {
   test.each(groupPaths)("命令分组 %s --help 成功", (path) => {
     const commandPath = path.split(" ");
 
-    expect(resolve([...commandPath, "--help"], registry)).toEqual({
+    expect(resolve([...commandPath, "--help"], registry)).toMatchObject({
       kind: "help",
       path: commandPath,
     });

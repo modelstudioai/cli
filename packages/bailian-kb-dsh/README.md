@@ -9,13 +9,13 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Bailian Console](https://bailian.console.aliyun.com/) · [中文文档](README.zh.md) · [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) · [API Documentation](https://help.aliyun.com/zh/model-studio/)
+[Bailian Console](https://bailian.console.aliyun.com/?spm=a2ty07.github) · [中文文档](README.zh.md) · [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) · [API Documentation](https://help.aliyun.com/zh/model-studio/)
 
 </div>
 
 ## What is this?
 
-`bailian-kb-dsh` is a plugin (and dsh bundle) that gives a DeepSeek Harness agent access to knowledge bases hosted on [Aliyun Model Studio](https://bailian.console.aliyun.com/) (Bailian). It registers two model-facing tools — `kb_search` for raw evidence and `kb_chat` for grounded answers — and ships a settings page plus a management skill for the [`bl` CLI](https://www.npmjs.com/package/bailian-cli).
+`bailian-kb-dsh` is a plugin (and dsh bundle) that gives a DeepSeek Harness agent access to knowledge bases hosted on [Aliyun Model Studio](https://bailian.console.aliyun.com/?spm=a2ty07.github) (Bailian). It registers two model-facing tools — `kb_search` for raw evidence and `kb_chat` for grounded answers — and ships a settings page plus a management skill for the [`bl` CLI](https://www.npmjs.com/package/bailian-cli).
 
 Retrieval happens through **retrieval services** you deploy on Bailian: a service binds one or more knowledge bases to an embedding/rerank configuration and is addressed by its `agent_id`. The plugin keeps the list of deployed services in front of the model, so it can decide whether the question is answerable from your knowledge at all.
 
@@ -30,8 +30,8 @@ Retrieval happens through **retrieval services** you deploy on Bailian: a servic
 ## Requirements
 
 - DeepSeek Harness with its plugin runtime (`@deepseek-ai/dsh-*`), Node.js >= 22.12
-- An Aliyun Model Studio account: a **workspace id** and a **DashScope API key** ([get one](https://bailian.console.aliyun.com/?tab=app#/api-key))
-- At least one **deployed** retrieval or Q&A service in that workspace — create one in the [console](https://bailian.console.aliyun.com/) or with `bl knowledge service create` / `bl knowledge service deploy`
+- An Aliyun Model Studio account: a **workspace id** and a **DashScope API key** ([get one](https://bailian.console.aliyun.com/?spm=a2ty07.github&tab=app#/api-key))
+- At least one **deployed** retrieval or Q&A service in that workspace — create one in the [console](https://bailian.console.aliyun.com/?spm=a2ty07.github) or with `bl knowledge service create` / `bl knowledge service deploy`
 - The [`bl` CLI](https://www.npmjs.com/package/bailian-cli) (`npm install -g bailian-cli`) for anything on the management side — creating knowledge bases, ingesting documents, deploying services. Retrieval itself calls the API directly and never shells out, so `kb_search` / `kb_chat` work without it
 
 ## Installation
@@ -110,7 +110,7 @@ For local integration, add the working copy to a dev profile (the patch file is 
 dsh plugin --profile dev add <this-repo>/packages/bailian-kb-dsh
 ```
 
-Internal design notes — context injection strategy, service cache layout, refresh triggers — live in [docs/kb-dsh/runtime-behavior.md](https://github.com/modelstudioai/cli/blob/main/docs/kb-dsh/runtime-behavior.md); the maintenance checklist is [docs/agents/dsh-plugin.md](https://github.com/modelstudioai/cli/blob/main/docs/agents/dsh-plugin.md).
+Maintenance checklist: [docs/agents/dsh-plugin.md](https://github.com/modelstudioai/cli/blob/main/docs/agents/dsh-plugin.md).
 
 ## Contributing
 

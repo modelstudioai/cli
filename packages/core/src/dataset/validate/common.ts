@@ -24,6 +24,9 @@ export const MAX_DATASET_BYTES = 200 * 1024 * 1024;
  */
 export const MAX_CPT_BYTES = 300 * 1024 * 1024;
 
+/** 决策模型训练数据单文件上限，按平台文档为 300MB。 */
+export const MAX_DECISION_DATASET_BYTES = 300 * 1024 * 1024;
+
 /**
  * Image / video ZIP size cap — 2 GB per the platform docs. Used by
  * `bl dataset upload` for media schemas and by the `sft-lora` training
@@ -88,12 +91,20 @@ export function emptyStats(): ValidationStats {
 export function parseDatasetSchemaFlag(value: string | undefined): DatasetSchema | undefined {
   if (value === undefined || value.trim() === "") return undefined;
   const v = value.trim();
-  if (v === "chatml" || v === "dpo" || v === "cpt" || v === "tts" || v === "image" || v === "video")
+  if (
+    v === "chatml" ||
+    v === "dpo" ||
+    v === "cpt" ||
+    v === "decision" ||
+    v === "tts" ||
+    v === "image" ||
+    v === "video"
+  )
     return v;
   throw new BailianError(
-    `Unsupported --schema "${value}". Supported: chatml, dpo, cpt, tts, image.`,
+    `Unsupported --schema "${value}". Supported: chatml, dpo, cpt, decision, tts, image, video. / 不支持的 --schema；可选值：chatml、dpo、cpt、decision、tts、image、video。`,
     ExitCode.USAGE,
-    `Omit --schema to auto-detect per record (chosen/rejected → DPO, text → CPT, wav_fn → TTS, img_path → image, else ChatML).`,
+    `Omit --schema to auto-detect per record (state/questions → decision, chosen/rejected → DPO, text → CPT, wav_fn → TTS, img_path → image, first_frame_path/video_path → video, else ChatML). / 省略 --schema 可逐条自动识别。`,
   );
 }
 

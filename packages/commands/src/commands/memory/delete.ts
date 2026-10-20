@@ -43,6 +43,11 @@ export default defineCommand({
     MEMORY_WORKSPACE_NOTE,
     {
       "en-US":
+        "This deletes only the selected memory node. It does not delete extracted user profile values or the profile schema.",
+      "zh-CN": "仅删除选中的记忆节点，不会删除已提取的用户画像值或画像模板。",
+    },
+    {
+      "en-US":
         "Deleted nodes may remain readable with status=delete. Run `memory list` first to confirm the node ID.",
       "zh-CN":
         "删除后的节点仍可能通过详情接口读取，状态为 delete。建议先用 `memory list` 确认节点 ID。",

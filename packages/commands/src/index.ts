@@ -17,6 +17,7 @@ export { default as videoRef } from "./commands/video/ref.ts";
 export { default as videoTaskGet } from "./commands/video/task-get.ts";
 export { default as videoDownload } from "./commands/video/download.ts";
 export { default as visionDescribe } from "./commands/vision/describe.ts";
+export { default as decisionPredict } from "./commands/decision/predict.ts";
 export { default as configShow } from "./commands/config/show.ts";
 export { default as configSet } from "./commands/config/set.ts";
 export { default as configList } from "./commands/config/list.ts";
@@ -165,6 +166,14 @@ export { default as finetuneExport } from "./commands/finetune/export.ts";
 export { default as finetuneWatch } from "./commands/finetune/watch.ts";
 export { default as finetuneCapability } from "./commands/finetune/capability.ts";
 export { default as finetunePrice } from "./commands/finetune/price.ts";
+export { default as finetuneCompressTemplates } from "./commands/finetune/compress-templates.ts";
+export { default as finetuneCompressCreate } from "./commands/finetune/compress-create.ts";
+export { default as finetuneCompressList } from "./commands/finetune/compress-list.ts";
+export { default as finetuneCompressGet } from "./commands/finetune/compress-get.ts";
+export { default as finetuneCompressWatch } from "./commands/finetune/compress-watch.ts";
+export { default as finetuneCompressLogs } from "./commands/finetune/compress-logs.ts";
+export { default as finetuneCompressCancel } from "./commands/finetune/compress-cancel.ts";
+export { default as finetuneCompressDelete } from "./commands/finetune/compress-delete.ts";
 export {
   deployTextCreate,
   deployAudioCreate,
@@ -276,6 +285,18 @@ export {
   managedAgentFileSearch,
   managedAgentFileUpload,
 } from "./commands/managed-agent/file.ts";
+export {
+  managedAgentWebhookCreate,
+  managedAgentWebhookList,
+  managedAgentWebhookGet,
+  managedAgentWebhookUpdate,
+  managedAgentWebhookDelete,
+  managedAgentWebhookEnable,
+  managedAgentWebhookDisable,
+  managedAgentWebhookTest,
+  managedAgentWebhookResetSecret,
+  managedAgentWebhookEvents,
+} from "./commands/managed-agent/webhook.ts";
 export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";
@@ -309,3 +330,17 @@ export {
 export { default as knowledgeDocImport } from "./commands/knowledge/doc-import.ts";
 
 export { default as knowledgeDocSync } from "./commands/knowledge/doc-sync.ts";
+
+export { default as managedAgentMemoryStoreCreate } from "./commands/managed-agent/memory-store/create.ts";
+export {
+  managedAgentMemoryStoreList,
+  managedAgentMemoryStoreGet,
+  managedAgentMemoryCreate,
+  managedAgentMemoryList,
+  managedAgentMemoryGet,
+  managedAgentMemoryUpdate,
+  managedAgentMemoryDelete,
+  managedAgentMemoryVersionList,
+  managedAgentMemoryVersionGet,
+  managedAgentMemoryVersionRedact,
+} from "./commands/managed-agent/memory-store/api.ts";

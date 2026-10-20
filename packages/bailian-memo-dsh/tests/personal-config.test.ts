@@ -20,7 +20,7 @@ vi.mock("node:os", async (original) => ({
 }));
 
 describe("personal-config state machine", () => {
-  it("accepts active identity without a profile schema and drops obsolete schema state", () => {
+  it("accepts active identity without a profile schema and preserves shared skill schema state", () => {
     const migrated = parsePersonalMemoryConfig(
       JSON.stringify({
         schema_version: 2,
@@ -32,8 +32,8 @@ describe("personal-config state machine", () => {
       }),
     );
     expect(migrated.status).toBe("active");
-    expect(migrated).not.toHaveProperty("profile_schema_id");
-    expect(migrated).not.toHaveProperty("profile_schema_version");
+    expect(migrated).toHaveProperty("profile_schema_id", "old-schema");
+    expect(migrated).toHaveProperty("profile_schema_version", 1);
   });
 
   it("migrates legacy enabled=true with full identity to active", () => {

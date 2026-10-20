@@ -13,6 +13,7 @@ import {
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runCommandInProcess,
 } from "../helpers.ts";
 import {
   KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
@@ -88,7 +89,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk add: --field 无 = 报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "add",
@@ -102,7 +103,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk add: 无任何内容 flag 报 USAGE (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "add",
@@ -115,7 +116,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk add: --content 与 --content-file 同传 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "add",
@@ -131,7 +132,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk add: --content 6001 字符 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "add",
@@ -145,7 +146,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk add: --title 51 字符 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "add",
@@ -165,7 +166,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
       "--image-url",
       `https://example.com/img${urlIndex}.png`,
     ]).flat();
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "add",
@@ -178,16 +179,10 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk add: dry-run 断言 pipelineId + field 键值原样", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "chunk",
-      "add",
-      "--index-id",
-      "idx_test",
-      "--field",
-      "列A=v=1",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "chunk", "add", "--index-id", "idx_test", "--field", "列A=v=1", ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/chunk\/create/);
@@ -200,16 +195,19 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
     const contentDir = mkdtempSync(join(tmpdir(), "chunk-add-cf-"));
     const contentPath = join(contentDir, "chunk.md");
     writeFileSync(contentPath, "content-file channel fixture body");
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "chunk",
-      "add",
-      "--index-id",
-      "idx_test",
-      "--content-file",
-      contentPath,
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "chunk",
+        "add",
+        "--index-id",
+        "idx_test",
+        "--content-file",
+        contentPath,
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     const fieldMap = data.request?.field as Record<string, unknown> | undefined;
@@ -217,22 +215,25 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk add: dry-run 断言 title/image_urls 键名映射", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "chunk",
-      "add",
-      "--index-id",
-      "idx_test",
-      "--content",
-      "hello",
-      "--title",
-      "intro",
-      "--image-url",
-      "https://example.com/a.png",
-      "--image-url",
-      "https://example.com/b.png",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "chunk",
+        "add",
+        "--index-id",
+        "idx_test",
+        "--content",
+        "hello",
+        "--title",
+        "intro",
+        "--image-url",
+        "https://example.com/a.png",
+        "--image-url",
+        "https://example.com/b.png",
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     const fieldMap = data.request?.field as Record<string, unknown> | undefined;
@@ -246,16 +247,10 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk list: dry-run 断言 pageNum/pageSize 键名 (camelCase 坑位)", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "chunk",
-      "list",
-      "--index-id",
-      "idx_test",
-      "--page-number",
-      "2",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "chunk", "list", "--index-id", "idx_test", "--page-number", "2", ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.request?.pageNum).toBe(2);
@@ -264,7 +259,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk list: --page-size 101 报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "list",
@@ -278,7 +273,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk update: content 9 字符 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "update",
@@ -300,7 +295,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
     const contentDir = mkdtempSync(join(tmpdir(), "chunk-upd-cf-"));
     const contentPath = join(contentDir, "short.txt");
     writeFileSync(contentPath, "123456789");
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "update",
@@ -318,7 +313,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk update: 无修改项 USAGE (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "update",
@@ -336,7 +331,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk update: --content 与 --content-file 同传 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "update",
@@ -356,7 +351,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk update: --title 51 字符 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "update",
@@ -374,7 +369,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk update: --exclude 与 --include 互斥 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "update",
@@ -392,20 +387,23 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk update: dry-run 断言 isDisplayedChunkContent 缺省 true", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "chunk",
-      "update",
-      "--index-id",
-      "idx_test",
-      "--chunk-id",
-      "chunk_test",
-      "--doc-id",
-      "file_test",
-      "--content",
-      "corrected content text",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "chunk",
+        "update",
+        "--index-id",
+        "idx_test",
+        "--chunk-id",
+        "chunk_test",
+        "--doc-id",
+        "file_test",
+        "--content",
+        "corrected content text",
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.request?.pipelineId).toBe("idx_test");
@@ -417,15 +415,10 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
       "--chunk-id",
       `chunk_${chunkIndex}`,
     ]).flat();
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "chunk",
-      "delete",
-      "--index-id",
-      "idx_test",
-      ...chunkIdArgs,
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "chunk", "delete", "--index-id", "idx_test", ...chunkIdArgs, ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ batches: Array<{ request: { chunkIds: string[] } }> }>(stdout);
     expect(data.batches).toHaveLength(2);
@@ -434,7 +427,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
   });
 
   test("chunk delete: 无 --yes 返回确认请求 (7)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "delete",
@@ -458,15 +451,18 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
 
 describe("e2e: kb stats / category / file / connector / import-oss (静态)", () => {
   test("kb stats: dry-run 断言秒级字符串时间戳", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "stats",
-      "--index-id",
-      "idx_test",
-      "--start",
-      "2026-07-30T00:00:00Z",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "stats",
+        "--index-id",
+        "idx_test",
+        "--start",
+        "2026-07-30T00:00:00Z",
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/index\/monitor/);
@@ -475,22 +471,17 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("kb stats: 13 位毫秒时间戳归一为秒", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "stats",
-      "--index-id",
-      "idx_test",
-      "--start",
-      "1785369600000",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "stats", "--index-id", "idx_test", "--start", "1785369600000", ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.request?.startTimestamp).toBe("1785369600");
   });
 
   test("kb stats: 非法时间报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "stats",
       "--index-id",
@@ -503,14 +494,10 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("category list: dry-run 断言 type=UNSTRUCTURED 与 maxResult 单数键名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "category",
-      "list",
-      "--max-result",
-      "5",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "category", "list", "--max-result", "5", ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/listCategory/);
@@ -520,7 +507,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("category add: --name 21 字符 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "category",
       "add",
@@ -532,18 +519,21 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("category add: dry-run 断言 parentCategoryId/connectorId 键名映射", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "category",
-      "add",
-      "--name",
-      "sub-cate",
-      "--parent-id",
-      "cate_parent",
-      "--collection-id",
-      "conn_test",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "category",
+        "add",
+        "--name",
+        "sub-cate",
+        "--parent-id",
+        "cate_parent",
+        "--collection-id",
+        "conn_test",
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/addCategory/);
@@ -554,14 +544,10 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("category delete: dry-run 断言 categoryId", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "category",
-      "delete",
-      "--category-id",
-      "cate_test",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "category", "delete", "--category-id", "cate_test", ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/deleteCategory/);
@@ -569,7 +555,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("category delete: 无 --yes 返回确认请求 (7)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "category",
       "delete",
@@ -589,7 +575,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("file list: 缺 --category-id 报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "file",
       "list",
@@ -600,22 +586,25 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("file list: dry-run 断言 fileIds 数组与 fileName/nextToken 键名透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "file",
-      "list",
-      "--category-id",
-      "cate_test",
-      "--name",
-      "report",
-      "--file-id",
-      "file_a",
-      "--file-id",
-      "file_b",
-      "--next-token",
-      "tok_1",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "file",
+        "list",
+        "--category-id",
+        "cate_test",
+        "--name",
+        "report",
+        "--file-id",
+        "file_a",
+        "--file-id",
+        "file_b",
+        "--next-token",
+        "tok_1",
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/listFile/);
@@ -627,14 +616,10 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("file get: dry-run 断言 fileId", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "file",
-      "get",
-      "--file-id",
-      "file_test",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "file", "get", "--file-id", "file_test", ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/describeFile/);
@@ -642,14 +627,10 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("file delete: dry-run 断言 fileId", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "file",
-      "delete",
-      "--file-id",
-      "file_test",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "file", "delete", "--file-id", "file_test", ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/deleteFile/);
@@ -657,7 +638,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("file delete: 无 --yes 返回确认请求 (7)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "file",
       "delete",
@@ -677,7 +658,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("collection create: --name 21 字符 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "collection",
       "create",
@@ -691,7 +672,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("collection create: --store-type 非法值 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "collection",
       "create",
@@ -707,7 +688,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("collection create: custom 缺 oss 参数 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "collection",
       "create",
@@ -723,16 +704,19 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("collection create: dry-run 断言 FILE + PLATFORM 缺省", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "collection",
-      "create",
-      "--name",
-      "demo",
-      "--description",
-      "team docs",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "collection",
+        "create",
+        "--name",
+        "demo",
+        "--description",
+        "team docs",
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.request?.connectorType).toBe("FILE");
@@ -741,22 +725,25 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("collection create: custom dry-run 断言 regionId/bucketName 键名映射", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "collection",
-      "create",
-      "--name",
-      "oss-coll",
-      "--description",
-      "own bucket",
-      "--store-type",
-      "custom",
-      "--oss-region",
-      "cn-beijing",
-      "--oss-bucket",
-      "my-bucket",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "collection",
+        "create",
+        "--name",
+        "oss-coll",
+        "--description",
+        "own bucket",
+        "--store-type",
+        "custom",
+        "--oss-region",
+        "cn-beijing",
+        "--oss-bucket",
+        "my-bucket",
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     const connectorConfig = data.request?.fileConnectorConfig as
@@ -772,7 +759,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("collection get: 都缺 / 都传 均 USAGE (2)", async () => {
-    const bothMissing = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const bothMissing = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "collection",
       "get",
@@ -780,7 +767,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
       "ws_test",
     ]);
     expect(bothMissing.exitCode).toBe(2);
-    const bothGiven = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const bothGiven = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "collection",
       "get",
@@ -795,14 +782,10 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("collection get: dry-run 断言 connectorName 键名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "collection",
-      "get",
-      "--name",
-      "my-conn",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      ["knowledge", "collection", "get", "--name", "my-conn", ...COMMON],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/getConnector/);
@@ -811,7 +794,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("doc import-oss: 缺 --bucket 报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "doc",
       "import-oss",
@@ -826,23 +809,26 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
   });
 
   test("doc import-oss: dry-run 断言 fileDetails 派生与 tag/overwrite/category 映射", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-      "knowledge",
-      "doc",
-      "import-oss",
-      "--bucket",
-      "my-bucket",
-      "--region",
-      "cn-beijing",
-      "--oss-key",
-      "docs/a.pdf",
-      "--category-id",
-      "cate_x",
-      "--tag",
-      "alpha",
-      "--overwrite",
-      ...COMMON,
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+      [
+        "knowledge",
+        "doc",
+        "import-oss",
+        "--bucket",
+        "my-bucket",
+        "--region",
+        "cn-beijing",
+        "--oss-key",
+        "docs/a.pdf",
+        "--category-id",
+        "cate_x",
+        "--tag",
+        "alpha",
+        "--overwrite",
+        ...COMMON,
+      ],
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/addFilesFromAuthorizedOss/);
@@ -856,7 +842,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
 
   test("doc import-oss: 11 个 --tag 报 USAGE (2)", async () => {
     const tagArgs = Array.from({ length: 11 }, (_, tagIndex) => ["--tag", `t${tagIndex}`]).flat();
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "doc",
       "import-oss",
@@ -877,7 +863,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
       "--oss-key",
       `docs/f${keyIndex}.pdf`,
     ]).flat();
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "doc",
       "import-oss",

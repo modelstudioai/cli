@@ -3,15 +3,6 @@ name: Publish
 on:
   workflow_dispatch:
     inputs:
-      package:
-        description: "Which package set to publish"
-        required: true
-        type: choice
-        options:
-          - bailian-cli
-          - knowledge-studio-cli
-          - bailian-kb-dsh
-          - bailian-memo-dsh
       mode:
         description: "Publish mode"
         required: true
@@ -25,13 +16,13 @@ on:
         type: string
 
 concurrency:
-  group: publish-${{ inputs.package }}-${{ inputs.mode }}-${{ inputs.channel }}
+  group: publish-${{ inputs.mode }}-${{ inputs.channel }}
   cancel-in-progress: false
 
 jobs:
   publish-stable:
-    if: inputs.mode == 'stable' && inputs.package != 'bailian-kb-dsh' && inputs.package != 'bailian-memo-dsh'
-    name: publish stable (${{ inputs.package }}) to npm + binary + tag
+    if: inputs.mode == 'stable'
+    name: publish stable (bailian-cli + kscli + dsh plugins) to npm + binary + tag
     runs-on: ubuntu-latest
     environment: production # Required Reviewers gate
     permissions:
@@ -97,11 +88,11 @@ jobs:
           FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
         # Script order: git tag, then binary GitHub Release + OSS, then npm.
         # OSS upload can fail on a network blip; npm must not succeed first.
-        run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
+        run: node tools/release/publish-stable.mjs
 
   publish-channel:
-    if: inputs.mode == 'channel' && inputs.package != 'bailian-kb-dsh' && inputs.package != 'bailian-memo-dsh'
-    name: publish channel (${{ inputs.package }}) to npm + binary
+    if: inputs.mode == 'channel'
+    name: publish channel (bailian-cli + kscli + dsh plugins) to npm + binary
     runs-on: ubuntu-latest
     permissions:
       contents: write # create prerelease GitHub Release with binary assets
@@ -165,49 +156,7 @@ jobs:
           # credentials in this repo (see publish-stable env notes).
           FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
           FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
         # Script order: binary GitHub Release + OSS, then npm.
         # OSS upload can fail on a network blip; npm must not succeed first.
-        run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
-
-  # Independent dsh plugins (downstream host adapters): own version, tsc + tsdown,
-  # npm-only. Shared workflow entry; NOT publish-stable/channel.mjs. See docs/agents/dsh-plugin.md.
-  publish-dsh-plugin:
-    if: inputs.package == 'bailian-kb-dsh' || inputs.package == 'bailian-memo-dsh'
-    name: publish ${{ inputs.mode }} (${{ inputs.package }}) to npm
-    runs-on: ubuntu-latest
-    # stable goes through the Required Reviewers gate, same as the bl stable job;
-    # channel stays ungated so dist-tag drops need no approval.
-    environment: ${{ inputs.mode == 'stable' && 'production' || '' }}
-    permissions:
-      contents: write # push the <package>-v<version> tag (stable only)
-      id-token: write # OIDC for npm Trusted Publishing + provenance
-    steps:
-      - name: Require channel input
-        if: ${{ inputs.mode == 'channel' && inputs.channel == '' }}
-        run: |
-          echo "::error::mode=channel requires the workflow input \"channel\" (npm dist-tag, e.g. mcp / plugin). Leave mode=stable if you do not need a dist-tag."
-          exit 1
-
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: pnpm
-          registry-url: "https://registry.npmjs.org/"
-
-      - name: Install gitleaks
-        run: |
-          set -euo pipefail
-          GITLEAKS_VERSION=8.21.2
-          curl -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | sudo tar -xz -C /usr/local/bin gitleaks
-          gitleaks version
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: publish-dsh-plugin
-        run: node tools/release/publish-dsh-plugin.mjs --package "${{ inputs.package }}" ${{ inputs.mode == 'channel' && format('--channel "{0}"', inputs.channel) || '' }}
+        run: node tools/release/publish-channel.mjs --channel "$RELEASE_CHANNEL"

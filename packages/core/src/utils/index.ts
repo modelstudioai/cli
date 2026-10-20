@@ -1,4 +1,5 @@
 export { generateFilename } from "./filename.ts";
+export { getHermesHome } from "./agent-home.ts";
 export { resolveOutputDir } from "./output-dir.ts";
 export { maskToken } from "./token.ts";
 export { stripUndefined } from "./object.ts";

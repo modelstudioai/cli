@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README.zh.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
+[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?spm=a2ty07.github) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README.zh.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key)
 
 ---
 
@@ -26,7 +26,7 @@ _Built for AI Agents. Every command works as a structured tool call._
 - **Model generation** — Full-modality generation across text, image, video, and speech, with editing and reference-based generation
 - **Asset understanding** — Parse and ask questions about images, documents, audio, and long videos
 - **App orchestration** — Call Managed Agents, agents, and workflows published on Aliyun Model Studio, wired to knowledge bases, memory, web search, and MCP tools
-- **Native MCP setup** — Register Bailian MCP servers in Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork (千问办公), Qwen Code, or Gemini CLI with channel attribution preserved
+- **Native MCP setup** — Register Bailian MCP servers in Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork (千问办公), Qwen Code, Gemini CLI, or Pi
 - **Training & deployment** — Validate and upload datasets, fine-tune models, deploy dedicated models as endpoints
 - **Account operations** — Login, UI-based configuration, model marketplace, usage and quota, rate-limit increases, team seat management
 - **Plan onboarding** — Connect subscription plans such as Token Plan to the CLI and common coding agents in one step
@@ -67,7 +67,7 @@ One sentence builds a reusable cloud-side short-film director for storyboarding,
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** — understands the requirement and generates the agent configuration
 - **[Aliyun Model Studio CLI](https://github.com/modelstudioai/cli/)** — validates the configuration, previews the changes, and completes the deployment
-- **[Managed Agent](https://bailian.console.aliyun.com/cn-beijing/?tab=managed-agents#/managed-agents/quick-start)** — runs the director role along with its skills and tools in the cloud
+- **[Managed Agent](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=managed-agents#/managed-agents/quick-start)** — runs the director role along with its skills and tools in the cloud
 
 ### The single prompt
 
@@ -121,9 +121,10 @@ Once installed, just describe your task to your AI Agent — no need to assemble
 | Monitoring & alerts      | "Show my model call stats, failures and logs, and create an alert rule."                                                              |
 | Throughput reservations  | "List my throughput reservations and capacity instances, then scale, renew or release capacity and wait for the operation to finish." |
 | Model selection          | "Recommend a model for image understanding and customer support."                                                                     |
+| Decision model           | "Use the Bailian decision model to route this ticket and assess whether it needs escalation."                                         |
 | About Bailian CLI        | "Tell me what Bailian CLI can do for me, and suggest how to use it for my needs."                                                     |
 
-> More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
+> More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?spm=a2ty07.github)
 
 ### Try a knowledge base
 
@@ -157,7 +158,7 @@ To use an existing ordinary API key or a Token Plan subscription key, run the sa
 bl auth login --api-key <API_KEY>
 ```
 
-Get an ordinary key from the [DashScope Console](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key), or a Token Plan key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview).
+Get an ordinary key from the [DashScope Console](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key), or a Token Plan key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview).
 
 ### Alibaba Cloud OpenAPI AK/SK
 
@@ -205,17 +206,17 @@ Scan the QR code to join the Aliyun Model Studio CLI DingTalk user group for usa
 
 ## Links
 
-Memory documentation (Chinese): [capability matrix](https://github.com/modelstudioai/cli/blob/main/docs/memory/cli-matrix.md) · [user guide](https://github.com/modelstudioai/cli/blob/main/docs/memory/user-guide.md).
+Memory documentation (Chinese): [capability matrix](https://github.com/modelstudioai/cli/blob/main/docs/memory/cli-matrix.md) · [command guide](https://github.com/modelstudioai/cli/blob/main/docs/memory/memory-cli-guide.md).
 
-| Resource                     | URL                                                                                       |
-| :--------------------------- | :---------------------------------------------------------------------------------------- |
-| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                         |
-| DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                                                  |
-| Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
-| Aliyun Model Studio Console  | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
-| Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
-| Get Token Plan API Key       | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
-| Get AccessKey                | https://ram.console.aliyun.com/manage/ak                                                  |
+| Resource                     | URL                                                                                                 |
+| :--------------------------- | :-------------------------------------------------------------------------------------------------- |
+| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?spm=a2ty07.github                                            |
+| DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                                                            |
+| Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models                                      |
+| Aliyun Model Studio Console  | https://bailian.console.aliyun.com/?spm=a2ty07.github                                               |
+| Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key                   |
+| Get Token Plan API Key       | https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview |
+| Get AccessKey                | https://ram.console.aliyun.com/manage/ak                                                            |
 
 ### RAG audio and video
 

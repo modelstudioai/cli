@@ -418,5 +418,5 @@ async function activate(ctx: Context, config: Config, isActive: () => boolean): 
   }
 
   // Best-effort resume of interrupted initializing state on plugin load.
-  void resumeAndEnsure(client).catch(() => undefined);
+  void ensureInitialized(client).catch(() => undefined);
 }

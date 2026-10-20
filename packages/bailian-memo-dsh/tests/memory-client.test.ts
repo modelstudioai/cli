@@ -133,3 +133,23 @@ it("returns no profile when there is no rule, and search stays independent", asy
   expect(url.pathname).toContain("memory_nodes/search");
   expect(JSON.parse(options.body as string)).not.toHaveProperty("profile_schema");
 });
+
+it("propagates the same recall signal through search, schema lookup and profile read", async () => {
+  const signal = new AbortController().signal;
+  const fetchImpl = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    expect(init?.signal).toBe(signal);
+    const address = typeof url === "string" ? url : url instanceof URL ? url.href : url.url;
+    if (address.includes("profile_schemas") && !address.includes("user_profiles")) {
+      return Response.json({ profile_schemas: [{ profile_schema_id: "schema" }] });
+    }
+    return Response.json({});
+  });
+  const client = new MemoryClient({
+    resolveApiKey: async () => "test",
+    resolveWorkspaceId: async () => "workspace",
+    fetchImpl: fetchImpl as typeof fetch,
+  });
+  await client.search({ userId: "user", query: "fact" }, signal);
+  await client.getCurrentProfile("user", "schema", signal);
+  expect(fetchImpl).toHaveBeenCalledTimes(3);
+});

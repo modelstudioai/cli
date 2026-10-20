@@ -190,8 +190,8 @@ export class MemoryClient {
     return (await response.json()) as T;
   }
 
-  async search(input: MemorySearchInput): Promise<MemorySearchResponse> {
-    return this.requestJson("POST", memorySearchPath(), searchBody(input));
+  async search(input: MemorySearchInput, signal?: AbortSignal): Promise<MemorySearchResponse> {
+    return this.requestJson("POST", memorySearchPath(), searchBody(input), undefined, signal);
   }
 
   async describeSearchScope(input: MemorySearchInput): Promise<{
@@ -260,17 +260,23 @@ export class MemoryClient {
   }
 
   /** Read the complete server order so the default is the last rule, including later pages. */
-  async listProfileSchemas(): Promise<Array<{ id: string; name: string }>> {
+  async listProfileSchemas(signal?: AbortSignal): Promise<Array<{ id: string; name: string }>> {
     const schemas: Array<{ id: string; name: string }> = [];
     const pageSize = 50;
     for (let page = 1; page <= 100; page += 1) {
       const result = await this.requestJson<{
         total?: number;
         profile_schemas?: Array<{ profile_schema_id?: string; name?: string }>;
-      }>("GET", profileSchemaPath(), undefined, {
-        page_num: String(page),
-        page_size: String(pageSize),
-      });
+      }>(
+        "GET",
+        profileSchemaPath(),
+        undefined,
+        {
+          page_num: String(page),
+          page_size: String(pageSize),
+        },
+        signal,
+      );
       const rows = result.profile_schemas ?? [];
       for (const row of rows) {
         if (!row.profile_schema_id)
@@ -284,8 +290,8 @@ export class MemoryClient {
     throw new Error("Profile rule list is incomplete. / 画像规则列表未获取完整。");
   }
 
-  async getProfileSchemaId(selectedId?: string): Promise<string | undefined> {
-    const schemas = await this.listProfileSchemas();
+  async getProfileSchemaId(selectedId?: string, signal?: AbortSignal): Promise<string | undefined> {
+    const schemas = await this.listProfileSchemas(signal);
     if (selectedId) {
       if (!schemas.some((schema) => schema.id === selectedId)) {
         throw new Error(
@@ -297,20 +303,35 @@ export class MemoryClient {
     return schemas.at(-1)?.id;
   }
 
-  async getCurrentProfile(userId: string, selectedId?: string): Promise<UserProfileResponse> {
-    const schemaId = await this.getProfileSchemaId(selectedId);
-    return schemaId ? this.getProfile({ schemaId, userId }) : { profile: { attributes: [] } };
+  async getCurrentProfile(
+    userId: string,
+    selectedId?: string,
+    signal?: AbortSignal,
+  ): Promise<UserProfileResponse> {
+    const schemaId = await this.getProfileSchemaId(selectedId, signal);
+    return schemaId
+      ? this.getProfile({ schemaId, userId }, signal)
+      : { profile: { attributes: [] } };
   }
 
-  async getProfile(input: {
-    schemaId: string;
-    userId: string;
-    needDetail?: boolean;
-  }): Promise<UserProfileResponse> {
-    return this.requestJson("GET", userProfilePath(input.schemaId), undefined, {
-      user_id: input.userId,
-      need_detail: input.needDetail ? "true" : undefined,
-    });
+  async getProfile(
+    input: {
+      schemaId: string;
+      userId: string;
+      needDetail?: boolean;
+    },
+    signal?: AbortSignal,
+  ): Promise<UserProfileResponse> {
+    return this.requestJson(
+      "GET",
+      userProfilePath(input.schemaId),
+      undefined,
+      {
+        user_id: input.userId,
+        need_detail: input.needDetail ? "true" : undefined,
+      },
+      signal,
+    );
   }
 
   async patchProfileValue(input: {

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { enterIsolatedHome, type IsolatedHomeHandle } from "e2e/isolation";
 import { parse as parseToml } from "smol-toml";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import {
@@ -18,14 +19,18 @@ import {
 
 let home = "";
 let configDir = "";
+let isolation: IsolatedHomeHandle | undefined;
 
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), "bl-mcp-agent-"));
-  configDir = join(home, ".bailian");
+  // MCP path resolution still reads OPENCLAW_CONFIG_PATH / ZCODE_HOME / CODEX_HOME, etc.
+  isolation = enterIsolatedHome();
+  home = isolation.home;
+  configDir = isolation.configDir;
 });
 
 afterEach(() => {
-  rmSync(home, { recursive: true, force: true });
+  isolation?.restore();
+  isolation = undefined;
 });
 
 function spec(transport: "streamable-http" | "sse" = "streamable-http"): McpConnectionSpec {
@@ -259,6 +264,31 @@ describe("MCP Agent registration", () => {
       "qwenwork",
       "gemini",
     ]);
+  });
+
+  test("resolveMcpAgentTargets ignores host OPENCLAW_CONFIG_PATH", () => {
+    // Drop beforeEach isolation, inject a host leak path, then re-enter to prove env is cleared.
+    isolation?.restore();
+    isolation = undefined;
+    const previousOpenclaw = process.env.OPENCLAW_CONFIG_PATH;
+    const leaked = mkdtempSync(join(tmpdir(), "bl-mcp-openclaw-leak-"));
+    const leakedConfig = join(leaked, "openclaw.json");
+    writeFileSync(leakedConfig, "{}");
+    process.env.OPENCLAW_CONFIG_PATH = leakedConfig;
+    try {
+      isolation = enterIsolatedHome();
+      home = isolation.home;
+      configDir = isolation.configDir;
+      expect(process.env.OPENCLAW_CONFIG_PATH).toBeUndefined();
+      mkdirSync(join(home, ".codex"), { recursive: true });
+      expect(resolveMcpAgentTargets("all", home)).toEqual(["codex"]);
+    } finally {
+      isolation?.restore();
+      isolation = undefined;
+      if (previousOpenclaw === undefined) delete process.env.OPENCLAW_CONFIG_PATH;
+      else process.env.OPENCLAW_CONFIG_PATH = previousOpenclaw;
+      rmSync(leaked, { recursive: true, force: true });
+    }
   });
 
   test("qoderwork writes ~/.qoderwork/mcp.json", () => {

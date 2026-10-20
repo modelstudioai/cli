@@ -192,8 +192,8 @@ export const telemetryStage: Middleware = (ctx, next) => {
  * if `next()` throws, the notice is skipped (no update nag on failure).
  */
 export const versionCheckStage: Middleware = async (ctx, next) => {
-  // Planning must not trigger update downloads or installed-skill writes.
-  if (ctx.command.prepare) {
+  // Planning and explicitly disabled update checks must not trigger background writes.
+  if (ctx.command.prepare || process.env.NO_UPDATE_NOTIFIER === "1") {
     await next();
     return;
   }

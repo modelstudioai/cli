@@ -4,7 +4,7 @@ import { parseArgs } from "util";
 import { runCheck } from "./check.mjs";
 import { createTag, currentBranch, isWorkingTreeClean, pushTag, tagExists } from "./lib/git.mjs";
 import { npmViewExists, pnpmPublish } from "./lib/npm.mjs";
-import { ALL_PACKAGES, PACKAGES } from "./lib/packages.mjs";
+import { ALL_PACKAGES } from "./lib/packages.mjs";
 import { releaseBinaryArtifacts } from "./lib/binary-release.mjs";
 
 function log(msg = "") {
@@ -18,15 +18,13 @@ function step(msg) {
 const { values } = parseArgs({
   options: {
     "dry-run": { type: "boolean", default: false },
-    knowledge: { type: "boolean", default: false },
     "skip-binary": { type: "boolean", default: false },
   },
   allowPositionals: false,
 });
 const dryRun = values["dry-run"];
-const knowledge = values.knowledge;
 const skipBinary = values["skip-binary"];
-const packages = knowledge ? ALL_PACKAGES : PACKAGES;
+const packages = ALL_PACKAGES;
 
 try {
   if (!dryRun && !process.env.CI) {
@@ -46,7 +44,7 @@ try {
     log("[dry-run] skipping working-tree + branch preflight");
   }
 
-  const { coreJson } = await runCheck({ knowledge });
+  const { coreJson } = await runCheck();
   const version = coreJson.version; // all packages share this, asserted by runCheck
 
   step(`idempotency: check ${version} against registry`);
@@ -83,7 +81,7 @@ try {
     await releaseBinaryArtifacts({ mode: "stable", dryRun });
   }
 
-  // 3) npm (dependency order: core → runtime → commands → cli [→ kscli])
+  // 3) npm (dependency order: core → runtime → commands → cli → kscli → dsh plugins)
   for (const pkg of packages) {
     if (published.get(pkg.key)) continue;
     step(`publish ${pkg.name}@${version} (tag=latest, provenance)`);

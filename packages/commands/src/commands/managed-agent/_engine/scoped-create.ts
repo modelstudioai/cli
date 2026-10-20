@@ -24,7 +24,13 @@ import { createFileStateScope } from "./file-state-manager.ts";
 import { installSdkTransport } from "./transport.ts";
 
 export type ScopedCreateHost = Pick<CommandContext, "client" | "identity" | "settings">;
-export type ScopedCreateGroup = "agents" | "environments" | "skills" | "vaults" | "deployments";
+export type ScopedCreateGroup =
+  | "agents"
+  | "environments"
+  | "skills"
+  | "vaults"
+  | "deployments"
+  | "memory_stores";
 
 export interface LoadedScopedCreateProject {
   configPath: string;
@@ -54,7 +60,7 @@ export interface ScopedTopLevelCreateInput {
   host: ScopedCreateHost;
   project: LoadedScopedCreateProject;
   group: Exclude<ScopedCreateGroup, "agents">;
-  resourceType: "environment" | "skill" | "vault" | "deployment";
+  resourceType: "environment" | "skill" | "vault" | "deployment" | "memory_store";
   displayName: string;
   rawDeclaration: Record<string, unknown>;
   resolvedDeclaration: Record<string, unknown>;
@@ -104,7 +110,12 @@ export function selectResourceKey(options: {
       .filter(
         (resource) =>
           resource.address.provider === options.provider &&
-          options.resourceTypes.includes(resource.address.type),
+          options.resourceTypes.includes(resource.address.type) &&
+          !(
+            resource.address.type === "memory_store" &&
+            resource.remote_id &&
+            resource.memory_initialization
+          ),
       )
       .map((resource) => resource.address.name),
   );
@@ -161,14 +172,19 @@ export async function loadScopedCreateProject(
 }
 
 export async function resolveCandidateDeclaration(options: {
-  project: LoadedScopedCreateProject;
+  project: Pick<LoadedScopedCreateProject, "config" | "configPath" | "projectName">;
   group: ScopedCreateGroup;
   rawDeclaration: Record<string, unknown>;
 }): Promise<Record<string, unknown>> {
   const temporaryKey = "__bailian_cli_create_candidate__";
-  const rawConfig = structuredClone(options.project.config) as unknown as Record<string, unknown>;
-  const declarations = (rawConfig[options.group] ?? {}) as Record<string, unknown>;
-  rawConfig[options.group] = { ...declarations, [temporaryKey]: options.rawDeclaration };
+  // Existing resources already have resolved file contents. Resolve only the new
+  // declaration here; scoped planning checks its references against the full project.
+  const rawConfig = {
+    version: options.project.config.version,
+    providers: options.project.config.providers,
+    defaults: options.project.config.defaults,
+    [options.group]: { [temporaryKey]: options.rawDeclaration },
+  };
   const resolved = await withAgentErrors(() =>
     resolveProjectConfigFromObject(rawConfig, {
       projectName: options.project.projectName,

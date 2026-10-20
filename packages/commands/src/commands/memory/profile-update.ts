@@ -93,6 +93,12 @@ export default defineCommand({
     MEMORY_WORKSPACE_NOTE,
     {
       "en-US":
+        "Attribute operations change the shared schema, not one user's profile values. An explicit delete operation removes an attribute definition; inspect the schema and use --dry-run before applying it.",
+      "zh-CN":
+        "属性操作修改共享模板，不是修改单个用户的画像值。显式 delete 操作会删除属性定义；请先查看模板并用 --dry-run 核对。",
+    },
+    {
+      "en-US":
         'Each operation needs "op": add (requires name), update / delete (require attribute_id). Run `memory profile show` first to get attribute IDs.',
       "zh-CN":
         '每条操作必须带 "op"：add（需要 name）、update / delete（需要 attribute_id）。属性 ID 先用 `memory profile show` 查。',

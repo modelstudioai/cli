@@ -2,9 +2,111 @@
 
 `bailian-cli` 系列包的所有重要变更都记录在此。
 
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands`、`knowledge-studio-cli` 共享一个版本号。
+格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands`、`knowledge-studio-cli`、`bailian-kb-dsh`、`bailian-memo-dsh` 共享一个版本号。
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
+
+## [2.5.0] - 2026-10-20
+
+### 新增
+
+- **Memory 管理** —— 新增节点详情、Skill记忆导出，以及画像模板列表、详情、更新和删除；支持按规则召回、pro/lite检索、技能元数据和仅画像抽取。
+- **个人记忆 Skill** —— 新增 `bailian-memory`，支持经用户授权的个人记忆、召回和画像流程。
+- **DeepSeek Harness 集成** —— 新增个人记忆插件，提供自动召回、异步整理和记住/遗忘工具；知识库插件适配dsh 0.2.1设置体系与隔离的管理凭据。
+
+### 变更
+
+- **Memory CLI 迁移（BREAKING）** —— Memory命令改用Workspace专属端点。配置 `--workspace-id`、`BAILIAN_WORKSPACE_ID` 或 `workspace_id`；在支持记忆库参数的命令中将 `--memory-library-id` 替换为 `--library-id`。`memory update` 和 `memory delete` 移除 `--user-id`；确认删除节点时需传 `--yes`。
+- **记忆写入（BREAKING）** —— `memory add` 改为提交异步抽取，默认最多等待120秒。仅提交可使用 `--wait 0`；JSON调用方需适配 `event_id`、`events`，提交回执不等于抽取完成。
+- **统一发布** —— CLI、Knowledge Studio CLI和两个dsh插件共用版本与发布流程；dsh知识库插件从独立0.1.x版本系列迁至2.5.0。
+
+### 已移除
+
+- **旧知识库检索（BREAKING）** —— 移除 `bl knowledge retrieve`、`kscli retrieve` 和 `knowledgeRetrieve` 命令导出。迁移至 `bl knowledge search` 或 `kscli search`，使用检索服务的 `--agent-id`；旧的index参数不能直接照搬。
+- **旧Memory库接口（BREAKING）** —— 导出类型 `MemoryAddResponse` 替换为 `MemoryAddAsyncResponse`；库调用方需适配更新后的异步请求/响应契约。
+
+### 修复
+
+- **记忆完成判定与输入校验** —— 空事件列表或缺少事件ID不再误报完成；轮询遵守超时预算，部分失败返回非零退出码，非法JSON元素和属性类型在请求前拒绝。
+- **检索说明** —— 明确 `--min-score` 默认0.3且仅对pro生效，lite不按该阈值过滤。
+
+### 安全
+
+- **Workspace端点** —— 拒绝可能改变请求目标主机的Workspace标识，防止凭据被发送到非预期主机。
+
+## [2.4.0] - 2026-10-19
+
+### 新增
+
+- **Managed Agent 记忆管理** —— 支持管理 Memory Store、记忆内容和历史版本，并将记忆挂载到 Session。
+- **工作空间 Webhook** —— 支持管理和测试 Webhook、重置签名密钥及查询投递事件。
+- **Agent 资源绑定** —— 创建 Agent 时可通过 `--environment`、`--vault` 和 `--mcp` 绑定默认 Environment、Vault 及 MCP 市场服务。
+- **运行时环境变量** —— 创建 Session、运行 Session 和创建 Deployment 时可重复传入 `--environment_variables KEY=VALUE`。
+
+## [2.3.3] - 2026-10-19
+
+### 修复
+
+- **二进制 CLI 请求** —— 修复二进制 CLI 的模型 API 请求失败问题，包括语音和视频生成。
+- **请求超时** —— 修复核心 API 长请求在配置的 `--timeout` 之前提前超时的问题；补充流式响应空闲保护，并在流结束时释放连接。
+- **Windows 控制台登录** —— 修复 Windows 打开浏览器时控制台登录链接的查询参数丢失问题。
+- **登录提示** —— 控制台登录后或执行 `bl auth status` 时，若未配置模型 API Key，会明确提示模型调用仍需配置 Key，并给出配置命令。
+
+## [2.3.2] - 2026-10-16
+
+### 修复
+
+- **CLI 更新** —— `bl update` 在升级失败或无法获取最新版本时返回非零退出码，便于脚本和 Agent 正确识别失败。
+
+## [2.3.1] - 2026-10-16
+
+### 修复
+
+- **请求超时** —— 设置超过 300 秒的请求超时时间后，不再被默认的响应头超时提前中断。
+
+## [2.3.0] - 2026-10-14
+
+### 新增
+
+- **Pi Agent 接入** —— 新增 Pi 支持：
+  - `bl config agent` 新增 `--agent pi`，用于配置 Pi 使用百炼模型。
+  - `bl mcp connect` / `bl mcp disconnect` 新增 `--agent pi`，用于接入和移除百炼 MCP 服务。
+
+### 修复
+
+- **全局参数位置** —— 支持在完整命令路径前使用全局参数，例如 `bl --config token-plan auth status`；命令专属参数和鉴权参数需放在路径后。
+- **参数校验与提示** —— 帮助和版本查询会校验已传入的参数；仅接受命令支持的参数名，参数解析错误支持按配置语言显示中英文提示。
+- **文件上传超时** —— `--timeout` 可设置本地文件上传至临时 OSS 的传输超时时间。
+
+## [2.2.2] - 2026-10-14
+
+### 新增
+
+- **模型压缩完整生命周期** —— 新增 `bl finetune compress templates/create/list/get/watch/logs/cancel/delete`，支持对符合条件的全参调优模型执行量化压缩，并覆盖 dry-run 预览、状态轮询、日志查询和安全删除确认。
+- **支持 Pi Agent** —— `bl config agent` 与 `bl mcp connect` / `bl mcp disconnect` 新增支持 Pi，写入其原生配置并保留已有设置，输出中的凭据会脱敏。
+- **全局参数可前置** —— `--config` 等全局参数现在既可放在命令之后，也可放在命令之前（`bl --config token-plan auth status`）；两种写法都只对本次调用选择 Profile，不修改 `active_config`。命令专属参数和凭证域参数仍须放在命令路径之后。
+- **决策模型推理** —— 新增 `bl decision`，通过工作空间专属 Endpoint 调用 TypeSafe System One，支持 `choice` / `noul` / `score` 校验、JSON 与文本输出、复用训练样本、北京/新加坡地域路由及 dry-run 预览。
+
+### 变更
+
+- **决策数据集校验** —— 与最新 API 对齐：`state` 可为字符串、对象或数组，`instructions` 改为可选，并按接口限制校验各类问题的 criteria。
+- **更严格的参数校验** —— 只接受命令已定义的参数。未知参数、缺少参数值或参数值非法时，即使本次调用原本会显示帮助，也返回用法错误退出码 2，解析错误提示跟随 Profile 语言；不带参数的根命令或命令组仍显示帮助并返回 0。`--timeout` 在命令行和最终生效配置中使用同一套“正有限数”校验规则。
+
+### 修复
+
+- **临时文件上传超时** —— 本地文件上传到临时 OSS 存储时会遵循 `--timeout`，不再固定为 120 秒。
+
+## [2.2.1] - 2026-10-12
+
+### 修复
+
+- **Hermes Agent 配置路径** —— `bl config agent --agent hermes` 现在会写入 Hermes 实际读取的位置（`$HERMES_HOME/config.yaml`，或平台原生默认路径：Windows 为 `%LOCALAPPDATA%\hermes`，其它平台为 `~/.hermes`），不再固定写 `~/.hermes/config.yaml`。此前在 Windows 或自定义 `HERMES_HOME` 环境下，配置被写到 Hermes 不读取的文件、变更静默失效，Agent 探测也可能误报 Hermes 为「未配置」。
+
+## [2.2.0] - 2026-10-12
+
+### 变更
+
+- **Token Plan 额度窗口** —— `bl usage token-plan` 现在只展示月度额度（使用百分比与重置时间），不再显示此前的 5 小时和 1 周窗口。
 
 ## [2.1.0] - 2026-09-28
 

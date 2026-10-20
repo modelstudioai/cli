@@ -5,24 +5,18 @@ import { printQuotaBox, readNumber } from "./quota-box.ts";
 const TOKEN_PLAN_USAGE_API = "zeldaHttp.apikeyMgr./tokenplan/personal/api/v2/usage";
 
 interface TokenPlanUsage {
-  per5HourPercentage?: number;
-  per5HourResetTime?: number;
-  per1WeekPercentage?: number;
-  per1WeekResetTime?: number;
+  per1MonthPercentage?: number;
+  per1MonthResetTime?: number;
 }
 
 function readUsage(result: unknown): TokenPlanUsage {
   const response = unwrapResponse(result as Record<string, unknown>);
   const usage: TokenPlanUsage = {};
 
-  const per5HourPercentage = readNumber(response.per5HourPercentage);
-  if (per5HourPercentage !== undefined) usage.per5HourPercentage = per5HourPercentage;
-  const per5HourResetTime = readNumber(response.per5HourResetTime);
-  if (per5HourResetTime !== undefined) usage.per5HourResetTime = per5HourResetTime;
-  const per1WeekPercentage = readNumber(response.per1WeekPercentage);
-  if (per1WeekPercentage !== undefined) usage.per1WeekPercentage = per1WeekPercentage;
-  const per1WeekResetTime = readNumber(response.per1WeekResetTime);
-  if (per1WeekResetTime !== undefined) usage.per1WeekResetTime = per1WeekResetTime;
+  const per1MonthPercentage = readNumber(response.per1MonthPercentage);
+  if (per1MonthPercentage !== undefined) usage.per1MonthPercentage = per1MonthPercentage;
+  const per1MonthResetTime = readNumber(response.per1MonthResetTime);
+  if (per1MonthResetTime !== undefined) usage.per1MonthResetTime = per1MonthResetTime;
 
   return usage;
 }
@@ -32,18 +26,11 @@ function printView(usage: TokenPlanUsage, generatedAt: number): void {
     "Token Plan Usage",
     [
       {
-        label: "5-hour quota",
+        label: "Monthly quota",
         emptyMessage:
-          "The 5-hour limit may be unlimited; verify in the Bailian Token Plan console.",
-        percentage: usage.per5HourPercentage,
-        resetTime: usage.per5HourResetTime,
-      },
-      {
-        label: "1-week quota",
-        emptyMessage:
-          "The 1-week limit may be unlimited; verify in the Bailian Token Plan console.",
-        percentage: usage.per1WeekPercentage,
-        resetTime: usage.per1WeekResetTime,
+          "The monthly limit may be unlimited; verify in the Bailian Token Plan console.",
+        percentage: usage.per1MonthPercentage,
+        resetTime: usage.per1MonthResetTime,
       },
     ],
     generatedAt,

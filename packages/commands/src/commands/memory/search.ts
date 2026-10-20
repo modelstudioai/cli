@@ -62,8 +62,8 @@ const SEARCH_FLAGS = {
     type: "number",
     valueHint: "<score>",
     description: {
-      "en-US": "Minimum similarity score, 0-1 (default: 0.3)",
-      "zh-CN": "最小相似度分数阈值，0~1（默认：0.3）",
+      "en-US": "Minimum similarity score, 0-1 (default: 0.3; only effective with pro)",
+      "zh-CN": "最小相似度分数阈值，0~1（默认：0.3；仅 pro 生效）",
     },
   },
   memoryTypes: {
@@ -143,8 +143,8 @@ export default defineCommand({
       "zh-CN": '--user-id user1 --messages \'[{"role":"user","content":"推荐一本书"}]\' --top-k 5',
     },
     {
-      "en-US": '--user-id user1 --query "reminders" --plan-version lite --min-score 0',
-      "zh-CN": '--user-id user1 --query "提醒事项" --plan-version lite --min-score 0',
+      "en-US": '--user-id user1 --query "reminders" --plan-version pro --min-score 0',
+      "zh-CN": '--user-id user1 --query "提醒事项" --plan-version pro --min-score 0',
     },
     {
       "en-US":
