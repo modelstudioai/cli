@@ -12,7 +12,7 @@ monorepo 现在按"纯逻辑 → 运行时框架 → 命令库 → 产品入口"
 - `packages/cli` — `bailian-cli`,完整 `bl` 产品入口;`src/commands.ts` 组装 `bl` 暴露的命令路径
 - `packages/kscli` — `knowledge-studio-cli`,Knowledge Studio 专用入口;`src/main.ts` 复用 commands 并重映射为 `kscli` 路径
 - `packages/bailian-kb-dsh` — `bailian-kb-dsh`,**下游宿主适配层**(依赖方向朝外):百炼知识库的 DeepSeek Harness (dsh) 插件,消费 `bl` CLI 与知识库 API,不在上面这条分层链上;构建独立，版本与发布跟随 bailian-cli,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)
-- `packages/bailian-memo-dsh` — `bailian-memo-dsh`,**下游宿主适配层**:百炼个人记忆 dsh 插件(dsh 0.2.1 Volatile Config / SettingsForms);身份在 `~/.bailian/personal-memory/config.json`;构建独立，版本与发布跟随 bailian-cli,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md) 与 [docs/memo-dsh/](docs/memo-dsh/)
+- `packages/bailian-memo-dsh` — `bailian-memo-dsh`,**下游宿主适配层**:百炼个人记忆 dsh 插件(dsh 0.2.1 Volatile Config / SettingsForms);身份在 `~/.bailian/personal-memory/config.json`;构建独立，版本与发布跟随 bailian-cli,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)
 
 ### 关键文件
 

@@ -52,7 +52,7 @@ bl memory add --user-id <id> [--messages <json>] [--content <text>] [flags]
 
 UNRECORDED表示这次没有记忆变化，不等于新增事实。一次抽取可能产生新增、更新或删除；没有独立的事件查询CLI。是否提取画像由profile-schema控制；创建模板本身不会生成画像。
 
-消息格式示例见[用户技术指南](user-guide.md#3-写入并读取第一条记忆)，轮询细节见[异步任务与等待](user-guide.md#4-异步任务与等待)。
+消息格式示例见[从对话抽取](memory-cli-guide.md#场景b从对话抽取事实和画像)，轮询细节见[异步完成和退出码](memory-cli-guide.md#异步完成和退出码)。
 
 **示例**
 

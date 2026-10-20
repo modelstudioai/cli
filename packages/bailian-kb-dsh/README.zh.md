@@ -110,7 +110,7 @@ pnpm --filter bailian-kb-dsh run test
 dsh plugin --profile dev add <本仓库>/packages/bailian-kb-dsh
 ```
 
-内部设计说明（上下文注入策略、服务缓存布局、刷新触发点）见 [docs/kb-dsh/runtime-behavior.md](https://github.com/modelstudioai/cli/blob/main/docs/kb-dsh/runtime-behavior.md)；维护清单见 [docs/agents/dsh-plugin.md](https://github.com/modelstudioai/cli/blob/main/docs/agents/dsh-plugin.md)。
+维护清单见 [docs/agents/dsh-plugin.md](https://github.com/modelstudioai/cli/blob/main/docs/agents/dsh-plugin.md)。
 
 ## 参与贡献
 

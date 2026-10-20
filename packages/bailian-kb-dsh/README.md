@@ -110,7 +110,7 @@ For local integration, add the working copy to a dev profile (the patch file is 
 dsh plugin --profile dev add <this-repo>/packages/bailian-kb-dsh
 ```
 
-Internal design notes — context injection strategy, service cache layout, refresh triggers — live in [docs/kb-dsh/runtime-behavior.md](https://github.com/modelstudioai/cli/blob/main/docs/kb-dsh/runtime-behavior.md); the maintenance checklist is [docs/agents/dsh-plugin.md](https://github.com/modelstudioai/cli/blob/main/docs/agents/dsh-plugin.md).
+Maintenance checklist: [docs/agents/dsh-plugin.md](https://github.com/modelstudioai/cli/blob/main/docs/agents/dsh-plugin.md).
 
 ## Contributing
 

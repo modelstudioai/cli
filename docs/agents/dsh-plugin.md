@@ -21,10 +21,10 @@
 
 当前包：
 
-| 包                 | 职责                                       | 目标 dsh                                  | 设计文档                       |
-| ------------------ | ------------------------------------------ | ----------------------------------------- | ------------------------------ |
-| `bailian-kb-dsh`   | 知识库 `kb_search` / `kb_chat` + skill     | **0.2.1** Volatile Config + SettingsForms | [docs/kb-dsh/](../kb-dsh/)     |
-| `bailian-memo-dsh` | 个人记忆自动召回 / 静默筛选 / 工具与设置页 | **0.2.1** Volatile Config + SettingsForms | [docs/memo-dsh/](../memo-dsh/) |
+| 包                 | 职责                                       | 目标 dsh                                  | 用户文档                                                                 |
+| ------------------ | ------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------ |
+| `bailian-kb-dsh`   | 知识库 `kb_search` / `kb_chat` + skill     | **0.2.1** Volatile Config + SettingsForms | [README.zh.md](../../packages/bailian-kb-dsh/README.zh.md)               |
+| `bailian-memo-dsh` | 个人记忆自动召回 / 静默筛选 / 工具与设置页 | **0.2.1** Volatile Config + SettingsForms | [README.zh.md](../../packages/bailian-memo-dsh/README.zh.md)             |
 
 ## tsconfig 三件套（改动前先读）
 
@@ -83,7 +83,7 @@
 ### E. 文档
 
 - [ ] 用户可见行为变了 → `README.md` 与 `README.zh.md` 一起改
-- [ ] 设计/门槛写进 `docs/<插件短名>/`，不要回流 README
+- [ ] 维护约定留在本文；不再另建 `docs/kb-dsh`、`docs/memo-dsh` 一类内部设计目录
 - [ ] 包根保留 `LICENSE`
 
 ### F. 依赖与测试
@@ -136,8 +136,6 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 
 ## 相关文档
 
-- memo 设计：[docs/memo-dsh/](../memo-dsh/)
-- kb 设计 / 运行时：[docs/kb-dsh/](../kb-dsh/)
 - 用户面：各包 `README.md` / `README.zh.md`
 
 ### Memo 画像规则
