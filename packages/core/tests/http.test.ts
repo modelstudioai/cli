@@ -6,6 +6,7 @@ import { Client } from "../src/client/client.ts";
 import { request, requestJson, type HttpDeps } from "../src/client/http.ts";
 import { BailianError } from "../src/errors/base.ts";
 import { ExitCode } from "../src/errors/codes.ts";
+import { parseSSE } from "../src/client/stream.ts";
 
 function testDeps(timeout = 5): HttpDeps {
   return {
@@ -300,7 +301,7 @@ describe("request signal cleanup", () => {
     },
   );
 
-  test("raw success returns the identical unconsumed Response and detaches at headers", async () => {
+  test("raw success keeps cancellation without an active timer before body consumption", async () => {
     vi.useFakeTimers();
     const parent = new AbortController();
     const response = new Response('{"stream":"still readable"}');
@@ -311,14 +312,162 @@ describe("request signal cleanup", () => {
       stream: true,
     });
     const signal = fetchMock.mock.calls[0][1]!.signal!;
-    expect(result).toBe(response);
     expect(result.bodyUsed).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(getEventListeners(parent.signal, "abort")).toHaveLength(1);
+    await expect(result.json()).resolves.toEqual({ stream: "still readable" });
     expect(vi.getTimerCount()).toBe(0);
     expect(getEventListeners(parent.signal, "abort")).toHaveLength(0);
     expect(getEventListeners(signal, "abort")).toHaveLength(0);
     parent.abort();
-    await vi.advanceTimersByTimeAsync(10_000);
     expect(signal.aborted).toBe(false);
-    await expect(result.json()).resolves.toEqual({ stream: "still readable" });
   });
+});
+
+describe("raw response idle protection", () => {
+  test("excludes consumer processing time from the network idle window", async () => {
+    await withServer(
+      (_incoming, response) => {
+        response.write("first");
+        const timer = setInterval(() => response.write("next"), 20);
+        response.on("close", () => clearInterval(timer));
+      },
+      async (url) => {
+        const response = await request(testDeps(0.1), { url, stream: true });
+        const reader = response.body!.getReader();
+        try {
+          expect((await reader.read()).done).toBe(false);
+          await new Promise((resolve) => setTimeout(resolve, 180));
+          expect((await reader.read()).done).toBe(false);
+        } finally {
+          await reader.cancel();
+          reader.releaseLock();
+        }
+      },
+    );
+  });
+
+  test("aborts a stalled body using the per-request timeout", async () => {
+    await withServer(
+      (_incoming, response) => response.write("first"),
+      async (url) => {
+        const response = await request(testDeps(5), { url, timeout: 0.15, stream: true });
+        await expect(response.text()).rejects.toMatchObject({
+          name: "BailianError",
+          exitCode: ExitCode.TIMEOUT,
+          message: expect.stringContaining("idle"),
+        });
+      },
+    );
+  });
+
+  test("keeps a progressing stream alive beyond its timeout window", async () => {
+    await withServer(
+      (_incoming, response) => {
+        let chunks = 0;
+        const timer = setInterval(() => {
+          response.write("x");
+          if (++chunks === 8) {
+            clearInterval(timer);
+            response.end();
+          }
+        }, 50);
+        response.on("close", () => clearInterval(timer));
+      },
+      async (url) => {
+        const started = performance.now();
+        const response = await request(testDeps(0.2), { url, stream: true });
+        await expect(response.text()).resolves.toBe("xxxxxxxx");
+        expect(performance.now() - started).toBeGreaterThan(300);
+      },
+    );
+  });
+
+  test("preserves caller cancellation after successful response headers", async () => {
+    const parent = new AbortController();
+    const reason = new Error("Caller cancelled stream");
+    await withServer(
+      (_incoming, response) => response.write("first"),
+      async (url) => {
+        const response = await request(testDeps(), { url, signal: parent.signal, stream: true });
+        const reading = response.text();
+        const rejected = expect(reading).rejects.toBe(reason);
+        parent.abort(reason);
+        await rejected;
+        expect(getEventListeners(parent.signal, "abort")).toHaveLength(0);
+      },
+    );
+  });
+
+  test("cancels the connection when an SSE consumer exits before EOF", async () => {
+    const parent = new AbortController();
+    let responseClosed = false;
+    await withServer(
+      (_incoming, response) => {
+        response.on("close", () => {
+          responseClosed = true;
+        });
+        response.write("data: [DONE]\n\n");
+      },
+      async (url) => {
+        const response = await request(testDeps(), { url, signal: parent.signal, stream: true });
+        for await (const event of parseSSE(response)) {
+          expect(event.data).toBe("[DONE]");
+          break;
+        }
+        expect(getEventListeners(parent.signal, "abort")).toHaveLength(0);
+        expect(response.body?.locked).toBe(false);
+        await expect.poll(() => responseClosed, { timeout: 1000 }).toBe(true);
+      },
+    );
+  });
+
+  test("preserves response metadata when protecting a redirected body", async () => {
+    await withServer(
+      (incoming, response) => {
+        if (incoming.url === "/") {
+          response.writeHead(302, { location: "/result" });
+          response.end();
+        } else {
+          response.writeHead(201, "Created", { "x-request-id": "local-request" });
+          response.end("done");
+        }
+      },
+      async (url) => {
+        const response = await request(testDeps(), { url });
+        expect(response.url).toBe(`${url}/result`);
+        expect(response.redirected).toBe(true);
+        expect(response.status).toBe(201);
+        expect(response.statusText).toBe("Created");
+        expect(response.headers.get("x-request-id")).toBe("local-request");
+        await expect(response.text()).resolves.toBe("done");
+      },
+    );
+  });
+});
+
+describe("raw response explicit cancellation", () => {
+  test.each([undefined, new Error("Consumer finished")])(
+    "aborts the owned request and releases a pending read",
+    async (reason) => {
+      const parent = new AbortController();
+      const source = new ReadableStream<Uint8Array>();
+      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(source));
+      const response = await request(testDeps(), {
+        url: "http://127.0.0.1/unused",
+        signal: parent.signal,
+      });
+      const reader = response.body!.getReader();
+      const pending = reader.read();
+      await reader.cancel(reason);
+      await expect(pending).resolves.toEqual({ value: undefined, done: true });
+      reader.releaseLock();
+      const signal = fetchMock.mock.calls[0][1]!.signal!;
+      expect(signal.aborted).toBe(true);
+      if (reason !== undefined) expect(signal.reason).toBe(reason);
+      expect(parent.signal.aborted).toBe(false);
+      expect(getEventListeners(parent.signal, "abort")).toHaveLength(0);
+      expect(source.locked).toBe(false);
+    },
+  );
 });

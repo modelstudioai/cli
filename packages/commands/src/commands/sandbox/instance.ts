@@ -383,7 +383,8 @@ export const sandboxPause = defineCommand({
       emitResult({ method: "POST", endpoint, request: null }, format);
       return;
     }
-    await ctx.client.request({ path: endpoint, method: "POST" });
+    const response = await ctx.client.request({ path: endpoint, method: "POST" });
+    await response.body?.cancel();
     if (ctx.settings.quiet) emitBare(ctx.flags.sandboxId);
     else emitResult({ sandboxID: ctx.flags.sandboxId, paused: true }, format);
   },
@@ -410,7 +411,8 @@ export const sandboxDelete = defineCommand({
       emitResult({ method: "DELETE", endpoint, request: null }, format);
       return;
     }
-    await ctx.client.request({ path: endpoint, method: "DELETE" });
+    const response = await ctx.client.request({ path: endpoint, method: "DELETE" });
+    await response.body?.cancel();
     if (ctx.settings.quiet) emitBare(ctx.flags.sandboxId);
     else emitResult({ sandboxID: ctx.flags.sandboxId, deleted: true }, format);
   },

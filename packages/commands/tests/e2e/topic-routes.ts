@@ -327,6 +327,19 @@ export const SANDBOX_ROUTES: E2eRouteExports = {
   "sandbox template delete": "sandboxTemplateDelete",
 };
 
+export const MANAGED_AGENT_WEBHOOK_ROUTES: E2eRouteExports = {
+  "managed-agent webhook create": "managedAgentWebhookCreate",
+  "managed-agent webhook list": "managedAgentWebhookList",
+  "managed-agent webhook get": "managedAgentWebhookGet",
+  "managed-agent webhook update": "managedAgentWebhookUpdate",
+  "managed-agent webhook delete": "managedAgentWebhookDelete",
+  "managed-agent webhook enable": "managedAgentWebhookEnable",
+  "managed-agent webhook disable": "managedAgentWebhookDisable",
+  "managed-agent webhook test": "managedAgentWebhookTest",
+  "managed-agent webhook reset-secret": "managedAgentWebhookResetSecret",
+  "managed-agent webhook events": "managedAgentWebhookEvents",
+};
+
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent init": "managedAgentInit",
   "managed-agent validate": "managedAgentValidate",
@@ -556,4 +569,20 @@ export const JOURNEY_J5_ROUTES: E2eRouteExports = {
   "knowledge file get": "knowledgeFileGet",
   "knowledge file delete": "knowledgeFileDelete",
   "knowledge doc upload": "knowledgeDocUpload",
+};
+
+export const MANAGED_AGENT_MEMORY_ROUTES: E2eRouteExports = {
+  "managed-agent memory-store create": "managedAgentMemoryStoreCreate",
+  "managed-agent memory-store list": "managedAgentMemoryStoreList",
+  "managed-agent memory-store get": "managedAgentMemoryStoreGet",
+  "managed-agent memory-store memories create": "managedAgentMemoryCreate",
+  "managed-agent memory-store memories list": "managedAgentMemoryList",
+  "managed-agent memory-store memories get": "managedAgentMemoryGet",
+  "managed-agent memory-store memories update": "managedAgentMemoryUpdate",
+  "managed-agent memory-store memories delete": "managedAgentMemoryDelete",
+  "managed-agent memory-store versions list": "managedAgentMemoryVersionList",
+  "managed-agent memory-store versions get": "managedAgentMemoryVersionGet",
+  "managed-agent memory-store versions redact": "managedAgentMemoryVersionRedact",
+  "managed-agent session create": "managedAgentSessionCreate",
+  "managed-agent session run": "managedAgentSessionRun",
 };
