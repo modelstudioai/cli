@@ -27,21 +27,67 @@ export const CONFIG_ROUTES: E2eRouteExports = {
   "config agent": "configAgent",
 };
 
-export const MEMORY_ROUTES: E2eRouteExports = {
+export const MEMORY_ADD_ROUTES: E2eRouteExports = {
   "memory add": "memoryAdd",
+};
+
+export const MEMORY_SEARCH_ROUTES: E2eRouteExports = {
   "memory search": "memorySearch",
+};
+
+export const MEMORY_LIST_ROUTES: E2eRouteExports = {
   "memory list": "memoryList",
+};
+
+export const MEMORY_UPDATE_ROUTES: E2eRouteExports = {
   "memory update": "memoryUpdate",
+};
+
+export const MEMORY_DELETE_ROUTES: E2eRouteExports = {
   "memory delete": "memoryDelete",
+  "memory add": "memoryAdd", // live self-cleaning chain
+  "memory list": "memoryList", // live: resolve the node id add just produced
+  "memory search": "memorySearch", // live: verify the node is retrievable
+  "memory update": "memoryUpdate", // live update step in the chain
+  "memory node show": "memoryNodeShow", // live: verify node detail after update
+  "memory skill export": "memorySkillExport", // live: verify exported skill metadata
+};
+
+export const MEMORY_NODE_SHOW_ROUTES: E2eRouteExports = {
+  "memory node show": "memoryNodeShow",
+};
+
+export const MEMORY_SKILL_EXPORT_ROUTES: E2eRouteExports = {
+  "memory skill export": "memorySkillExport",
+};
+
+export const MEMORY_PROFILE_CREATE_ROUTES: E2eRouteExports = {
   "memory profile create": "memoryProfileCreate",
+};
+
+export const MEMORY_PROFILE_LIST_ROUTES: E2eRouteExports = {
+  "memory profile list": "memoryProfileList",
+};
+
+export const MEMORY_PROFILE_SHOW_ROUTES: E2eRouteExports = {
+  "memory profile show": "memoryProfileShow",
+};
+
+export const MEMORY_PROFILE_UPDATE_ROUTES: E2eRouteExports = {
+  "memory profile update": "memoryProfileUpdate",
+};
+
+export const MEMORY_PROFILE_GET_ROUTES: E2eRouteExports = {
   "memory profile get": "memoryProfileGet",
 };
 
-export const KNOWLEDGE_ROUTES: E2eRouteExports = {
-  "knowledge retrieve": "knowledgeRetrieve",
-  "knowledge search": "knowledgeSearch",
-  "knowledge chat": "knowledgeChat",
-  "knowledge list": "knowledgeKbList", // live: grab a real index id for retrieve
+export const MEMORY_PROFILE_DELETE_ROUTES: E2eRouteExports = {
+  "memory profile delete": "memoryProfileDelete",
+  "memory profile create": "memoryProfileCreate", // live self-cleaning chain
+  "memory profile list": "memoryProfileList", // live: the new schema shows up in the list
+  "memory profile show": "memoryProfileShow", // live: attribute_id handles for update
+  "memory profile update": "memoryProfileUpdate", // live update step in the chain
+  "memory profile get": "memoryProfileGet", // live: user profile reachable through the schema
 };
 
 export const KNOWLEDGE_SEARCH_ROUTES: E2eRouteExports = {
@@ -447,7 +493,6 @@ export const KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES: E2eRouteExports = {
   "knowledge chunk update": "knowledgeChunkUpdate",
   "knowledge chunk delete": "knowledgeChunkDelete",
   "knowledge stats": "knowledgeKbStats",
-  "knowledge retrieve": "knowledgeRetrieve", // live rerank retrieval on the throwaway base
   "knowledge category list": "knowledgeCategoryList",
   "knowledge category add": "knowledgeCategoryAdd",
   "knowledge category delete": "knowledgeCategoryDelete",
@@ -469,7 +514,6 @@ export const KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES: E2eRouteExports = {
 const JOURNEY_KB_BASE_ROUTES: E2eRouteExports = {
   "knowledge doc upload": "knowledgeDocUpload",
   "knowledge create": "knowledgeKbCreate",
-  "knowledge retrieve": "knowledgeRetrieve",
   "knowledge delete": "knowledgeKbDelete",
   "knowledge file delete": "knowledgeFileDelete", // clean up data-center files
 };
@@ -485,6 +529,11 @@ export const JOURNEY_J1_ROUTES: E2eRouteExports = {
 };
 
 export const JOURNEY_J2_ROUTES: E2eRouteExports = {
+  "knowledge service create": "knowledgeServiceCreate",
+  "knowledge service get": "knowledgeServiceGet",
+  "knowledge service update": "knowledgeServiceUpdate",
+  "knowledge service delete": "knowledgeServiceDelete",
+  "knowledge search": "knowledgeSearch",
   ...JOURNEY_KB_BASE_ROUTES,
   "knowledge doc list": "knowledgeDocList",
   "knowledge doc status": "knowledgeDocStatus",

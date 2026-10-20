@@ -1,0 +1,57 @@
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "我们家上周买了一只猫，很可爱，我给它买了一顶帽子，给它拍照留念。"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "https://img.alicdn.com/imgextra/i4/O1CN01U7bIWM6r4aK1qoAG_!!6000000001208-0-tps-912-1316.jpg"
+          }
+        },
+        {
+          "type": "text",
+          "text": "上周末带我女儿和狗一起去海边玩了，拍了这张照片。"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "https://img.alicdn.com/imgextra/i4/O1CN01Cdt3RHerFlE49oEn_!!6000000001872-0-tps-2048-1365.jpg"
+          }
+        },
+        {
+          "type": "text",
+          "text": "昨天给我的女儿过了生日，很开心，这是拍的照片，明年她再过生日的时候提醒我要准备礼物。"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "https://search-data-all.oss-cn-hangzhou.aliyuncs.com/memory/borth.jpg"
+          }
+        },
+        {
+          "type": "text",
+          "text": "这是我最喜欢的水果。"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "https://search-data-all.oss-cn-hangzhou.aliyuncs.com/memory/fruit04.png"
+          }
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "都记住了：海边和女儿、狗的合照很有纪念意义；女儿生日的照片也很珍贵，明年生日会提醒你准备礼物；还知道了你最喜欢的水果。"
+    }
+  ],
+  "meta_data": {
+    "location_name": "北京",
+    "geo_coordinate": "116.481499,39.990475"
+  }
+}
