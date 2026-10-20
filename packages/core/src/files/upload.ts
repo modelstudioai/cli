@@ -11,9 +11,7 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { trackingHeaders, type TrackingIdentity } from "../client/headers.ts";
 import { REGIONS } from "../config/schema.ts";
-
-// Pinned to cn region; thread baseUrl through if overseas upload becomes a requirement.
-const UPLOAD_API = `${REGIONS.cn}/api/v1/uploads`;
+import { normalizeModelBaseUrl } from "../config/model-base-url.ts";
 
 interface UploadPolicy {
   upload_host: string;
@@ -37,9 +35,11 @@ async function getUploadPolicy(
   apiKey: string,
   model: string,
   identity: TrackingIdentity,
+  baseUrl: string,
   signal?: AbortSignal,
 ): Promise<UploadPolicy> {
-  const url = `${UPLOAD_API}?action=getPolicy&model=${encodeURIComponent(model)}`;
+  const uploadApi = `${normalizeModelBaseUrl(baseUrl)}/api/v1/uploads`;
+  const url = `${uploadApi}?action=getPolicy&model=${encodeURIComponent(model)}`;
   const policySignal = combineWithTimeout(15_000, signal);
   const res = await fetch(url, {
     headers: {
@@ -53,7 +53,7 @@ async function getUploadPolicy(
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new BailianError(
-      `Failed to get upload policy (HTTP ${res.status}): ${text}`,
+      `Failed to get upload policy (HTTP ${res.status}, ${uploadApi}): ${text}`,
       ExitCode.GENERAL,
     );
   }
@@ -108,6 +108,8 @@ async function uploadToOSS(
 
 export interface UploadOptions {
   apiKey: string;
+  /** Defaults to CN for direct SDK callers; Client supplies its resolved credential origin. */
+  baseUrl?: string;
   model: string;
   filePath: string;
   identity: TrackingIdentity;
@@ -163,7 +165,7 @@ export function redactDataUri(input: string): string {
  * The URL is valid for 48 hours.
  */
 export async function uploadFile(opts: UploadOptions): Promise<string> {
-  const { apiKey, model, filePath, identity, signal, timeout } = opts;
+  const { apiKey, baseUrl = REGIONS.cn, model, filePath, identity, signal, timeout } = opts;
 
   if (!existsSync(filePath)) {
     throw new BailianError(`File not found: ${filePath}`, ExitCode.USAGE);
@@ -174,7 +176,7 @@ export async function uploadFile(opts: UploadOptions): Promise<string> {
     throw new BailianError(`Not a file: ${filePath}`, ExitCode.USAGE);
   }
 
-  const policy = await getUploadPolicy(apiKey, model, identity, signal);
+  const policy = await getUploadPolicy(apiKey, model, identity, baseUrl, signal);
   return uploadToOSS(policy, filePath, signal, timeout);
 }
 
@@ -196,11 +198,12 @@ export async function resolveFileUrl(
   input: string,
   apiKey: string,
   model: string,
-  opts: { identity: TrackingIdentity; signal?: AbortSignal; timeout?: number },
+  opts: { identity: TrackingIdentity; baseUrl?: string; signal?: AbortSignal; timeout?: number },
 ): Promise<string> {
   if (!isLocalFile(input)) return input;
   return uploadFile({
     apiKey,
+    baseUrl: opts.baseUrl,
     model,
     filePath: input,
     identity: opts.identity,
