@@ -29,6 +29,9 @@ core/files/upload.ts                     ← 文件上传 endpoint(与 model 域
 ```
 
 临时文件上传与后续模型请求使用同一 API origin,包括国际区、Workspace 和自定义代理。
+Prime 视频命令通过 `Client.uploadFile` / `resolveImageInput` 的 `defaultBaseUrl` 回调,
+复用 `resolvePrimeEndpoint` 推导默认 Workspace origin;显式配置的 API origin 仍优先,
+已有媒体 URL 不触发上传或求值上传默认地址。
 上传服务的区域/模型支持由服务端决定:错误中附上有效上传 endpoint 并保留原始服务响应,
 不自动换区域重试。
 如果所选服务不支持临时上传,使用服务可访问的 HTTPS 媒体 URL;已有 URL 会跳过本地上传。
