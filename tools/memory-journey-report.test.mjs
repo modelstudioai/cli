@@ -1,19 +1,19 @@
-import { test } from "node:test";
+import { test } from "vite-plus/test";
 import assert from "node:assert/strict";
 import { summarizeSuite, missingCloudEnvironment } from "./memory-journey-report.mjs";
 
-await test("default-library acceptance does not require an explicit library", () => {
+test("default-library acceptance does not require an explicit library", () => {
   assert.deepEqual(
     missingCloudEnvironment({ DASHSCOPE_API_KEY: "test", BAILIAN_WORKSPACE_ID: "test" }),
     [],
   );
 });
-await test("missing credentials are reported by name, never value", () => {
+test("missing credentials are reported by name, never value", () => {
   assert.deepEqual(missingCloudEnvironment({ DASHSCOPE_API_KEY: "secret" }), [
     "BAILIAN_WORKSPACE_ID",
   ]);
 });
-await test("skipped or absent mandatory journeys cannot pass acceptance", () => {
+test("skipped or absent mandatory journeys cannot pass acceptance", () => {
   const result = summarizeSuite(
     {
       testResults: [
@@ -36,7 +36,7 @@ await test("skipped or absent mandatory journeys cannot pass acceptance", () => 
     ],
   );
 });
-await test("one failed check fails the entire journey", () => {
+test("one failed check fails the entire journey", () => {
   const result = summarizeSuite(
     {
       testResults: [
