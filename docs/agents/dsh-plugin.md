@@ -128,9 +128,11 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 1. 占住包名（OIDC Trusted Publishing 无法给不存在的包首发）
 2. npm 包设置绑 Trusted Publisher：仓库 `modelstudioai/cli`、workflow `publish.yml`
 
-### memo 发布硬门槛
+### memo 发布验收范围
 
-见 [docs/memo-dsh/2026-10-08-bailian-memo-dsh-design.md](../memo-dsh/2026-10-08-bailian-memo-dsh-design.md) 第 7 节：Memory GA、画像值精确删除 live 验证、dsh 0.2.1 实机安装。未通过前不要 stable。
+2.5.0按维护者确认与CLI整体发布；本轮明确不包含dsh/Skill实际宿主验收，不将其列为本轮发布前置，也不能将未执行的实机验证写成通过。构建、类型检查、单测及发布包检查仍由统一GitHub流程执行。
+
+历史首发清单中的Memory服务可用性、画像值精确删除live和宿主实机安装不等同于CI通过。发布说明不得据此承诺服务GA、画像删除实链路或宿主实机已验收；未有证据的能力保持未验证状态。后续版本按实际约定更新验收范围。
 
 ## 相关文档
 

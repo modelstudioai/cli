@@ -6,7 +6,7 @@ Bailian personal memory plugin for [DeepSeek Harness](https://github.com/deepsee
 
 It adds automatic recall on top-level turns, silent auxiliary curation with recoverable async writes, explicit remember/forget tools, and a Plugins settings page. Identity and consent live in `~/.bailian/personal-memory/config.json` (shared with the `bailian-memory` skill). API keys use dsh credentials (`BAILIAN_MEMO_API_KEY`).
 
-> **Release gate:** stable publish requires Memory GA, verified profile-value delete (`need_detail` + `PATCH profile_values`), and a live dsh 0.2.1 install check. Until then, treat this package as internal / channel-only.
+> **2.5.0 validation scope:** this plugin follows the unified CLI release. Actual dsh/Skill host validation is outside this release preparation scope; CI build and unit checks do not establish a successful host install, Memory service GA, or live profile-value deletion. Those checks must not be reported as passed without separate evidence.
 
 ## Install
 

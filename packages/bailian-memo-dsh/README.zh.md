@@ -6,7 +6,7 @@
 
 提供顶层回合自动召回、静默辅助筛选与可恢复异步写入、显式记住/遗忘工具，以及 Plugins 设置页。身份与授权保存在 `~/.bailian/personal-memory/config.json`（与 `bailian-memory` skill 共享）。API Key 使用 dsh credentials（`BAILIAN_MEMO_API_KEY`）。
 
-> **发布门槛：** stable 发布前需确认 Memory 主能力上线、画像值精确删除（`need_detail` + `PATCH profile_values`）实链路，以及 dsh 0.2.1 实机安装验证。此前仅用于内部 / channel 验证。
+> **2.5.0验收范围：** 本插件跟随CLI统一发布，本轮发布准备不包含dsh/Skill实际宿主验收。CI构建及单测不代表宿主安装、Memory服务GA或画像值精确删除live已验证；没有独立证据时不能将这些检查标记为通过。
 
 ## 安装
 

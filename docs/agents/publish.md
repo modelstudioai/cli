@@ -114,7 +114,7 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 
 独立入口：GitHub Actions → **Clean npm tags**（`.github/workflows/cleanup-npm-tags.yml`）。
 
-- 六个包复选框默认全选；`tags` 输入待删除的标签，支持空格、逗号或换行分隔。
+- 发布包复选框按该workflow实际选项选择；`tags` 输入待删除的标签，支持空格、逗号或换行分隔。
 - `dry_run` 默认开启，只查询并预览。实际删除前先检查预览，再取消勾选；首次试跑只选 `bailian-cli`，标签填 `release-test`。
 - 先校验全部输入并读取所有所选包的标签，拒绝空选择、非法标签和 `latest`；标签不存在则跳过。
 - 实际删除串行调用 `npm dist-tag rm`，每次删除前检查标签是否仍指向预览版本，删除后最多查询 5 次确认（间隔 1、2、4、8 秒），容忍 registry 短暂返回旧数据，删除命令只执行一次；发生错误立即停止，已删除的标签不会自动恢复。日志及 Actions Summary 保留每条完成结果，可按同样输入重跑剩余项。
@@ -128,7 +128,7 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 - **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中
 - **darwin 签名**：编完后 `binary-codesign.mjs` 对 darwin Mach-O 做 ad-hoc 重签，并按 Apple 的方式重算每一页 SHA-256（末页不补零）。对不上就中止发布。macOS runner 额外跑 `codesign --verify --strict`。Linux runner 用 `rcodesign 0.29.0 sign`；不要用 `rcodesign verify`（会拒绝 Apple 已通过的 ad-hoc 签名）。漏签时 Apple Silicon 会在启动时 SIGKILL
 - **Actions 版本**：checkout/setup-node/pnpm-action 均为 v6（Node 24 兼容）
-- **npm 配置**：当前 release tooling 发布的包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands` / `bailian-cli` / `knowledge-studio-cli`)的 Trusted Publisher 指向 `modelstudioai/cli` 的 `publish.yml`;新增发布包时同步 npm Trusted Publisher
+- **npm 配置**：七个发布包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands` / `bailian-cli` / `knowledge-studio-cli` / `bailian-kb-dsh` / `bailian-memo-dsh`)的 Trusted Publisher 指向 `modelstudioai/cli` 的 `publish.yml`;新增发布包时同步 npm Trusted Publisher
 
 ## `check.mjs` 不覆盖的（手动确认）
 

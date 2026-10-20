@@ -2,9 +2,37 @@
 
 `bailian-cli` 系列包的所有重要变更都记录在此。
 
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands`、`knowledge-studio-cli` 共享一个版本号。
+格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands`、`knowledge-studio-cli`、`bailian-kb-dsh`、`bailian-memo-dsh` 共享一个版本号。
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
+
+## [2.5.0] - 2026-10-20
+
+### 新增
+
+- **Memory 管理** —— 新增节点详情、Skill记忆导出，以及画像模板列表、详情、更新和删除；支持按规则召回、pro/lite检索、技能元数据和仅画像抽取。
+- **个人记忆 Skill** —— 新增 `bailian-memory`，支持经用户授权的个人记忆、召回和画像流程。
+- **DeepSeek Harness 集成** —— 新增个人记忆插件，提供自动召回、异步整理和记住/遗忘工具；知识库插件适配dsh 0.2.1设置体系与隔离的管理凭据。
+
+### 变更
+
+- **Memory CLI 迁移（BREAKING）** —— Memory命令改用Workspace专属端点。配置 `--workspace-id`、`BAILIAN_WORKSPACE_ID` 或 `workspace_id`；在支持记忆库参数的命令中将 `--memory-library-id` 替换为 `--library-id`。`memory update` 和 `memory delete` 移除 `--user-id`；确认删除节点时需传 `--yes`。
+- **记忆写入（BREAKING）** —— `memory add` 改为提交异步抽取，默认最多等待120秒。仅提交可使用 `--wait 0`；JSON调用方需适配 `event_id`、`events`，提交回执不等于抽取完成。
+- **统一发布** —— CLI、Knowledge Studio CLI和两个dsh插件共用版本与发布流程；dsh知识库插件从独立0.1.x版本系列迁至2.5.0。
+
+### 已移除
+
+- **旧知识库检索（BREAKING）** —— 移除 `bl knowledge retrieve`、`kscli retrieve` 和 `knowledgeRetrieve` 命令导出。迁移至 `bl knowledge search` 或 `kscli search`，使用检索服务的 `--agent-id`；旧的index参数不能直接照搬。
+- **旧Memory库接口（BREAKING）** —— 导出类型 `MemoryAddResponse` 替换为 `MemoryAddAsyncResponse`；库调用方需适配更新后的异步请求/响应契约。
+
+### 修复
+
+- **记忆完成判定与输入校验** —— 空事件列表或缺少事件ID不再误报完成；轮询遵守超时预算，部分失败返回非零退出码，非法JSON元素和属性类型在请求前拒绝。
+- **检索说明** —— 明确 `--min-score` 默认0.3且仅对pro生效，lite不按该阈值过滤。
+
+### 安全
+
+- **Workspace端点** —— 拒绝可能改变请求目标主机的Workspace标识，防止凭据被发送到非预期主机。
 
 ## [2.4.0] - 2026-10-19
 
