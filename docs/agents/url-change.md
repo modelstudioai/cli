@@ -23,9 +23,15 @@ runtime/src/urls.ts                      ← 用户面控制台 URL(cn-only)
   MCP_WEBSEARCH_PAGE        mcpMarketplaceDetailPage("WebSearch")
   mcpMarketplaceDetailPage    BAILIAN_CONSOLE?tab=mcp#/mcp-market/detail/<serverCode>
 
-core/files/upload.ts                     ← 文件上传 endpoint(cn-pinned)
-  UPLOAD_API                ${REGIONS.cn}/api/v1/uploads
+core/files/upload.ts                     ← 文件上传 endpoint(与 model 域凭证同源)
+  UploadOptions.baseUrl     Client 传入有效凭证的 baseUrl,经 normalizeModelBaseUrl 取 origin
+  /api/v1/uploads           直接 SDK 调用未提供 baseUrl 时保持 REGIONS.cn 默认值
 ```
+
+临时文件上传与后续模型请求使用同一 API origin,包括国际区、Workspace 和自定义代理。
+上传服务的区域/模型支持由服务端决定:错误中附上有效上传 endpoint 并保留原始服务响应,
+不自动换区域重试。
+如果所选服务不支持临时上传,使用服务可访问的 HTTPS 媒体 URL;已有 URL 会跳过本地上传。
 
 ## 必查清单
 

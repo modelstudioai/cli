@@ -151,8 +151,10 @@ export class Client {
   /** Resolve a file arg: upload a local path to OSS (returns oss:// URL), or pass a URL through. */
   uploadFile(source: string, model: string, opts: { signal?: AbortSignal } = {}): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
-    return resolveFileUrl(source, this.requireApi().token, model, {
+    const credential = this.requireApi();
+    return resolveFileUrl(source, credential.token, model, {
       ...opts,
+      baseUrl: credential.baseUrl,
       identity: this.deps.identity,
       timeout: this.deps.settings.timeout,
     });
