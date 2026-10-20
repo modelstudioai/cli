@@ -50,6 +50,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 
 - [ ] 知识库用户可见术语统一为「数据集（collection）」；服务端原始字段、API 路径和必需标签保留协议名称。
 - [ ] 个人知识库 Skill 的手写流程放在 `references/`，命令生成物仍在 `reference/`；本地绑定属于 Skill 文件协议，不伪装成 CLI 配置。验证自然语言发现、跨会话范围复用、当前附件不建库、暂停和失败恢复；纯文本模拟不等同于真实宿主行为验证。
+- [ ] 首次新建并上传目录须串起 init、目录同步与真实资料召回；检索前从原文件制定多问题预期，逐题核对来源和必要事实，报告跳过/失败/pending 范围。样例命中或单题命中不能替代整组验收；同步完成时间与召回验证时间分别记录。
 
 - [ ] 领域 skill（gen / finetune / managed-agent）路由或命令表后有指向 `reference/` 的句；文末 `## references`（protocol + reference）与家族对齐
 - [ ] description 含 WHAT + WHEN + 反触发；安装说明指向 `bl skill init`，不写 companions 必装
