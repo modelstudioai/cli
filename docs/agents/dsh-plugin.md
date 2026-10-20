@@ -21,10 +21,10 @@
 
 当前包：
 
-| 包                 | 职责                                       | 目标 dsh                                  | 用户文档                                                                 |
-| ------------------ | ------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------ |
-| `bailian-kb-dsh`   | 知识库 `kb_search` / `kb_chat` + skill     | **0.2.1** Volatile Config + SettingsForms | [README.zh.md](../../packages/bailian-kb-dsh/README.zh.md)               |
-| `bailian-memo-dsh` | 个人记忆自动召回 / 静默筛选 / 工具与设置页 | **0.2.1** Volatile Config + SettingsForms | [README.zh.md](../../packages/bailian-memo-dsh/README.zh.md)             |
+| 包                 | 职责                                       | 目标 dsh                                  | 用户文档                                                     |
+| ------------------ | ------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------ |
+| `bailian-kb-dsh`   | 知识库 `kb_search` / `kb_chat` + skill     | **0.2.1** Volatile Config + SettingsForms | [README.zh.md](../../packages/bailian-kb-dsh/README.zh.md)   |
+| `bailian-memo-dsh` | 个人记忆自动召回 / 静默筛选 / 工具与设置页 | **0.2.1** Volatile Config + SettingsForms | [README.zh.md](../../packages/bailian-memo-dsh/README.zh.md) |
 
 ## tsconfig 三件套（改动前先读）
 
