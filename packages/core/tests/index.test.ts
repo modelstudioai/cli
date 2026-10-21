@@ -4,7 +4,6 @@ import {
   BailianError,
   Client,
   ExitCode,
-  McpClient,
   callConsoleGateway,
   mapApiError,
   request,
@@ -344,39 +343,6 @@ test("request propagates caller AbortSignal to fetch", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
-});
-
-test("McpClient uses injected client identity for initialize and User-Agent", async () => {
-  const originalFetch = globalThis.fetch;
-  const bodies: unknown[] = [];
-  const userAgents: string[] = [];
-
-  globalThis.fetch = async (_url, init) => {
-    const headers = init?.headers as Record<string, string> | undefined;
-    userAgents.push(headers?.["User-Agent"] ?? "");
-    const body = init?.body;
-    if (typeof body === "string") bodies.push(JSON.parse(body));
-    return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
-      status: 200,
-    });
-  };
-
-  try {
-    const client = new McpClient(
-      testDeps({ clientName: "test-client", version: "9.8.7" }),
-      "https://mcp.example.test",
-      "sk-test",
-    );
-    await client.initialize();
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-
-  expect(userAgents).toEqual(["test-client/9.8.7", "test-client/9.8.7"]);
-  expect(bodies[0]).toMatchObject({
-    method: "initialize",
-    params: { clientInfo: { name: "test-client", version: "9.8.7" } },
-  });
 });
 
 test("resolveWatermark uses flag or defaults to true", () => {

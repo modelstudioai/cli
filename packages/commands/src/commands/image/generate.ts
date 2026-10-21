@@ -20,6 +20,11 @@ import {
   resolveImageGenerateApi,
   ASYNC_FLAG,
   CONCURRENT_FLAG,
+  bailianMcpPath,
+  AIGC_MCP_SERVER,
+  AIGC_MCP_TOOL,
+  buildImageGenArgs,
+  parseAigcImageResults,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
@@ -27,6 +32,12 @@ import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-run
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
+import {
+  isAutoModel,
+  assertMcpCompatible,
+  withAigcMcpSession,
+  type Localize,
+} from "../shared/aigc-mcp.ts";
 
 import { join } from "path";
 
@@ -167,11 +178,31 @@ export default defineCommand({
       "zh-CN": '--prompt "产品摄影" --n 2 --concurrent 3  # 并行生成 6 张图片',
     },
   ],
+  notes: [
+    {
+      "en-US":
+        'Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.',
+      "zh-CN":
+        '模型 "auto"（通过 --model auto 或将配置默认模型设为 "auto"）改走百炼官方 MCP，参数面更小；MCP 不支持的参数会直接报用法错误，而不回退 REST。',
+    },
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const prompt = flags.prompt;
 
-    const model = flags.model || settings.defaultImageModel || "qwen-image-3.0";
+    const resolvedModel = flags.model || settings.defaultImageModel;
+    if (isAutoModel(resolvedModel)) {
+      await handleAutoMcpMode(
+        ctx.client,
+        ctx.localize,
+        settings,
+        flags,
+        detectOutputFormat(settings.output),
+      );
+      return;
+    }
+
+    const model = resolvedModel || "qwen-image-3.0";
     const route = resolveImageGenerateApi(model);
     const defaultSize = "1:1";
     const sizeInput = flags.size || defaultSize;
@@ -237,6 +268,61 @@ export default defineCommand({
     }
   },
 });
+
+// ---- Auto mode: Bailian AIGC MCP (bailian_image_gen) ----
+
+async function handleAutoMcpMode(
+  client: Client,
+  localize: Localize,
+  settings: Settings,
+  flags: GenerateFlags,
+  format: string,
+): Promise<void> {
+  assertMcpCompatible("imageGen", flags, localize);
+
+  const concurrent = getConcurrency(flags);
+  const args = buildImageGenArgs({
+    prompt: flags.prompt,
+    size: flags.size || undefined,
+    n: flags.n,
+    negativePrompt: flags.negativePrompt || undefined,
+    promptExtend: flags.promptExtend,
+  });
+
+  if (settings.dryRun) {
+    emitResult(
+      {
+        server: AIGC_MCP_SERVER.image,
+        url: client.url(bailianMcpPath(AIGC_MCP_SERVER.image)),
+        tool: AIGC_MCP_TOOL.imageGen,
+        arguments: args,
+        mode: "mcp",
+        concurrent,
+      },
+      format as OutputFormat,
+    );
+    return;
+  }
+
+  if (!settings.quiet) {
+    process.stderr.write("[Model: auto] [Mode: mcp]\n");
+  }
+
+  // One shared MCP session; --concurrent fans out parallel tools/call on it.
+  await withAigcMcpSession(client, AIGC_MCP_SERVER.image, localize, async (callTool) => {
+    const perRequest = await runConcurrent(concurrent, settings, async () => {
+      const inner = await callTool(AIGC_MCP_TOOL.imageGen, args);
+      return parseAigcImageResults(inner);
+    });
+
+    const imageUrls = perRequest.flat();
+    if (imageUrls.length === 0) {
+      throw new BailianError("Generation completed but no images returned.", ExitCode.GENERAL);
+    }
+
+    await saveImages(imageUrls, flags, settings, format);
+  });
+}
 
 // ---- Sync mode: qwen-image / wan2.7-image / z-image ----
 

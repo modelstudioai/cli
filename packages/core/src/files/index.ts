@@ -3,5 +3,6 @@ export {
   isLocalFile,
   resolveFileUrl,
   imageFileToDataUri,
+  audioFileToDataUri,
   redactDataUri,
 } from "./upload.ts";

@@ -22,6 +22,11 @@ import {
   ASYNC_FLAG,
   CONCURRENT_FLAG,
   redactDataUri,
+  bailianMcpPath,
+  AIGC_MCP_SERVER,
+  AIGC_MCP_TOOL,
+  buildImageEditArgs,
+  parseAigcImageResults,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
@@ -30,6 +35,14 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { join } from "path";
 import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
+import {
+  isAutoModel,
+  assertMcpCompatible,
+  withAigcMcpSession,
+  resolveAutoImageInput,
+  mcpSingleImageOnlyError,
+  type Localize,
+} from "../shared/aigc-mcp.ts";
 
 const EDIT_FLAGS = {
   image: {
@@ -181,6 +194,14 @@ export default defineCommand({
       "zh-CN": '--image ./photo.png --prompt "将背景替换为海滩" --watermark false',
     },
   ],
+  notes: [
+    {
+      "en-US":
+        'Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST. Auto edit accepts a single --image only.',
+      "zh-CN":
+        '模型 "auto"（通过 --model auto 或将配置默认模型设为 "auto"）改走百炼官方 MCP，参数面更小；MCP 不支持的参数会直接报用法错误，而不回退 REST。auto 编辑仅支持单个 --image。',
+    },
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     // Normalize --image to string array (supports both single and repeated flags)
@@ -192,7 +213,20 @@ export default defineCommand({
     }
     const prompt = flags.prompt;
 
-    const model = flags.model || settings.defaultImageModel || "qwen-image-3.0";
+    const resolvedModel = flags.model || settings.defaultImageModel;
+    if (isAutoModel(resolvedModel)) {
+      await handleAutoMcpMode(
+        ctx.client,
+        ctx.localize,
+        settings,
+        flags,
+        rawImages,
+        detectOutputFormat(settings.output),
+      );
+      return;
+    }
+
+    const model = resolvedModel || "qwen-image-3.0";
     const route = resolveImageEditApi(model);
 
     // Auto-upload local files (resolve all images in parallel)
@@ -328,6 +362,69 @@ export default defineCommand({
     }
   },
 });
+
+async function handleAutoMcpMode(
+  client: Client,
+  localize: Localize,
+  settings: Settings,
+  flags: EditFlags,
+  rawImages: string[],
+  format: OutputFormat,
+): Promise<void> {
+  assertMcpCompatible("imageEdit", flags, localize);
+
+  // bailian_image_edit takes a single source image; bailian_image_fusion is out
+  // of scope, so multi-image merge is rejected in auto mode.
+  if (rawImages.length > 1) {
+    throw mcpSingleImageOnlyError(localize);
+  }
+  const source = rawImages[0];
+  if (!source) {
+    throw new BailianError("Provide one --image to edit.", ExitCode.USAGE);
+  }
+
+  const imageUrl = resolveAutoImageInput(source, localize);
+  const concurrent = getConcurrency(flags);
+  const args = buildImageEditArgs({
+    imageUrl,
+    prompt: flags.prompt,
+    negativePrompt: flags.negativePrompt || undefined,
+  });
+
+  if (settings.dryRun) {
+    emitResult(
+      {
+        server: AIGC_MCP_SERVER.image,
+        url: client.url(bailianMcpPath(AIGC_MCP_SERVER.image)),
+        tool: AIGC_MCP_TOOL.imageEdit,
+        arguments: { ...args, image_url: redactDataUri(imageUrl) },
+        mode: "mcp",
+        concurrent,
+      },
+      format,
+    );
+    return;
+  }
+
+  if (!settings.quiet) {
+    process.stderr.write("[Model: auto] [Mode: mcp] [Images: 1]\n");
+  }
+
+  // One shared MCP session; --concurrent fans out parallel tools/call on it.
+  await withAigcMcpSession(client, AIGC_MCP_SERVER.image, localize, async (callTool) => {
+    const perRequest = await runConcurrent(concurrent, settings, async () => {
+      const inner = await callTool(AIGC_MCP_TOOL.imageEdit, args);
+      return parseAigcImageResults(inner);
+    });
+
+    const imageUrls = perRequest.flat();
+    if (imageUrls.length === 0) {
+      throw new BailianError("Edit completed but no images returned.", ExitCode.GENERAL);
+    }
+
+    await saveImages(imageUrls, flags, settings, format);
+  });
+}
 
 async function handleSyncMode(
   client: Client,

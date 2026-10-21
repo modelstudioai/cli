@@ -25,9 +25,22 @@ import {
   type FlagsDef,
   type ParsedFlags,
   ASYNC_FLAG,
+  redactDataUri,
+  bailianMcpPath,
+  AIGC_MCP_SERVER,
+  AIGC_MCP_TOOL,
+  buildSpeechToTextArgs,
+  parseAigcAsrTexts,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+import {
+  isAutoModel,
+  assertMcpCompatible,
+  withAigcMcpSession,
+  resolveAutoAudioInput,
+  type Localize,
+} from "../shared/aigc-mcp.ts";
 
 const RECOGNIZE_FLAGS = {
   url: {
@@ -195,6 +208,14 @@ export default defineCommand({
     "--url https://example.com/audio.mp3 --async --quiet",
     "--url https://example.com/audio.mp3 --model qwen-audio-3.0-asr-flash --language en",
   ],
+  notes: [
+    {
+      "en-US":
+        'Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set and simplified text output; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.',
+      "zh-CN":
+        '模型 "auto"（通过 --model auto 或将配置默认模型设为 "auto"）改走百炼官方 MCP，参数面更小、输出为简化文本；MCP 不支持的参数会直接报用法错误，而不回退 REST。',
+    },
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     // Normalize --url to string[] (supports both single and repeated flags)
@@ -203,6 +224,19 @@ export default defineCommand({
       rawUrls = flags.url;
     } else if (typeof flags.url === "string") {
       rawUrls = [flags.url];
+    }
+
+    const resolvedModel = flags.model || settings.defaultSpeechRecognitionModel;
+    if (isAutoModel(resolvedModel)) {
+      await handleAutoMcpMode(
+        ctx.client,
+        ctx.localize,
+        settings,
+        flags,
+        rawUrls,
+        detectOutputFormat(settings.output),
+      );
+      return;
     }
 
     // Strict validation: --speaker-count requires --diarization
@@ -215,7 +249,7 @@ export default defineCommand({
       );
     }
 
-    const model = flags.model || settings.defaultSpeechRecognitionModel || "fun-asr";
+    const model = resolvedModel || "fun-asr";
     const route = resolveAsrApi(model);
     if (route.kind === "unsupported") {
       throw new BailianError(
@@ -308,6 +342,63 @@ export default defineCommand({
     await handleAsyncMode(ctx.client, settings, body, flags, format, resolvedUrls.length);
   },
 });
+
+async function handleAutoMcpMode(
+  client: Client,
+  localize: Localize,
+  settings: Settings,
+  flags: RecognizeFlags,
+  rawUrls: string[],
+  format: OutputFormat,
+): Promise<void> {
+  assertMcpCompatible("asr", flags, localize);
+
+  if (rawUrls.length === 0) {
+    throw new BailianError("Provide at least one --url to recognize.", ExitCode.USAGE);
+  }
+
+  // Public http(s)/oss URLs pass through; local files become inline base64 data
+  // URIs (the MCP server rejects oss:// and cannot fetch private uploads).
+  const fileUrls = rawUrls.map((source) => resolveAutoAudioInput(source, localize));
+  const args = buildSpeechToTextArgs(fileUrls);
+
+  if (settings.dryRun) {
+    emitResult(
+      {
+        server: AIGC_MCP_SERVER.asr,
+        url: client.url(bailianMcpPath(AIGC_MCP_SERVER.asr)),
+        tool: AIGC_MCP_TOOL.speechToText,
+        arguments: { ...args, file_urls: fileUrls.map((fileUrl) => redactDataUri(fileUrl)) },
+        mode: "mcp",
+      },
+      format,
+    );
+    return;
+  }
+
+  if (!settings.quiet) {
+    process.stderr.write(`[Model: auto] [Mode: mcp] [Files: ${fileUrls.length}]\n`);
+  }
+
+  // bailian_speech_to_text is synchronous: one tools/call returns all transcripts.
+  const result = await withAigcMcpSession(client, AIGC_MCP_SERVER.asr, localize, (callTool) =>
+    callTool(AIGC_MCP_TOOL.speechToText, args),
+  );
+
+  const texts = parseAigcAsrTexts(result);
+
+  // Simplified output: plain transcription text, one entry per line.
+  for (const text of texts) {
+    process.stdout.write(text.endsWith("\n") ? text : `${text}\n`);
+  }
+
+  if (flags.out) {
+    writeFileSync(flags.out, JSON.stringify(texts, null, 2) + "\n");
+    if (!settings.quiet) {
+      process.stderr.write(`Full result saved to: ${flags.out}\n`);
+    }
+  }
+}
 
 async function handleSyncFlashMode(
   client: Client,
