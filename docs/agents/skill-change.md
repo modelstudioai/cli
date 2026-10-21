@@ -40,6 +40,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 
 - [ ] **整包装齐**：安装 / 缺 skill 文案主推 `bl skill init`；升级同步用 `bl skill update`（只更新已安装，不装新 skill）；业务 skill **不**声明 `companions`
 - [ ] **协议读取**：CRITICAL / references 可链 `../bailian-protocol/…`；若读不到 → 停止执行 `bl`，提示 `bl skill init`
+- [ ] **调用归因**：业务 skill 与协议预检执行 `bl` 时必须带 Agent 归因前缀（见 `bailian-protocol`「Call attribution」）；人类终端不要设这些变量
 - [ ] **高风险确认**：统一由 `bailian-protocol` 定义；reference / leaf help 以 `risk: high` 明示风险，业务 skill 不得引导 Agent 自动补 `--yes`。遇到 exit code 7 / `requires_confirmation` 时停止执行并请求确认；目标或范围变化后重新确认
 - [ ] **正常控制流**：`requires_confirmation` 不是 CLI bug，`assets/issue-reporting.md` 必须将 exit code 7 保持在 EXCLUDE 范围
 - [ ] **软 hand-off**：兄弟业务 skill **只写 skill 名**；已安装则 Read，未安装则 `bl … --help` 或提示整包安装；**不要**把 `../bailian-gen/…` 等写成执行前提

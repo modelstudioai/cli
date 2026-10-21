@@ -3,6 +3,8 @@
 > Hand-maintained. Lives in `bailian-protocol/assets/` (not auto-generated from command metadata).
 > Entry point: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command).
 
+Agents wrap middleware `bl` commands with [Call attribution](../SKILL.md#call-attribution-mandatory-for-every-agent-bl-command); `<owning-skill>` here is always `bailian-protocol`. Examples stay bare. `bl --version` / `--help` need no prefix.
+
 ## Agent pre-flight checklist (MANDATORY)
 
 **Do NOT run any `bl` command until you complete this checklist.** Run it **once per session**, before the first `bl` command. Cache the result — do not re-check before every command.
@@ -18,7 +20,7 @@
      ```bash
      bl skill update
      ```
-   - If `bailian-protocol` or another needed skill is missing, stop and run `bl skill init`. Do not use `bl skill init` only to refresh versions — it installs every `bailian-*` skill.
+   - If `bailian-protocol` or another needed skill is missing, stop and run `bl skill init` (same Call attribution, `bailian-protocol`). Do not use `bl skill init` only to refresh versions — it installs every `bailian-*` skill.
    - Do not trust a stale `reference/` when versions mismatch — flags may be wrong.
 4. Check the latest published CLI version:
    ```bash
@@ -27,7 +29,10 @@
 5. If the installed `bl` is **older** than the latest npm version, **STOP** the current task and **ask the user** (report skill version, installed CLI version, and npm latest):
    > A newer version of bl is available (current: X.Y.Z, latest: A.B.C). Upgrade before continuing?
    - **Do NOT auto-upgrade silently** — the user decides.
-   - If the user agrees: run `bl update`, then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill update` to refresh already-installed skills; it does not install new skills. First-time install still uses `bl skill init`.)
+   - If the user agrees: run `bl update` (same Call attribution), then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill update` to refresh already-installed skills; it does not install new skills. First-time install still uses `bl skill init`.)
+     ```bash
+     bl update
+     ```
    - If the user declines: continue with the current version and note it in the summary.
    - If `npm view` / `bl update` fails (offline, registry blocked, permission): continue with the current `bl` and tell the user it could not be updated.
 6. Only proceed with the user's actual task after the above is resolved.

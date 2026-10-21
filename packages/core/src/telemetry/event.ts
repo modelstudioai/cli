@@ -1,4 +1,5 @@
 import type { AuthRequirement } from "../types/command.ts";
+import type { CallerAttribution } from "./caller.ts";
 
 export interface TrackingEvent {
   command: string;
@@ -14,6 +15,11 @@ export interface TrackingEvent {
   os: string;
   authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
+  /** Always present on new CLI events: `agent` or `human`. */
+  callerType: CallerAttribution["callerType"];
+  callerName?: string;
+  skillName?: string;
+  skillVersion?: string;
 }
 
 export function createTrackingEvent(opts: {
@@ -24,6 +30,7 @@ export function createTrackingEvent(opts: {
   cliVersion: string;
   authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
+  caller: CallerAttribution;
 }): TrackingEvent {
   const event: TrackingEvent = {
     command: opts.command,
@@ -33,7 +40,14 @@ export function createTrackingEvent(opts: {
     cliVersion: opts.cliVersion,
     nodeVersion: process.version,
     os: process.platform,
+    callerType: opts.caller.callerType,
   };
+
+  if (opts.caller.callerType === "agent") {
+    event.callerName = opts.caller.callerName;
+    if (opts.caller.skillName !== undefined) event.skillName = opts.caller.skillName;
+    if (opts.caller.skillVersion !== undefined) event.skillVersion = opts.caller.skillVersion;
+  }
 
   if (opts.authMethod) {
     event.authMethod = opts.authMethod;

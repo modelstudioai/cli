@@ -21,7 +21,7 @@ description: >-
 > bl skill init
 > ```
 >
-> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。
+> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。Agents wrap with [Call attribution](#call-attribution-mandatory-for-every-agent-bl-command) (`bailian-protocol`).
 
 ## Provider selection and consent
 
@@ -72,9 +72,38 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 - `bailian-protocol`：靠 `bl skill init` 与业务 skill 同装；CRITICAL 可用相对路径 `../bailian-protocol/…`。读不到则停止跑 `bl`，提示整包安装。
 - 其它 bailian-\* 业务 skill：只按名字提及，**不要**写死 `../bailian-*/SKILL.md` 当执行前提。
 
+## Call attribution (mandatory for every Agent `bl` command)
+
+Examples in this protocol, `assets/`, and business skills show bare `bl …`. When an Agent **runs** a command, wrap that single invocation with the prefix below (declared once here). Humans must not set these variables; unset defaults to human.
+
+```bash
+BAILIAN_CALLER_TYPE=agent \
+BAILIAN_CALLER_NAME=<agent-id> \
+BAILIAN_SKILL_NAME=<owning-skill> \
+BAILIAN_SKILL_VERSION=<metadata.version> \
+bl <example>
+```
+
+Pick `<owning-skill>` from the task (do not repeat the prefix in every example):
+
+| Task                                                                     | `<owning-skill>`                       |
+| ------------------------------------------------------------------------ | -------------------------------------- |
+| Install, `skill init` / `skill update`, `bl update`, protocol pre-flight | `bailian-protocol`                     |
+| auth, config, text, app, knowledge, usage                                | `bailian-cli`                          |
+| image / video / speech / vision / omni                                   | `bailian-gen`                          |
+| Other domain commands                                                    | The `bailian-*` skill currently in use |
+
+Conventions:
+
+- `BAILIAN_CALLER_NAME`: stable host id (`cursor` / `claude-code` / `codex` / `qwen-code`); use `unknown` when unsure. Do not scan install directories.
+- `BAILIAN_SKILL_VERSION`: copy `metadata.version` from that owning skill's `SKILL.md`.
+- Prefix each `bl` invocation; do not `export` into the shell session. `bl --version` / `--help` skip telemetry and need no prefix.
+- If the host accepts one-shot env without rewriting the command string, set the same four variables there.
+- PowerShell: fresh subprocess, or save/restore all four (restore to unset when they were unset).
+
 ## Version & updates (after provider selection, before the first `bl` command)
 
-**MANDATORY:** Before running any `bl` command, complete the **Agent pre-flight checklist** in [`assets/versioning.md`](assets/versioning.md). Do NOT run any `bl` command until the checklist is complete. If versions mismatch, ask the user whether to upgrade — do not proceed silently.
+**MANDATORY:** Before running any `bl` command, complete the **Agent pre-flight checklist** in [`assets/versioning.md`](assets/versioning.md). Do NOT run any `bl` command until the checklist is complete. If versions mismatch, ask the user whether to upgrade — do not proceed silently. Pre-flight `bl` commands that enter middleware (for example `bl skill update` / `bl update` / `bl skill init`) must use the same call-attribution prefix above; owning skill for those is `bailian-protocol`.
 
 ## Setup & auth
 
@@ -94,7 +123,7 @@ bl text chat --message "Write a poem about spring"  # explicit text-model smoke 
 ## Color output
 
 When an agent needs plain text without ANSI color codes (for parsing, logs, or
-snapshots), run the command with `NO_COLOR=1`:
+snapshots), run with `NO_COLOR=1` (and Call attribution when run by an Agent):
 
 ```bash
 NO_COLOR=1 bl config show --output text

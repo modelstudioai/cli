@@ -7,6 +7,8 @@ Read this only when you need to install `bl`, change credentials/endpoint, or
 inspect config keys. Day-to-day command routing lives in the business skills
 (`bailian-cli` / `bailian-gen` / …).
 
+Examples stay bare `bl …`. Agents wrap them with [Call attribution](../SKILL.md#call-attribution-mandatory-for-every-agent-bl-command): `bailian-protocol` for install / `skill init`, `bailian-cli` for auth / config.
+
 ---
 
 ## Install

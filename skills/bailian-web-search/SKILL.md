@@ -19,7 +19,7 @@ description: >-
 
 # Bailian web search routing (`bailian-web-search`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent, Version & updates (pre-flight checklist), Setup & auth, and CLI errors: report an issue. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent, Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 > **Scope:** model-aware routing for web search inside Agent-driven `bl` workflows — this skill owns the routing decision only.
 > Command flags / usage / examples: Read skill `bailian-cli` reference if installed; else `bl search web --help` / `bl text chat --help` — do not guess flags.

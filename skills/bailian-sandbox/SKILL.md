@@ -15,7 +15,7 @@ description: >-
 
 # Bailian Sandbox (`bl sandbox`)
 
-Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKILL.md) for consent, high-risk confirmation, version checks, authentication, and error handling. If it is missing, stop execution and prompt the user to install the full family with `bl skill init`.
+Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKILL.md) for consent, high-risk confirmation, version checks, call attribution, authentication, and error handling. If it is missing, stop execution and prompt the user to install the full family with `bl skill init`.
 
 ## Scope and setup
 

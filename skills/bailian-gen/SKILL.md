@@ -20,7 +20,7 @@ description: >-
 
 # Bailian media generation & understanding (`bl image` / `bl video` / `bl speech` / `bl omni` / `bl vision`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 ## Consent (short version; full rules in bailian-protocol)
 
