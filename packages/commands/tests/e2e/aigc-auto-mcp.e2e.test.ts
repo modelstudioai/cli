@@ -1,7 +1,14 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { makeE2eOutputDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import {
+  isBailianE2EMediaEnabled,
+  isBailianE2EVideoEnabled,
+  isDashScopeE2EReady,
+  makeE2eOutputDir,
+  parseStdoutJson,
+  runCommandE2e,
+} from "./helpers.ts";
 import type { E2eRouteExports } from "./topic-routes.ts";
 
 /**
@@ -321,3 +328,99 @@ describe("e2e: aigc auto → mcp", () => {
     expect(stderr, label).toMatch(pattern);
   });
 });
+
+// ---- 真实 MCP 调用（live gated）----
+//
+// 以上全部是离线 dry-run。以下三条真实打百炼 AIGC MCP，验证 auto 确实能经 MCP
+// 出结果并落地文件。默认 skip：需 BAILIAN_E2E=1 + DASHSCOPE_API_KEY；图像 / 语音
+// 另受媒体开关控制（默认开），视频耗时长、另需 BAILIAN_E2E_VIDEO=1。
+//
+// image edit / speech recognize 的真实链路需要合法的图片 / 音频二进制 fixture
+// （静音音频会被下游判为“无语音”而 isError），其请求契约已由上面的 dry-run 预览
+// 与 data URI 脱敏覆盖，故 live 只覆盖纯 prompt/text 输入的这三条命令。
+
+describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
+  "e2e: aigc auto → mcp（DashScope 媒体，真实调用）",
+  () => {
+    test("【auto】image generate 真实经 MCP(bailian_image_gen) 出图并落地", async () => {
+      const outDir = makeE2eOutputDir("aigc-auto-live-image-generate");
+      const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
+        "image",
+        "generate",
+        "--model",
+        "auto",
+        "--prompt",
+        "一只简笔画小猫，白底",
+        "--out-dir",
+        outDir,
+        "--out-prefix",
+        "e2e-auto-gen",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ urls?: string[]; saved?: string[]; total?: number }>(stdout);
+      expect(data.saved?.length ?? 0).toBeGreaterThan(0);
+      expect(data.saved?.[0]).toContain("e2e-auto-gen");
+      expect(data.urls?.length ?? 0).toBeGreaterThan(0);
+    }, 300_000);
+
+    test("【auto】speech synthesize 真实经 MCP(bailian_tts) 合成并落地", async () => {
+      const outDir = makeE2eOutputDir("aigc-auto-live-speech-synthesize");
+      const outWav = join(outDir, "e2e-auto-tts.wav");
+      const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
+        "speech",
+        "synthesize",
+        "--model",
+        "auto",
+        "--text",
+        "端到端 auto 语音测试",
+        // voice 原样透传给 MCP，需为服务端音色枚举内的值（与 REST live 用例一致）。
+        "--voice",
+        "longxiaochun_v3",
+        "--out",
+        outWav,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ saved?: string; audio_url?: string; voice?: string }>(stdout);
+      expect(data.saved).toBe(outWav);
+      expect(data.audio_url?.length ?? 0).toBeGreaterThan(0);
+      expect(data.voice).toBe("longxiaochun_v3");
+    }, 180_000);
+  },
+);
+
+describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
+  "e2e: aigc auto → mcp（DashScope 视频，真实调用）",
+  () => {
+    test("【auto】video generate(t2v) 真实经 MCP 提交→轮询→下载", async () => {
+      const outDir = makeE2eOutputDir("aigc-auto-live-video-generate");
+      const outMp4 = join(outDir, "e2e-auto-t2v.mp4");
+      const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
+        "video",
+        "generate",
+        "--model",
+        "auto",
+        "--prompt",
+        "海浪拍打礁石，慢镜头",
+        "--download",
+        outMp4,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        task_id?: string;
+        video_url?: string;
+        status?: string;
+        saved?: string;
+      }>(stdout);
+      expect(data.status).toBe("SUCCEEDED");
+      expect(data.saved).toBe(outMp4);
+      expect(data.video_url?.length ?? 0).toBeGreaterThan(0);
+      expect(data.task_id?.length ?? 0).toBeGreaterThan(0);
+    }, 600_000);
+  },
+);
