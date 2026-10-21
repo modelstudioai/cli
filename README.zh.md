@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
+<img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/banner.jpg" alt="Aliyun Model Studio CLI" />
 
 **阿里云百炼 (DashScope) AI 平台命令行工具**
 
@@ -36,7 +36,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
-    <img src="https://img.alicdn.com/imgextra/i1/O1CN01Q5052k232Hd36NodG_!!6000000007197-0-tps-2940-1656.jpg" alt="点击播放演示视频" width="720" />
+    <img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/showcase-short-film.jpg" alt="点击播放演示视频" width="720" />
   </a>
 </p>
 
@@ -56,7 +56,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/2v0GYLbJSQb2saj4iopTJDW3iRIHsintYlK-wTKbhqE.mp4">
-    <img src="https://img.alicdn.com/imgextra/i4/6000000001674/O1CN01xhzixhxltbH3LxWu_!!6000000001674-0-tbvideo.jpg" alt="点击播放演示视频" width="720" />
+    <img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/showcase-managed-agent.jpg" alt="点击播放演示视频" width="720" />
   </a>
 </p>
 
@@ -189,7 +189,7 @@ bl update
 
 欢迎扫码加入阿里云百炼 CLI 钉钉用户交流群，获取使用答疑、问题排查、Bug 反馈和使用经验交流支持。
 
-<img src="https://img.alicdn.com/imgextra/i3/O1CN015uuhYGb6j0L12xJZ_!!6000000006304-2-tps-516-485.png" alt="阿里云百炼 CLI 钉钉用户交流群" width="240" />
+<img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/dingtalk-group.png" alt="阿里云百炼 CLI 钉钉用户交流群" width="240" />
 
 ## 相关链接
 
