@@ -32,9 +32,14 @@ export { default as memorySearch } from "./commands/memory/search.ts";
 export { default as memoryList } from "./commands/memory/list.ts";
 export { default as memoryUpdate } from "./commands/memory/update.ts";
 export { default as memoryDelete } from "./commands/memory/delete.ts";
+export { default as memoryNodeShow } from "./commands/memory/node-show.ts";
+export { default as memorySkillExport } from "./commands/memory/skill-export.ts";
 export { default as memoryProfileCreate } from "./commands/memory/profile-create.ts";
+export { default as memoryProfileList } from "./commands/memory/profile-list.ts";
+export { default as memoryProfileShow } from "./commands/memory/profile-show.ts";
+export { default as memoryProfileUpdate } from "./commands/memory/profile-update.ts";
+export { default as memoryProfileDelete } from "./commands/memory/profile-delete.ts";
 export { default as memoryProfileGet } from "./commands/memory/profile-get.ts";
-export { default as knowledgeRetrieve } from "./commands/knowledge/retrieve.ts";
 export { default as knowledgeSearch } from "./commands/knowledge/search.ts";
 export { default as knowledgeChat } from "./commands/knowledge/chat.ts";
 export { default as knowledgeKbList } from "./commands/knowledge/kb-list.ts";
@@ -279,6 +284,18 @@ export {
   managedAgentFileSearch,
   managedAgentFileUpload,
 } from "./commands/managed-agent/file.ts";
+export {
+  managedAgentWebhookCreate,
+  managedAgentWebhookList,
+  managedAgentWebhookGet,
+  managedAgentWebhookUpdate,
+  managedAgentWebhookDelete,
+  managedAgentWebhookEnable,
+  managedAgentWebhookDisable,
+  managedAgentWebhookTest,
+  managedAgentWebhookResetSecret,
+  managedAgentWebhookEvents,
+} from "./commands/managed-agent/webhook.ts";
 export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";
@@ -308,3 +325,17 @@ export {
   sandboxTemplateList,
   sandboxTemplateUpdate,
 } from "./commands/sandbox/template.ts";
+
+export { default as managedAgentMemoryStoreCreate } from "./commands/managed-agent/memory-store/create.ts";
+export {
+  managedAgentMemoryStoreList,
+  managedAgentMemoryStoreGet,
+  managedAgentMemoryCreate,
+  managedAgentMemoryList,
+  managedAgentMemoryGet,
+  managedAgentMemoryUpdate,
+  managedAgentMemoryDelete,
+  managedAgentMemoryVersionList,
+  managedAgentMemoryVersionGet,
+  managedAgentMemoryVersionRedact,
+} from "./commands/managed-agent/memory-store/api.ts";

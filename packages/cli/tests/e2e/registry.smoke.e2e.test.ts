@@ -86,3 +86,8 @@ describe("e2e: bl registry smoke", () => {
     );
   });
 });
+
+test("removed retrieve command is rejected", async () => {
+  const { exitCode } = await runCliSmoke(["knowledge", "retrieve", "--help"]);
+  expect(exitCode).toBe(2);
+});

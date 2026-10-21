@@ -27,21 +27,67 @@ export const CONFIG_ROUTES: E2eRouteExports = {
   "config agent": "configAgent",
 };
 
-export const MEMORY_ROUTES: E2eRouteExports = {
+export const MEMORY_ADD_ROUTES: E2eRouteExports = {
   "memory add": "memoryAdd",
+};
+
+export const MEMORY_SEARCH_ROUTES: E2eRouteExports = {
   "memory search": "memorySearch",
+};
+
+export const MEMORY_LIST_ROUTES: E2eRouteExports = {
   "memory list": "memoryList",
+};
+
+export const MEMORY_UPDATE_ROUTES: E2eRouteExports = {
   "memory update": "memoryUpdate",
+};
+
+export const MEMORY_DELETE_ROUTES: E2eRouteExports = {
   "memory delete": "memoryDelete",
+  "memory add": "memoryAdd", // live self-cleaning chain
+  "memory list": "memoryList", // live: resolve the node id add just produced
+  "memory search": "memorySearch", // live: verify the node is retrievable
+  "memory update": "memoryUpdate", // live update step in the chain
+  "memory node show": "memoryNodeShow", // live: verify node detail after update
+  "memory skill export": "memorySkillExport", // live: verify exported skill metadata
+};
+
+export const MEMORY_NODE_SHOW_ROUTES: E2eRouteExports = {
+  "memory node show": "memoryNodeShow",
+};
+
+export const MEMORY_SKILL_EXPORT_ROUTES: E2eRouteExports = {
+  "memory skill export": "memorySkillExport",
+};
+
+export const MEMORY_PROFILE_CREATE_ROUTES: E2eRouteExports = {
   "memory profile create": "memoryProfileCreate",
+};
+
+export const MEMORY_PROFILE_LIST_ROUTES: E2eRouteExports = {
+  "memory profile list": "memoryProfileList",
+};
+
+export const MEMORY_PROFILE_SHOW_ROUTES: E2eRouteExports = {
+  "memory profile show": "memoryProfileShow",
+};
+
+export const MEMORY_PROFILE_UPDATE_ROUTES: E2eRouteExports = {
+  "memory profile update": "memoryProfileUpdate",
+};
+
+export const MEMORY_PROFILE_GET_ROUTES: E2eRouteExports = {
   "memory profile get": "memoryProfileGet",
 };
 
-export const KNOWLEDGE_ROUTES: E2eRouteExports = {
-  "knowledge retrieve": "knowledgeRetrieve",
-  "knowledge search": "knowledgeSearch",
-  "knowledge chat": "knowledgeChat",
-  "knowledge list": "knowledgeKbList", // live: grab a real index id for retrieve
+export const MEMORY_PROFILE_DELETE_ROUTES: E2eRouteExports = {
+  "memory profile delete": "memoryProfileDelete",
+  "memory profile create": "memoryProfileCreate", // live self-cleaning chain
+  "memory profile list": "memoryProfileList", // live: the new schema shows up in the list
+  "memory profile show": "memoryProfileShow", // live: attribute_id handles for update
+  "memory profile update": "memoryProfileUpdate", // live update step in the chain
+  "memory profile get": "memoryProfileGet", // live: user profile reachable through the schema
 };
 
 export const KNOWLEDGE_SEARCH_ROUTES: E2eRouteExports = {
@@ -281,6 +327,19 @@ export const SANDBOX_ROUTES: E2eRouteExports = {
   "sandbox template delete": "sandboxTemplateDelete",
 };
 
+export const MANAGED_AGENT_WEBHOOK_ROUTES: E2eRouteExports = {
+  "managed-agent webhook create": "managedAgentWebhookCreate",
+  "managed-agent webhook list": "managedAgentWebhookList",
+  "managed-agent webhook get": "managedAgentWebhookGet",
+  "managed-agent webhook update": "managedAgentWebhookUpdate",
+  "managed-agent webhook delete": "managedAgentWebhookDelete",
+  "managed-agent webhook enable": "managedAgentWebhookEnable",
+  "managed-agent webhook disable": "managedAgentWebhookDisable",
+  "managed-agent webhook test": "managedAgentWebhookTest",
+  "managed-agent webhook reset-secret": "managedAgentWebhookResetSecret",
+  "managed-agent webhook events": "managedAgentWebhookEvents",
+};
+
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent init": "managedAgentInit",
   "managed-agent validate": "managedAgentValidate",
@@ -434,7 +493,6 @@ export const KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES: E2eRouteExports = {
   "knowledge chunk update": "knowledgeChunkUpdate",
   "knowledge chunk delete": "knowledgeChunkDelete",
   "knowledge stats": "knowledgeKbStats",
-  "knowledge retrieve": "knowledgeRetrieve", // live rerank retrieval on the throwaway base
   "knowledge category list": "knowledgeCategoryList",
   "knowledge category add": "knowledgeCategoryAdd",
   "knowledge category delete": "knowledgeCategoryDelete",
@@ -456,7 +514,6 @@ export const KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES: E2eRouteExports = {
 const JOURNEY_KB_BASE_ROUTES: E2eRouteExports = {
   "knowledge doc upload": "knowledgeDocUpload",
   "knowledge create": "knowledgeKbCreate",
-  "knowledge retrieve": "knowledgeRetrieve",
   "knowledge delete": "knowledgeKbDelete",
   "knowledge file delete": "knowledgeFileDelete", // clean up data-center files
 };
@@ -472,6 +529,11 @@ export const JOURNEY_J1_ROUTES: E2eRouteExports = {
 };
 
 export const JOURNEY_J2_ROUTES: E2eRouteExports = {
+  "knowledge service create": "knowledgeServiceCreate",
+  "knowledge service get": "knowledgeServiceGet",
+  "knowledge service update": "knowledgeServiceUpdate",
+  "knowledge service delete": "knowledgeServiceDelete",
+  "knowledge search": "knowledgeSearch",
   ...JOURNEY_KB_BASE_ROUTES,
   "knowledge doc list": "knowledgeDocList",
   "knowledge doc status": "knowledgeDocStatus",
@@ -507,4 +569,20 @@ export const JOURNEY_J5_ROUTES: E2eRouteExports = {
   "knowledge file get": "knowledgeFileGet",
   "knowledge file delete": "knowledgeFileDelete",
   "knowledge doc upload": "knowledgeDocUpload",
+};
+
+export const MANAGED_AGENT_MEMORY_ROUTES: E2eRouteExports = {
+  "managed-agent memory-store create": "managedAgentMemoryStoreCreate",
+  "managed-agent memory-store list": "managedAgentMemoryStoreList",
+  "managed-agent memory-store get": "managedAgentMemoryStoreGet",
+  "managed-agent memory-store memories create": "managedAgentMemoryCreate",
+  "managed-agent memory-store memories list": "managedAgentMemoryList",
+  "managed-agent memory-store memories get": "managedAgentMemoryGet",
+  "managed-agent memory-store memories update": "managedAgentMemoryUpdate",
+  "managed-agent memory-store memories delete": "managedAgentMemoryDelete",
+  "managed-agent memory-store versions list": "managedAgentMemoryVersionList",
+  "managed-agent memory-store versions get": "managedAgentMemoryVersionGet",
+  "managed-agent memory-store versions redact": "managedAgentMemoryVersionRedact",
+  "managed-agent session create": "managedAgentSessionCreate",
+  "managed-agent session run": "managedAgentSessionRun",
 };

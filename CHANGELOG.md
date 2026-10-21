@@ -2,9 +2,55 @@
 
 All notable changes to the `bailian-cli` packages are documented here.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The `bailian-cli`, `bailian-cli-core`, `bailian-cli-runtime`, `bailian-cli-commands`, and `knowledge-studio-cli` packages share a single version number.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The `bailian-cli`, `bailian-cli-core`, `bailian-cli-runtime`, `bailian-cli-commands`, `knowledge-studio-cli`, `bailian-kb-dsh`, and `bailian-memo-dsh` packages share a single version number.
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
+
+## [2.5.0] - 2026-10-20
+
+### Added
+
+- **Memory management** — Add node details, Skill memory export, and profile schema listing, inspection, updates and deletion; support rule-scoped recall, pro/lite search, skill metadata and profile-only extraction.
+- **Personal memory Skill** — Add `bailian-memory` for consent-based personal memory, recall and user profile workflows.
+- **DeepSeek Harness integrations** — Add the personal memory plugin with automatic recall, asynchronous curation and remember/forget tools; update the knowledge plugin for dsh 0.2.1 settings and isolated management credentials.
+
+### Changed
+
+- **Memory CLI migration (BREAKING)** — Memory commands now use a Workspace-specific endpoint. Configure `--workspace-id`, `BAILIAN_WORKSPACE_ID` or `workspace_id`; replace `--memory-library-id` with `--library-id` on commands that support it. Remove `--user-id` from `memory update` and `memory delete`; confirmed node deletion now requires `--yes`.
+- **Memory writes (BREAKING)** — `memory add` now submits asynchronous extraction and waits up to 120 seconds by default. Use `--wait 0` for submission-only behavior. JSON consumers must handle `event_id` and `events`; a submission receipt is not proof of completed extraction.
+- **Unified releases** — CLI, Knowledge Studio CLI and both dsh plugins now share one version and release workflow. The dsh knowledge plugin moves from its independent 0.1.x series to 2.5.0.
+
+### Removed
+
+- **Legacy knowledge retrieval (BREAKING)** — Remove `bl knowledge retrieve`, `kscli retrieve` and the `knowledgeRetrieve` command export. Migrate to `bl knowledge search` or `kscli search` using a retrieval service's `--agent-id`; old index-based arguments are not interchangeable.
+- **Legacy Memory library API (BREAKING)** — Replace the exported `MemoryAddResponse` type with `MemoryAddAsyncResponse`; library consumers must adapt to the updated asynchronous request/response contracts.
+
+### Fixed
+
+- **Memory completion and input validation** — Empty event lists and missing event IDs no longer falsely confirm completion; polling obeys its deadline, partial failures return a non-zero exit code, and malformed JSON elements and attribute types are rejected before requests.
+- **Search documentation** — Clarify that `--min-score` defaults to 0.3 and only applies to pro search; lite does not filter by this threshold.
+
+### Security
+
+- **Workspace endpoints** — Reject Workspace identifiers that could alter the destination host, preventing credentials from being sent to an unintended host.
+
+## [2.4.0] - 2026-10-19
+
+### Added
+
+- **Managed Agent memory** — Manage Memory Stores, memory contents and historical versions, and mount memory into Sessions.
+- **Workspace Webhooks** — Manage and test Webhooks, rotate signing secrets, and inspect delivery events.
+- **Agent resource bindings** — Agent creation supports default Environment and Vault bindings and MCP market servers through `--environment`, `--vault` and `--mcp`.
+- **Runtime environment variables** — Session creation, Session runs and Deployment creation accept repeatable `--environment_variables KEY=VALUE`.
+
+## [2.3.3] - 2026-10-19
+
+### Fixed
+
+- **Binary CLI requests** — Fix model API requests failing in the binary CLI, including speech and video generation.
+- **Request timeouts** — Fix long-running core API requests timing out before the configured `--timeout`; add streaming idle protection and release connections when streams end.
+- **Windows console login** — Fix console login URLs losing query parameters when opening the browser on Windows.
+- **Login guidance** — After console login or when running `bl auth status`, clearly indicate when a model API key is missing and show the commands needed to configure it.
 
 ## [2.3.2] - 2026-10-16
 

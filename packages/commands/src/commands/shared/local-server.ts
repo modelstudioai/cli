@@ -22,21 +22,69 @@ export function listenLocalServer(server: http.Server, port = 0): Promise<number
   });
 }
 
+export interface OpenInvocation {
+  command: string;
+  args: string[];
+  /** Windows only: keep the quotes we added for `cmd.exe`. */
+  windowsVerbatimArguments?: boolean;
+}
+
+/**
+ * Quote a value for `cmd /c`. An embedded `"` is written as `""`, which cmd
+ * reads as one literal quote.
+ *
+ * Do not double `%`. `%%` → `%` is a batch-file rule and does not apply when
+ * Node starts `cmd /c` directly. Doubling would make `start` open a different
+ * target (`%20` would stay `%20` with two percent signs).
+ */
+function quoteForCmd(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+/**
+ * Command that opens `target` with the OS default handler.
+ *
+ * On Windows, `start` is a `cmd.exe` builtin. An empty argv slot is not enough:
+ * cmd re-parses the command line and treats an unquoted `&` as a separator, so
+ * `...&needapikey=true` never reaches the browser. `start` also consumes the
+ * first quoted argument as a window title. `/d` skips AutoRun, `/v:off` disables
+ * delayed expansion, and `/s /c` strips one outer quote pair, leaving:
+ * `start "" "<target>"`.
+ */
+export function buildOpenInvocation(target: string, platform = process.platform): OpenInvocation {
+  if (platform === "win32") {
+    const inner = `start "" ${quoteForCmd(target)}`;
+    return {
+      command: "cmd",
+      args: ["/d", "/v:off", "/s", "/c", `"${inner}"`],
+      windowsVerbatimArguments: true,
+    };
+  }
+  if (platform === "darwin") {
+    return { command: "open", args: [target] };
+  }
+  return { command: "xdg-open", args: [target] };
+}
+
 /**
  * Open a local file, directory, or URL with the OS default handler
- * (best-effort, cross-platform). Arguments are passed to `execFile` as an array
- * so the target is never interpreted by a shell.
+ * (best-effort, cross-platform).
  */
 export function openPath(target: string): Promise<void> {
-  const platform = process.platform;
-  const cmd = platform === "darwin" ? "open" : platform === "win32" ? "cmd" : "xdg-open";
-  const args = platform === "win32" ? ["/c", "start", "", target] : [target];
-
+  const invocation = buildOpenInvocation(target);
   return new Promise((resolve, reject) => {
-    execFile(cmd, args, { windowsHide: true }, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
+    execFile(
+      invocation.command,
+      invocation.args,
+      {
+        windowsHide: true,
+        windowsVerbatimArguments: invocation.windowsVerbatimArguments,
+      },
+      (err) => {
+        if (err) reject(err);
+        else resolve();
+      },
+    );
   });
 }
 

@@ -147,7 +147,7 @@ export class CommandRegistry {
     return commands;
   }
 
-  /** First registered command path, for the "Getting Help" example (e.g. "knowledge retrieve"). */
+  /** First registered command path, for the "Getting Help" example (e.g. "knowledge search"). */
   private helpExample(): string {
     const walk = (node: CommandNode, path: string[]): string | null => {
       for (const [name, child] of node.children) {

@@ -22,7 +22,7 @@ export interface KbClientOptions {
   endpointHost: string;
   /** Service version forwarded on search/chat when set (deployment debug choice). */
   agentVersion?: string;
-  /** Resolves the current DASHSCOPE_API_KEY per call; throws with guidance when unconfigured. */
+  /** Resolves the current BAILIAN_KB_API_KEY per call; throws with guidance when unconfigured. */
   resolveApiKey: () => Promise<string>;
   /** Test seam; defaults to global fetch. */
   fetchImpl?: typeof fetch;

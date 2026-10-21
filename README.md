@@ -194,6 +194,8 @@ Scan the QR code to join the Aliyun Model Studio CLI DingTalk user group for usa
 
 ## Links
 
+Memory documentation (Chinese): [capability matrix](https://github.com/modelstudioai/cli/blob/main/docs/memory/cli-matrix.md) · [command guide](https://github.com/modelstudioai/cli/blob/main/docs/memory/memory-cli-guide.md).
+
 | Resource                     | URL                                                                                                 |
 | :--------------------------- | :-------------------------------------------------------------------------------------------------- |
 | Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?spm=a2ty07.github                                            |

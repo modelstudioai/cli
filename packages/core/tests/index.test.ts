@@ -94,6 +94,22 @@ test("mapApiError captures Sandbox numeric code and requestID", () => {
   });
 });
 
+test("mapApiError preserves AgentStudio nested error codes and server messages", () => {
+  for (const apiCode of ["11800016", 11800016]) {
+    const error = mapApiError(400, {
+      error: { code: apiCode, message: "invalid webhook request" },
+      request_id: "webhook-request-id",
+    });
+    expect(error.exitCode).toBe(ExitCode.GENERAL);
+    expect(error.message).toBe("invalid webhook request");
+    expect(error.api).toEqual({
+      httpStatus: 400,
+      apiCode: "11800016",
+      requestId: "webhook-request-id",
+    });
+  }
+});
+
 test("Sandbox endpoint builders fix cn-beijing and encode path identifiers", () => {
   expect(sandboxEndpoint("ws-test", "/sandboxes")).toBe(
     "https://ws-test.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio/sandbox/sandboxes",
