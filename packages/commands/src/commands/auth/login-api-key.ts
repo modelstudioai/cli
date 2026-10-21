@@ -2,6 +2,7 @@ import {
   BailianError,
   ExitCode,
   getApiKeyLoginKind,
+  getMiniMaxProfilePreset,
   normalizeModelBaseUrl,
   requestJson,
   type ApiKeyLoginKind,
@@ -33,7 +34,7 @@ interface ApiKeyLoginProfile {
   persistPatch?: AuthPersistPatch;
 }
 
-type ApiKeyEndpointKind = Exclude<ApiKeyLoginKind, "unknown">;
+type ApiKeyEndpointKind = Exclude<ApiKeyLoginKind, "unknown"> | "minimax";
 
 interface ApiKeyValidationCandidate {
   baseUrl: string;
@@ -63,7 +64,7 @@ const ORDINARY_WORKSPACE_REGIONS = [
   "us-east-1",
 ] as const;
 
-const KNOWN_BASE_URLS: Readonly<Record<ApiKeyEndpointKind, readonly string[]>> = {
+const KNOWN_BASE_URLS: Readonly<Record<Exclude<ApiKeyLoginKind, "unknown">, readonly string[]>> = {
   ordinary: [
     "https://dashscope.aliyuncs.com",
     "https://dashscope-intl.aliyuncs.com",
@@ -77,6 +78,7 @@ const KNOWN_BASE_URLS: Readonly<Record<ApiKeyEndpointKind, readonly string[]>> =
 };
 
 function modelsUrl(baseUrl: string, kind: ApiKeyEndpointKind): string {
+  if (kind === "minimax") return new URL("/v1/models", baseUrl).toString();
   const url = new URL(
     kind === "token-plan" ? "/compatible-mode/v1/models" : "/api/v1/models",
     `${baseUrl}/`,
@@ -88,7 +90,7 @@ function modelsUrl(baseUrl: string, kind: ApiKeyEndpointKind): string {
   return url.toString();
 }
 
-function validationKinds(apiKeyKind: ApiKeyLoginKind): ApiKeyEndpointKind[] {
+function validationKinds(apiKeyKind: ApiKeyLoginKind): Exclude<ApiKeyLoginKind, "unknown">[] {
   if (apiKeyKind === "unknown") return ["ordinary", "token-plan"];
   return [apiKeyKind];
 }
@@ -118,6 +120,12 @@ export function apiKeyValidationCandidates(
   const kinds = validationKinds(apiKeyKind);
   const candidates: ApiKeyValidationCandidate[] = [];
   const seenUrls = new Set<string>();
+
+  const selectedBaseUrl = options.explicitBaseUrl ?? options.storedBaseUrl;
+  if (selectedBaseUrl && getMiniMaxProfilePreset(selectedBaseUrl)) {
+    addCandidate(candidates, seenUrls, selectedBaseUrl, "minimax");
+    return candidates;
+  }
 
   if (options.explicitBaseUrl) {
     for (const kind of kinds) addCandidate(candidates, seenUrls, options.explicitBaseUrl, kind);

@@ -2,6 +2,7 @@ import {
   defineCommand,
   generateCLIAccessToken,
   getModelProfilePreset,
+  getMiniMaxProfilePreset,
   normalizeModelBaseUrl,
 } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
@@ -81,8 +82,18 @@ export default defineCommand({
       },
     },
   },
+  notes: [
+    {
+      "en-US":
+        "Use --config minimax or --config minimax-cn with --api-key for MiniMax global or China text profiles. New profiles default to MiniMax-M3.1-Flash and only claim text.chat; saved models and custom --base-url values are preserved.",
+      "zh-CN":
+        "使用 --config minimax 或 --config minimax-cn 配合 --api-key 登录 MiniMax 国际站或中国站文本配置。新配置默认使用 MiniMax-M3.1-Flash，仅声明 text.chat；保留已保存的模型和自定义 --base-url。",
+    },
+  ],
   exampleArgs: [
     "--console",
+    "--config minimax --api-key <key>",
+    "--config minimax-cn --api-key <key>",
     "--api-key sk-xxxxx",
     "--open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx",
   ],
@@ -171,17 +182,23 @@ export default defineCommand({
       return;
     }
     const stored = store.stored();
+    const namedPreset = getMiniMaxProfilePreset(
+      getModelProfilePreset(settings.configName)?.baseUrl,
+    );
     const validation = await validateApiKey(deps, key, {
-      explicitBaseUrl: baseUrl,
+      explicitBaseUrl: baseUrl ?? (!stored.baseUrl ? namedPreset?.baseUrl : undefined),
       storedBaseUrl: stored.baseUrl,
       workspaceId: settings.workspaceId,
     });
-    const profilePreset = getModelProfilePreset(
-      validation.kind === "token-plan" ? "token-plan" : undefined,
-    );
+    const profilePreset =
+      getMiniMaxProfilePreset(validation.baseUrl) ??
+      getModelProfilePreset(validation.kind === "token-plan" ? "token-plan" : undefined);
     await persistApiKey(deps, key, {
       persistBaseUrl: validation.baseUrl,
-      defaultTextModel: profilePreset?.defaultTextModel,
+      defaultTextModel:
+        validation.kind === "minimax"
+          ? (settings.defaultTextModel ?? profilePreset?.defaultTextModel)
+          : profilePreset?.defaultTextModel,
       defaultVideoModel: profilePreset?.defaultVideoModel,
       defaultImageToVideoModel: profilePreset?.defaultImageToVideoModel,
       defaultReferenceToVideoModel: profilePreset?.defaultReferenceToVideoModel,

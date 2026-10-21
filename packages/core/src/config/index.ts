@@ -31,6 +31,7 @@ export { ensureConfigDir, getConfigDir, getConfigPath, getCredentialsPath } from
 export {
   getApiKeyLoginKind,
   getModelProfilePreset,
+  getMiniMaxProfilePreset,
   type ApiKeyLoginKind,
 } from "./profile-presets.ts";
 export { normalizeModelBaseUrl } from "./model-base-url.ts";

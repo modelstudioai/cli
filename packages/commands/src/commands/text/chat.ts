@@ -2,6 +2,8 @@ import {
   defineCommand,
   chatPath,
   responsesPath,
+  getMiniMaxProfilePreset,
+  UsageError,
   parseSSE,
   detectOutputFormat,
   readTextFromPathOrStdin,
@@ -35,8 +37,9 @@ const CHAT_FLAGS = {
     type: "string",
     valueHint: "<model>",
     description: {
-      "en-US": "Model ID (default: qwen3.8-max)",
-      "zh-CN": "模型 ID（默认：qwen3.8-max）",
+      "en-US":
+        "Model ID (default: profile model, MiniMax-M3.1-Flash for MiniMax, otherwise qwen3.8-max)",
+      "zh-CN": "模型 ID（默认：配置模型，MiniMax 使用 MiniMax-M3.1-Flash，其他使用 qwen3.8-max）",
     },
   },
   message: {
@@ -96,8 +99,8 @@ const CHAT_FLAGS = {
   enableThinking: {
     type: "switch",
     description: {
-      "en-US": "Enable thinking/reasoning mode (for qwen3/qwq models)",
-      "zh-CN": "启用思考/推理模式（适用于 qwen3/qwq 模型）",
+      "en-US": "Enable thinking/reasoning mode (Qwen or MiniMax; Flash always reasons)",
+      "zh-CN": "启用思考/推理模式（Qwen 或 MiniMax；Flash 始终开启推理）",
     },
   },
   thinkingBudget: {
@@ -197,6 +200,12 @@ export default defineCommand({
   notes: [
     {
       "en-US":
+        "MiniMax profiles support --api chat and --api responses. Use --model MiniMax-M3, MiniMax-M2.7, or a custom model to override Flash. Flash reasoning is always on; --thinking-budget is unsupported.",
+      "zh-CN":
+        "MiniMax 配置支持 --api chat 和 --api responses。使用 --model MiniMax-M3、MiniMax-M2.7 或自定义模型可覆盖 Flash 默认值。Flash 始终开启推理，不支持 --thinking-budget。",
+    },
+    {
+      "en-US":
         "Prime mode requires an explicit model and currently supports only the Chat Completions API.",
       "zh-CN": "Prime 模式必须显式指定模型，且当前仅支持 Chat Completions API。",
     },
@@ -226,7 +235,12 @@ export default defineCommand({
     const { system, messages } = parseMessages(flags);
 
     const api = flags.api ?? "chat";
-    const model = flags.model || settings.defaultTextModel || "qwen3.8-max";
+    const miniMaxPreset = flags.prime ? undefined : getMiniMaxProfilePreset(ctx.client.baseUrl);
+    const model =
+      flags.model || settings.defaultTextModel || miniMaxPreset?.defaultTextModel || "qwen3.8-max";
+    if (miniMaxPreset && flags.thinkingBudget !== undefined) {
+      throw new UsageError("MiniMax does not support --thinking-budget.");
+    }
     const shouldStream = flags.stream || process.stdout.isTTY;
     const format = detectOutputFormat(settings.output);
 
@@ -258,17 +272,22 @@ export default defineCommand({
     if (flags.topP !== undefined) body.top_p = flags.topP;
 
     if (flags.enableThinking) {
-      body.enable_thinking = true;
-      if (api === "chat" && "messages" in body && flags.thinkingBudget !== undefined) {
-        body.thinking_budget = flags.thinkingBudget;
+      if (miniMaxPreset) {
+        if ("messages" in body) body.thinking = { type: "adaptive" };
+        else body.reasoning = { effort: "max" };
+      } else {
+        body.enable_thinking = true;
+        if (api === "chat" && "messages" in body && flags.thinkingBudget !== undefined) {
+          body.thinking_budget = flags.thinkingBudget;
+        }
       }
     }
 
     const requestPath = flags.prime
       ? resolvePrimeEndpoint(ctx, chatPath())
       : api === "responses"
-        ? responsesPath()
-        : chatPath();
+        ? responsesPath(ctx.client.baseUrl)
+        : chatPath(ctx.client.baseUrl);
 
     if (flags.tool) {
       const tools = flags.tool.map((toolValue) => {
