@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="../../assets/banner.jpg" alt="Aliyun Model Studio CLI" />
+<img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/banner.jpg" alt="Aliyun Model Studio CLI" />
 
 **The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
@@ -37,7 +37,7 @@ _Built for AI Agents. Every command works as a structured tool call._
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
-    <img src="../../assets/showcase-short-film.jpg" alt="Click to play the demo video" width="720" />
+    <img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/showcase-short-film.jpg" alt="Click to play the demo video" width="720" />
   </a>
 </p>
 
@@ -57,7 +57,7 @@ A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from 
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/2v0GYLbJSQb2saj4iopTJDW3iRIHsintYlK-wTKbhqE.mp4">
-    <img src="../../assets/showcase-managed-agent.jpg" alt="Click to play the demo video" width="720" />
+    <img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/showcase-managed-agent.jpg" alt="Click to play the demo video" width="720" />
   </a>
 </p>
 
@@ -190,7 +190,7 @@ Bug reports, feature requests, and PRs are welcome. See [CONTRIBUTING.md](https:
 
 Scan the QR code to join the Aliyun Model Studio CLI DingTalk user group for usage help, troubleshooting, bug reports, and tips from other users.
 
-<img src="../../assets/dingtalk-group.png" alt="Aliyun Model Studio CLI DingTalk user group" width="240" />
+<img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/dingtalk-group.png" alt="Aliyun Model Studio CLI DingTalk user group" width="240" />
 
 ## Links
 
