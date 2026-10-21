@@ -90,7 +90,12 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
     resolveBaseUrl: (fallback) => resolveModelBaseUrl(sources, fallback),
     async login(patch) {
       const targetConfigName = patch.api_key
-        ? resolveApiKeyLoginConfigName(patch.api_key, configName, activateAfterLogin)
+        ? resolveApiKeyLoginConfigName(
+            patch.api_key,
+            configName,
+            activateAfterLogin,
+            patch.base_url,
+          )
         : configName;
       const shouldActivate = activateAfterLogin || targetConfigName !== configName;
       const existing = readConfigFile(targetConfigName) as Record<string, unknown>;

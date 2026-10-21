@@ -1,18 +1,28 @@
 interface ModelProfilePreset {
   baseUrl: string;
   defaultTextModel: string;
-  defaultVideoModel: string;
-  defaultImageToVideoModel: string;
-  defaultReferenceToVideoModel: string;
-  defaultImageModel: string;
-  defaultSpeechModel: string;
-  defaultSpeechRecognitionModel: string;
+  defaultVideoModel?: string;
+  defaultImageToVideoModel?: string;
+  defaultReferenceToVideoModel?: string;
+  defaultImageModel?: string;
+  defaultSpeechModel?: string;
+  defaultSpeechRecognitionModel?: string;
   apiKeyCapabilities: readonly string[];
 }
 
 export type ApiKeyLoginKind = "token-plan" | "ordinary" | "unknown";
 
 const MODEL_PROFILE_PRESETS: Readonly<Record<string, ModelProfilePreset>> = {
+  minimax: {
+    baseUrl: "https://api.minimax.io",
+    defaultTextModel: "MiniMax-M3.1-Flash",
+    apiKeyCapabilities: ["text.chat"],
+  },
+  "minimax-cn": {
+    baseUrl: "https://api.minimax.cn",
+    defaultTextModel: "MiniMax-M3.1-Flash",
+    apiKeyCapabilities: ["text.chat"],
+  },
   "token-plan": {
     baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com",
     defaultTextModel: "qwen3.8-max",
@@ -42,7 +52,20 @@ export function getModelProfilePreset(configName?: string): ModelProfilePreset |
   return configName ? MODEL_PROFILE_PRESETS[configName] : undefined;
 }
 
-/** Classify only the key formats that affect automatic Profile routing. */
+/** Recognize only official HTTPS origins; custom gateways keep their existing behavior. */
+export function getMiniMaxProfilePreset(baseUrl?: string): ModelProfilePreset | undefined {
+  if (!baseUrl) return undefined;
+  let origin: string;
+  try {
+    origin = new URL(baseUrl).origin;
+  } catch {
+    return undefined;
+  }
+  return [MODEL_PROFILE_PRESETS.minimax, MODEL_PROFILE_PRESETS["minimax-cn"]].find(
+    (preset) => preset.baseUrl === origin,
+  );
+}
+
 export function getApiKeyLoginKind(apiKey: string): ApiKeyLoginKind {
   const normalizedApiKey = apiKey.trim();
   if (normalizedApiKey.startsWith("sk-sp-")) return "token-plan";
@@ -55,8 +78,9 @@ export function resolveApiKeyLoginConfigName(
   apiKey: string,
   selectedConfigName: string | undefined,
   configExplicit: boolean,
+  baseUrl?: string,
 ): string | undefined {
-  if (configExplicit) return selectedConfigName;
+  if (configExplicit || getMiniMaxProfilePreset(baseUrl)) return selectedConfigName;
   const apiKeyKind = getApiKeyLoginKind(apiKey);
   if (apiKeyKind === "token-plan") return "token-plan";
   if (apiKeyKind === "ordinary" && selectedConfigName === "token-plan") return undefined;

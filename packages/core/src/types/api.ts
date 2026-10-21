@@ -42,6 +42,7 @@ export interface ChatRequest {
   tool_choice?: "auto" | "none" | { type: "function"; function: { name: string } };
   enable_thinking?: boolean;
   thinking_budget?: number;
+  thinking?: { type: "adaptive" };
   modalities?: string[];
   audio?: { voice: string; format?: string };
   stream_options?: { include_usage?: boolean };
@@ -119,6 +120,7 @@ export interface ResponsesRequest {
   stream?: boolean;
   tools?: Array<Record<string, unknown>>;
   enable_thinking?: boolean;
+  reasoning?: { effort: "max" };
 }
 
 export interface ResponsesOutputContent {

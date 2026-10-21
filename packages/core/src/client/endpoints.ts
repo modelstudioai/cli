@@ -1,4 +1,5 @@
 import { UsageError } from "../errors/base.ts";
+import { getMiniMaxProfilePreset } from "../config/profile-presets.ts";
 
 // API path builders — return the path only; the Client prepends the
 // credential's baseUrl. Commands never see baseUrl.
@@ -22,13 +23,15 @@ function workspaceEndpoint(workspaceId: string, path: string): string {
 }
 
 // ---- Chat (OpenAI Compatible) ----
-export function chatPath(): string {
-  return "/compatible-mode/v1/chat/completions";
+export function chatPath(baseUrl?: string): string {
+  return getMiniMaxProfilePreset(baseUrl)
+    ? "/v1/chat/completions"
+    : "/compatible-mode/v1/chat/completions";
 }
 
 // ---- Responses (OpenAI Compatible) ----
-export function responsesPath(): string {
-  return "/compatible-mode/v1/responses";
+export function responsesPath(baseUrl?: string): string {
+  return getMiniMaxProfilePreset(baseUrl) ? "/v1/responses" : "/compatible-mode/v1/responses";
 }
 
 // ---- Decision model (TypeSafe System One, workspace-based host) ----
