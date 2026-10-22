@@ -71,7 +71,7 @@ test("wires process.env through readCaller into trackCommandExecution", async ()
   expect(next).toHaveBeenCalledOnce();
 });
 
-test("defaults to human when caller env is unset", async () => {
+test("defaults to unknown when caller env is unset", async () => {
   vi.stubEnv("BAILIAN_CALLER_TYPE", undefined);
   vi.stubEnv("BAILIAN_CALLER_NAME", undefined);
   vi.stubEnv("BAILIAN_SKILL_NAME", undefined);
@@ -83,5 +83,5 @@ test("defaults to human when caller env is unset", async () => {
   const deps = trackerMocks.trackCommandExecution.mock.calls[0]![0] as {
     caller: CallerAttribution;
   };
-  expect(deps.caller).toEqual({ callerType: "human" });
+  expect(deps.caller).toEqual({ callerType: "unknown" });
 });

@@ -1,7 +1,7 @@
-/** Parse BAILIAN_CALLER_* from the process env. Defaults to human. */
+/** Parse BAILIAN_CALLER_*. Only an explicit agent is `agent`; everything else is `unknown`. */
 
 export type CallerAttribution =
-  | { callerType: "human" }
+  | { callerType: "unknown" }
   | {
       callerType: "agent";
       callerName: string;
@@ -36,7 +36,7 @@ function normalizeCallerName(raw: string | undefined): string {
 export function readCaller(env: NodeJS.ProcessEnv): CallerAttribution {
   const callerType = readTrimmed(env, CALLER_TYPE_ENV)?.toLowerCase();
   if (callerType !== "agent" && callerType !== "ai_agent") {
-    return { callerType: "human" };
+    return { callerType: "unknown" };
   }
 
   const skillNameRaw = readTrimmed(env, SKILL_NAME_ENV)?.toLowerCase();

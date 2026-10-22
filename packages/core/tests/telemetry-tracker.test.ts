@@ -21,7 +21,7 @@ const identity: Identity = {
   npmPackage: "bailian-cli",
 };
 
-const humanCaller: CallerAttribution = { callerType: "human" };
+const unknownCaller: CallerAttribution = { callerType: "unknown" };
 const agentCaller: CallerAttribution = {
   callerType: "agent",
   callerName: "cursor",
@@ -40,7 +40,7 @@ test("records BailianError exitCode in local events and AEM ext", async () => {
         identity,
         settings: { telemetry: true } as Settings,
         authMethod: "apiKey",
-        caller: humanCaller,
+        caller: unknownCaller,
       },
       ["knowledge", "doc", "delete"],
       {},
@@ -57,13 +57,13 @@ test("records BailianError exitCode in local events and AEM ext", async () => {
     success: false,
     exitCode: 7,
     errorMessage: "该操作会永久删除文档。",
-    callerType: "human",
+    callerType: "unknown",
   });
   expect(event.callerName).toBeUndefined();
   expect(event.skillName).toBeUndefined();
   expect(event.skillVersion).toBeUndefined();
   expect(buildRemoteAemOptions(event)).toMatchObject({
-    ext: expect.objectContaining({ exitCode: 7, callerType: "human" }),
+    ext: expect.objectContaining({ exitCode: 7, callerType: "unknown" }),
   });
 });
 
@@ -85,7 +85,7 @@ test.each([
         identity,
         settings: { telemetry: true } as Settings,
         authMethod: "apiKey",
-        caller: humanCaller,
+        caller: unknownCaller,
       },
       ["managed-agent", "webhook", "events"],
       { page, pageSize: 20 },

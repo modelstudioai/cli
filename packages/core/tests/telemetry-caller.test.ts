@@ -8,8 +8,8 @@ test.each([
   { label: "illegal false", env: { BAILIAN_CALLER_TYPE: "false" } },
   { label: "illegal ai-agent", env: { BAILIAN_CALLER_TYPE: "ai-agent" } },
   { label: "illegal zero", env: { BAILIAN_CALLER_TYPE: "0" } },
-])("maps $label to human without agent fields", ({ env }) => {
-  expect(readCaller(env)).toEqual({ callerType: "human" });
+])("maps $label to unknown without agent fields", ({ env }) => {
+  expect(readCaller(env)).toEqual({ callerType: "unknown" });
 });
 
 test.each([
@@ -130,7 +130,7 @@ test("lowercases skillName before validation", () => {
   });
 });
 
-test("ignores agent detail fields when callerType is human", () => {
+test("ignores agent detail fields when callerType is not agent", () => {
   expect(
     readCaller({
       BAILIAN_CALLER_TYPE: "human",
@@ -138,5 +138,5 @@ test("ignores agent detail fields when callerType is human", () => {
       BAILIAN_SKILL_NAME: "bailian-cli",
       BAILIAN_SKILL_VERSION: "2.5.0",
     }),
-  ).toEqual({ callerType: "human" });
+  ).toEqual({ callerType: "unknown" });
 });

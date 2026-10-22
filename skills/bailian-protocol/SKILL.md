@@ -74,7 +74,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 
 ## Call attribution (mandatory for every Agent `bl` command)
 
-Examples in this protocol, `assets/`, and business skills show bare `bl …`. When an Agent **runs** a command, wrap that single invocation with the prefix below (declared once here). Humans must not set these variables; unset defaults to human.
+Examples in this protocol, `assets/`, and business skills show bare `bl …`. When an Agent **runs** a command, wrap that single invocation with the prefix below (declared once here). Humans must not set these variables. Anything other than an explicit agent is recorded as `unknown`.
 
 ```bash
 BAILIAN_CALLER_TYPE=agent \

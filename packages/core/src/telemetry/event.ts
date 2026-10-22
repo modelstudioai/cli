@@ -15,7 +15,7 @@ export interface TrackingEvent {
   os: string;
   authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
-  /** Always present on new CLI events: `agent` or `human`. */
+  /** Always present on new CLI events: `agent` or `unknown`. */
   callerType: CallerAttribution["callerType"];
   callerName?: string;
   skillName?: string;
