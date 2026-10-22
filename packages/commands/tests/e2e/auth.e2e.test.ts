@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { tmpdir } from "os";
 import { join } from "path";
 import { Readable } from "node:stream";
-import { execFile } from "node:child_process";
+import { execFile, type ExecFileException } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { readConfigFile, readConfigProfiles, writeConfigFile } from "bailian-cli-core";
@@ -301,7 +301,7 @@ describe("e2e: auth", () => {
         },
       });
       try {
-        const result = await new Promise<{ code: number | string | undefined; output: string }>(
+        const result = await new Promise<{ code: ExecFileException["code"]; output: string }>(
           (resolve) => {
             const child = execFile(
               process.execPath,
