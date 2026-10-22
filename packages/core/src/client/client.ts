@@ -229,18 +229,29 @@ export class Client {
       ) {
         throw err;
       }
+      const credential = this.deps.consoleCred;
+      let retryResult: unknown;
       const newToken = await refreshAccessToken({
         identity: this.deps.identity,
-        settings: this.deps.settings,
+        settings: {
+          ...this.deps.settings,
+          consoleRegion: credential.region,
+          consoleSite: credential.site,
+          consoleSwitchAgent: credential.switchAgent,
+        },
         baseUrl: this.deps.baseUrl,
+        validateToken: async (token) => {
+          retryResult = await callConsoleGateway(
+            { ...credential, token },
+            timeout,
+            gwOpts,
+            this.deps.settings,
+          );
+        },
       });
       if (!newToken) throw err;
-      return (await callConsoleGateway(
-        { ...this.deps.consoleCred, token: newToken },
-        timeout,
-        gwOpts,
-        this.deps.settings,
-      )) as T;
+      this.deps.consoleCred = { ...credential, token: newToken };
+      return retryResult as T;
     }
   }
 

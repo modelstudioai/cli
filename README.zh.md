@@ -137,6 +137,22 @@ bl auth login --console
 
 国际站请使用 `--console-site international`。
 
+CLI 始终打印登录地址。若要自行选择浏览器，请保持命令运行，并在**同一台机器**的浏览器中打开地址：
+
+```bash
+bl auth login --console --no-browser --console-site international
+```
+
+浏览器拦截本地回调时，请检查控制台站点的本地网络权限，或尝试 Firefox。PNA 兼容响应头不能绕过 Chrome 的本地网络权限或 Safari 的混合内容限制。15 分钟内未收到回调会登录失败（退出码 5），不会视为成功。
+
+如果已有有效的控制台 access token，可通过 stdin 导入，无需浏览器或本地回调服务。必须指定 token 实际所属的地域与站点；以下为 POSIX shell 示例：
+
+```bash
+bl auth login --console --token-stdin --console-site international --console-region ap-southeast-1 < /path/to/console-token.txt
+```
+
+输入只能是一个原始 token（不超过 64 KiB），不接受 JSON 或 `Bearer ...`；为避免凭证回显，不接受终端交互输入。请使用受保护的文件或可信管道，不要把 token 放进命令参数或 shell 历史，使用后清理临时凭证文件。CLI 校验通过才保存；失败时保留原凭证和激活的 Profile。加上 `--config <name>` 可在成功后写入并激活指定 Profile。此方式仅导入控制台会话，不创建模型 API Key。
+
 ### API Key
 
 使用已有的普通 API Key 或 Token Plan 订阅 Key，都执行同一条命令：
