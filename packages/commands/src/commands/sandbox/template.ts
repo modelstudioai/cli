@@ -644,7 +644,8 @@ export const sandboxTemplateDelete = defineCommand({
       emitResult({ method: "DELETE", endpoint, request: null }, format);
       return;
     }
-    await ctx.client.request({ path: endpoint, method: "DELETE" });
+    const response = await ctx.client.request({ path: endpoint, method: "DELETE" });
+    await response.body?.cancel();
     if (ctx.settings.quiet) emitBare(ctx.flags.templateId);
     else emitResult({ templateID: ctx.flags.templateId, deleted: true }, format);
   },

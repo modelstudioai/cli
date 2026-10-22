@@ -15,7 +15,7 @@ export interface ApiErrorBody {
 
 export function mapApiError(status: number, body: ApiErrorBody, _url?: string): BailianError {
   const apiMsg = body.error?.message || body.message || `HTTP ${status}`;
-  const rawCode = body.error?.type ?? body.code;
+  const rawCode = body.error?.type ?? body.error?.code ?? body.code;
   const apiCode =
     typeof rawCode === "string"
       ? rawCode

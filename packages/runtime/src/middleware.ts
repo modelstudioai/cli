@@ -189,6 +189,11 @@ export const telemetryStage: Middleware = (ctx, next) => {
  * if `next()` throws, the notice is skipped (no update nag on failure).
  */
 export const versionCheckStage: Middleware = async (ctx, next) => {
+  // Local source launchers can disable background updates without quieting output.
+  if (process.env.NO_UPDATE_NOTIFIER === "1") {
+    await next();
+    return;
+  }
   const pending = checkForUpdate(
     ctx.identity.version,
     ctx.identity.npmPackage,

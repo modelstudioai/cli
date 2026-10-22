@@ -5,6 +5,13 @@ import { ExitCode } from "../errors/codes.ts";
 import { mapApiError } from "../errors/api.ts";
 import { maskToken } from "../utils/token.ts";
 import { sourceConfig, trackingHeaders } from "./headers.ts";
+import { Dispatcher, getGlobalDispatcher } from "undici";
+
+// Core owns the request deadline and body idle window. Override transport
+// limits only for this request, preserving the current proxy/connection pool.
+const withoutTransportTimeouts: Dispatcher.DispatcherComposeInterceptor =
+  (dispatch) => (options, handler) =>
+    dispatch({ ...options, headersTimeout: 0, bodyTimeout: 0 }, handler);
 
 /** 传输层依赖:UA 用 identity,timeout/verbose 用 settings。凭证由调用方(Client)注头。 */
 export interface HttpDeps {
@@ -34,14 +41,19 @@ function bodyReferencesOssUrl(body: unknown): boolean {
   return JSON.stringify(body).includes("oss://");
 }
 
+/** Successful raw response bodies must be consumed or explicitly cancelled by the caller. */
 export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Response> {
   const timeoutMs = (opts.timeout ?? deps.settings.timeout) * 1000;
   const requestSignal = createRequestSignal(timeoutMs, opts.signal);
   try {
-    // Raw/streaming callers retain ownership of successful response bodies.
-    return await performRequest(deps, opts, requestSignal.signal);
-  } finally {
+    const response = await performRequest(deps, opts, requestSignal.signal);
+    // After headers, raw/streaming responses use a rolling idle window rather
+    // than a total deadline. The body owns cleanup until EOF/cancel/error.
+    return protectResponseBody(response, requestSignal);
+  } catch (error) {
     requestSignal.cleanup();
+    if (requestSignal.signal.aborted) throw requestSignal.signal.reason;
+    throw error;
   }
 }
 
@@ -77,7 +89,7 @@ async function performRequest(
     console.error(`> x-dashscope-source-config: ${sourceConfig(deps.identity)}`);
   }
 
-  const res = await fetch(opts.url, {
+  const requestInit = {
     method: opts.method ?? "GET",
     headers,
     body: opts.body
@@ -86,7 +98,18 @@ async function performRequest(
         : JSON.stringify(opts.body)
       : undefined,
     signal,
-  });
+    // Bun's native fetch ignores dispatchers and its undici shim has no compose.
+    // Keep native fetch in both runtimes, adapting only transport controls.
+    ...(process.versions.bun
+      ? { timeout: false as const }
+      : {
+          dispatcher: Dispatcher.prototype.compose.call(
+            getGlobalDispatcher(),
+            withoutTransportTimeouts,
+          ) as unknown as RequestInit["dispatcher"],
+        }),
+  };
+  const res = await fetch(opts.url, requestInit);
 
   if (deps.settings.verbose) {
     console.error(`< ${res.status} ${res.statusText}`);
@@ -110,14 +133,26 @@ async function performRequest(
   return res;
 }
 
-function createRequestSignal(
-  timeoutMs: number,
-  parentSignal?: AbortSignal,
-): { signal: AbortSignal; cleanup: () => void } {
+interface RequestSignal {
+  signal: AbortSignal;
+  cleanup: () => void;
+  abort: (reason?: unknown) => void;
+  resetIdleTimeout: () => void;
+  pauseTimeout: () => void;
+}
+
+function createRequestSignal(timeoutMs: number, parentSignal?: AbortSignal): RequestSignal {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let finished = false;
+  const armTimer = (reason?: unknown) => {
+    if (finished) return;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => controller.abort(reason), timeoutMs);
+  };
   const abortFromParent = () => controller.abort(parentSignal?.reason);
   const cleanup = () => {
+    finished = true;
     clearTimeout(timeout);
     parentSignal?.removeEventListener("abort", abortFromParent);
     controller.signal.removeEventListener("abort", cleanup);
@@ -125,9 +160,100 @@ function createRequestSignal(
 
   controller.signal.addEventListener("abort", cleanup, { once: true });
   if (parentSignal?.aborted) abortFromParent();
-  else parentSignal?.addEventListener("abort", abortFromParent, { once: true });
+  else {
+    parentSignal?.addEventListener("abort", abortFromParent, { once: true });
+    armTimer();
+  }
 
-  return { signal: controller.signal, cleanup };
+  return {
+    signal: controller.signal,
+    cleanup,
+    abort: (reason) => controller.abort(reason),
+    pauseTimeout: () => clearTimeout(timeout),
+    resetIdleTimeout: () =>
+      armTimer(
+        new BailianError(
+          `Response body idle timeout: no data received for ${timeoutMs / 1000}s.`,
+          ExitCode.TIMEOUT,
+          "Increase --timeout to allow a longer interval between response chunks.",
+        ),
+      ),
+  };
+}
+
+function protectResponseBody(response: Response, requestSignal: RequestSignal): Response {
+  if (!response.body) {
+    requestSignal.cleanup();
+    return response;
+  }
+  // Only count time spent waiting for network data, not consumer processing.
+  // An unused raw response must not keep a command alive through a timer.
+  requestSignal.pauseTimeout();
+  const reader = response.body.getReader();
+  const { signal } = requestSignal;
+  let finished = false;
+  let onAbort: () => void;
+  const finish = () => {
+    finished = true;
+    signal.removeEventListener("abort", onAbort);
+    requestSignal.cleanup();
+  };
+  const cancelSource = (reason?: unknown) =>
+    reader.cancel(reason).finally(() => reader.releaseLock());
+  const body = new ReadableStream<Uint8Array>(
+    {
+      start(controller) {
+        onAbort = () => {
+          if (finished) return;
+          finish();
+          controller.error(signal.reason);
+          void cancelSource(signal.reason).catch(() => {});
+        };
+        signal.addEventListener("abort", onAbort, { once: true });
+        if (signal.aborted) onAbort();
+      },
+      async pull(controller) {
+        try {
+          requestSignal.resetIdleTimeout();
+          const part = await reader.read();
+          requestSignal.pauseTimeout();
+          if (finished) return;
+          if (part.done) {
+            finish();
+            reader.releaseLock();
+            controller.close();
+          } else {
+            controller.enqueue(part.value);
+          }
+        } catch (error) {
+          if (finished) return;
+          finish();
+          reader.releaseLock();
+          controller.error(signal.aborted ? signal.reason : error);
+        }
+      },
+      cancel(reason) {
+        finish();
+        // Own transport teardown as well as reader cleanup: cancelling the
+        // reader alone can leave native Bun's HTTP connection open.
+        requestSignal.abort(reason);
+        return cancelSource(reason).catch(() => {});
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  const protectedResponse = new Response(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+  // A constructed Response otherwise loses fetch's URL/redirect metadata.
+  Object.defineProperties(protectedResponse, {
+    url: { value: response.url },
+    redirected: { value: response.redirected },
+    type: { value: response.type },
+  });
+  return protectedResponse;
 }
 
 export async function requestJson<T>(deps: HttpDeps, opts: RequestOpts): Promise<T> {

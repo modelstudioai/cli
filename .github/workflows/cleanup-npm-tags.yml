@@ -1,0 +1,73 @@
+name: Clean npm tags
+run-name: Clean npm tags (${{ inputs.dry_run && 'preview' || 'delete' }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      bailian_cli:
+        description: "bailian-cli"
+        type: boolean
+        default: true
+      bailian_cli_core:
+        description: "bailian-cli-core"
+        type: boolean
+        default: true
+      bailian_cli_runtime:
+        description: "bailian-cli-runtime"
+        type: boolean
+        default: true
+      bailian_cli_commands:
+        description: "bailian-cli-commands"
+        type: boolean
+        default: true
+      knowledge_studio_cli:
+        description: "knowledge-studio-cli"
+        type: boolean
+        default: true
+      bailian_kb_dsh:
+        description: "bailian-kb-dsh"
+        type: boolean
+        default: true
+      tags:
+        description: "Tags to remove (spaces, commas or newlines). latest is protected."
+        type: string
+        required: true
+      dry_run:
+        description: "Preview only / 只预览，不删除"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cleanup-npm-tags
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org/"
+          package-manager-cache: false
+      - name: Install npm with OIDC dist-tag support
+        run: npm install --global npm@11.21.0
+      - name: Clean selected tags
+        env:
+          CLEANUP_CLI: ${{ inputs.bailian_cli }}
+          CLEANUP_CORE: ${{ inputs.bailian_cli_core }}
+          CLEANUP_RUNTIME: ${{ inputs.bailian_cli_runtime }}
+          CLEANUP_COMMANDS: ${{ inputs.bailian_cli_commands }}
+          CLEANUP_KSCLI: ${{ inputs.knowledge_studio_cli }}
+          CLEANUP_DSH: ${{ inputs.bailian_kb_dsh }}
+          CLEANUP_TAGS: ${{ inputs.tags }}
+          CLEANUP_DRY_RUN: ${{ inputs.dry_run }}
+        run: node tools/release/cleanup-npm-tags.mjs

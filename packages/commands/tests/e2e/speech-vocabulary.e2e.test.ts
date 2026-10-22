@@ -10,6 +10,7 @@ import {
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runCommandInProcess,
 } from "./helpers.ts";
 import { SPEECH_ROUTES } from "./topic-routes.ts";
 
@@ -228,7 +229,7 @@ describe("e2e: speech vocabulary", () => {
   });
 
   test("create object 形态 --dry-run 输出 speech-biasing 信封", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_ROUTES, [
       "speech",
       "vocabulary",
       "create",
@@ -266,7 +267,7 @@ describe("e2e: speech vocabulary", () => {
   });
 
   test("create array 形态 --dry-run 原样透传 lang", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_ROUTES, [
       "speech",
       "vocabulary",
       "create",
@@ -291,7 +292,7 @@ describe("e2e: speech vocabulary", () => {
   });
 
   test("create object + --lang --dry-run 下发到每一条", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_ROUTES, [
       "speech",
       "vocabulary",
       "create",
@@ -319,7 +320,7 @@ describe("e2e: speech vocabulary", () => {
 
   test("create --words-file --dry-run 读取文件", async () => {
     const filePath = makeTempJson('{"from-file":4}');
-    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_ROUTES, [
       "speech",
       "vocabulary",
       "create",
@@ -344,7 +345,7 @@ describe("e2e: speech vocabulary", () => {
   });
 
   test("list --page 2 --dry-run 将 page_index 转为 1", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_ROUTES, [
       "speech",
       "vocabulary",
       "list",
@@ -364,7 +365,7 @@ describe("e2e: speech vocabulary", () => {
   });
 
   test("get --dry-run 使用 query_vocabulary", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_ROUTES, [
       "speech",
       "vocabulary",
       "get",
@@ -384,7 +385,7 @@ describe("e2e: speech vocabulary", () => {
   });
 
   test("update --dry-run 无 --yes 也能预览", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_ROUTES, [
       "speech",
       "vocabulary",
       "update",
@@ -413,7 +414,7 @@ describe("e2e: speech vocabulary", () => {
   });
 
   test("delete --dry-run 无 --yes 也能预览", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_ROUTES, [
       "speech",
       "vocabulary",
       "delete",

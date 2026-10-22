@@ -6,6 +6,7 @@ import {
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runConsoleCommandE2e,
 } from "./helpers.ts";
 import { TOKEN_PLAN_ROUTES } from "./topic-routes.ts";
 
@@ -83,7 +84,7 @@ describe("e2e: token-plan", () => {
 
 describe.skipIf(!isConsoleE2EReady())("e2e: token-plan harness-quota（Console）", () => {
   test("harness-quota --dry-run 输出两个网关请求计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(TOKEN_PLAN_ROUTES, [
+    const { stdout, stderr, exitCode } = await runConsoleCommandE2e(TOKEN_PLAN_ROUTES, [
       "token-plan",
       "harness-quota",
       "--dry-run",
@@ -102,7 +103,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: token-plan harness-quota（Console�
   });
 
   test("harness-quota --type 透传给 harness 列表接口", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(TOKEN_PLAN_ROUTES, [
+    const { stdout, stderr, exitCode } = await runConsoleCommandE2e(TOKEN_PLAN_ROUTES, [
       "token-plan",
       "harness-quota",
       "--type",
@@ -117,7 +118,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: token-plan harness-quota（Console�
   });
 
   test("harness-quota --output json 返回权益额度条目", async () => {
-    const result = await runCommandE2e(TOKEN_PLAN_ROUTES, [
+    const result = await runConsoleCommandE2e(TOKEN_PLAN_ROUTES, [
       "token-plan",
       "harness-quota",
       "--output",
@@ -148,7 +149,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: token-plan harness-quota（Console�
   });
 
   test("harness-quota 默认渲染额度框或空态文案", async () => {
-    const result = await runCommandE2e(TOKEN_PLAN_ROUTES, ["token-plan", "harness-quota"]);
+    const result = await runConsoleCommandE2e(TOKEN_PLAN_ROUTES, ["token-plan", "harness-quota"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
     expect(result.stdout).toMatch(

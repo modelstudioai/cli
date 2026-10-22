@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import { CONSOLE_FLAGS_DRY_RUN_ROUTES } from "./topic-routes.ts";
 
 type ConsoleDryRunMeta = {
@@ -23,7 +23,7 @@ describe("e2e: console global flags (dry-run)", () => {
     expect(stderr).toMatch(/--console-region cn-beijing/);
   });
 
-  test("auth login --help:自有 flag 含 --console-site,不含其余 console 域 flag", async () => {
+  test("auth login --help:自有 flag 含站点和 stdin 导入地域，不注入其余 console 域 flag", async () => {
     const { stderr, exitCode } = await runCommandHelp(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "auth",
       "login",
@@ -32,8 +32,10 @@ describe("e2e: console global flags (dry-run)", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--api-key <key>/);
     expect(stderr).toMatch(/--base-url <url>/);
-    expect(stderr).toMatch(/--console-site <site>/);
-    expect(stderr).not.toMatch(/--console-region/);
+    expect(stderr).toContain("--console-site <domestic|international>");
+    expect(stderr).toContain("--console-region <cn-beijing|ap-southeast-1>");
+    expect(stderr).toContain("--token-stdin");
+    expect(stderr).not.toMatch(/--console-switch-agent/);
     expect(stderr).not.toMatch(/--workspace-id/);
   });
 
@@ -56,7 +58,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("console call --dry-run --console-region / --console-site / --console-switch-agent 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "console",
       "call",
       "--api",
@@ -81,7 +83,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("console call 拒绝未知全局 flag --region", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "console",
       "call",
       "--api",
@@ -97,7 +99,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("mcp list --dry-run --console-region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "mcp",
       "list",
       "--dry-run",
@@ -112,7 +114,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("quota check --dry-run --console-region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "quota",
       "check",
       "--dry-run",

@@ -257,6 +257,13 @@ export class ServiceCache {
     return await this.inFlight;
   }
 
+  /** A mutation must not reuse a discovery request that began before it completed. */
+  async refreshAfterMutation(): Promise<void> {
+    await this.inFlight;
+    this.invalidate();
+    await this.refresh();
+  }
+
   private async runRefresh(): Promise<void> {
     try {
       const workspaceId = await this.opts.resolveWorkspaceId();

@@ -11,7 +11,13 @@ import {
 } from "@openagentpack/sdk";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 import { parse } from "yaml";
-import { e2eFixturesDir, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import {
+  e2eFixturesDir,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  runCommandInProcess,
+} from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 
 const AGENTS_DEPLOYMENT_YAML = join(e2eFixturesDir, "managed-agent", "agents-deployment.yaml");
@@ -30,12 +36,42 @@ const DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES = [
   "bailian.deployment.file.mount_path.duplicate",
 ];
 const projectDirectories: string[] = [];
+const RUNTIME_BINDING_YAML = `version: "1"
+providers:
+  bailian:
+    api_key: \${DASHSCOPE_API_KEY}
+    base_url: \${BAILIAN_BASE_URL}
+defaults:
+  provider: bailian
+environments:
+  dev:
+    config:
+      type: cloud
+      networking:
+        type: unrestricted
+vaults:
+  secrets:
+    display_name: Secrets
+    credentials: []
+`;
+const RUNTIME_BINDING_ENV = {
+  DASHSCOPE_API_KEY: "sk-e2e-agent-runtime-binding",
+  BAILIAN_BASE_URL: "http://127.0.0.1:1/api/v1/agentstudio",
+};
 
 afterEach(async () => {
   for (const directory of projectDirectories.splice(0)) {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+async function writeRuntimeBindingProject(): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), "bl-agent-runtime-binding-e2e-"));
+  projectDirectories.push(directory);
+  const configPath = join(directory, "agents.yaml");
+  await writeFile(configPath, RUNTIME_BINDING_YAML, "utf8");
+  return configPath;
+}
 
 async function writeLocalSkillDirectory(parentDirectory: string): Promise<string> {
   const skillDirectory = join(parentDirectory, "local-report");
@@ -133,7 +169,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("plan --dry-run 通过 SDK planner 规划原生 Bailian Deployment", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "plan",
       "--dry-run",
@@ -196,7 +232,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("plan --dry-run 在 Deployment 安全诊断失败时阻断计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "plan",
       "--dry-run",
@@ -238,7 +274,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent apply 不再接受 --refresh-only", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "apply",
       "--dry-run",
@@ -347,7 +383,7 @@ describe("e2e: managed-agent", () => {
         ],
       }),
     );
-    const dryBuild = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const dryBuild = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "project",
       "build",
@@ -540,7 +576,11 @@ agents:
     expect(stderr).toMatch(/--name|--model|--instructions|--skill|--skill-dir|--type|--yes/i);
     expect(stderr).toMatch(/remote Skill ID|远端 Skill ID/i);
     expect(stderr).toMatch(/local Skill directory|本地 Skill 目录/i);
-    expect(stderr).not.toMatch(/--key|--environment|--vault/i);
+    expect(stderr).toMatch(/--environment <yaml-key>/);
+    expect(stderr).toMatch(/--vault <yaml-key>/);
+    expect(stderr).toMatch(/--mcp <server-code>/);
+    expect(stderr).toMatch(/MCP market server code|MCP 市场服务 code/i);
+    expect(stderr).not.toMatch(/--key/i);
   });
 
   test("managed-agent agent create 缺少 --name 时退出为用法错误 (2)", async () => {
@@ -559,9 +599,37 @@ agents:
   });
 
   test.each([
-    ["--environment", "dev"],
-    ["--vault", "secrets"],
-  ])("managed-agent agent create 不接受运行时参数 %s", async (flag, value) => {
+    ["--environment", /Environment 'missing' is not declared/],
+    ["--vault", /Vault 'missing' is not declared/],
+  ])("managed-agent agent create 拒绝未声明的 %s key", async (flag, message) => {
+    const configPath = await writeRuntimeBindingProject();
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "agent",
+        "create",
+        "--name",
+        "Runtime Binding Agent",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "help",
+        flag,
+        "missing",
+        "--file",
+        configPath,
+        "--dry-run",
+        "--quiet",
+      ],
+      RUNTIME_BINDING_ENV,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(message);
+    expect(await readFile(configPath, "utf8")).toBe(RUNTIME_BINDING_YAML);
+  });
+
+  test("managed-agent agent create 拒绝空的 --mcp", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "agent",
@@ -572,12 +640,107 @@ agents:
       "qwen3.8-max",
       "--instructions",
       "help",
-      flag,
-      value,
+      "--mcp",
+      " ",
       "--quiet",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toMatch(new RegExp(`(?:Unknown flag|未知参数).*${flag}`, "i"));
+    expect(stderr).toMatch(/--mcp values must not be empty/);
+  });
+
+  test("managed-agent agent create --dry-run 回显运行时绑定且不改 YAML", async () => {
+    const configPath = await writeRuntimeBindingProject();
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "agent",
+        "create",
+        "--name",
+        "Runtime Binding Agent",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "help",
+        "--environment",
+        "dev",
+        "--vault",
+        "secrets",
+        "--mcp",
+        "market-a",
+        "--mcp",
+        "market-a",
+        "--mcp",
+        "market-b",
+        "--file",
+        configPath,
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      RUNTIME_BINDING_ENV,
+    );
+    expect(exitCode, stderr).toBe(0);
+    expect(parseStdoutJson(stdout)).toMatchObject({
+      agent: {
+        key: "runtime-binding-agent",
+        environment: "dev",
+        vault: "secrets",
+        mcp: ["market-a", "market-b"],
+      },
+      yaml_written: false,
+    });
+    expect(await readFile(configPath, "utf8")).toBe(RUNTIME_BINDING_YAML);
+  });
+
+  test("managed-agent agent create --yes 将运行时绑定和 MCP 写入 Agent 声明", async () => {
+    const configPath = await writeRuntimeBindingProject();
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "agent",
+        "create",
+        "--name",
+        "Runtime Binding Agent",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "help",
+        "--environment",
+        "dev",
+        "--vault",
+        "secrets",
+        "--mcp",
+        "market-a",
+        "--file",
+        configPath,
+        "--yes",
+      ],
+      RUNTIME_BINDING_ENV,
+    );
+    // dev and secrets are declared but never created, so create-only blocks after the YAML write.
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Reconcile first/i);
+    const config = parse(await readFile(configPath, "utf8")) as {
+      agents?: Record<string, Record<string, unknown>>;
+    };
+    const agent = config.agents?.["runtime-binding-agent"];
+    expect(agent).toMatchObject({
+      environment: "dev",
+      vault: "secrets",
+      tools: {
+        mcp: [
+          {
+            type: "mcp_toolkit",
+            mcp_server_name: "market-a",
+            default_config: { enabled: true },
+            configs: [],
+          },
+        ],
+      },
+    });
+    expect(agent?.mcp_servers).toEqual([{ name: "market-a", type: "official" }]);
   });
 
   test("managed-agent agent create 将 official Skill ID 写为外部引用", async () => {
@@ -636,7 +799,7 @@ defaults:
 
   test("managed-agent agent create 的 Skill type 默认是 custom", async () => {
     const sourceBefore = await readFile(AGENTS_YAML, "utf8");
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "agent",
       "create",
@@ -679,7 +842,7 @@ defaults:
     await writeFile(configPath, configSource, "utf8");
 
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
         "managed-agent",
         "agent",
         "create",
@@ -752,7 +915,7 @@ defaults:
     await writeFile(configPath, configSource, "utf8");
 
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
         "managed-agent",
         "agent",
         "create",
@@ -1200,7 +1363,7 @@ vaults:
   });
 
   test("deployment create 拒绝非法 Event 与不完整 Schedule", async () => {
-    const mixedEventInputs = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const mixedEventInputs = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "deployment",
       "create",
@@ -1217,7 +1380,7 @@ vaults:
     expect(mixedEventInputs.exitCode).toBe(2);
     expect(mixedEventInputs.stderr).toMatch(/--message and --event cannot be used together/i);
 
-    const invalidEvent = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const invalidEvent = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "deployment",
       "create",
@@ -1394,7 +1557,7 @@ vaults:
   });
 
   test("session event send 拒绝字符串 content", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "session",
       "event",
@@ -1410,7 +1573,7 @@ vaults:
   });
 
   test("file upload 不再暴露多 Provider 专属选项", async () => {
-    const providerResult = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const providerResult = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "file",
       "upload",
@@ -1423,7 +1586,7 @@ vaults:
     expect(providerResult.exitCode).toBe(2);
     expect(providerResult.stderr).toMatch(/(?:Unknown flag|未知参数).*--provider/i);
 
-    const purposeResult = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const purposeResult = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "file",
       "upload",
@@ -1481,7 +1644,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     ["deployment pause", ["deployment", "pause", "--deployment-id", "dep_e2e"]],
     ["deployment unpause", ["deployment", "unpause", "--deployment-id", "dep_e2e"]],
   ])("%s --dry-run 在构建 SDK runtime 前短路", async (_label, commandArgs) => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       ...commandArgs,
       "--dry-run",
@@ -1492,7 +1655,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
   });
 
   test("init --dry-run 仅输出计划，不创建文件", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "init",
       "--dry-run",
@@ -1508,7 +1671,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
   });
 
   test("project workbench --dry-run 仅输出目录项目启动计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "project",
       "workbench",
@@ -1531,7 +1694,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
   });
 
   test("init 不再接受 --provider", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "init",
       "--dry-run",
@@ -1546,7 +1709,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     const parent = await mkdtemp(join(tmpdir(), "bailian-managed-agent-project-dry-run-"));
     projectDirectories.push(parent);
     const projectRoot = join(parent, "project");
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "project",
       "init",
@@ -1564,7 +1727,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
   });
 
   test("apply --dry-run 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "apply",
       "--dry-run",
@@ -1578,7 +1741,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
 
   test("agent create --dry-run 自动生成 key 且不改 YAML", async () => {
     const sourceBefore = await readFile(AGENTS_YAML, "utf8");
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "agent",
       "create",
@@ -1624,7 +1787,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     ["vault", ["vault", "create", "--name", "Create Vault"], "vault", "create-vault"],
   ])("%s create --dry-run 只规划目标资源且不改 YAML", async (_label, commandArgs, type, key) => {
     const sourceBefore = await readFile(AGENTS_YAML, "utf8");
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       ...commandArgs,
       "--dry-run",
@@ -1665,7 +1828,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
       "utf8",
     );
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
         "managed-agent",
         "skill",
         "create",
@@ -1721,7 +1884,7 @@ agents:
       await seedTrackedResources(configPath, [
         { type: "agent", name: "assistant", provider: "bailian" },
       ]);
-      const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
         "managed-agent",
         "deployment",
         "create",
@@ -1781,7 +1944,7 @@ vaults:
       await seedTrackedResources(configPath, [
         { type: "vault", name: "production", provider: "bailian" },
       ]);
-      const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
         "managed-agent",
         "vault",
         "credential",
@@ -1823,7 +1986,7 @@ vaults:
   });
 
   test("destroy --dry-run 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "destroy",
       "--dry-run",
@@ -1837,7 +2000,7 @@ vaults:
   });
 
   test("session create --dry-run 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "session",
       "create",
@@ -1853,7 +2016,7 @@ vaults:
   });
 
   test("session delete --dry-run 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "session",
       "delete",
@@ -1869,7 +2032,7 @@ vaults:
   });
 
   test("session send --dry-run 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "session",
       "send",
@@ -1892,7 +2055,7 @@ vaults:
   });
 
   test("session run --dry-run 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "session",
       "run",
@@ -1911,7 +2074,7 @@ vaults:
   });
 
   test("state rm --dry-run 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "state",
       "rm",
@@ -1927,7 +2090,7 @@ vaults:
   });
 
   test("state import --dry-run 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "state",
       "import",

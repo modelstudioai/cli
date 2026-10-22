@@ -36,7 +36,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - `bl auth login --api-key ...` 先通过只读 `GET /models` 校验 Key，校验成功后才原子写入 `api_key` 与实际匹配的 `base_url`。显式 `--base-url` 只校验该站点，不自动改写；未显式指定时，普通 `sk-*` / `sk-ws-*` 按“当前 Profile 已保存的同类站点 → 基于 `workspace_id` 构造的各地域 Workspace 专属站点 → 公共地域”顺序选择首个成功结果，`sk-sp-*` 并行探测国内站与新加坡 Token Plan，其他格式同时尝试两类候选。所有候选明确拒绝时返回 `AUTH`；网络、超时、非 JSON 或 5xx 视为校验无法确定并透传原错误。任一失败都不落盘、不激活 Profile
 - 未显式传 `--config` 时，`sk-sp-*` 自动写入并激活 `token-plan`；普通 `sk-*` / `sk-ws-*` 仅在当前为 `token-plan` 时改写并激活 `default`，否则保留当前 Profile；其他格式不自动切换。显式 `--config` 始终优先。`sk-sp-*` 无论写入哪个 Profile 都会携带 Token Plan 的预设默认模型，并在保留已有项的基础上补齐 `api_key_capabilities`，不自动删除任何已有能力。登录仍不得删除其他鉴权域的凭证
 - `bl auth login --console` 更新 `access_token` 以及回调携带的 console 作用域字段；若所选 Profile 没有模型 API Key，会要求控制台页面创建并回传一个普通 API Key 与 Base URL 一并保存。该回调结果不重复执行 `/models` 校验，且不会创建或配置 Token Plan
-- `bl auth login --open-api ...` 更新 `access_key_id` / `access_key_secret`,同时会调用 OpenAPI 生成 CLI `access_token` 并一并写入;即一次 `--open-api` 登录同时产生 `openapi` 与 `console` 域凭证
+- `bl auth login --open-api ...` 调用 OpenAPI 生成 CLI `access_token`，通过目标 Console 网关的只读 `loginInfo` 校验后，才一并写入 `access_key_id` / `access_key_secret` / `access_token` 和实际 `console_region` / `console_site`；失败不覆盖原凭证、不激活 Profile。一次成功登录同时产生 `openapi` 与 `console` 域凭证
 - `bl auth logout --console` 只清 `access_token`
 - `bl auth logout --open-api` 只清 `access_key_id` / `access_key_secret` / `security_token`
 - `bl auth logout` 清 `api_key` + `base_url` + `access_token` + `access_key_*`
@@ -58,6 +58,20 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore` / `ctx.configStore` 的窄接口操作落盘。
 
+### Console 浏览器回调与人工导入
+
+- 浏览器回调只监听 `127.0.0.1`，校验随机 `state`，只对本次控制台 Origin 返回 CORS 头；仅可信 Origin 明确请求 PNA 时返回 `Access-Control-Allow-Private-Network: true`。错误响应也必须可被可信页面读取，不能返回通配 Origin。
+- 登录地址始终输出；`--no-browser` 只禁止自动打开浏览器，仍等待本机回调。必须在打开浏览器前注册完成事件，浏览器启动失败或挂起不阻止回调完成。无 token 的回调不能视为成功；15 分钟未收到凭证返回 `TIMEOUT`，保存失败返回错误，保存期间客户端断开也必须完成清理。
+- `--console --token-stdin` 与 `--no-browser` 互斥，必须显式指定 `--console-region`；只接受非 TTY stdin 的单个原始 token（最多 64 KiB），拒绝空输入、JSON、Bearer 前缀及多 token 输入。此分支不启动浏览器或回调服务，经目标网关 `loginInfo` 验证成功才保存 token/site/region 并激活指定 Profile；保留其他凭证，失败和 dry-run 不写入、不激活，dry-run 不读取 stdin。
+- PNA 响应头只是兼容措施，不能宣称绕过 Chrome LNA 权限或 Safari 混合内容限制。回归覆盖真实 loopback 请求、超时、浏览器启动竞态、stdin 失败不改配置及输出不泄漏 token。
+
+### Console token 签发与刷新
+
+- `resolveCLIAccessTokenTarget()` 优先采用有效 `consoleRegion`；地域缺省时识别国内/新加坡 DashScope 和对应 `*.maas.aliyuncs.com` 域名（含 Token Plan、Workspace）。未知或不支持的地域报错，不静默回退北京；`consoleSite` 与地域独立，不能把新加坡自动等同国际站。
+- `Client.console()` 收到 `NotLogined` 后，以本次实际 Console credential 的 region/site/switchAgent 签发并重试一次。只有原请求重试成功才保存新 token，并更新 Client 内存凭证；失败保留磁盘旧 token。
+- `refreshAccessToken()` 独立调用时默认用只读 `loginInfo` 验证；调用方提供 `validateToken` 时由其完成验证或原请求重试，回调成功后才落盘。缺少当前 Profile 的 AK/SK 返回 `null`，不跨 Profile 借用凭证。
+- `auth generate-access-token` 只签发并输出，不做 Console 验证、不持久化；首次登录的校验直接走 `callConsoleGateway`，不得递归进入刷新流程。
+
 ### 例外:agent 命令的分层鉴权与 SDK 凭证内存注入
 
 `bl managed-agent *` 按调用链分两层:
@@ -76,6 +90,14 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 5. `assertBailianOnlyProviders(providers)` — 拒绝非 Bailian Provider；随后 `assertProviderCredentials(providers)` 在 Bailian `api_key` 为空时给出 CLI 权威 `AUTH` 错误和登录 hint；离线命令传 `credentials: "none"` 跳过 key 断言，但仍执行 Bailian-only 配置校验
 
 禁止命令层直接 `readConfigFile` 裸读凭证；Bailian 字段以 CLI 鉴权链为唯一信源。SDK bootstrap 期间读取到的兼容凭证变量也会在配置解析后统一清扫。
+
+### 例外:工作空间 Webhook 的轻量 SDK context
+
+`managed-agent webhook` 是工作空间 API，使用 `auth: "apiKey"`，不加载 `agents.yaml`、项目 `.env` 或 State，也不走上述项目凭证 bootstrap。命令通过 `managed-agent/_engine/**` 的轻量 context，将 `ctx.client.exportApiCredential()`、解析后的 Base URL 与工作空间作用域仅在内存中交给 SDK，固定 `provider: "bailian"`，并按 runtime 的 `settings.timeout` 构造请求 `AbortSignal`。不得用 YAML 临时文件拼接 Provider，也不得另建一条 HTTP 或凭证解析链。
+
+- `--workspace-id` 由命令自声明，读取 `ctx.flags.workspaceId` 后回退 `ctx.settings.workspaceId`；Base URL 和 API Key 复用 CLI 的 flags → env → Profile 优先级。
+- 所有 Webhook 写操作声明 `risk: "high"`；`--dry-run` 在创建 SDK context、读取项目文件或请求远端前返回，不要求 API Key。
+- `create` / `reset-secret` 成功响应中的 `signing_secret` 保留在用户请求的结果中；verbose 诊断和错误输出必须脱敏，不得把成功响应的密钥复制到日志。服务端错误的普通 message 仍原样透传。
 
 ## 必查清单
 
@@ -135,7 +157,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 ### E. 测试
 
-- [ ] `packages/cli/tests/e2e/auth.e2e.test.ts` 增加新方式的 happy / failure 路径
+- [ ] `packages/commands/tests/e2e/auth.e2e.test.ts` 增加新方式的 happy / failure 路径；浏览器回调契约在 `packages/commands/tests/login-console.test.ts` 覆盖
 - [ ] mask token 的输出格式不变(避免泄漏)
 - [ ] 如调整 resolver 优先级,补 core/runtime 单测覆盖 flag > env > file
 
@@ -175,3 +197,4 @@ pnpm -F bailian-cli exec tsx src/main.ts usage stats --dry-run --output json --w
 - ✗ token mask 显示完整 token,日志泄漏
 - ✗ `auth: "console"` 命令误用 `apiKey` 域,config 只有 API key 时会把 `sk-...` 发到网关
 - ✗ 新增 core resolver hint 时写死产品命令,导致 `kscli` 等入口提示错误
+- ✗ Windows 上用 `cmd /c start` 打开带 `&` 的 URL 时没把整段目标括起来。`auth login --console` 的 `needapikey=true` 会被 cmd 当成下一条命令,浏览器只拿到控制台会话。打开参数走 `packages/commands/src/commands/shared/local-server.ts` 的 `buildOpenInvocation`（dsh 插件里有一份同步实现）

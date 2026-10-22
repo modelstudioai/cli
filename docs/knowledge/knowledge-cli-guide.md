@@ -32,7 +32,7 @@
 - **Chunk 级运维**：直接增删改查知识库中的内容切片
 - **检索服务管理**：创建/部署/复制/删除 Q&A 和检索服务（agent），管理 draft 与发布版本
 - **数据中心管理**：文件、集合（connector）、分类的增删查
-- **检索与对话**：语义检索（search）、多轮对话（chat）、兼容旧检索（retrieve）
+- **检索与对话**：语义检索（search）、多轮对话（chat）
 
 共 34 个子命令，按功能域分为 7 组。所有命令均使用 DashScope API Key 鉴权。
 
@@ -659,19 +659,7 @@ kscli category delete --category-id <id> [flags]
 
 ### 检索与对话
 
-> 📖 [完整手册](knowledge/search-chat.md) — 3 个命令
-
-#### `kscli retrieve`
-
-从知识库检索（已废弃，请用 `search` 替代）。
-
-```bash
-kscli retrieve --index-id <id> --query <text> [flags]
-```
-
-→ [完整参数与示例](knowledge/search-chat.md#bl-knowledge-retrieve)
-
----
+> 📖 [完整手册](knowledge/search-chat.md) — 2 个命令
 
 #### `kscli search`
 
@@ -742,12 +730,6 @@ bl config set workspace_id ws-xxx
 
 **解决**：始终用 `doc list --quiet` 获取 `doc_id`。
 
-### retrieve 已废弃
-
-**问题**：`retrieve` 命令输出废弃警告。
-
-**解决**：改用 `search` 命令。`search` 通过 `--agent-id` 驱动检索策略，支持多知识库、路由、rerank 等高级特性。`retrieve` 直接操作 `--index-id`，功能受限且不再迭代。
-
 ### OSS 导入权限错误
 
 **报错**：服务端返回权限相关错误。
@@ -817,6 +799,5 @@ bl config set workspace_id ws-xxx
 | `kscli category list`     | 分类列表     | `--collection-id`, `--parent-id`                            |
 | `kscli category add`      | 创建分类     | `--name`, `--parent-id`                                     |
 | `kscli category delete`   | 删除分类     | `--category-id`, `--yes`                                    |
-| `kscli retrieve`          | 检索（废弃） | `--index-id`, `--query`                                     |
 | `kscli search`            | 语义检索     | `--query`, `--agent-id`                                     |
 | `kscli chat`              | RAG 对话     | `--message`, `--agent-id`                                   |

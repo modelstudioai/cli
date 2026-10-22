@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { packAndScan } from "./lib/pack-scan.mjs";
 import { run } from "./lib/proc.mjs";
 import { assertReadmeSync, loadAndValidatePackages } from "./lib/validate.mjs";
-import { ALL_PACKAGES, PACKAGES } from "./lib/packages.mjs";
+import { ALL_PACKAGES, KSCLI_PACKAGE, DSH_PACKAGES } from "./lib/packages.mjs";
 
 function log(msg = "") {
   process.stdout.write(`${msg}\n`);
@@ -18,17 +18,14 @@ function step(msg) {
  * Pure-validation pipeline. Reusable from publish-stable / publish-channel.
  * Returns { coreJson, cliJson } for callers that need the parsed package.jsons.
  *
- * @param {{ channel?: boolean, knowledge?: boolean }} [options]
+ * @param {{ channel?: boolean }} [options]
  * @param {boolean} [options.channel] — When true (publish-channel): regenerate
  *   `reference/` and assert it matches git, but do not sync `SKILL.md` from the
  *   temporary beta `package.json` version (repo skill stays aligned with stable).
- * @param {boolean} [options.knowledge] — When true: also build and validate
- *   knowledge-studio-cli alongside the base packages.
  */
 export async function runCheck(options = {}) {
   const channel = options.channel === true;
-  const knowledge = options.knowledge === true;
-  const packages = knowledge ? ALL_PACKAGES : PACKAGES;
+  const packages = ALL_PACKAGES;
 
   step("pnpm install --frozen-lockfile");
   run("pnpm", ["install", "--frozen-lockfile"]);
@@ -70,6 +67,7 @@ export async function runCheck(options = {}) {
           "skills/bailian-finetune/SKILL.md",
           "skills/bailian-managed-agent/SKILL.md",
           "skills/bailian-sandbox/SKILL.md",
+          "skills/bailian-memory/SKILL.md",
           "skills/bailian-web-search/SKILL.md",
         ]),
     "skills/bailian-cli/reference/",
@@ -77,14 +75,15 @@ export async function runCheck(options = {}) {
     "skills/bailian-finetune/reference/",
     "skills/bailian-managed-agent/reference/",
     "skills/bailian-sandbox/reference/",
+    "skills/bailian-memory/reference/",
   ]);
 
   step("build bailian-cli");
   run("pnpm", ["--filter", "bailian-cli", "run", "build"]);
 
-  if (knowledge) {
-    step("build knowledge-studio-cli");
-    run("pnpm", ["--filter", "knowledge-studio-cli", "run", "build"]);
+  for (const pkg of [KSCLI_PACKAGE, ...DSH_PACKAGES]) {
+    step(`build ${pkg.name}`);
+    run("pnpm", ["--filter", pkg.name, "run", "build"]);
   }
 
   step("pack + scan (publint, gitleaks)");

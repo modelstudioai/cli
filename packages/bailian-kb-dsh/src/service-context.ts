@@ -28,8 +28,20 @@ import type { UserMessage } from "@deepseek-ai/dsh-session";
 import { buildNoServiceNotice, buildServiceCatalog } from "./service-catalog.js";
 import type { ServiceCache } from "./service-cache.js";
 
-/** Marks this plugin's own injections in the durable log. */
-const SOURCE_PLUGIN = "tool-bailian-kb/services";
+/** Producer kind for this plugin's service-catalog context. */
+export const KB_CATALOG_SOURCE_KIND = "bailian-kb-catalog";
+
+/** Catalog context this plugin publishes into a session. */
+export interface KbServiceCatalogSource {
+  readonly kind: typeof KB_CATALOG_SOURCE_KIND;
+  readonly form: "catalog";
+}
+
+declare module "@deepseek-ai/dsh-llm" {
+  interface MessageSourceMap {
+    "bailian-kb-catalog": KbServiceCatalogSource;
+  }
+}
 
 export interface ServiceContextOptions {
   cache: ServiceCache;
@@ -43,8 +55,8 @@ export interface ServiceContextOptions {
 }
 
 /** Whether one durable message came from this module. */
-function isOwnInjection(source: { kind: string; plugin?: string }): boolean {
-  return source.kind === "plugin" && source.plugin === SOURCE_PLUGIN;
+function isOwnInjection(source: { kind: string }): boolean {
+  return source.kind === KB_CATALOG_SOURCE_KIND;
 }
 
 /** Concatenate a message's text parts, which is what the model actually reads. */
@@ -65,7 +77,7 @@ function messageText(message: UserMessage): string {
  */
 function visibleCatalogText(agent: Agent): string | undefined {
   const visible = new Set(agent.session.surface.nodes);
-  const events = agent.session.events;
+  const events = agent.session.snapshotEvents();
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
     if (event === undefined) continue;
@@ -132,7 +144,7 @@ export function installServiceContext(ctx: Context, opts: ServiceContextOptions)
 
         const catalog = createUserMessage({
           content: [{ type: "text", text }],
-          source: { kind: "plugin", plugin: SOURCE_PLUGIN, form: "catalog" },
+          source: { kind: KB_CATALOG_SOURCE_KIND, form: "catalog" },
         });
         return {
           kind: "enter",

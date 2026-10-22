@@ -5,9 +5,9 @@ description: >-
   当用户要创建/更新/删除知识库、上传或导入文档（本地/OSS）、创建/部署/调参检索或问答服务、
   增删改查 Chunk、管理数据中心类目/文件/集合时使用本 skill。
   检索与问答不走本 skill——用原生工具 kb_search（取证据）/ kb_chat（成品问答）；
-  bl knowledge search / chat 仅用于部署后的验证调试（如 --agent-version beta 调试草稿版）。
-  kb_search / kb_chat 的凭据与工作空间由插件自动解析（~/.dsh/settings.yaml 的 bailian-kb 段、
-  ~/.dsh/.credentials.yaml 的 DASHSCOPE_API_KEY），不要自己去读或传。
+  通过 kb_manage 执行 bl knowledge search / chat 仅用于部署后的验证调试（如 --agent-version beta 调试草稿版）。
+  kb_search / kb_chat 的凭据与工作空间由插件自动解析（插件配置页的 workspaceId、
+  ~/.dsh/.credentials.yaml 的 BAILIAN_KB_API_KEY），不要自己去读或传。
   普通问答、编程、写作、翻译、泛搜索不触发本 skill。
 ---
 
@@ -24,13 +24,15 @@ description: >-
 - 服务很多时清单只列最近修改的若干条并标明总数。要找特定服务用 `bl knowledge service list --scene search --name <关键词>`；
 - 清单里确实没有能回答用户问题的服务时，如实告知用户，**不要挑一个最像的 agent_id 去试**。
 
-## 前置检查
+## 执行入口与配置
 
-1. 安装校验：运行 `bl knowledge list --help`。若报 `Unknown command` 或 bl 未安装，执行
-   `npm install -g bailian-cli`（需 Node.js ≥ 18.17）；已安装但命令缺失时先 `bl update` 升级。
-   安装失败时把错误原样报告给用户，不要静默跳过。
-2. 鉴权：需要 `DASHSCOPE_API_KEY`（环境变量，或 `bl auth login --api-key sk-xxx`，或 `bl config set --key api_key --value sk-xxx`）。
-3. workspace 解析优先级：`--workspace-id` 参数 > 环境变量 `BAILIAN_WORKSPACE_ID` > `bl config set --key workspace_id --value ws-xxx`。
+下文 `bl knowledge …` 是命令语法示例，实际操作一律通过 `kb_manage`，把 `bl knowledge` 后面的部分拆成参数数组。例如 `bl knowledge service list --scene search` 对应 `kb_manage({"args":["service","list","--scene","search"]})`。
+
+不要通过 shell 直接运行知识库命令，不要读取密钥或使用 `bl auth login` / `bl config set`。插件自动使用 dsh 当前凭据、Workspace 和固定端点；缺配置时引导用户在 dsh 插件设置页填写。参数不得包含 `--api-key`、`--workspace-id`、`--base-url` 或 `--config`。
+
+使用 `kb_manage({"args":["list","--help"]})` 检查命令。若宿主未安装 bl，安装 `bailian-cli` 后重试。参数不确定时先查对应命令 `--help`，不要猜。
+
+涉及删除等需要确认的操作，保留 CLI 原有确认机制；出现 `requires_confirmation` 时向用户确认，不自动补 `--yes`。
 
 ## 何时用哪个命令
 
@@ -43,16 +45,15 @@ description: >-
 | 创建 / 部署 / 调参检索（问答）服务       | `bl knowledge service create/update/deploy/…`       | `bl knowledge service --help`    |
 | 修正错误切片、屏蔽某段内容               | `bl knowledge chunk add/list/update/delete`         | `bl knowledge chunk --help`      |
 | 数据中心类目 / 文件 / 集合管理           | `bl knowledge category/file/collection …`           | `bl knowledge category --help`   |
-| CLI 配置、升级                           | `bl config show/set`、`bl update`                   | `bl config --help`               |
 | 部署后验证、调试草稿版服务               | `bl knowledge search/chat --agent-version beta`     | `bl knowledge search --help`     |
 
 ## 核心工作流：建库到可检索
 
 ```bash
-bl knowledge doc upload --file ./docs/ --workspace-id ws-xxx                # 1. 上传本地文件/目录 → 得 fileId
+bl knowledge doc upload --file ./docs/                # 1. 上传本地文件/目录 → 得 fileId
 bl knowledge create --name my-kb --description '产品文档' --doc-id <fileId> --wait                # 2. 建库并导入 → 得 index-id (pipelineId)
 bl knowledge service create --name my-search --scene search --index-id <index-id>   # 3. 建检索服务 → 得 agent-id（draft）
-bl knowledge service deploy --agent-id <agent-id> --yes                     # 4. 发布服务（此后可被默认版本调用）
+bl knowledge service deploy --agent-id <agent-id>                           # 4. 发布服务（此后可被默认版本调用）
 bl knowledge service list --scene search --status deployed                  # 5. 确认服务可见
 ```
 

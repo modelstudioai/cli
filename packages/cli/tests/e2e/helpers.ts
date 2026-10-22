@@ -47,6 +47,19 @@ const mainTs = join(cliPackageRoot, "src", "main.ts");
 export async function runCli(
   args: string[],
   envOverrides: NodeJS.ProcessEnv = {},
+  options: { seedCredentials?: boolean } = {},
 ): Promise<RunCliResult> {
-  return runNodeMain(mainTs, args, { cwd: cliPackageRoot, env: envOverrides });
+  return runNodeMain(mainTs, args, {
+    cwd: cliPackageRoot,
+    env: envOverrides,
+    seedCredentials: options.seedCredentials,
+  });
+}
+
+/** Console live 用例：隔离环境里带上本机 access_token。 */
+export async function runConsoleCli(
+  args: string[],
+  envOverrides: NodeJS.ProcessEnv = {},
+): Promise<RunCliResult> {
+  return runCli(args, envOverrides, { seedCredentials: true });
 }

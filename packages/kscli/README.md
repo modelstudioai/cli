@@ -136,11 +136,10 @@ kscli chat \
 
 ### Retrieval & Chat
 
-| Command    | Description                                       |
-| :--------- | :------------------------------------------------ |
-| `search`   | Semantic search across knowledge bases (RAG)      |
-| `chat`     | Knowledge-base Q&A with streaming (RAG)           |
-| `retrieve` | Query a knowledge base (deprecated, use `search`) |
+| Command  | Description                                  |
+| :------- | :------------------------------------------- |
+| `search` | Semantic search across knowledge bases (RAG) |
+| `chat`   | Knowledge-base Q&A with streaming (RAG)      |
 
 ### Utility
 
