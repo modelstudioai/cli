@@ -75,12 +75,13 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 | 场景                    | 条件                                                                                                       |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 文本/搜索/记忆/配置     | `isDashScopeE2EReady()`（`.env` 中的 `DASHSCOPE_API_KEY`）                                                 |
+| 文本/搜索/配置          | `isDashScopeE2EReady()`（`.env` 中的 `DASHSCOPE_API_KEY`）                                                 |
 | 图像/语音               | `isBailianE2EMediaEnabled() && isDashScopeE2EReady()`                                                      |
 | 视频                    | `isBailianE2EVideoEnabled() && isDashScopeE2EReady()`                                                      |
 | OpenAPI AK/SK           | `isOpenApiE2EReady()`（`.env` 中必须同时提供完整 AK/SK）                                                   |
 | 视频 download/task      | 另需 `BAILIAN_E2E_VIDEO_TASK_ID`                                                                           |
 | 知识库 chat/search live | `isChatE2EReady()` / `isSearchE2EReady()`（`knowledge chat/search`，需 `BAILIAN_WORKSPACE_ID` + agent ID） |
+| 记忆 live               | `isMemoryE2EReady()`（另需 `BAILIAN_E2E_MEMORY_LIBRARY_ID`；记忆服务需账号单独开通）                       |
 
 ## 用例类型
 
@@ -97,6 +98,8 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 - runtime 的离线 high-risk fixture 必须覆盖带 `--yes` 确实进入 `run()`，并断言 `yes` 不进入 command 自有 flags
 
 ## Journey 层（用户旅程全链路）
+
+- Memory 主干：`packages/commands/tests/e2e/memory/journeys`（J1–J5 CLI）与 `packages/bailian-memo-dsh/tests/journeys`（J6–J8 受控宿主）；严格入口 `node tools/test-memory-journeys.mjs`。默认库只要求 Key/Workspace，缺环境或跳过必跑项不能当作通过。真实 Agent 会话验收与受控宿主分开报告。
 
 - **定位**：命令 E2E 验单命令契约；journey 验“用户带着目标跨命令走通回路”，结构性断言不在 journey 重复
 - **闭环断言**：fixture 埋独特标记词，以“标记词能否被召回”判定回路闭合；硬断言 fail，软断言 `recordSoft` 落报告人工复核
@@ -163,6 +166,10 @@ test("foo bar --dry-run 仅输出计划", async () => {
   expect(data.request).toBeDefined();
 });
 ```
+
+## Memory 发布前审计
+
+发布判断应包含命令契约、风险到测试的映射和安装产物验证，不能只看用例总数或源代码 harness 全绿。参考 [Memory CLI 发布审计](../memory/2026-10-19-cli-release-audit.md)。`tools/smoke-memory-package.mjs` 接受本地 tarball 目录，使用隔离配置安装并执行产物 bin；`--live` 只对随机测试身份执行自清理 CRUD。服务 fixture 未配置的分组必须在报告中列为未运行，不能当作通过。真实 dsh/Skill 宿主是否作为门槛按当次用户明确的范围决定。
 
 ## 与批量压测的关系
 

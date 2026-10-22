@@ -52,7 +52,7 @@ grep -rnE "https://dashscope[a-z-]*\.aliyuncs\.com" packages/ --include="*.ts" \
 ### B. 非 TS 文件(只能人工同步,无法 import)
 
 - [ ] `skills/*/reference/` 各 `<group>.md` 中 API/控制台 URL(`generate:reference` 重建后核对并提交)
-- [ ] `README.md` / `README.zh.md` 中所有 URL
+- [ ] `README.md` / `README.zh.md` 中所有 URL；内容图必须用可公网绝对 URL，且根目录与 `packages/cli` 逐字节一致（`assertReadmeSync`）。`img.alicdn.com` 会被 GitHub Camo 拒绝；相对路径在 npm 上解析不到。优先 `https://raw.githubusercontent.com/modelstudioai/cli/main/assets/...`
 
 ### C. 渠道追踪参数
 
@@ -75,5 +75,6 @@ pnpm -F bailian-cli exec tsx src/main.ts help                # help 命令
 ## 常见漏点
 
 - ✗ 改了 `urls.ts` / 登录站点 / 文档 deep link 但忘记同步 README(用户最先看到)
+- ✗ README 内容图用相对路径或阿里云 CDN：发版 `assertReadmeSync` / GitHub Camo / npm 子包 README 至少会坏一处
 - ✗ 在 runtime / command 文件里 inline `https://bailian.console.aliyun.com/...` 而不是从 `urls.ts` import
 - ✗ 在 core 的 hint 里写 URL(违反 [error-hint-change.md](error-hint-change.md) 不变量 1)

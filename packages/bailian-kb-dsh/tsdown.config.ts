@@ -34,10 +34,18 @@ const PLATFORM_MODULES = [
  * engine lives in runtime pending its rehoming; at runtime the lazy CJS table
  * answers the require natively.
  */
-const RUNTIME_STORE_EXEMPTION = "@deepseek-ai/dsh-client-runtime/client";
+const HOST_TABLE_EXEMPTIONS = [
+  "@deepseek-ai/dsh-client-store",
+  "@deepseek-ai/dsh-client-connection/client",
+  "@deepseek-ai/dsh-client-locale/client",
+  "@deepseek-ai/dsh-client-ui-settings/client",
+  "@deepseek-ai/dsh-client-ui-plugin-manager/client",
+  "@deepseek-ai/dsh-client-ui-primitives",
+  "@deepseek-ai/dsh-api-remotes/client",
+] as const;
 
 /** Externals resolved from the loader module table. */
-const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, RUNTIME_STORE_EXEMPTION];
+const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, ...HOST_TABLE_EXEMPTIONS];
 
 /** Virtual-id wrapper keeping module CSS away from tsdown's own css pipeline. */
 const CSS_VIRTUAL_PREFIX = "\0dsh-css:";

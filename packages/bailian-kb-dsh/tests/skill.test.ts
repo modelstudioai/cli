@@ -80,7 +80,7 @@ describe("the packaged bailian-kb SKILL.md", () => {
     expect(parsed?.description).toContain("bl");
     // The frontmatter must state where credentials come from: that sentence used
     // to live in skill.ts and would otherwise be lost with the duplicate.
-    expect(parsed?.description).toContain("DASHSCOPE_API_KEY");
+    expect(parsed?.description).toContain("BAILIAN_KB_API_KEY");
   });
 
   it("keeps its description within the catalog truncation budget", () => {
