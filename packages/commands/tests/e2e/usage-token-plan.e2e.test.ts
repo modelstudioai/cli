@@ -54,13 +54,10 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage token-plan（Console）", () =
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
-    const data = parseStdoutJson<{
-      per1MonthPercentage?: number;
-      per1MonthResetTime?: number;
-    }>(result.stdout);
-    const fields = [data.per1MonthPercentage, data.per1MonthResetTime];
-    for (const field of fields) {
-      if (field !== undefined) expect(field).toBeTypeOf("number");
+    const data = parseStdoutJson<Record<string, unknown>>(result.stdout);
+    expect(data.hasQuotaData).toBeTypeOf("boolean");
+    for (const [field, value] of Object.entries(data)) {
+      if (field.startsWith("per")) expect(value).toBeTypeOf("number");
     }
   });
 
@@ -69,6 +66,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage token-plan（Console）", () =
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
     expect(result.stdout).toContain("Generated at:");
-    expect(result.stdout).toContain("Monthly quota");
+    expect(result.stdout).toMatch(/(Monthly|\d+-(hour|day|week|month)) quota/);
   });
 });
