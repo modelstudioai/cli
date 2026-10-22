@@ -138,6 +138,22 @@ bl auth login --console
 
 Use `--console-site international` for the international console.
 
+The CLI always prints the login URL. To choose a browser yourself, keep the command running and open the URL on the **same machine**:
+
+```bash
+bl auth login --console --no-browser --console-site international
+```
+
+If the browser blocks the local callback, check the console site's local-network permission or try Firefox. The PNA compatibility header does not bypass Chrome's local-network permission or Safari's mixed-content restrictions. No callback within 15 minutes is a failure (exit code 5), not a successful login.
+
+If you already have a valid console access token, import it via stdin without a browser or local callback server. Specify the token's actual region and site; for example, in a POSIX shell:
+
+```bash
+bl auth login --console --token-stdin --console-site international --console-region ap-southeast-1 < /path/to/console-token.txt
+```
+
+Input must be one raw token (up to 64 KiB), not JSON or `Bearer ...`; interactive terminal input is rejected to avoid echoing secrets. Use a protected file or trusted pipe, never put the token in command arguments or shell history, and remove temporary secret files after use. The CLI validates the token before saving; failure leaves existing credentials and the active Profile unchanged. Add `--config <name>` to save and activate a specific Profile on success. This imports only the console session, not a model API key.
+
 ### API Key
 
 To use an existing ordinary API key or a Token Plan subscription key, run the same command:
