@@ -21,7 +21,7 @@ description: >-
 > bl skill init
 > ```
 >
-> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。
+> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。Agents wrap with [Call attribution](#call-attribution-mandatory-for-every-agent-bl-command).
 
 ## Provider selection and consent
 
@@ -72,9 +72,64 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 - `bailian-protocol`：靠 `bl skill init` 与业务 skill 同装；CRITICAL 可用相对路径 `../bailian-protocol/…`。读不到则停止跑 `bl`，提示整包安装。
 - 其它 bailian-\* 业务 skill：只按名字提及，**不要**写死 `../bailian-*/SKILL.md` 当执行前提。
 
+## Call attribution (mandatory for every Agent `bl` command)
+
+Examples in this protocol, `assets/`, business skills, and generated `reference/` show bare `bl …`. When an Agent **runs** a command, wrap that single invocation with one of the templates below. Humans must not set these variables. Anything other than an explicit agent is recorded as `unknown`.
+
+`--help` and `--version` skip telemetry and need no prefix. Every other `bl` does, including `bl skill init`, `bl skill update`, and `bl update`. Do not `export` the variables into the shell session. If the host accepts a one-shot env map without rewriting the command string, set the same four variables there instead.
+
+Pick the template that matches the **current shell**. Windows Codex defaults to PowerShell — do not paste the bash form into PowerShell. Sample host id is `codex`; replace with this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Use `unknown` only when you cannot tell. Do not borrow another product's name. Do not scan install directories.
+
+### bash / zsh / Git Bash / WSL
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=<host> BAILIAN_SKILL_NAME=<owning-skill> BAILIAN_SKILL_VERSION=<metadata.version> bl <args>
+```
+
+Filled sample for this protocol (`bl skill init`):
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill init
+```
+
+Inside a command substitution: put the four variables inside `$(...)`.
+
+With `NO_COLOR` (config is owned by `bailian-cli`):
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 NO_COLOR=1 bl config show --output text
+```
+
+### PowerShell (Windows Codex default)
+
+```powershell
+$env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='<host>'; $env:BAILIAN_SKILL_NAME='<owning-skill>'; $env:BAILIAN_SKILL_VERSION='<metadata.version>'; bl <args>; $code=$LASTEXITCODE; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue; if ($code -ne 0) { exit $code }
+```
+
+Filled sample for this protocol:
+
+```powershell
+$env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='codex'; $env:BAILIAN_SKILL_NAME='bailian-protocol'; $env:BAILIAN_SKILL_VERSION='2.5.0'; bl skill init; $code=$LASTEXITCODE; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue; if ($code -ne 0) { exit $code }
+```
+
+Clear the four variables after each command so they do not linger in the Codex session. Save `$LASTEXITCODE` before `Remove-Item` and `exit` only on nonzero — a trailing successful cleanup must not mask `bl` failures (e.g. exit 7 `requires_confirmation`).
+
+### Owning skill
+
+Reuse the same four-variable shape on every later `bl`, but change `BAILIAN_SKILL_NAME` when the command belongs to a different skill; keep `BAILIAN_CALLER_NAME` as this host. Each business skill shows one filled-in sample for its own commands.
+
+| Task                                                                     | `<owning-skill>`                       |
+| ------------------------------------------------------------------------ | -------------------------------------- |
+| Install, `skill init` / `skill update`, `bl update`, protocol pre-flight | `bailian-protocol`                     |
+| auth, config, text, app, knowledge, usage                                | `bailian-cli`                          |
+| image / video / speech / vision / omni                                   | `bailian-gen`                          |
+| Other domain commands                                                    | The `bailian-*` skill currently in use |
+
+`BAILIAN_SKILL_VERSION`: copy `metadata.version` from that owning skill's `SKILL.md` frontmatter. The family currently shares one version; if the frontmatter differs from `2.5.0` in a sample, use the frontmatter.
+
 ## Version & updates (after provider selection, before the first `bl` command)
 
-**MANDATORY:** Before running any `bl` command, complete the **Agent pre-flight checklist** in [`assets/versioning.md`](assets/versioning.md). Do NOT run any `bl` command until the checklist is complete. If versions mismatch, ask the user whether to upgrade — do not proceed silently.
+**MANDATORY:** Before running any `bl` command, complete the **Agent pre-flight checklist** in [`assets/versioning.md`](assets/versioning.md). Do NOT run any `bl` command until the checklist is complete. If versions mismatch, ask the user whether to upgrade — do not proceed silently. Pre-flight `bl` commands that enter middleware (for example `bl skill update` / `bl update` / `bl skill init`) must use Call attribution above; owning skill for those is `bailian-protocol`.
 
 ## Setup & auth
 
@@ -94,7 +149,7 @@ bl text chat --message "Write a poem about spring"  # explicit text-model smoke 
 ## Color output
 
 When an agent needs plain text without ANSI color codes (for parsing, logs, or
-snapshots), run the command with `NO_COLOR=1`:
+snapshots), run with `NO_COLOR=1` and Call attribution (see the bash sample under [Call attribution](#call-attribution-mandatory-for-every-agent-bl-command)):
 
 ```bash
 NO_COLOR=1 bl config show --output text
