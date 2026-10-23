@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.5.1] - 2026-10-23
+
+### Added
+
+- **Console login**: Support `--no-browser` for manually opening the login URL and `--token-stdin` for importing and validating console credentials from standard input.
+- **Agent attribution**: Support declaring the calling Agent, Skill name and version; undeclared callers remain unknown.
+
+### Fixed
+
+- **Login completion**: Handle fast browser callbacks reliably and report a timeout when no credentials are received.
+- **Credential refresh**: Correct region selection and validate the retried request before saving refreshed credentials.
+
 ## [2.5.0] - 2026-10-20
 
 ### Added
