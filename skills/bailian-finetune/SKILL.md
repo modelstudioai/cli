@@ -16,7 +16,13 @@ description: >-
 
 # Bailian fine-tuning pipeline (`bl dataset` / `bl finetune` / `bl deploy`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist), Setup & auth, and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) (dataset / finetune / deploy) and `bl <command> --help` — do not guess flags. The whole pipeline requires an API key. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) (dataset / finetune / deploy) and `bl <command> --help` — do not guess flags. Examples in `reference/` stay bare; wrap with Call attribution when running. The whole pipeline requires an API key. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-finetune`; replace `codex` with this host). After deploy, `bl text chat` is owned by `bailian-cli`.
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-finetune BAILIAN_SKILL_VERSION=2.5.0 bl dataset validate --file train.jsonl
+```
 
 ## End-to-end workflow (follow in order)
 

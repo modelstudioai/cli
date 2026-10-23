@@ -15,7 +15,7 @@ The browser paths below belong to the official browser image, not to every Sandb
 
 Reuse the requested instance. Create one only when creation is part of the user's request. Follow the shared protocol before running `bl`; use the generated command reference for lifecycle flags.
 
-Capture the credential-bearing result in a private temporary directory:
+Capture the credential-bearing result in a private temporary directory. Agents wrap the `bl` line with Call attribution (`bailian-sandbox`).
 
 ```bash
 umask 077
