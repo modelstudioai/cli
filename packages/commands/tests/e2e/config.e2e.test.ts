@@ -63,11 +63,13 @@ describe("e2e: config", () => {
     const data = parseStdoutJson<{
       config_file?: string;
       base_url?: string;
+      DASHSCOPE_BASE_URL?: string;
       timeout?: number;
       watermark?: boolean;
     }>(stdout);
     expect(data.config_file).toBeDefined();
-    expect(data.base_url).toBeDefined();
+    // 生效 base_url 可能来自文件/默认（base_url）或 env（DASHSCOPE_BASE_URL）
+    expect(data.base_url ?? data.DASHSCOPE_BASE_URL).toBeDefined();
     expect(data.timeout).toBeDefined();
     expect(data.watermark).toBe(true);
   });
@@ -142,6 +144,114 @@ describe("e2e: config", () => {
       const data = parseStdoutJson<{ security_token?: string }>(stdout);
       expect(data.security_token).toBe("sts-...oken");
       expect(stdout).not.toContain(securityToken);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
+  test("config show 脱敏 DASHSCOPE_*，JSON 用 active 标出生效层且值保持干净", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-show-env-"));
+    try {
+      writeFileSync(
+        join(configDir, "config.json"),
+        JSON.stringify(
+          {
+            api_key: "sk-file-secret-key",
+            base_url: "https://file.example.com",
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "show", "--output", "json"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "sk-env-secret-key",
+          DASHSCOPE_BASE_URL: "https://env.example.com",
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        api_key?: string;
+        base_url?: string;
+        DASHSCOPE_API_KEY?: string;
+        DASHSCOPE_BASE_URL?: string;
+        active?: { api_key?: string; base_url?: string };
+      }>(stdout);
+      expect(data.DASHSCOPE_API_KEY).toBeDefined();
+      expect(data.DASHSCOPE_API_KEY).not.toContain("sk-env-secret-key");
+      expect(data.DASHSCOPE_API_KEY).not.toMatch(/active/);
+      expect(data.DASHSCOPE_BASE_URL).toBe("https://env.example.com");
+      expect(data.api_key).toBeDefined();
+      expect(data.api_key).not.toMatch(/active/);
+      expect(data.api_key).not.toContain("sk-file-secret-key");
+      expect(data.base_url).toBe("https://file.example.com");
+      expect(data.active).toEqual({ api_key: "env", base_url: "env" });
+      expect(stdout).not.toContain("sk-env-secret-key");
+      expect(stdout).not.toContain("sk-file-secret-key");
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
+  test("config show 在仅有 DASHSCOPE_BASE_URL 时仍输出文件层默认 base_url", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-show-env-base-only-"));
+    try {
+      writeFileSync(
+        join(configDir, "config.json"),
+        JSON.stringify({ api_key: "sk-file" }, null, 2) + "\n",
+      );
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "show", "--output", "json"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "",
+          DASHSCOPE_BASE_URL: "https://env.example.com",
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        base_url?: string;
+        DASHSCOPE_BASE_URL?: string;
+        active?: { api_key?: string; base_url?: string };
+      }>(stdout);
+      expect(data.base_url).toBe("https://dashscope.aliyuncs.com");
+      expect(data.DASHSCOPE_BASE_URL).toBe("https://env.example.com");
+      expect(data.active).toEqual({ api_key: "config", base_url: "env" });
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
+  test("config show 对 DASHSCOPE_BASE_URL 只展示 origin，不泄露 userinfo/query", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-show-env-url-secret-"));
+    const rawEnvBaseUrl = "https://user:pass@example.com/path?token=super-secret#frag";
+    try {
+      writeFileSync(join(configDir, "config.json"), "{}\n");
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "show", "--output", "json"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_BASE_URL: rawEnvBaseUrl,
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        DASHSCOPE_BASE_URL?: string;
+        active?: { base_url?: string };
+      }>(stdout);
+      expect(data.DASHSCOPE_BASE_URL).toBe("https://example.com");
+      expect(data.active?.base_url).toBe("env");
+      expect(stdout).not.toContain("user:pass");
+      expect(stdout).not.toContain("super-secret");
+      expect(stdout).not.toContain(rawEnvBaseUrl);
     } finally {
       rmSync(configDir, { recursive: true, force: true });
     }
