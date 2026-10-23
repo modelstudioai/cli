@@ -103,16 +103,16 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-c
 ### PowerShell (Windows Codex default)
 
 ```powershell
-$env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='<host>'; $env:BAILIAN_SKILL_NAME='<owning-skill>'; $env:BAILIAN_SKILL_VERSION='<metadata.version>'; bl <args>; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue
+$env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='<host>'; $env:BAILIAN_SKILL_NAME='<owning-skill>'; $env:BAILIAN_SKILL_VERSION='<metadata.version>'; bl <args>; $code=$LASTEXITCODE; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue; if ($code -ne 0) { exit $code }
 ```
 
 Filled sample for this protocol:
 
 ```powershell
-$env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='codex'; $env:BAILIAN_SKILL_NAME='bailian-protocol'; $env:BAILIAN_SKILL_VERSION='2.5.0'; bl skill init; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue
+$env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='codex'; $env:BAILIAN_SKILL_NAME='bailian-protocol'; $env:BAILIAN_SKILL_VERSION='2.5.0'; bl skill init; $code=$LASTEXITCODE; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue; if ($code -ne 0) { exit $code }
 ```
 
-Clear the four variables after each command so they do not linger in the Codex session.
+Clear the four variables after each command so they do not linger in the Codex session. Save `$LASTEXITCODE` before `Remove-Item` and `exit` only on nonzero — a trailing successful cleanup must not mask `bl` failures (e.g. exit 7 `requires_confirmation`).
 
 ### Owning skill
 
