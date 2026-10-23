@@ -7,7 +7,14 @@ Read this only when you need to install `bl`, change credentials/endpoint, or
 inspect config keys. Day-to-day command routing lives in the business skills
 (`bailian-cli` / `bailian-gen` / …).
 
-Examples stay bare `bl …`. Agents wrap them with [Call attribution](../SKILL.md#call-attribution-mandatory-for-every-agent-bl-command): `bailian-protocol` for install / `skill init`, `bailian-cli` for auth / config.
+An Agent must not paste a bare `bl` into bash. Fences below include Call attribution with sample `BAILIAN_CALLER_NAME=codex`; replace with this host's stable id (examples: `qwen-code`, `qoder`, `claude-code`, `cursor`). Humans omit the four `BAILIAN_*` variables. `bailian-protocol` owns install / `skill init`; `bailian-cli` owns auth / config; image / video smoke commands use `bailian-gen`. Reuse the four-variable shape on every `bl`, and set `BAILIAN_SKILL_NAME` to the owning skill for that command. `BAILIAN_SKILL_VERSION` is `metadata.version` in `bailian-protocol/SKILL.md`. Do not `export` the variables.
+
+**Agent shell:**
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill init
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth status
+```
 
 ---
 
@@ -20,7 +27,8 @@ Examples stay bare `bl …`. Agents wrap them with [Call attribution](../SKILL.m
 ```bash
 # node -v ≥ 18.17.0; global install via npm only (do not use pnpm/yarn)
 npm install -g bailian-cli
-bl skill init
+# Agent shell: sample uses codex — replace with this host's id
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill init
 ```
 
 ### 2. Fallback: binary (no Node)
@@ -29,7 +37,7 @@ When there is no usable Node/npm, or Node is too old for the npm path:
 
 ```bash
 curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
-# The script runs bl skill init after installing the CLI; if that fails, run it manually
+# The script runs bl skill init after installing the CLI. If that child process is bare, rerun the prefixed bl skill init from the Agent shell block above.
 ```
 
 Windows PowerShell: `irm https://bailian.aliyun.com/cli/install.ps1 | iex`
@@ -42,10 +50,11 @@ Unix `install.sh` prefers the `.tar.gz` asset and does not require `unzip`. Wind
 - **Advanced / subset** (include protocol when needed):
 
 ```bash
-# bl skill add --name bailian-protocol,bailian-gen
-# bl skill add --name bailian-protocol,bailian-finetune
-# bl skill add --name bailian-protocol,bailian-managed-agent
-# bl skill add --name bailian-protocol,bailian-cli
+# Agent shell: uncomment one line. Sample uses codex — replace with this host's id.
+# BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill add --name bailian-protocol,bailian-gen
+# BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill add --name bailian-protocol,bailian-finetune
+# BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill add --name bailian-protocol,bailian-managed-agent
+# BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill add --name bailian-protocol,bailian-cli
 ```
 
 Verify: `bl --version` (prints `bl X.Y.Z`).
@@ -63,10 +72,11 @@ For the exact command-to-auth mapping, read the owning skill's `reference/index.
 | OpenAPI AK/SK | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`)   |
 
 ```bash
-bl auth status            # check current auth
-bl auth logout            # clear credentials and the model Base URL
-bl auth logout --console  # clear console token only
-bl auth logout --open-api # clear OpenAPI AK/SK only
+# Agent shell. Sample uses codex — replace with this host's id
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth status
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth logout
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth logout --console
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth logout --open-api
 ```
 
 - Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key
@@ -81,16 +91,16 @@ Get or copy the Token Plan API key from the [subscription overview](https://bail
 Token Plan and other subscription plans cannot use `--console`; log in directly with the subscription API Key:
 
 ```bash
-bl auth login --api-key sk-sp-xxx
-bl text chat --message "Hello"
-bl image generate --prompt "A cat"
-bl video generate --prompt "A horse running through a field"
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth login --api-key sk-sp-xxx
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl text chat --message "Hello"
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-gen BAILIAN_SKILL_VERSION=2.5.0 bl image generate --prompt "A cat"
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-gen BAILIAN_SKILL_VERSION=2.5.0 bl video generate --prompt "A horse running through a field"
 ```
 
 Ordinary API Keys use the same command:
 
 ```bash
-bl auth login --api-key <key>
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth login --api-key <key>
 ```
 
 ### API Key capability fallback
@@ -112,7 +122,7 @@ appends missing preset capabilities without removing existing entries, so log in
 the persisted preset.
 
 ```bash
-bl config set --config company-plan --key api-key-capabilities \
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config set --config company-plan --key api-key-capabilities \
   --value text.chat,image.generate,video.generate
 ```
 
@@ -122,8 +132,8 @@ Successful login automatically activates the explicitly selected Profile. Use `b
 inspect it, and switch back when needed:
 
 ```bash
-bl config list
-bl config use --name default
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config list
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config use --name default
 ```
 
 API Key login selects and activates the matching built-in Profile only after the credential is saved. Failed login and `--dry-run` do not switch Profiles. Use
@@ -181,11 +191,11 @@ Use `bl auth login --console` for the China site. Add `--console-site internatio
 5. **Still unclear** — ask the user which console they use; do not assume domestic.
 
 ```bash
-# Domestic
-bl auth login --console
+# Domestic. Sample uses codex — replace with this host's id
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth login --console
 
 # International
-bl auth login --console --console-site international
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl auth login --console --console-site international
 ```
 
 After a successful console login, the callback may persist `console_site` in `~/.bailian/config.json`. You can also set it manually:
@@ -214,12 +224,12 @@ Default: `https://dashscope.aliyuncs.com` (China). Override with any of:
 - **Env:** `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_OUTPUT`, `ALIBABA_CLOUD_ACCESS_KEY_ID`, `ALIBABA_CLOUD_ACCESS_KEY_SECRET`, `BAILIAN_WORKSPACE_ID`
 
 ```bash
-bl config show
-bl config list
-bl config use --name <existing-profile>
-bl config use --name default
-bl config set --key default-text-model --value qwen3.8-max
-bl config set --key output_dir --value ~/bailian-output
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config show
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config list
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config use --name <existing-profile>
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config use --name default
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config set --key default-text-model --value qwen3.8-max
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config set --key output_dir --value ~/bailian-output
 ```
 
 Valid config keys: run `bl config set --help`, or if `bailian-cli` is installed read its `reference/config.md`.

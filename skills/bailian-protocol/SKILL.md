@@ -15,13 +15,17 @@ description: >-
 
 本 skill 是 `bailian-*` 家族的统一执行协议。所有业务 skill 在跑 `bl` 前都应先读本文件。
 
-> **Install（supported）：** 整包装齐，含本 skill 与全部业务 skill：
+**Agent shell:** never paste a bare `bl` into bash. Put the four `BAILIAN_*` variables on that same command ([Call attribution](#call-attribution-mandatory-for-every-agent-bl-command)). `--help` and `--version` are the only exceptions. Humans must not set these variables.
+
+> **Install（supported）：** 整包装齐，含本 skill 与全部业务 skill。Human terminal: `bl skill init`.
 >
-> ```bash
-> bl skill init
-> ```
->
-> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。Agents wrap with [Call attribution](#call-attribution-mandatory-for-every-agent-bl-command) (`bailian-protocol`).
+> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。Do not paste that human line into an Agent shell.
+
+**Agent shell** for that install (`BAILIAN_SKILL_VERSION` is this file's `metadata.version`; sample uses `codex` — replace with this host's id):
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill init
+```
 
 ## Provider selection and consent
 
@@ -74,17 +78,23 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 
 ## Call attribution (mandatory for every Agent `bl` command)
 
-Examples in this protocol, `assets/`, and business skills show bare `bl …`. When an Agent **runs** a command, wrap that single invocation with the prefix below (declared once here). Humans must not set these variables. Anything other than an explicit agent is recorded as `unknown`.
+**Never run a bare `bl` from an Agent shell.** Codex CLI, Qwen CLI, and other bash hosts copy a fenced command as-is, so the variables must be on the same line as `bl`. Do not `export` them into the shell session. Humans must not set them. Anything other than an explicit agent is recorded as `unknown`.
+
+`--help` and `--version` skip telemetry and need no prefix. Every other `bl` does, including `bl skill init`, `bl skill update`, and `bl update`.
+
+Fenced `bl` blocks in this file, `assets/`, business skills, and generated `reference/` are **human documentation** unless the fence is labeled **Agent shell**. Copy the arguments, then add the prefix. Do not paste a human fence into bash.
+
+Single-line form (keep the variables on the same command):
 
 ```bash
-BAILIAN_CALLER_TYPE=agent \
-BAILIAN_CALLER_NAME=<agent-id> \
-BAILIAN_SKILL_NAME=<owning-skill> \
-BAILIAN_SKILL_VERSION=<metadata.version> \
-bl <example>
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=<host> BAILIAN_SKILL_NAME=<owning-skill> BAILIAN_SKILL_VERSION=<metadata.version> bl <args>
 ```
 
-Pick `<owning-skill>` from the task (do not repeat the prefix in every example):
+`<host>` is this Agent host's stable id. Examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`. Use the actual host name (lowercase; spaces/underscores become hyphens). Use `unknown` only when you cannot tell which host you are. Do not borrow another product's name. Do not scan install directories. Do not leave angle brackets or a `|` list in the command.
+
+If the host shell tool accepts a one-shot env map without rewriting the command string, set the same four variables there. A bare `bl` with neither the prefix nor that env map is not valid for an Agent.
+
+Owning skill for the task (each business skill also shows one filled-in line). Reuse the four-variable shape on every later `bl`, but change `BAILIAN_SKILL_NAME` when the command belongs to a different skill; keep `BAILIAN_CALLER_NAME` as this host:
 
 | Task                                                                     | `<owning-skill>`                       |
 | ------------------------------------------------------------------------ | -------------------------------------- |
@@ -95,10 +105,8 @@ Pick `<owning-skill>` from the task (do not repeat the prefix in every example):
 
 Conventions:
 
-- `BAILIAN_CALLER_NAME`: stable host id (`cursor` / `claude-code` / `codex` / `qwen-code`); use `unknown` when unsure. Do not scan install directories.
-- `BAILIAN_SKILL_VERSION`: copy `metadata.version` from that owning skill's `SKILL.md`.
-- Prefix each `bl` invocation; do not `export` into the shell session. `bl --version` / `--help` skip telemetry and need no prefix.
-- If the host accepts one-shot env without rewriting the command string, set the same four variables there.
+- `BAILIAN_SKILL_VERSION`: copy `metadata.version` from that owning skill's `SKILL.md` frontmatter. The family currently shares one version; if the frontmatter differs from `2.5.0` in an example, use the frontmatter.
+- If `bl` sits inside a command substitution, put the four variables inside it: `VAR=$(BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-gen BAILIAN_SKILL_VERSION=2.5.0 bl ...)`.
 - PowerShell: fresh subprocess, or save/restore all four (restore to unset when they were unset).
 
 ## Version & updates (after provider selection, before the first `bl` command)
@@ -114,6 +122,8 @@ Install, API key / console login, endpoint override, and config keys:
 
 **API Key login:** Token Plan and other subscription plans cannot use `--console`. For them, or when the user already has an ordinary API Key, run `bl auth login --api-key <key>`.
 
+Human documentation. Agent shell: prefix each `bl` line (`bailian-cli` for auth and text). Do not paste this fence as-is.
+
 ```bash
 bl auth status                                      # check current auth
 bl auth login --console --console-site international  # example: international console
@@ -123,15 +133,17 @@ bl text chat --message "Write a poem about spring"  # explicit text-model smoke 
 ## Color output
 
 When an agent needs plain text without ANSI color codes (for parsing, logs, or
-snapshots), run with `NO_COLOR=1` (and Call attribution when run by an Agent):
+snapshots), run with `NO_COLOR=1` on the same command as Call attribution. `config` is owned by `bailian-cli`. Sample uses `codex`; replace with this host's id.
 
 ```bash
-NO_COLOR=1 bl config show --output text
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 NO_COLOR=1 bl config show --output text
 ```
 
 ## Local files (mandatory)
 
 Any command that accepts a **file URL** also accepts a **local path**. The CLI uploads to DashScope temporary storage (`oss://`, 48h) automatically.
+
+Human documentation. Agent shell: prefix each `bl` line with `bailian-gen`. Do not paste this fence as-is.
 
 ```bash
 bl image edit --image ./photo.png --prompt "Add sunset"
@@ -152,6 +164,8 @@ When the selected workflow uses `bl text chat` or `bl omni`, the CLI injects **n
 - For `bl image generate` / `bl video *`, write any in-frame text / captions in the user's language unless the prompt specifies otherwise.
 - If the user explicitly names a target language (e.g. "翻译成英文"), follow that instead.
 - Your own narration around the tool call is also in the user's language.
+
+Human documentation. Agent shell: prefix each `bl` line with `bailian-cli`. Do not paste this fence as-is.
 
 ```bash
 bl text chat --system "Reply in Chinese." --message "Explain what a vector database is."

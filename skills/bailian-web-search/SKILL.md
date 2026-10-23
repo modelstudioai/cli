@@ -21,6 +21,15 @@ description: >-
 
 **CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent, Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
+**Agent bash (mandatory):** Never run a bare `bl` in the shell. Prefix every invocation except `--help` and `--version`. Do not `export` these variables. Set `BAILIAN_CALLER_NAME` to this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Sample lines use `codex`; replace with your host. `BAILIAN_SKILL_VERSION` is this file's `metadata.version` (`2.5.0`). `bl config` and `bl text chat` are owned by `bailian-cli`; `bl search web` is owned by this skill.
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config show --output json
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-web-search BAILIAN_SKILL_VERSION=2.5.0 bl search web --query "阿里云百炼最新功能"
+```
+
+Replace `codex` in the sample with this host's id. Reuse the same four-variable shape on every later `bl`, but set `BAILIAN_SKILL_NAME` to the owning skill for that command. Keep `BAILIAN_CALLER_NAME` as this host.
+
 > **Scope:** model-aware routing for web search inside Agent-driven `bl` workflows — this skill owns the routing decision only.
 > Command flags / usage / examples: Read skill `bailian-cli` reference if installed; else `bl search web --help` / `bl text chat --help` — do not guess flags.
 >
@@ -32,10 +41,10 @@ Token Plan keys do not authorize Bailian MCP search — never route them to `bl 
 
 ### Step 1 — Identify the active model identity
 
-Run (no auth needed):
+Run with the Agent bash shape (`BAILIAN_SKILL_NAME=bailian-cli` for this command; replace `codex` with this host's id). No auth needed:
 
 ```bash
-bl config show --output json
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config show --output json
 ```
 
 Treat the connection as **Token Plan** when **either** condition holds — this mirrors the CLI's own endpoint detection (`usesTokenPlanEndpoint`), so routing stays consistent with command behavior:
@@ -58,7 +67,7 @@ Do not rely on the profile name alone: users can create additional Token Plan pr
 ### Model-native path (Token Plan preferred / fallback target)
 
 ```bash
-bl text chat --api responses --tool '{"type":"web_search"}' --message "搜索近期的阿里云新闻"
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl text chat --api responses --tool '{"type":"web_search"}' --message "搜索近期的阿里云新闻"
 ```
 
 - The Responses API enables native web search via the tool definition `{"type":"web_search"}`.
@@ -69,7 +78,7 @@ bl text chat --api responses --tool '{"type":"web_search"}' --message "搜索近
 ### MCP path (default)
 
 ```bash
-bl search web --query "阿里云百炼最新功能"
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-web-search BAILIAN_SKILL_VERSION=2.5.0 bl search web --query "阿里云百炼最新功能"
 ```
 
 - Requires the WebSearch MCP to be activated for the current key; on the not-activated error the CLI appends an activation hint with the marketplace URL — relay it to the user.
@@ -92,6 +101,15 @@ Fallback discipline:
 3. If the fallback also fails, stop and report both errors verbatim; follow the issue-reporting flow in `bailian-protocol` (ask once). Never loop retries.
 
 ## Quick examples
+
+**Agent shell** — replace `codex` with this host's id. Do not drop the variables. Set `BAILIAN_SKILL_NAME` to the owning skill for that command.
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config show --output json
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-web-search BAILIAN_SKILL_VERSION=2.5.0 bl search web --query "阿里云百炼最新功能"
+```
+
+Human documentation only. Do not paste this fence into an Agent shell. `bl config` / `bl text chat` use `BAILIAN_SKILL_NAME=bailian-cli`; `bl search web` uses `bailian-web-search`.
 
 ```bash
 # Step 1: identify the active model identity

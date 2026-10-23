@@ -3,24 +3,27 @@
 > Hand-maintained. Lives in `bailian-protocol/assets/` (not auto-generated from command metadata).
 > Entry point: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command).
 
-Agents wrap middleware `bl` commands with [Call attribution](../SKILL.md#call-attribution-mandatory-for-every-agent-bl-command); `<owning-skill>` here is always `bailian-protocol`. Examples stay bare. `bl --version` / `--help` need no prefix.
+Pre-flight `bl` commands that enter middleware use [Call attribution](../SKILL.md#call-attribution-mandatory-for-every-agent-bl-command). `<owning-skill>` here is always `bailian-protocol`. `BAILIAN_SKILL_VERSION` is `metadata.version` in `bailian-protocol/SKILL.md` (currently `2.5.0`). Set `BAILIAN_CALLER_NAME` to this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Sample lines use `codex`; replace with your host. Do not `export` the variables. `bl --version` / `--help` need no prefix. Do not paste a bare `bl skill update`, `bl skill init`, or `bl update` into bash.
 
 ## Agent pre-flight checklist (MANDATORY)
 
 **Do NOT run any `bl` command until you complete this checklist.** Run it **once per session**, before the first `bl` command. Cache the result — do not re-check before every command.
 
 1. Read `metadata.version` from the installed `bailian-protocol/SKILL.md` frontmatter (all `bailian-*` skills share the same version).
-2. Check the installed CLI version:
+2. Check the installed CLI version (`--version` skips telemetry; no prefix):
    ```bash
    bl --version
    ```
    If this fails, see [Missing `bl`](#missing-bl) below.
 3. Compare the two versions (ignore the `bl` prefix; compare only `X.Y.Z`):
-   - If `metadata.version` ≠ `bl --version`, refresh already-installed skills before doing anything else:
+   - If `metadata.version` ≠ `bl --version`, refresh already-installed skills before doing anything else. Replace `codex` with this host's id.
      ```bash
-     bl skill update
+     BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill update
      ```
-   - If `bailian-protocol` or another needed skill is missing, stop and run `bl skill init` (same Call attribution, `bailian-protocol`). Do not use `bl skill init` only to refresh versions — it installs every `bailian-*` skill.
+   - If `bailian-protocol` or another needed skill is missing, stop and run the same four-variable shape with `bl skill init` (`BAILIAN_SKILL_NAME=bailian-protocol`). Do not use `bl skill init` only to refresh versions — it installs every `bailian-*` skill.
+     ```bash
+     BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill init
+     ```
    - Do not trust a stale `reference/` when versions mismatch — flags may be wrong.
 4. Check the latest published CLI version:
    ```bash
@@ -29,9 +32,9 @@ Agents wrap middleware `bl` commands with [Call attribution](../SKILL.md#call-at
 5. If the installed `bl` is **older** than the latest npm version, **STOP** the current task and **ask the user** (report skill version, installed CLI version, and npm latest):
    > A newer version of bl is available (current: X.Y.Z, latest: A.B.C). Upgrade before continuing?
    - **Do NOT auto-upgrade silently** — the user decides.
-   - If the user agrees: run `bl update` (same Call attribution), then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill update` to refresh already-installed skills; it does not install new skills. First-time install still uses `bl skill init`.)
+   - If the user agrees: run `bl update` with the same four-variable shape (`BAILIAN_SKILL_NAME=bailian-protocol`), then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill update` to refresh already-installed skills; it does not install new skills. First-time install still uses `bl skill init`.) Replace `codex` with this host's id.
      ```bash
-     bl update
+     BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl update
      ```
    - If the user declines: continue with the current version and note it in the summary.
    - If `npm view` / `bl update` fails (offline, registry blocked, permission): continue with the current `bl` and tell the user it could not be updated.
@@ -46,9 +49,10 @@ If `bl --version` fails, install the CLI and skills (same order as [setup.md →
 ```bash
 # Recommended — Node.js ≥ 18.17.0; npm only (do not use pnpm/yarn)
 npm install -g bailian-cli
-bl skill init
+# Agent shell: sample uses codex — replace with this host's id
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill init
 
-# Fallback — no usable Node/npm:
+# Fallback — no usable Node/npm (the script runs bl skill init; if that child is bare, run the prefixed line above yourself):
 # curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
 ```
 

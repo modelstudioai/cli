@@ -15,12 +15,12 @@ The browser paths below belong to the official browser image, not to every Sandb
 
 Reuse the requested instance. Create one only when creation is part of the user's request. Follow the shared protocol before running `bl`; use the generated command reference for lifecycle flags.
 
-Capture the credential-bearing result in a private temporary directory:
+Capture the credential-bearing result in a private temporary directory. Agent shell: prefix the `bl` line. Sample uses `codex`; replace with this host's id. Do not `export` the `BAILIAN_*` variables.
 
 ```bash
 umask 077
 sandbox_connection_dir="$(mktemp -d)"
-bl sandbox get --sandbox-id <sandbox-id> --show-credentials --output json > "$sandbox_connection_dir/connection.json"
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-sandbox BAILIAN_SKILL_VERSION=2.5.0 bl sandbox get --sandbox-id <sandbox-id> --show-credentials --output json > "$sandbox_connection_dir/connection.json"
 ```
 
 Check the command exit code before reading the file. `create` and `connect` can also return connection fields with `--show-credentials`, but neither command opens a terminal or browser. Without that flag, tokens are `[REDACTED]` and cannot authenticate a runtime request.
