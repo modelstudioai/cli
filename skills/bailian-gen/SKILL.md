@@ -20,15 +20,13 @@ description: >-
 
 # Bailian media generation & understanding (`bl image` / `bl video` / `bl speech` / `bl omni` / `bl vision`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. Examples in `reference/` are human documentation; prefix them before running. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. Examples in `reference/` stay bare; wrap with Call attribution when running. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
-**Agent bash (mandatory):** Never run a bare `bl` in the shell. Prefix every invocation except `--help` and `--version`, including commands copied from the human examples or `reference/` below. Do not `export` these variables. Set `BAILIAN_CALLER_NAME` to this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Sample lines use `codex`; replace with your host. `BAILIAN_SKILL_VERSION` is this file's `metadata.version` (`2.5.0`).
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-gen`; replace `codex` with this host):
 
 ```bash
 BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-gen BAILIAN_SKILL_VERSION=2.5.0 bl image generate --prompt "A cat in space" --out-dir ./out/
 ```
-
-Replace `codex` in the sample with this host's id. Reuse the same four-variable shape on every later `bl`, but set `BAILIAN_SKILL_NAME` to the owning skill for that command (see `bailian-protocol` Call attribution). Keep `BAILIAN_CALLER_NAME` as this host.
 
 ## Consent (short version; full rules in bailian-protocol)
 
@@ -62,23 +60,21 @@ Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <comma
 
 ## Watermark configuration
 
-Image generation and editing, video generation and editing, and reference-to-video enable watermarks by default. Change the default for the active Profile with the Agent bash shape. `bl config` is owned by `bailian-cli` (`BAILIAN_SKILL_NAME=bailian-cli`). Sample uses `codex`; replace with this host's id.
+Image generation and editing, video generation and editing, and reference-to-video enable watermarks by default. Change the default for the active Profile via `bl config` (owned by `bailian-cli`; wrap with Call attribution).
 
 ```bash
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config set --key watermark --value false
+bl config set --key watermark --value false
 ```
 
 Set it to `true` to enable watermarks again. To update a named Profile without switching Profiles, add `--config <name>`:
 
 ```bash
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl config set --config media --key watermark --value false
+bl config set --config media --key watermark --value false
 ```
 
 ## Local files (mandatory)
 
 Any command that accepts a **file URL** also accepts a **local path**; the CLI uploads to DashScope temporary storage (`oss://`, 48h) automatically. If the user gives a local file, pass the path directly — never ask them to upload or host a URL first.
-
-Human documentation. Agent shell: prefix each `bl` line with the Agent bash block above. Do not paste this fence as-is.
 
 ```bash
 bl image edit --image ./photo.png --prompt "Add sunset"
@@ -89,15 +85,6 @@ bl speech recognize --url ./meeting.wav
 ```
 
 ## Quick examples
-
-**Agent shell** — copy this shape; replace `codex` with this host's id. Do not drop the variables. Reuse the four-variable shape on later commands; set `BAILIAN_SKILL_NAME` to the owning skill for that command. If `bl` is inside `$(...)`, put the four variables inside the substitution.
-
-```bash
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-gen BAILIAN_SKILL_VERSION=2.5.0 bl image generate --prompt "A cat in space" --out-dir ./out/
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-gen BAILIAN_SKILL_VERSION=2.5.0 bl video generate --prompt "Sunset on the beach" --download sunset.mp4
-```
-
-Human documentation only. Do not paste this fence into an Agent shell.
 
 ```bash
 bl image generate --prompt "A cat in space" --out-dir ./out/

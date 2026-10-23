@@ -21,13 +21,11 @@ description: >-
 
 执行任何 `bl` 命令前，先读取共享协议 [bailian-protocol](../bailian-protocol/SKILL.md)，遵循鉴权、版本预检、调用归因和高风险确认。协议缺失不妨碍识别记忆意图或解释启用流程；但执行命令前须补齐，提示 `bl skill init`，不能静默退回内置记忆并声称本服务已工作。
 
-**Agent bash (mandatory):** Never run a bare `bl` in the shell. Prefix every invocation except `--help` and `--version`, including commands copied from `reference/memory.md`. Do not `export` these variables. Set `BAILIAN_CALLER_NAME` to this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Sample lines use `codex`; replace with your host. `BAILIAN_SKILL_VERSION` is this file's `metadata.version` (`2.5.0`). Examples in `reference/` are human documentation.
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-memory`; replace `codex` with this host). Fill `<bound-user-id>` / `<bound-workspace-id>` from `~/.bailian/personal-memory/config.json`; do not invent ids. Command names in the tables below are arguments only.
 
 ```bash
 BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-memory BAILIAN_SKILL_VERSION=2.5.0 bl memory list --user-id <bound-user-id> --workspace-id <bound-workspace-id> --page-size 1 --output json
 ```
-
-Fill `<bound-user-id>` and `<bound-workspace-id>` from `~/.bailian/personal-memory/config.json` (`user_id`, `workspace_id`). Do not invent a temporary user id. Replace `codex` in the sample with this host's id. Reuse the same four-variable shape on every later `bl`, but set `BAILIAN_SKILL_NAME` to the owning skill for that command (see `bailian-protocol` Call attribution). Keep `BAILIAN_CALLER_NAME` as this host. Command names in the tables below are arguments only.
 
 ## 入口与范围
 

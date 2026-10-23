@@ -15,15 +15,13 @@ description: >-
 
 # Bailian Sandbox (`bl sandbox`)
 
-Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKILL.md) for consent, high-risk confirmation, version checks, call attribution, authentication, and error handling. If it is missing, stop execution and prompt the user to install the full family with `bl skill init`. Examples in `reference/` are human documentation; prefix them before running.
+Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKILL.md) for consent, high-risk confirmation, version checks, call attribution, authentication, and error handling. If it is missing, stop execution and prompt the user to install the full family with `bl skill init`. Examples in `reference/` stay bare; wrap with Call attribution when running.
 
-**Agent bash (mandatory):** Never run a bare `bl` in the shell. Prefix every invocation except `--help` and `--version`. Do not `export` these variables. Set `BAILIAN_CALLER_NAME` to this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Sample lines use `codex`; replace with your host. `BAILIAN_SKILL_VERSION` is this file's `metadata.version` (`2.5.0`). `bl auth` / `bl config` use `BAILIAN_SKILL_NAME=bailian-cli`; `bl sandbox` uses `bailian-sandbox`.
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-sandbox`; replace `codex` with this host). `bl auth` / `bl config` are owned by `bailian-cli`.
 
 ```bash
 BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-sandbox BAILIAN_SKILL_VERSION=2.5.0 bl sandbox list
 ```
-
-Replace `codex` in the sample with this host's id. Reuse the same four-variable shape on every later `bl`, but set `BAILIAN_SKILL_NAME` to the owning skill for that command (see `bailian-protocol` Call attribution). Keep `BAILIAN_CALLER_NAME` as this host.
 
 ## Scope and setup
 

@@ -18,15 +18,13 @@ description: >-
 
 # Bailian managed agent IaC (`bl managed-agent`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): High-risk operation confirmation, Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. Examples in `reference/` are human documentation; prefix them before running. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): High-risk operation confirmation, Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. Examples in `reference/` stay bare; wrap with Call attribution when running. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
-**Agent bash (mandatory):** Never run a bare `bl` in the shell. Prefix every invocation except `--help` and `--version`, including commands copied from the human fences below. Do not `export` these variables. Set `BAILIAN_CALLER_NAME` to this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Sample lines use `codex`; replace with your host. `BAILIAN_SKILL_VERSION` is this file's `metadata.version` (`2.5.0`).
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-managed-agent`; replace `codex` with this host):
 
 ```bash
 BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-managed-agent BAILIAN_SKILL_VERSION=2.5.0 bl managed-agent plan
 ```
-
-Replace `codex` in the sample with this host's id. Reuse the same four-variable shape on every later `bl`, but set `BAILIAN_SKILL_NAME` to the owning skill for that command (see `bailian-protocol` Call attribution). Keep `BAILIAN_CALLER_NAME` as this host.
 
 ## Safety guardrail (the most important rule)
 
@@ -110,8 +108,6 @@ for explicit confirmation before re-running with `--yes`.
 ### Credential secret input
 
 `vault credential create --secret-env <ENV_NAME>` 中的参数是变量名，不是 Secret 明文。Secret 可来自 Shell export、CI Secret 注入或可选的 `.env`；CLI 会从当前目录向上自动加载最近的 `.env`，用户不必创建该文件。
-
-Human documentation. Agent shell: prefix the `bl` line with the Agent bash variables above. Do not paste this fence as-is. Do not `export` the `BAILIAN_*` variables; `export` below is only for the credential value.
 
 ```bash
 export PROD_API_TOKEN="..."
@@ -201,8 +197,6 @@ Managed Agents 的子线程通过 Event 中的 `session_thread_id` 暴露；公�
 - Deployment currently supports File Resources only. An effective Memory mount, including one inherited from the Agent, is rejected. / Deployment 本期仅支持 File，不能继承或直接挂载记忆库。
 - Preview memory writes with `--dry-run`, then obtain confirmation before adding `--yes`. Version redaction permanently removes that version's content. / 版本擦除不可撤销，必须先预览并确认。
 
-Human documentation. Agent shell: prefix each `bl` line with the Agent bash variables above. Do not paste this fence as-is.
-
 ```bash
 bl managed-agent memory-store create --name Notes --dry-run
 bl managed-agent memory-store memories list --workspace-id ws-example --store-id memstore-example --view full
@@ -219,8 +213,6 @@ Command fields and pagination are authoritative in `reference/managed-agent.md` 
 - Select the workspace with `--workspace-id` or the configured environment/Profile. Explicit flags take precedence over environment variables, then the selected Profile. Check `webhook <command> --help` for the available request fields.
 - `webhook events` uses `--limit` (1–100) and the opaque `--page` cursor; pass `next_page` back unchanged. / 事件分页游标保持原样传回，不转换成数字页码。
 - Successful `create` and `reset-secret` responses can contain `signing_secret`. Store that response securely for signature verification; do not paste it into logs, issue reports, or source files. Verbose diagnostics and errors must not expose secrets. / 创建或重置密钥的成功响应可能包含签名密钥；请安全保存，不写入日志或代码。
-
-Human documentation. Agent shell: prefix each `bl` line with the Agent bash variables above. Do not paste this fence as-is.
 
 ```bash
 bl managed-agent webhook list --workspace-id ws-example --output json

@@ -16,15 +16,13 @@ description: >-
 
 # Bailian fine-tuning pipeline (`bl dataset` / `bl finetune` / `bl deploy`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) (dataset / finetune / deploy) and `bl <command> --help` — do not guess flags. Examples in `reference/` are human documentation; prefix them before running. The whole pipeline requires an API key. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) (dataset / finetune / deploy) and `bl <command> --help` — do not guess flags. Examples in `reference/` stay bare; wrap with Call attribution when running. The whole pipeline requires an API key. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
-**Agent bash (mandatory):** Never run a bare `bl` in the shell. Prefix every invocation except `--help` and `--version`, including commands copied from the human examples or `reference/` below. Do not `export` these variables. Set `BAILIAN_CALLER_NAME` to this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Sample lines use `codex`; replace with your host. `BAILIAN_SKILL_VERSION` is this file's `metadata.version` (`2.5.0`).
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-finetune`; replace `codex` with this host). After deploy, `bl text chat` is owned by `bailian-cli`.
 
 ```bash
 BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-finetune BAILIAN_SKILL_VERSION=2.5.0 bl dataset validate --file train.jsonl
 ```
-
-Replace `codex` in the sample with this host's id. Reuse the same four-variable shape on every later `bl`, but set `BAILIAN_SKILL_NAME` to the owning skill for that command (see `bailian-protocol` Call attribution). Keep `BAILIAN_CALLER_NAME` as this host. Example: after deploy, `bl text chat` uses `BAILIAN_SKILL_NAME=bailian-cli`, not `bailian-finetune`. The numbered workflow below is arguments only.
 
 ## End-to-end workflow (follow in order)
 
@@ -74,15 +72,6 @@ The `capacity create` / `scale` / `renew` / `delete` and `overflow` commands are
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
 
 ## Quick examples
-
-**Agent shell** — copy this shape; replace `codex` with this host's id. Do not drop the variables. Reuse the four-variable shape on later commands; set `BAILIAN_SKILL_NAME` to the owning skill for that command.
-
-```bash
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-finetune BAILIAN_SKILL_VERSION=2.5.0 bl dataset validate --file train.jsonl
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-finetune BAILIAN_SKILL_VERSION=2.5.0 bl dataset upload --file train.jsonl
-```
-
-Human documentation only. Do not paste this fence into an Agent shell.
 
 ```bash
 bl dataset validate --file train.jsonl

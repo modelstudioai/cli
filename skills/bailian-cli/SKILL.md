@@ -23,13 +23,11 @@ description: >-
 
 **CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent, Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
-**Agent bash (mandatory):** Never run a bare `bl` in the shell. Prefix every invocation except `--help` and `--version`, including commands copied from the human examples or `reference/` below. Do not `export` these variables. Set `BAILIAN_CALLER_NAME` to this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Sample lines use `codex`; replace with your host. `BAILIAN_SKILL_VERSION` is this file's `metadata.version` (`2.5.0`).
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-cli`; replace `codex` with this host):
 
 ```bash
 BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl text chat --message "Write a poem about spring"
 ```
-
-Replace `codex` in the sample with this host's id. Reuse the same four-variable shape on every later `bl`, but set `BAILIAN_SKILL_NAME` to the owning skill for that command (see `bailian-protocol` Call attribution). Keep `BAILIAN_CALLER_NAME` as this host.
 
 > **Family hub** — This skill owns Bailian resource commands and the hub `reference/` (apps, knowledge, usage, auth, config, …).
 > Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `bl skill init`).
@@ -101,20 +99,11 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Bailian Sandbox instance / template lifecycle       | → skill `bailian-sandbox`                                                                                      | Fallback: `bl sandbox --help`                                                                                                      |
 | Web search (model-aware routing)                    | → skill `bailian-web-search`                                                                                   | Token Plan vs MCP path + fallback; fallback: `bl search web --help`                                                                |
 
-Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`. Examples in `reference/` are human documentation; an Agent runs them with the Agent bash prefix above.
+Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`. Examples in `reference/` stay bare; wrap with Call attribution when running.
 
 ---
 
 ## Quick examples
-
-**Agent shell** — copy this shape; replace `codex` with this host's id. Do not drop the variables. Reuse the four-variable shape on later commands; set `BAILIAN_SKILL_NAME` to the owning skill for that command.
-
-```bash
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl text chat --message "Write a poem about spring in Chinese"
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl usage stats
-```
-
-Human documentation only. Do not paste this fence into an Agent shell; prefix each `bl` line.
 
 ```bash
 bl text chat --message "Write a poem about spring in Chinese"
@@ -132,8 +121,6 @@ More examples per command: see `reference/<group>.md` (e.g. [`reference/text.md`
 ## Agent workflows
 
 ### Find and call an app
-
-Run each `bl` with the Agent bash prefix. The lines below are the arguments only.
 
 1. `bl app list --name <keyword> --output json`
 2. Pick `code` (app ID); handle `user_prompt_params` via `--biz-params '{"key":"value"}'`
