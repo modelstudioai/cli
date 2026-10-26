@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -79,6 +80,11 @@ export default defineCommand({
     "--agent-id aid-xxx --workspace-id ws-xxx",
     "--agent-id aid-xxx --agent-version beta",
   ],
+  validate(flags) {
+    const nonemptyError = validateNonemptyFlags({ "agent-id": flags.agentId });
+    if (nonemptyError) return nonemptyError;
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);

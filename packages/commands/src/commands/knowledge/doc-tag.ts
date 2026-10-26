@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -65,6 +66,9 @@ export default defineCommand({
     "--doc-id file-a --doc-id file-b --tag final --mode overwrite",
   ],
   validate(flags) {
+    const nonemptyError = validateNonemptyFlags({ "doc-id": flags.docId, tag: flags.tag });
+    if (nonemptyError) return nonemptyError;
+
     if (flags.docId.length > 20) return "--doc-id accepts at most 20 ids per call";
     if (flags.mode !== undefined && flags.mode !== "append" && flags.mode !== "overwrite") {
       return "--mode must be append or overwrite";

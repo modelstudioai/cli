@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -140,6 +141,16 @@ export default defineCommand({
     },
   ],
   validate(flags) {
+    const nonemptyError = validateNonemptyFlags({
+      "index-id": flags.indexId,
+      ...(flags.docId !== undefined ? { "doc-id": flags.docId } : {}),
+    });
+    if (nonemptyError) return nonemptyError;
+
+    if (flags.content !== undefined && !flags.imageUrl?.length && !flags.field?.length) {
+      const contentError = validateNonemptyFlags({ content: flags.content });
+      if (contentError) return contentError;
+    }
     const hasConvenience =
       flags.content !== undefined ||
       flags.contentFile !== undefined ||

@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -63,6 +64,14 @@ export default defineCommand({
     "--index-id idx-xxx --chunk-id chunk-a --chunk-id chunk-b --workspace-id ws-xxx",
     "--index-id idx-xxx --chunk-id chunk-a --yes",
   ],
+  validate(flags) {
+    const nonemptyError = validateNonemptyFlags({
+      "index-id": flags.indexId,
+      "chunk-id": flags.chunkId,
+    });
+    if (nonemptyError) return nonemptyError;
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);

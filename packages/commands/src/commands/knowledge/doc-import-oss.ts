@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import { basename } from "node:path";
 import {
   defineCommand,
@@ -95,6 +96,13 @@ export default defineCommand({
     "--bucket my-bucket --region cn-beijing --oss-key docs/a.pdf --oss-key docs/b.docx --overwrite",
   ],
   validate(flags) {
+    const nonemptyError = validateNonemptyFlags({
+      bucket: flags.bucket,
+      region: flags.region,
+      "oss-key": flags.ossKey,
+    });
+    if (nonemptyError) return nonemptyError;
+
     if (flags.ossKey.length > 10) return "--oss-key accepts at most 10 entries per call";
     if (flags.tag !== undefined && flags.tag.length > 10) {
       return "--tag accepts at most 10 entries";

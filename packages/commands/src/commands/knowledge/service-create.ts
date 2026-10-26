@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import { createKnowledgeService } from "./operations/service.ts";
 import { parseConfigFile } from "./service-update.ts";
 import {
@@ -96,6 +97,9 @@ export default defineCommand({
     "--name my-search --scene search --index-id idx-xxx",
   ],
   validate(flags) {
+    const nonemptyError = validateNonemptyFlags({ name: flags.name });
+    if (nonemptyError) return nonemptyError;
+
     if (flags.configFile !== undefined && flags.indexId !== undefined)
       return {
         "en-US": "Use either --config-file or --index-id.",

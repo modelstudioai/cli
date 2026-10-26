@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import { firstNonEmptyText, mediaSummary } from "./media-output.ts";
 import {
   defineCommand,
@@ -54,6 +55,9 @@ export default defineCommand({
     "--index-id idx-xxx --doc-id file-xxx --page-size 50",
   ],
   validate(flags) {
+    const nonemptyError = validateNonemptyFlags({ "index-id": flags.indexId });
+    if (nonemptyError) return nonemptyError;
+
     if (flags.pageSize !== undefined && (flags.pageSize < 1 || flags.pageSize > 100)) {
       return "--page-size must be between 1 and 100";
     }
