@@ -23,18 +23,23 @@ runtime/src/urls.ts                      ← 用户面控制台 URL(cn-only)
   MCP_WEBSEARCH_PAGE        mcpMarketplaceDetailPage("WebSearch")
   mcpMarketplaceDetailPage    BAILIAN_CONSOLE?tab=mcp#/mcp-market/detail/<serverCode>
 
-core/files/upload.ts                     ← 文件上传 endpoint(与 model 域凭证同源)
-  UploadOptions.baseUrl     Client 传入有效凭证的 baseUrl,经 normalizeModelBaseUrl 取 origin
-  /api/v1/uploads           直接 SDK 调用未提供 baseUrl 时保持 REGIONS.cn 默认值
+core/files/upload.ts                     ← model baseUrl → 同源临时上传 endpoint
+  北京/新加坡公共站         保持当前公共站 origin + /api/v1/uploads
+  北京/新加坡 Workspace     保持当前 Workspace origin + /api/v1/uploads
+  显式自定义代理            保持代理 origin,不改写到公共站
+  其他官方地域 / Token Plan 联网前报 usage error,引导使用 HTTPS URL
+  UploadOptions.baseUrl     直接 SDK 调用未提供时保持北京公共站默认值
 ```
 
-临时文件上传与后续模型请求使用同一 API origin,包括国际区、Workspace 和自定义代理。
 Prime 视频命令通过 `Client.uploadFile` / `resolveImageInput` 的 `defaultBaseUrl` 回调,
-复用 `resolvePrimeEndpoint` 推导默认 Workspace origin;显式配置的 API origin 仍优先,
-已有媒体 URL 不触发上传或求值上传默认地址。
-上传服务的区域/模型支持由服务端决定:错误中附上有效上传 endpoint 并保留原始服务响应,
-不自动换区域重试。
-如果所选服务不支持临时上传,使用服务可访问的 HTTPS 媒体 URL;已有 URL 会跳过本地上传。
+复用 `resolvePrimeEndpoint` 推导 model Workspace origin;上传策略与模型提交均保持该
+Workspace origin。显式配置的 model origin 仍优先;已有媒体 URL 不触发上传或求值上传默认地址。
+
+官方临时文件上传当前只支持 `cn-beijing` 与 `ap-southeast-1`;其他已知官方地域与
+Token Plan 在发送 API Key 前失败。显式自定义代理视为自身路由的权威来源,保持同源并由
+代理/服务决定能力。任何路径都不得回退公共站或跨 origin 重试;不支持时用户可改用服务
+可访问的 HTTPS 媒体 URL。服务端错误保留 message/code/request ID/raw response,并在
+message 的结构化上下文中展示本次有效上传 endpoint。
 
 ## 必查清单
 

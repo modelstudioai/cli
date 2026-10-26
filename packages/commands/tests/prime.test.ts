@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Client, REGIONS, type ApiKeyCredential, type Settings } from "bailian-cli-core";
+import { Client, ExitCode, REGIONS, type ApiKeyCredential, type Settings } from "bailian-cli-core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { resolvePrimeEndpoint, validatePrimeFlags } from "../src/commands/shared/prime.ts";
 import videoGenerate from "../src/commands/video/generate.ts";
@@ -145,20 +145,25 @@ describe("Prime video upload origins", () => {
     } as never);
   }
 
-  function expectUploadOrigin(origin: string, uploadCount = 1) {
+  function expectRequestOrigins(options: {
+    uploadOrigin: string;
+    submitOrigin: string;
+    uploadCount?: number;
+  }) {
+    const { uploadOrigin, submitOrigin, uploadCount = 1 } = options;
     const policyCalls = fetchMock.mock.calls.filter(([input]) => {
       const url = input instanceof Request ? input.url : input.toString();
       return url.includes("/api/v1/uploads?");
     });
     expect(policyCalls).toHaveLength(uploadCount);
     for (const [policyUrl, policyOptions] of policyCalls) {
-      expect(policyUrl).toBe(`${origin}/api/v1/uploads?action=getPolicy&model=wan3.0-video`);
+      expect(policyUrl).toBe(`${uploadOrigin}/api/v1/uploads?action=getPolicy&model=wan3.0-video`);
       expect(new Headers(policyOptions?.headers).get("Authorization")).toBe(
         "Bearer synthetic-workspace-key",
       );
     }
     const [submitUrl, submitOptions] = fetchMock.mock.calls.at(-1)!;
-    expect(submitUrl).toBe(`${origin}/api/v1/services/aigc/video-generation/video-synthesis`);
+    expect(submitUrl).toBe(`${submitOrigin}/api/v1/services/aigc/video-generation/video-synthesis`);
     expect(new Headers(submitOptions?.headers).get("Authorization")).toBe(
       "Bearer synthetic-workspace-key",
     );
@@ -175,24 +180,49 @@ describe("Prime video upload origins", () => {
           settingsWorkspaceId: credentialSource === "env" ? "ws_test" : undefined,
         },
       );
-      expectUploadOrigin(workspaceOrigin);
+      expectRequestOrigins({ uploadOrigin: workspaceOrigin, submitOrigin: workspaceOrigin });
     },
   );
 
   test("uploads both local keyframes to the derived workspace", async () => {
     await runVideo({ image: fixturePath, lastFrame: fixturePath, workspaceId: "ws_test" });
-    expectUploadOrigin(workspaceOrigin, 2);
+    expectRequestOrigins({
+      uploadOrigin: workspaceOrigin,
+      submitOrigin: workspaceOrigin,
+      uploadCount: 2,
+    });
   });
 
   test.each([
-    REGIONS.intl,
-    REGIONS.us,
-    "https://configured-workspace.ap-southeast-1.maas.aliyuncs.com",
-    "https://proxy.example.test",
-  ])("keeps the configured origin %s without requiring a workspace", async (baseUrl) => {
-    await runVideo({ file: fixturePath }, { baseUrl });
-    expectUploadOrigin(baseUrl);
-  });
+    [REGIONS.cn, REGIONS.cn],
+    [REGIONS.intl, REGIONS.intl],
+    [
+      "https://configured-workspace.cn-beijing.maas.aliyuncs.com",
+      "https://configured-workspace.cn-beijing.maas.aliyuncs.com",
+    ],
+    [
+      "https://configured-workspace.ap-southeast-1.maas.aliyuncs.com",
+      "https://configured-workspace.ap-southeast-1.maas.aliyuncs.com",
+    ],
+    ["https://proxy.example.test", "https://proxy.example.test"],
+  ])(
+    "routes configured origin %s through upload service %s without requiring a workspace",
+    async (baseUrl, uploadOrigin) => {
+      await runVideo({ file: fixturePath }, { baseUrl });
+      expectRequestOrigins({ uploadOrigin, submitOrigin: baseUrl });
+    },
+  );
+
+  test.each([REGIONS.us, "https://configured-workspace.us-east-1.maas.aliyuncs.com"])(
+    "rejects unsupported local upload origin %s before submitting",
+    async (baseUrl) => {
+      await expect(runVideo({ file: fixturePath }, { baseUrl })).rejects.toMatchObject({
+        exitCode: ExitCode.USAGE,
+        hint: expect.stringContaining("HTTPS media URL"),
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
 
   test("rejects a missing default workspace before making an upload request", async () => {
     await expect(runVideo({ file: fixturePath })).rejects.toMatchObject({
@@ -203,6 +233,10 @@ describe("Prime video upload origins", () => {
 
   test("passes an existing media URL through without uploading", async () => {
     await runVideo({ file: "https://media.example.test/video.mp4", workspaceId: "ws_test" });
-    expectUploadOrigin(workspaceOrigin, 0);
+    expectRequestOrigins({
+      uploadOrigin: workspaceOrigin,
+      submitOrigin: workspaceOrigin,
+      uploadCount: 0,
+    });
   });
 });

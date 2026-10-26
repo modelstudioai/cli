@@ -51,72 +51,116 @@ afterEach(() => {
   rmSync(fixtureDir, { recursive: true, force: true });
 });
 
-function makeClient(baseUrl: string): Client {
+function makeClient(baseUrl: string, token = "sk-synthetic-profile-key"): Client {
   return new Client({
     identity,
     settings,
     baseUrl: REGIONS.cn,
-    apiCred: { token: "synthetic-profile-key", baseUrl, source: "config" },
+    apiCred: { token, baseUrl, source: "config" },
   });
+}
+
+function expectSuccessfulUpload(uploadOrigin: string): void {
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  const [policyUrl, policyOptions] = fetchMock.mock.calls[0]!;
+  expect(policyUrl).toBe(`${uploadOrigin}/api/v1/uploads?action=getPolicy&model=wan3.0-video`);
+  expect(new Headers(policyOptions?.headers).get("Authorization")).toBe(
+    "Bearer sk-synthetic-profile-key",
+  );
+  const [uploadUrl, uploadOptions] = fetchMock.mock.calls[1]!;
+  expect(uploadUrl).toBe(policy.upload_host);
+  expect(uploadOptions).toBeDefined();
+  const uploadRequestOptions = uploadOptions!;
+  expect(uploadRequestOptions.method).toBe("POST");
+  expect((uploadRequestOptions.body as FormData).get("key")).toBe("temporary/sample.mp4");
+  expect(new Headers(uploadRequestOptions.headers).has("Authorization")).toBe(false);
 }
 
 describe("regional temporary file uploads", () => {
   test.each([
-    REGIONS.cn,
-    REGIONS.intl,
-    REGIONS.us,
-    "https://ws-example.ap-southeast-1.maas.aliyuncs.com",
-    "https://proxy.example.test",
-  ])("pairs the upload policy host with the credential for %s", async (baseUrl) => {
+    [REGIONS.cn, REGIONS.cn],
+    [REGIONS.intl, REGIONS.intl],
+    [
+      "https://ws-example.cn-beijing.maas.aliyuncs.com",
+      "https://ws-example.cn-beijing.maas.aliyuncs.com",
+    ],
+    [
+      "https://ws-example.ap-southeast-1.maas.aliyuncs.com",
+      "https://ws-example.ap-southeast-1.maas.aliyuncs.com",
+    ],
+    ["https://proxy.example.test", "https://proxy.example.test"],
+  ])("routes %s through the supported upload service %s", async (baseUrl, uploadOrigin) => {
     await expect(makeClient(baseUrl).uploadFile(fixturePath, "wan3.0-video")).resolves.toBe(
       "oss://temporary/sample.mp4",
     );
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const [policyUrl, policyOptions] = fetchMock.mock.calls[0]!;
-    expect(policyUrl).toBe(`${baseUrl}/api/v1/uploads?action=getPolicy&model=wan3.0-video`);
-    expect(new Headers(policyOptions?.headers).get("Authorization")).toBe(
-      "Bearer synthetic-profile-key",
-    );
-    const [uploadUrl, uploadOptions] = fetchMock.mock.calls[1]!;
-    expect(uploadUrl).toBe(policy.upload_host);
-    expect(uploadOptions?.method).toBe("POST");
-    expect((uploadOptions?.body as FormData).get("key")).toBe("temporary/sample.mp4");
-    expect(new Headers(uploadOptions?.headers).has("Authorization")).toBe(false);
+    expectSuccessfulUpload(uploadOrigin);
   });
 
   test("keeps the CN default for existing direct uploadFile callers", async () => {
     await uploadFile({
-      apiKey: "synthetic-profile-key",
+      apiKey: "sk-synthetic-profile-key",
       model: "wan3.0-video",
       filePath: fixturePath,
       identity,
     });
-    expect(fetchMock.mock.calls[0]![0]).toBe(
-      `${REGIONS.cn}/api/v1/uploads?action=getPolicy&model=wan3.0-video`,
-    );
+    expectSuccessfulUpload(REGIONS.cn);
   });
 
-  test("normalizes a supplied upload base URL using the shared origin contract", async () => {
+  test("normalizes a supported model base URL before resolving its upload region", async () => {
     const options = {
       identity,
       baseUrl: `${REGIONS.intl}/compatible-mode/v1/?unused=value#fragment`,
     };
-    await resolveFileUrl(fixturePath, "synthetic-profile-key", "wan3.0-video", options);
-    expect(fetchMock.mock.calls[0]![0]).toBe(
-      `${REGIONS.intl}/api/v1/uploads?action=getPolicy&model=wan3.0-video`,
-    );
+    await resolveFileUrl(fixturePath, "sk-synthetic-profile-key", "wan3.0-video", options);
+    expectSuccessfulUpload(REGIONS.intl);
   });
 
-  test("preserves unsupported-service errors without retrying another region", async () => {
+  test.each([
+    [REGIONS.us, "dashscope-us.aliyuncs.com"],
+    ["https://ws-example.us-east-1.maas.aliyuncs.com", "us-east-1"],
+    ["https://ws-example.cn-shanghai.maas.aliyuncs.com", "cn-shanghai"],
+    ["https://token-plan.cn-beijing.maas.aliyuncs.com", "Token Plan"],
+  ])("rejects unsupported local uploads for %s", async (baseUrl, target) => {
+    await expect(makeClient(baseUrl).uploadFile(fixturePath, "wan3.0-video")).rejects.toMatchObject(
+      {
+        exitCode: ExitCode.USAGE,
+        message: expect.stringContaining(target),
+        hint: expect.stringContaining("HTTPS media URL"),
+      },
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects Token Plan keys before requesting a policy", async () => {
+    await expect(
+      makeClient(REGIONS.cn, "sk-sp-synthetic-plan-key").uploadFile(fixturePath, "wan3.0-video"),
+    ).rejects.toMatchObject({
+      exitCode: ExitCode.USAGE,
+      message: expect.stringContaining("Token Plan"),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("preserves upload-policy service errors without retrying another region", async () => {
     fetchMock.mockReset();
-    const response = '{"code":"UnsupportedOperation","message":"Temporary uploads unavailable"}';
+    const response = JSON.stringify({
+      code: "UnsupportedOperation",
+      message: "Temporary uploads unavailable",
+      request_id: "request-test",
+    });
     fetchMock.mockResolvedValueOnce(new Response(response, { status: 404 }));
     await expect(
       makeClient(REGIONS.intl).uploadFile(fixturePath, "wan3.0-video"),
     ).rejects.toMatchObject({
       exitCode: ExitCode.GENERAL,
-      message: `Failed to get upload policy (HTTP 404, ${REGIONS.intl}/api/v1/uploads): ${response}`,
+      message: `HTTP 404; code=UnsupportedOperation; request_id=request-test; upload_endpoint=${REGIONS.intl}/api/v1/uploads - Temporary uploads unavailable`,
+      hint: undefined,
+      api: {
+        httpStatus: 404,
+        apiCode: "UnsupportedOperation",
+        requestId: "request-test",
+      },
+      rawResponse: response,
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]![0]).toBe(
