@@ -106,6 +106,11 @@ export default defineCommand({
     },
   ],
   validate(flags) {
+    if (!flags.agentId.trim())
+      return {
+        "en-US": "--agent-id must not be empty or whitespace.",
+        "zh-CN": "--agent-id 不能为空或仅包含空白字符。",
+      };
     if (!flags.query?.trim() && !flags.image?.some((url) => url.trim()))
       return { "en-US": "Provide --query or --image.", "zh-CN": "请提供 --query 或 --image。" };
     return undefined;

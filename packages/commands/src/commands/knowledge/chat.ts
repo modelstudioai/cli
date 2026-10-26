@@ -233,6 +233,16 @@ export default defineCommand({
     },
   ],
   validate(flags) {
+    if (!flags.agentId.trim())
+      return {
+        "en-US": "--agent-id must not be empty or whitespace.",
+        "zh-CN": "--agent-id 不能为空或仅包含空白字符。",
+      };
+    if (flags.image?.some((url) => !url.trim()))
+      return {
+        "en-US": "--image must contain nonempty URLs.",
+        "zh-CN": "--image 的图片地址不能为空或仅包含空白字符。",
+      };
     if (flags.messagesFile && (flags.message?.length || flags.image?.length))
       return {
         "en-US": "--messages-file cannot be combined with --message or --image.",
@@ -242,6 +252,28 @@ export default defineCommand({
       return {
         "en-US": "Provide --message, --messages-file or --image.",
         "zh-CN": "请提供 --message、--messages-file 或 --image。",
+      };
+    if (
+      !flags.messagesFile &&
+      !flags.image?.length &&
+      !parseMessages(flags).some((message) => {
+        if (message.tool_calls?.length) return true;
+        if (typeof message.content === "string") return !!message.content.trim();
+        return (
+          Array.isArray(message.content) &&
+          message.content.some(
+            (part) =>
+              (part?.type === "text" && typeof part.text === "string" && !!part.text.trim()) ||
+              (part?.type === "image_url" &&
+                typeof part.image_url?.url === "string" &&
+                !!part.image_url.url.trim()),
+          )
+        );
+      })
+    )
+      return {
+        "en-US": "Provide nonempty --message content or --image.",
+        "zh-CN": "请通过 --message 提供非空消息内容，或通过 --image 提供图片。",
       };
     if (
       flags.sessionFileId &&

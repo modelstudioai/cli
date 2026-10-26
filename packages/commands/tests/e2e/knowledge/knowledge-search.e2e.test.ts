@@ -6,6 +6,7 @@ import {
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runCommandInProcess,
 } from "../helpers.ts";
 import { KNOWLEDGE_SEARCH_ROUTES } from "../topic-routes.ts";
 
@@ -53,6 +54,30 @@ describe("e2e: knowledge search", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--agent-id|Usage:/i);
+  });
+
+  test.each([
+    { agentId: "", dryRun: true },
+    { agentId: " \t\n", dryRun: true },
+    { agentId: "", dryRun: false },
+    { agentId: " \t\n", dryRun: false },
+  ])("拒绝空检索服务 ID：%j", async ({ agentId, dryRun }) => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SEARCH_ROUTES, [
+      "knowledge",
+      "search",
+      "--query",
+      "有效查询",
+      "--agent-id",
+      agentId,
+      ...(dryRun ? ["--dry-run"] : []),
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stdout).toBe("");
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 2, message: "--agent-id must not be empty or whitespace." },
+    });
   });
 
   test("缺少 --workspace-id 时非零退出并提示", async () => {
