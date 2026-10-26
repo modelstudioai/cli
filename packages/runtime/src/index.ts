@@ -27,7 +27,7 @@ export type { ParsePathResult } from "./args.ts";
 
 // Process-level setup / error handling
 export { setupProxyFromEnv } from "./proxy.ts";
-export { handleError } from "./error-handler.ts";
+export { handleError, normalizeError } from "./error-handler.ts";
 export { CLI_VERSION } from "./version.ts";
 
 // Console URLs referenced by commands (e.g. auth/status, banner)

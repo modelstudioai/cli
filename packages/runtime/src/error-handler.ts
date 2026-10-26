@@ -168,6 +168,40 @@ function writeBailianErrorText(err: BailianError): void {
   process.stderr.write(`${pad("Exit code:")}${err.exitCode}\n`);
 }
 
+export function normalizeError(err: unknown, cliName: string): BailianError {
+  binName = cliName;
+  if (err instanceof BailianError) return err;
+  if (err instanceof Error) {
+    if (
+      err.name === "AbortError" ||
+      err.name === "TimeoutError" ||
+      err.message.includes("timed out")
+    ) {
+      const timeout = new BailianError(
+        "Request timed out.",
+        ExitCode.TIMEOUT,
+        "Try increasing --timeout (e.g. --timeout 60).\n" +
+          `${baseUrlHint()}\n` +
+          `Run: ${binName} auth status — to check credentials.`,
+        { cause: err },
+      );
+      return timeout;
+    }
+
+    if (err instanceof TypeError && err.message === "fetch failed") {
+      return fromFetchFailed(err);
+    }
+
+    const ecode = (err as NodeJS.ErrnoException).code;
+    if (typeof ecode === "string" && ecode.startsWith("E")) {
+      return fromFsError(err as NodeJS.ErrnoException);
+    }
+
+    return new BailianError(err.message, ExitCode.GENERAL, undefined, { cause: err });
+  }
+  return new BailianError(String(err));
+}
+
 export function handleError(err: unknown, cliName: string): never {
   binName = cliName;
 
@@ -186,26 +220,12 @@ export function handleError(err: unknown, cliName: string): never {
     if (
       err.name === "AbortError" ||
       err.name === "TimeoutError" ||
-      err.message.includes("timed out")
+      err.message.includes("timed out") ||
+      (err instanceof TypeError && err.message === "fetch failed") ||
+      (typeof (err as NodeJS.ErrnoException).code === "string" &&
+        (err as NodeJS.ErrnoException).code!.startsWith("E"))
     ) {
-      const timeout = new BailianError(
-        "Request timed out.",
-        ExitCode.TIMEOUT,
-        "Try increasing --timeout (e.g. --timeout 60).\n" +
-          `${baseUrlHint()}\n` +
-          `Run: ${binName} auth status — to check credentials.`,
-        { cause: err },
-      );
-      return handleError(timeout, binName);
-    }
-
-    if (err instanceof TypeError && err.message === "fetch failed") {
-      return handleError(fromFetchFailed(err), binName);
-    }
-
-    const ecode = (err as NodeJS.ErrnoException).code;
-    if (typeof ecode === "string" && ecode.startsWith("E")) {
-      return handleError(fromFsError(err as NodeJS.ErrnoException), binName);
+      return handleError(normalizeError(err, cliName), cliName);
     }
 
     process.stderr.write(`\n${pad("Error:")}${err.message}\n`);
