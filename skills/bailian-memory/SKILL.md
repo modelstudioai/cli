@@ -1,7 +1,7 @@
 ---
 name: bailian-memory
 metadata:
-  version: "2.5.0"
+  version: "2.5.1"
   requires:
     bins: ["bl"]
 description: >-
@@ -19,7 +19,13 @@ description: >-
 
 **读取本 Skill、检查本地启用状态与发送云端请求是三个不同步骤。** 前两步不以已经启用为前提；只有云端个人记忆读写需要启用授权。安装 Skill 不代表用户已授权上传。
 
-执行任何 `bl` 命令前，先读取共享协议 [bailian-protocol](../bailian-protocol/SKILL.md)，遵循鉴权、版本预检和高风险确认。协议缺失不妨碍识别记忆意图或解释启用流程；但执行命令前须补齐，提示 `bl skill init`，不能静默退回内置记忆并声称本服务已工作。
+执行任何 `bl` 命令前，先读取共享协议 [bailian-protocol](../bailian-protocol/SKILL.md)，遵循鉴权、版本预检、调用归因和高风险确认。协议缺失不妨碍识别记忆意图或解释启用流程；但执行命令前须补齐，提示 `bl skill init`，不能静默退回内置记忆并声称本服务已工作。
+
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-memory`; replace `codex` with this host). Fill `<bound-user-id>` / `<bound-workspace-id>` from `~/.bailian/personal-memory/config.json`; do not invent ids. Command names in the tables below are arguments only.
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-memory BAILIAN_SKILL_VERSION=2.5.0 bl memory list --user-id <bound-user-id> --workspace-id <bound-workspace-id> --page-size 1 --output json
+```
 
 ## 入口与范围
 

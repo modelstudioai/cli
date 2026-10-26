@@ -1,7 +1,7 @@
 ---
 name: bailian-cli
 metadata:
-  version: "2.5.0"
+  version: "2.5.1"
   requires:
     bins: ["bl"]
 description: >-
@@ -21,7 +21,13 @@ description: >-
 
 # Aliyun Model Studio CLI (`bl`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent, Version & updates (pre-flight checklist), Setup & auth, and CLI errors: report an issue. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent, Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-cli`; replace `codex` with this host):
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 bl text chat --message "Write a poem about spring"
+```
 
 > **Family hub** — This skill owns Bailian resource commands and the hub `reference/` (apps, usage, auth, config, …).
 > Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `bl skill init`).
@@ -94,7 +100,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Bailian Sandbox instance / template lifecycle       | → skill `bailian-sandbox`                                                                                      | Fallback: `bl sandbox --help`                                                                                                      |
 | Web search (model-aware routing)                    | → skill `bailian-web-search`                                                                                   | Token Plan vs MCP path + fallback; fallback: `bl search web --help`                                                                |
 
-Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`.
+Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`. Examples in `reference/` stay bare; wrap with Call attribution when running.
 
 ---
 

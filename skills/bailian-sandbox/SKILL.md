@@ -1,7 +1,7 @@
 ---
 name: bailian-sandbox
 metadata:
-  version: "2.5.0"
+  version: "2.5.1"
   requires:
     bins: ["bl"]
 description: >-
@@ -15,7 +15,13 @@ description: >-
 
 # Bailian Sandbox (`bl sandbox`)
 
-Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKILL.md) for consent, high-risk confirmation, version checks, authentication, and error handling. If it is missing, stop execution and prompt the user to install the full family with `bl skill init`.
+Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKILL.md) for consent, high-risk confirmation, version checks, call attribution, authentication, and error handling. If it is missing, stop execution and prompt the user to install the full family with `bl skill init`. Examples in `reference/` stay bare; wrap with Call attribution when running.
+
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-sandbox`; replace `codex` with this host). `bl auth` / `bl config` are owned by `bailian-cli`.
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-sandbox BAILIAN_SKILL_VERSION=2.5.0 bl sandbox list
+```
 
 ## Scope and setup
 

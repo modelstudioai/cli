@@ -5,7 +5,9 @@ import { expect, test } from "vite-plus/test";
 import { makeConfigStore } from "../src/config/store.ts";
 import { makeAuthStore } from "../src/auth/store.ts";
 import { resolveApiKey } from "../src/auth/resolver.ts";
-import { refreshAccessToken } from "../src/auth/refresh-token.ts";
+import { generateCLIAccessToken, refreshAccessToken } from "../src/auth/refresh-token.ts";
+import { Client } from "../src/client/client.ts";
+import { withIsolatedHome } from "./helpers/isolation.ts";
 import {
   buildSettings,
   buildSources,
@@ -236,11 +238,24 @@ test("Console access token 自动刷新写回当前选中 Config", async () => {
     await activateConfigProfile("dev");
 
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ cliAccessToken: "refreshed-dev" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+    globalThis.fetch = async (input, init) => {
+      const isGeneration =
+        new URL(input instanceof Request ? input.url : input).pathname ===
+        "/modelstudio/cli/generateAccessToken";
+      if (!isGeneration) {
+        expect(readConfigFile("dev").access_token).toBe("expired-dev");
+        expect(new Headers(init?.headers).get("authorization")).toBe("Bearer refreshed-dev");
+      }
+      return new Response(
+        JSON.stringify(
+          isGeneration ? { cliAccessToken: "refreshed-dev" } : { data: { success: true } },
+        ),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    };
     try {
       const sources = buildSources({});
       const refreshed = await refreshAccessToken({
@@ -262,6 +277,165 @@ test("Console access token 自动刷新写回当前选中 Config", async () => {
     }
   });
 });
+
+const tokenTestIdentity = {
+  binName: "bl",
+  version: "test",
+  npmPackage: "bailian-cli",
+  clientName: "bailian-cli-test",
+};
+
+test.each([
+  { baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com", expected: "ap-southeast-1" },
+  { baseUrl: "https://workspace.ap-southeast-1.maas.aliyuncs.com", expected: "ap-southeast-1" },
+  { baseUrl: "https://dashscope-intl.aliyuncs.com/api/v1", expected: "ap-southeast-1" },
+  { baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com", expected: "cn-beijing" },
+  { baseUrl: "https://dashscope.aliyuncs.com", expected: "cn-beijing" },
+  {
+    baseUrl: "https://proxy.example.com",
+    consoleRegion: "ap-southeast-1",
+    expected: "ap-southeast-1",
+  },
+  {
+    baseUrl: "https://dashscope-intl.aliyuncs.com",
+    consoleRegion: "cn-beijing",
+    expected: "cn-beijing",
+  },
+])(
+  "CLI token 地域解析：$baseUrl / $consoleRegion",
+  async ({ baseUrl, consoleRegion, expected }) => {
+    const originalFetch = globalThis.fetch;
+    const hosts: string[] = [];
+    globalThis.fetch = async (input) => {
+      hosts.push(new URL(input instanceof Request ? input.url : input).hostname);
+      return new Response(JSON.stringify({ cliAccessToken: "candidate" }));
+    };
+    try {
+      await generateCLIAccessToken({
+        identity: tokenTestIdentity,
+        settings: buildSettings({ flags: { consoleRegion }, file: {}, env: {} }),
+        baseUrl,
+        accessKeyId: "mock-ak",
+        accessKeySecret: "mock-secret",
+      });
+      expect(hosts).toEqual([`modelstudio.${expected}.aliyuncs.com`]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  },
+);
+
+test.each([
+  { baseUrl: "https://unknown.example.com" },
+  { baseUrl: "https://dashscope-us.aliyuncs.com" },
+  { baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com.evil.test" },
+  { baseUrl: "https://dashscope.aliyuncs.com", consoleRegion: "unsupported-region" },
+])("CLI token 无法解析地域时不请求北京：$baseUrl", async ({ baseUrl, consoleRegion }) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = async () => {
+    requests++;
+    return new Response(JSON.stringify({ cliAccessToken: "candidate" }));
+  };
+  try {
+    await expect(
+      generateCLIAccessToken({
+        identity: tokenTestIdentity,
+        settings: buildSettings({ flags: { consoleRegion }, file: {}, env: {} }),
+        baseUrl,
+        accessKeyId: "mock-ak",
+        accessKeySecret: "mock-secret",
+      }),
+    ).rejects.toMatchObject({ exitCode: 2 });
+    expect(requests).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test.each(["success", "NotLogined", "network"])(
+  "Console 刷新后重试 %s：成功才落盘",
+  async (outcome) => {
+    await withIsolatedHome(async () => {
+      await writeConfigFile({ access_token: "default-token" });
+      await writeConfigFile(
+        {
+          access_token: "old-token",
+          access_key_id: "mock-ak",
+          access_key_secret: "mock-secret",
+          console_region: "ap-southeast-1",
+          console_site: "international",
+        },
+        "token-plan",
+      );
+      const settings = buildSettings({ flags: {}, file: {}, env: {}, configName: "token-plan" });
+      const client = new Client({
+        identity: tokenTestIdentity,
+        settings,
+        baseUrl: "https://proxy.example.com",
+        consoleCred: {
+          token: "old-token",
+          region: "ap-southeast-1",
+          site: "international",
+          switchAgent: 123,
+          source: "config",
+        },
+      });
+      const originalFetch = globalThis.fetch;
+      const authorizations: string[] = [];
+      let generations = 0;
+      globalThis.fetch = async (input, init) => {
+        const endpoint = new URL(input instanceof Request ? input.url : input);
+        if (endpoint.pathname === "/modelstudio/cli/generateAccessToken") {
+          generations++;
+          expect(endpoint.hostname).toBe("modelstudio.ap-southeast-1.aliyuncs.com");
+          return new Response(JSON.stringify({ cliAccessToken: "new-token" }));
+        }
+        expect(endpoint.hostname).toBe("bailian-singapore-cs.alibabacloud.com");
+        const authorization = new Headers(init?.headers).get("authorization")!;
+        authorizations.push(authorization);
+        const payload = JSON.parse(new URLSearchParams(init?.body as string).get("params")!);
+        expect(payload.Data.cornerstoneParam.switchAgent).toBe(123);
+        if (authorizations.length <= 2) {
+          expect(readConfigFile("token-plan").access_token).toBe("old-token");
+        }
+        if (authorization === "Bearer old-token" || outcome === "NotLogined") {
+          return new Response(
+            JSON.stringify({
+              data: { success: false, errorCode: "BailianGateway.Login.NotLogined" },
+            }),
+          );
+        }
+        if (outcome === "network") throw new TypeError("fetch failed");
+        return new Response(JSON.stringify({ data: { success: true, value: "ok" } }));
+      };
+      try {
+        if (outcome === "success") {
+          await expect(client.console("test.api", {})).resolves.toMatchObject({
+            data: { value: "ok" },
+          });
+          expect(readConfigFile("token-plan").access_token).toBe("new-token");
+          await client.console("test.api", {});
+          expect(authorizations).toEqual([
+            "Bearer old-token",
+            "Bearer new-token",
+            "Bearer new-token",
+          ]);
+        } else {
+          await expect(client.console("test.api", {})).rejects.toThrow(
+            outcome === "network" ? "fetch failed" : "not logged in",
+          );
+          expect(readConfigFile("token-plan").access_token).toBe("old-token");
+          expect(authorizations).toEqual(["Bearer old-token", "Bearer new-token"]);
+        }
+        expect(generations).toBe(1);
+        expect(readConfigFile().access_token).toBe("default-token");
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+  },
+);
 
 test("ConfigStore:命名 config 与默认配置隔离且写入保留其它 block", async () => {
   await inTempConfigDir(async () => {

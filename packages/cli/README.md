@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
+<img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/banner.jpg" alt="Aliyun Model Studio CLI" />
 
 **The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
@@ -37,7 +37,7 @@ _Built for AI Agents. Every command works as a structured tool call._
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
-    <img src="https://img.alicdn.com/imgextra/i1/O1CN01Q5052k232Hd36NodG_!!6000000007197-0-tps-2940-1656.jpg" alt="Click to play the demo video" width="720" />
+    <img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/showcase-short-film.jpg" alt="Click to play the demo video" width="720" />
   </a>
 </p>
 
@@ -57,7 +57,7 @@ A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from 
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/2v0GYLbJSQb2saj4iopTJDW3iRIHsintYlK-wTKbhqE.mp4">
-    <img src="https://img.alicdn.com/imgextra/i4/6000000001674/O1CN01xhzixhxltbH3LxWu_!!6000000001674-0-tbvideo.jpg" alt="Click to play the demo video" width="720" />
+    <img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/showcase-managed-agent.jpg" alt="Click to play the demo video" width="720" />
   </a>
 </p>
 
@@ -150,6 +150,22 @@ bl auth login --console
 
 Use `--console-site international` for the international console.
 
+The CLI always prints the login URL. To choose a browser yourself, keep the command running and open the URL on the **same machine**:
+
+```bash
+bl auth login --console --no-browser --console-site international
+```
+
+If the browser blocks the local callback, check the console site's local-network permission or try Firefox. The PNA compatibility header does not bypass Chrome's local-network permission or Safari's mixed-content restrictions. No callback within 15 minutes is a failure (exit code 5), not a successful login.
+
+If you already have a valid console access token, import it via stdin without a browser or local callback server. Specify the token's actual region and site; for example, in a POSIX shell:
+
+```bash
+bl auth login --console --token-stdin --console-site international --console-region ap-southeast-1 < /path/to/console-token.txt
+```
+
+Input must be one raw token (up to 64 KiB), not JSON or `Bearer ...`; interactive terminal input is rejected to avoid echoing secrets. Use a protected file or trusted pipe, never put the token in command arguments or shell history, and remove temporary secret files after use. The CLI validates the token before saving; failure leaves existing credentials and the active Profile unchanged. Add `--config <name>` to save and activate a specific Profile on success. This imports only the console session, not a model API key.
+
 ### API Key
 
 To use an existing ordinary API key or a Token Plan subscription key, run the same command:
@@ -202,7 +218,7 @@ Bug reports, feature requests, and PRs are welcome. See [CONTRIBUTING.md](https:
 
 Scan the QR code to join the Aliyun Model Studio CLI DingTalk user group for usage help, troubleshooting, bug reports, and tips from other users.
 
-<img src="https://img.alicdn.com/imgextra/i3/O1CN015uuhYGb6j0L12xJZ_!!6000000006304-2-tps-516-485.png" alt="Aliyun Model Studio CLI DingTalk user group" width="240" />
+<img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/dingtalk-group.png" alt="Aliyun Model Studio CLI DingTalk user group" width="240" />
 
 ## Links
 

@@ -23,7 +23,8 @@ test("Sandbox is a valid standalone skill aligned with the CLI version", () => {
   expect(frontmatter.metadata.version).toBe(cliPackage.version);
 
   for (const link of skillMarkdown.matchAll(/\]\(([^)]+)\)/g)) {
-    expect(existsSync(join(sandboxSkillDirectory, link[1]))).toBe(true);
+    const target = link[1].split("#")[0];
+    expect(existsSync(join(sandboxSkillDirectory, target)), target).toBe(true);
   }
 });
 
