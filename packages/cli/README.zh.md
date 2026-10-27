@@ -125,6 +125,18 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 > 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?spm=a2ty07.github)
 
+### 体验知识库
+
+准备有效的 API Key 和工作空间后，先预览初始化计划：
+
+```bash
+bl knowledge init --workspace-id <workspace-id> --dry-run
+```
+
+知识库创建成功即持续按时计费，即使没有检索也一样。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效；模型调用另计，当前账户剩余额度未知。查看计划与[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)，**确认本次操作后**，在同一命令中去掉 `--dry-run` 并添加 `--yes` 执行。
+
+保留返回的 ID 和恢复记录。退出 CLI 或后续步骤失败不会停止计费；按返回的清理动作删除不再需要的知识库。检索及清理示例见 [Knowledge Studio 快速开始](packages/kscli/README.zh.md#快速开始)。知识库 Skill `bailian-knowledge` 通过 `bl skill init` 安装。
+
 ## 认证方式
 
 ### 控制台登录（OAuth，推荐）
@@ -220,3 +232,7 @@ Memory 用户文档：[能力矩阵](https://github.com/modelstudioai/cli/blob/m
 | 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key                   |
 | 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview |
 | 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                            |
+
+### RAG 音视频接入
+
+`bl knowledge doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 仅输出最终回答。参阅 [命令指南](docs/knowledge/knowledge-cli-guide.md)。

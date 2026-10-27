@@ -34,6 +34,7 @@ import {
   shouldAutoUpdate,
 } from "./utils/update-checker.ts";
 import { ConfirmationRequiredError, confirmationHint } from "./confirm.ts";
+import { prepareCommand } from "./preparation.ts";
 
 /**
  * What each middleware stage gets for the invocation in flight: the matched
@@ -41,6 +42,8 @@ import { ConfirmationRequiredError, confirmationHint } from "./confirm.ts";
  * {@link authStage}). A stage reads these and may augment them before `next()`.
  */
 export interface RunContext {
+  commandPath?: (command: AnyCommand) => string[] | undefined;
+  prepared?: unknown;
   /** 静态产品身份(binName/version/npmPackage/clientName)。 */
   readonly identity: Identity;
   /** The matched command path, e.g. ["speech","recognize"]. */
@@ -142,20 +145,20 @@ export const authStage: Middleware = async (ctx, next) => {
     try {
       cred = resolveApiKey(apiSources);
     } catch (err) {
-      if (!settings.dryRun) throw err;
+      if (!settings.dryRun || command.prepare) throw err;
     }
     ctx.client = new Client({
       ...base,
       ...resolveModelBaseUrlState(apiSources),
       apiCred: cred,
     });
-    if (cred) maybeShowStatusBar(settings, cred.token, cred);
+    if (cred && !command.prepare) maybeShowStatusBar(settings, cred.token, cred);
   } else if (command.auth === "console") {
     let cred: ConsoleCredential | undefined;
     try {
       cred = resolveConsole(sources);
     } catch (err) {
-      if (!settings.dryRun) throw err;
+      if (!settings.dryRun || command.prepare) throw err;
     }
     if (cred) ctx.client = new Client({ ...base, consoleCred: cred });
   } else if (command.auth === "openapi") {
@@ -163,7 +166,7 @@ export const authStage: Middleware = async (ctx, next) => {
     try {
       cred = resolveOpenApi(sources);
     } catch (err) {
-      if (!settings.dryRun) throw err;
+      if (!settings.dryRun || command.prepare) throw err;
     }
     ctx.client = new Client({ ...base, openApiCred: cred });
   }
@@ -191,8 +194,8 @@ export const telemetryStage: Middleware = (ctx, next) => {
  * if `next()` throws, the notice is skipped (no update nag on failure).
  */
 export const versionCheckStage: Middleware = async (ctx, next) => {
-  // Local source launchers can disable background updates without quieting output.
-  if (process.env.NO_UPDATE_NOTIFIER === "1") {
+  // Planning and explicitly disabled update checks must not trigger background writes.
+  if (ctx.command.prepare || process.env.NO_UPDATE_NOTIFIER === "1") {
     await next();
     return;
   }
@@ -230,7 +233,12 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
  * so confirmation-required failures remain observable.
  */
 export const confirmationStage: Middleware = async (ctx, next) => {
-  if (ctx.command.risk === undefined || ctx.confirmed || ctx.settings.dryRun) {
+  if (
+    ctx.command.prepare ||
+    ctx.command.risk === undefined ||
+    ctx.confirmed ||
+    ctx.settings.dryRun
+  ) {
     await next();
     return;
   }
@@ -242,4 +250,6 @@ export const confirmationStage: Middleware = async (ctx, next) => {
 };
 
 /** Innermost stage: hand control to the command with its full context. */
-export const runCommandStage: Middleware = (ctx) => ctx.command.run(ctx);
+export const runCommandStage: Middleware = async (ctx) => {
+  if (await prepareCommand(ctx)) await ctx.command.run(ctx);
+};

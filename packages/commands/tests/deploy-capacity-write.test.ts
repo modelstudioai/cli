@@ -143,7 +143,11 @@ async function run(
   settings: Partial<Settings> = {},
 ) {
   const validation = await command.validate?.(flags);
-  if (validation) throw new BailianError(validation, ExitCode.USAGE);
+  if (validation)
+    throw new BailianError(
+      typeof validation === "string" ? validation : validation["en-US"],
+      ExitCode.USAGE,
+    );
   // Only settings/flags/client are exercised. No auth/config store or runtime startup is invoked.
   await command.run({
     identity: {

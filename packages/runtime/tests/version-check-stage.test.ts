@@ -20,8 +20,9 @@ function makeContext(): RunContext {
       npmPackage: "bailian-cli",
     },
     path: ["auth", "login"],
+    command: { auth: "none", description: "Test command", async run() {} },
     settings: { quiet: false },
-  } as RunContext;
+  } as unknown as RunContext;
 }
 
 beforeEach(() => {

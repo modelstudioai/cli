@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Knowledge Studio 控制台](https://rag.console.aliyun.com/) · [English](README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [完整 CLI 指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md)
+[Knowledge Studio 控制台](https://rag.console.aliyun.com/) · [English](README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [完整 CLI 指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md)
 
 </div>
 
@@ -24,7 +24,7 @@
 - **检索服务** — 创建、配置、部署、复制和管理检索服务，将知识库绑定到指定模型
 - **Chunk 管理** — 在文档内新增、列出、更新、删除文本分片，实现细粒度内容控制
 - **数据中心** — 管理工作区数据中心的独立文件，在挂载到知识库前进行预处理
-- **集合与分类** — 通过集合组织知识库，通过分类对文档进行标记，实现范围检索
+- **数据集与分类** — 通过数据集组织知识库，通过分类对文档进行标记，实现范围检索
 - **RAG 检索与对话** — 跨知识库语义检索，流式问答返回基于知识的回答
 - **Agent 友好** — 支持 JSON 结构化输出（`--output json`）、预览模式（`--dry-run`）和静默模式（`--quiet`），便于脚本集成
 
@@ -38,38 +38,40 @@ npm install -g knowledge-studio-cli
 
 ## 快速开始
 
+先配置有效的 DashScope API Key（例如通过 `DASHSCOPE_API_KEY`），并准备有知识库权限的工作空间。下方占位 ID 请替换为实际值。
+
+知识库创建成功后，即使不检索也持续按时计费。**标准版一次性 720 小时额度由多个知识库共享，新用户开通服务后 30 天内有效**；模型调用另计，CLI 不假定当前账户还剩多少额度。详见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。
+
 ```bash
-# 1. 创建知识库
-kscli kb create \
-  --name "my-kb" \
-  --description "我的产品文档知识库" \
-  --embedding-model text-embedding-v3 \
-  --workspace-id <your-workspace-id>
-
-# 2. 上传文档
-kscli doc upload \
-  --kb-id <kb-id> \
-  --file ./product-docs.pdf \
-  --workspace-id <your-workspace-id>
-
-# 3. 查看处理状态
-kscli doc status \
-  --kb-id <kb-id> \
-  --doc-id <doc-id> \
-  --workspace-id <your-workspace-id>
-
-# 4. 语义检索
-kscli search \
-  --query "什么是 Model Studio？" \
-  --agent-id <your-agent-id> \
-  --workspace-id <your-workspace-id>
-
-# 5. 知识库问答（流式输出）
-kscli chat \
-  --message "什么是RAG？" \
-  --agent-id <your-agent-id> \
-  --workspace-id <your-workspace-id>
+# 先预览：可能鉴权并读取已有资源，但不会写入。
+kscli init --workspace-id <workspace-id> --dry-run
 ```
+
+查看计划和计费说明，确认本次操作及范围后再执行：
+
+```bash
+kscli init --workspace-id <workspace-id> --yes
+```
+
+初始化会上传样例、创建或复用可确认归属的知识库与 beta 检索服务，并验证样例检索。不会自动创建问答服务或发布服务。保留返回的 ID 和 `.bailian/knowledge/init.json` 恢复记录。继续检索时使用返回的 **agent ID**，不要填知识库 index ID：
+
+```bash
+kscli search --agent-id <agent-id> --agent-version beta --query "RAG" --workspace-id <workspace-id>
+```
+
+关闭终端或后续步骤失败不会停止计费。请查看 init 输出的资源及清理动作，部分失败时也要核对已创建资源。仅清理不再需要的资源，复用资源不属于默认临时资源。查看具体知识库并确认删除后果后：
+
+```bash
+kscli kb delete --index-id <index-id> --workspace-id <workspace-id>
+```
+
+删除需要确认；只有确认范围后才添加 `--yes`。成功删除知识库才能停止其规格计费，仅删除文档或检索服务不行。源文件等其他资源可能需要另行清理。
+
+### 通过 AI 助手使用
+
+通过 `bl skill init` 安装知识库工作流，或用 `bl skill add --name bailian-protocol,bailian-knowledge` 选择安装。更新已安装 Skill 使用 `bl skill update`。安装渠道属于完整百炼 CLI，`kscli` 没有 `skill` 子命令。
+
+助手先读取 `kscli --introspect` 确认当前能力，创建资源前预览变更并解释计费。当前 schema 未列出的能力不能视为已安装版本支持。
 
 ## 命令列表
 
@@ -124,15 +126,15 @@ kscli chat \
 | `file get`    | 查看数据中心文件详情 |
 | `file delete` | 删除数据中心文件     |
 
-### 集合与分类
+### 数据集与分类
 
-| 命令                | 说明               |
-| :------------------ | :----------------- |
-| `collection create` | 在知识库中创建集合 |
-| `collection get`    | 查看集合详情       |
-| `category list`     | 列出知识库中的分类 |
-| `category add`      | 向知识库添加分类   |
-| `category delete`   | 删除知识库中的分类 |
+| 命令                | 说明                 |
+| :------------------ | :------------------- |
+| `collection create` | 在知识库中创建数据集 |
+| `collection get`    | 查看数据集详情       |
+| `category list`     | 列出知识库中的分类   |
+| `category add`      | 向知识库添加分类     |
+| `category delete`   | 删除知识库中的分类   |
 
 ### 检索与对话
 
@@ -149,7 +151,7 @@ kscli chat \
 | `config set`  | 设置配置项       |
 | `update`      | 自更新到最新版本 |
 
-> 完整参数说明、输出格式与使用示例请参阅 [CLI 指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md)。
+> 完整参数说明、输出格式与使用示例请参阅 [CLI 指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md)。
 
 ## 认证方式
 
@@ -202,12 +204,12 @@ kscli update
 
 ## 相关链接
 
-| 资源                    | 地址                                                                                                      |
-| :---------------------- | :-------------------------------------------------------------------------------------------------------- |
-| Knowledge Studio 控制台 | https://rag.console.aliyun.com/                                                                           |
-| DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                                  |
-| 获取 API Key            | https://bailian.console.aliyun.com/?spm=a2ty07.github&tab=app#/api-key                                    |
-| 完整 CLI 指南           | [docs/knowledge-cli-guide.md](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md) |
+| 资源                    | 地址                                                                                                                |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------ |
+| Knowledge Studio 控制台 | https://rag.console.aliyun.com/                                                                                     |
+| DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                                            |
+| 获取 API Key            | https://bailian.console.aliyun.com/?spm=a2ty07.github&tab=app#/api-key                                              |
+| 完整 CLI 指南           | [docs/knowledge-cli-guide.md](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md) |
 
 ## 参与贡献
 
@@ -216,3 +218,7 @@ kscli update
 ## 许可证
 
 [Apache 2.0](LICENSE)
+
+### RAG 音视频接入
+
+`kscli doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 仅输出最终回答。参阅 [命令指南](../../docs/knowledge/knowledge-cli-guide.md)。

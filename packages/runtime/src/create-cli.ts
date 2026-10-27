@@ -1,5 +1,6 @@
 import { CommandRegistry } from "./registry.ts";
 import { resolve } from "./resolve.ts";
+import { buildCommandSchema, serializeCommandSchema } from "./introspect.ts";
 import {
   compose,
   authStage,
@@ -177,6 +178,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     const res = resolve(argv, registry, localize);
 
     switch (res.kind) {
+      case "introspect":
+        process.stdout.write(
+          serializeCommandSchema(buildCommandSchema(registry, identity, res.path)),
+        );
+        return;
       case "version":
         process.stdout.write(`${binName} ${version}\n`);
         return;
@@ -203,12 +209,13 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             Object.keys(res.command.flags ?? {}),
           ) as ParsedFlags<FlagsDef>;
           const invalid = await res.command.validate?.(ownFlags);
-          if (invalid) throw new UsageError(invalid);
+          if (invalid) throw new UsageError(localize(invalid));
 
           // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
           const sources = buildSources(globalFlags);
           const settings = buildSettings(sources);
           const ctx: RunContext = {
+            commandPath: (command) => registry.commandPath(command),
             identity,
             path: res.path,
             command: res.command,

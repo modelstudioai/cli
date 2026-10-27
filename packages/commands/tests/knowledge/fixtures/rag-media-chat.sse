@@ -1,0 +1,14 @@
+data: {"request_id": "request-fixture", "code": "200", "output": {"choices": [{"message": {"role": "assistant", "content": "规划内容", "extra": {"step": "planning", "step_change": "plan_start"}}, "finish_reason": ""}]}, "unknown_extension": {"preserved": true}}
+
+data: {"request_id": "request-fixture", "code": "200", "output": {"choices": [{"message": {"role": "assistant", "content": "", "extra": {"step": "tool_calling", "step_change": "tool_calling"}, "tool_calls": [{"id": "tool-fixture", "function": {"name": "semantic_search", "arguments": "{}"}}]}, "finish_reason": ""}]}, "unknown_extension": {"preserved": true}, "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "cached_tokens": 0}}
+
+data: {"request_id": "request-fixture", "code": "200", "output": {"choices": [{"message": {"role": "tool", "content": "工具摘要", "extra": {"step": "tool_calling", "step_change": "tool_return"}, "additional_kwargs": {"extra_json": {"docs": [{"doc_id": "file-fixture", "_citation_index": 1, "content": "", "clip_description": "画面描述", "clip_start_time": 0, "clip_end_time": 28000, "video_url": ["https://example.com/video.mp4"], "image_url": ["https://example.com/frame.png"], "audio_url": [], "audio_segments": [{"start_time": 10760, "end_time": 75480, "content": "音频转写", "speaker": {"name": "speaker-fixture"}}], "future": {"preserved": true}}]}}}, "finish_reason": ""}]}, "unknown_extension": {"preserved": true}}
+
+data: {"request_id": "request-fixture", "code": "200", "output": {"choices": [{"message": {"role": "assistant", "content": "最终", "extra": {"step": "generating", "step_change": "generation_start"}}, "finish_reason": ""}]}, "unknown_extension": {"preserved": true}}
+
+data: {"request_id": "request-fixture", "code": "200", "output": {"choices": [{"message": {"role": "assistant", "content": [{"type": "text", "text": "答案"}], "extra": {"step": "generating"}}, "finish_reason": ""}]}, "unknown_extension": {"preserved": true}}
+
+data: {"request_id": "request-fixture", "code": "200", "output": {"choices": [{"message": {"role": "assistant", "content": "", "extra": {"step": "generating", "step_change": "generation_end"}}, "finish_reason": "stop"}]}, "unknown_extension": {"preserved": true}, "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "cached_tokens": 0}}
+
+data: [DONE]
+

@@ -1,3 +1,4 @@
+import { createKnowledgeIndex } from "./operations/index.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -6,9 +7,14 @@ import {
   BailianError,
   ExitCode,
   type FlagsDef,
-  type RagCreateIndexV2Response,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+import {
+  knowledgeBillingNotice,
+  localizedKnowledgeBillingNotice,
+  writeKnowledgeBillingNotice,
+  reportCreatedKnowledgeBase,
+} from "./billing.ts";
 import {
   resolveWorkspaceId,
   WORKSPACE_FLAG,
@@ -19,7 +25,37 @@ import {
   pollImportJob,
 } from "./shared.ts";
 
+// Console model selection and an existing multimedia index both use these defaults.
+// The server remains authoritative for the configured model allowlist.
+const MULTIMEDIA_EMBEDDING_MODEL = "qwen3-vl-embedding";
+const MULTIMEDIA_RERANK_MODEL = "qwen3-vl-rerank";
+
 const KB_CREATE_FLAGS = {
+  knowledgeType: {
+    type: "string",
+    valueHint: "<type>",
+    choices: ["document", "multimedia"] as const,
+    description: {
+      "en-US": "Knowledge type: document or multimedia",
+      "zh-CN": "知识类型：document 或 multimedia",
+    },
+  },
+  knowledgeScene: {
+    type: "string",
+    valueHint: "<scene>",
+    description: {
+      "en-US": "Knowledge scene (requires --knowledge-type)",
+      "zh-CN": "知识场景（需要 --knowledge-type）",
+    },
+  },
+  multimodalEmbeddingModel: {
+    type: "string",
+    valueHint: "<name>",
+    description: {
+      "en-US": "Multimodal embedding model (multimedia/visual scene: alias of --embedding-model)",
+      "zh-CN": "多模态向量模型（音视频/视觉理解场景下为 --embedding-model 的别名）",
+    },
+  },
   name: {
     type: "string",
     valueHint: "<text>",
@@ -60,8 +96,10 @@ const KB_CREATE_FLAGS = {
     type: "string",
     valueHint: "<name>",
     description: {
-      "en-US": "Embedding model name (default: text-embedding-v4)",
-      "zh-CN": "Embedding 模型名称（默认：text-embedding-v4）",
+      "en-US":
+        "Embedding model name (document default: text-embedding-v4; multimedia/visual scene: qwen3-vl-embedding)",
+      "zh-CN":
+        "Embedding 模型名称（文档默认 text-embedding-v4；音视频/视觉理解默认 qwen3-vl-embedding）",
     },
   },
   chunkSize: {
@@ -121,9 +159,14 @@ export default defineCommand({
   flags: KB_CREATE_FLAGS,
   notes: [
     {
+      "en-US": `${knowledgeBillingNotice.message["en-US"]}\n${knowledgeBillingNotice.url}`,
+      "zh-CN": `${knowledgeBillingNotice.message["zh-CN"]}\n${knowledgeBillingNotice.url}`,
+    },
+    {
       "en-US":
-        "Structure/sink types are fixed to the default document knowledge base (unstructured, BUILT_IN storage).",
-      "zh-CN": "结构和存储类型固定为默认文档知识库（unstructured、BUILT_IN 存储）。",
+        "Structure/sink types are unstructured and BUILT_IN. Multimedia uses basic_multimedia_qa, qwen3-vl-embedding and qwen3-vl-rerank with similar reranking. Allowed explicit models are validated by the server.",
+      "zh-CN":
+        "结构和存储类型为 unstructured、BUILT_IN。音视频采用 basic_multimedia_qa、qwen3-vl-embedding 和 qwen3-vl-rerank（similar 模式）。显式模型是否在允许列表中由服务端校验。",
     },
     {
       "en-US":
@@ -136,6 +179,7 @@ export default defineCommand({
     },
   ],
   exampleArgs: [
+    "--name media-demo --description media --doc-id file-xxx --knowledge-type multimedia",
     {
       "en-US": "--name demo --description 'product docs' --doc-id file-xxx --workspace-id ws-xxx",
       "zh-CN": "--name demo --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx",
@@ -146,6 +190,42 @@ export default defineCommand({
     },
   ],
   validate(flags) {
+    if (
+      (flags.knowledgeType === "multimedia" || flags.knowledgeScene === "visual_perception_qa") &&
+      flags.embeddingModel !== undefined &&
+      flags.multimodalEmbeddingModel !== undefined
+    )
+      return {
+        "en-US":
+          "For multimedia/visual scenes, choose only one of --embedding-model and --multimodal-embedding-model.",
+        "zh-CN":
+          "音视频/视觉理解场景只能选择 --embedding-model 或 --multimodal-embedding-model 中的一种。",
+      };
+    if (flags.knowledgeScene && !flags.knowledgeType)
+      return {
+        "en-US": "--knowledge-scene requires --knowledge-type.",
+        "zh-CN": "--knowledge-scene 需要 --knowledge-type。",
+      };
+    if (
+      flags.knowledgeType === "multimedia" &&
+      flags.knowledgeScene &&
+      flags.knowledgeScene !== "basic_multimedia_qa"
+    )
+      return {
+        "en-US": "Multimedia requires basic_multimedia_qa.",
+        "zh-CN": "音视频知识库场景必须为 basic_multimedia_qa。",
+      };
+    if (
+      flags.knowledgeType === "document" &&
+      flags.knowledgeScene &&
+      ![
+        "basic_document_qa",
+        "visual_perception_qa",
+        "lite_document_qa",
+        "visual_document_qa",
+      ].includes(flags.knowledgeScene)
+    )
+      return { "en-US": "Invalid document knowledge scene.", "zh-CN": "文档知识库场景无效。" };
     if (flags.name.length < 1 || flags.name.length > 20) return "--name must be 1-20 characters";
     if (flags.description.length < 1 || flags.description.length > 500) {
       return "--description must be 1-500 characters";
@@ -171,24 +251,47 @@ export default defineCommand({
       description: flags.description,
       structureType: "unstructured",
       sinkType: "BUILT_IN",
-      embeddingModelName: flags.embeddingModel ?? "text-embedding-v4",
+      ...(flags.knowledgeType
+        ? {
+            knowledgeType: flags.knowledgeType,
+            knowledgeScene:
+              flags.knowledgeScene ??
+              (flags.knowledgeType === "multimedia" ? "basic_multimedia_qa" : "basic_document_qa"),
+          }
+        : {}),
+      ...(flags.knowledgeType === "multimedia" || flags.knowledgeScene === "visual_perception_qa"
+        ? {
+            // The console's multimedia/visual branches use embeddingModelName, not the image-only field.
+            embeddingModelName:
+              flags.multimodalEmbeddingModel ?? flags.embeddingModel ?? MULTIMEDIA_EMBEDDING_MODEL,
+            ...(flags.knowledgeType === "multimedia"
+              ? { rerankModelName: MULTIMEDIA_RERANK_MODEL, rerankMode: "similar" }
+              : {}),
+          }
+        : {
+            embeddingModelName: flags.embeddingModel ?? "text-embedding-v4",
+            ...(flags.multimodalEmbeddingModel !== undefined
+              ? { multimodalEmbeddingModelName: flags.multimodalEmbeddingModel }
+              : {}),
+          }),
       chunkSize: flags.chunkSize ?? 600,
       ...buildDataSourceFields(flags),
     };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.indexCreateV2);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      emitResult(
+        { endpoint, request: body, notices: [localizedKnowledgeBillingNotice(ctx)] },
+        format,
+      );
       return;
     }
 
-    const response = await ctx.client.requestJson<RagCreateIndexV2Response>({
-      path: endpoint,
-      method: "POST",
-      body,
-    });
+    writeKnowledgeBillingNotice(ctx);
+    const response = await createKnowledgeIndex(ctx.client, workspaceId, body);
     const pipelineId = response.data?.pipelineId;
     const ingestionId = response.data?.ingestionId;
+    const resources = pipelineId ? [reportCreatedKnowledgeBase(ctx, workspaceId, pipelineId)] : [];
 
     let finalStatus: string | undefined;
     if (flags.wait && pipelineId && ingestionId) {
@@ -220,6 +323,14 @@ export default defineCommand({
       emitBare("Next: check the import job status, then search against this knowledge base.");
       return;
     }
-    emitResult(finalStatus ? { ...response, final_status: finalStatus } : response, format);
+    emitResult(
+      {
+        ...response,
+        ...(finalStatus ? { final_status: finalStatus } : {}),
+        resources,
+        notices: [localizedKnowledgeBillingNotice(ctx)],
+      },
+      format,
+    );
   },
 });

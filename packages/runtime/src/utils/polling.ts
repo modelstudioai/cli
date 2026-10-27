@@ -4,6 +4,8 @@ import { createSpinner } from "../output/progress.ts";
 export interface PollOptions {
   /** Absolute task URL (Client passes absolute URLs through as-is). */
   url: string;
+  /** Optional complete snapshot loader (for paginated task APIs). */
+  load?: () => Promise<unknown>;
   intervalSec: number;
   timeoutSec: number;
   isComplete: (data: unknown) => boolean;
@@ -20,7 +22,9 @@ export async function poll<T>(client: Client, settings: Settings, opts: PollOpti
 
   try {
     while (Date.now() < deadline) {
-      const data = await client.requestJson<T>({ path: opts.url });
+      const data = opts.load
+        ? ((await opts.load()) as T)
+        : await client.requestJson<T>({ path: opts.url });
 
       if (opts.getStatus && !settings.quiet) {
         spinner.update(`Status: ${opts.getStatus(data)}`);

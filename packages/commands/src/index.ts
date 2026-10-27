@@ -47,6 +47,7 @@ export { default as knowledgeKbInfo } from "./commands/knowledge/kb-info.ts";
 export { default as knowledgeDocList } from "./commands/knowledge/doc-list.ts";
 export { default as knowledgeDocStatus } from "./commands/knowledge/doc-status.ts";
 export { default as knowledgeDocUpload } from "./commands/knowledge/doc-upload.ts";
+export { default as knowledgeInit } from "./commands/knowledge/init.ts";
 export { default as knowledgeKbCreate } from "./commands/knowledge/kb-create.ts";
 export { default as knowledgeKbUpdate } from "./commands/knowledge/kb-update.ts";
 export { default as knowledgeKbDelete } from "./commands/knowledge/kb-delete.ts";
@@ -325,6 +326,10 @@ export {
   sandboxTemplateList,
   sandboxTemplateUpdate,
 } from "./commands/sandbox/template.ts";
+
+export { default as knowledgeDocImport } from "./commands/knowledge/doc-import.ts";
+
+export { default as knowledgeDocSync } from "./commands/knowledge/doc-sync.ts";
 
 export { default as managedAgentMemoryStoreCreate } from "./commands/managed-agent/memory-store/create.ts";
 export {
