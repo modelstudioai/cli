@@ -1,7 +1,7 @@
 ---
 name: bailian-cli
 metadata:
-  version: "2.6.0"
+  version: "2.6.1"
   requires:
     bins: ["bl"]
 description: >-
