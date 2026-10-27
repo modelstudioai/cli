@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { writeFileSync } from "fs";
 import {
   BailianError,
@@ -435,7 +436,7 @@ async function handleAsyncMode(
     }
 
     // Fetch transcription JSON
-    const transRes = await fetch(subResult.transcription_url);
+    const transRes = await httpTransport.fetch(subResult.transcription_url);
     if (!transRes.ok) {
       throw new BailianError(
         `Failed to download transcription: HTTP ${transRes.status}`,

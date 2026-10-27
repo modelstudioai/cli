@@ -29,6 +29,8 @@
 - [ ] 如果新 flag 影响有效配置面,改 `packages/core/src/config/schema.ts` 的 `Settings` 接口
 - [ ] 如果对应 env var 或 config 文件字段,改 `packages/core/src/config/loader.ts` 的 `buildSettings`
 
+- [ ] 新全局 flag 在根/组/叶 `--introspect` 中可发现；命令自有 flag 不得占用 introspect；跨 flag validate 仍标注为未导出
+
 ### C. 文档层
 
 - [ ] `README.md` / `README.zh.md` 如果在示例里展示了相关命令,补充新 flag
@@ -53,6 +55,7 @@ pnpm -F bailian-cli exec tsx src/main.ts <command> --new-flag x   # 实测一遍
 
 ## 常见漏点
 
+- `required: true` 只校验参数是否提供，不拒绝空字符串；服务 ID 等非空约束放在命令 `validate` 中，并覆盖空值、纯空白值及 dry-run 的 stderr JSON / 退出码。多模态消息须在解析角色前缀后判断内容，保留有效图片和工具调用。
 - SDK 的通用参数解析器可能接受其他 Provider 的资源类型；产品命令应在鉴权和 dry-run 输出前限制支持的类型，错误文案不得回显资源凭证或任意输入值。
 - 定向创建仅解析新增资源声明；已有项目中的 instructions / Memory 正文已完成文件读取，不能再把它们当作原始文件路径解析。跨资源引用继续交给完整项目的定向 plan 校验。
 - 修改请求超时时，检查底层 HTTP 限制：core 的公共 HTTP 请求层仅为已设置超时计时器的请求关闭 `headersTimeout`，由请求 `AbortSignal` 控制响应头等待；保留 `bodyTimeout` 空闲保护，不全局关闭其他请求的超时。仅设置 Agent 默认值会被 Node `fetch` 的逐请求默认值覆盖。流式读取的总时长另由调用方管理，不能据此宣称 `--timeout` 覆盖整个流。

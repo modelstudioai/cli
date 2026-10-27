@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 /**
  * Direct in-process API call implementations for pipeline steps.
  * Bypasses the CLI command handler layer and calls requestJson/request directly.
@@ -741,7 +742,7 @@ export async function speechRecognize(
   const transcripts: Record<string, unknown>[] = [];
   for (const item of transcriptionItems) {
     if (!item.transcription_url) continue;
-    const transRes = await fetch(item.transcription_url, { signal: ctx.signal });
+    const transRes = await httpTransport.fetch(item.transcription_url, { signal: ctx.signal });
     if (!transRes.ok) {
       throw new PipelineError(
         "async_task_failed",

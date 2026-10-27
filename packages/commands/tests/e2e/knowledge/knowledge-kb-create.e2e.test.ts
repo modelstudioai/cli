@@ -29,6 +29,9 @@ describe("e2e: knowledge kb create", () => {
     expect(stderr).toMatch(/--category-id/i);
     expect(stderr).toMatch(/--embedding-model/i);
     expect(stderr).toMatch(/--chunk-size/i);
+    expect(stderr).toContain("720");
+    expect(stderr).toContain("billing-for-knowledge-base");
+    expect(stderr).not.toContain("--yes");
   });
 
   test("缺 --name 报 USAGE (2)", async () => {
@@ -204,3 +207,57 @@ describe("e2e: knowledge kb create", () => {
 });
 
 // The live self-cleaning chain lives in knowledge-kb-delete.e2e.test.ts (upload → create → delete).
+
+describe("multimedia creation contract", () => {
+  test("explicit media models and fixed scene map without document defaults", async () => {
+    const result = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
+      "knowledge",
+      "create",
+      "--name",
+      "media",
+      "--description",
+      "sample",
+      "--doc-id",
+      "file_test",
+      "--knowledge-type",
+      "multimedia",
+      "--multimodal-embedding-model",
+      "qwen3-vl-embedding",
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const output = parseStdoutJson<{ request: Record<string, unknown> }>(result.stdout);
+    expect(output.request).toMatchObject({
+      knowledgeType: "multimedia",
+      knowledgeScene: "basic_multimedia_qa",
+      embeddingModelName: "qwen3-vl-embedding",
+      rerankModelName: "qwen3-vl-rerank",
+      structureType: "unstructured",
+    });
+    expect(output.request).not.toHaveProperty("multimodalEmbeddingModelName");
+  });
+  test("conflicting media scene fails before network", async () => {
+    const result = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
+      "knowledge",
+      "create",
+      "--name",
+      "media",
+      "--description",
+      "sample",
+      "--doc-id",
+      "file_test",
+      "--knowledge-type",
+      "multimedia",
+      "--knowledge-scene",
+      "basic_document_qa",
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+    ]);
+    expect(result.exitCode).toBe(2);
+  });
+});

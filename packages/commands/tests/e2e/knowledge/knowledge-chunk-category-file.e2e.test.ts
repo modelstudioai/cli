@@ -1085,6 +1085,7 @@ describe.skipIf(!isKbAdminE2EReady())(
         const kbCreateRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
           "knowledge",
           "create",
+          "--yes",
           "--name",
           `e2e-cate-kb-${Date.now() % 100000000}`.slice(0, 20),
           "--description",
@@ -1187,6 +1188,7 @@ describe.skipIf(!isKbAdminE2EReady())(
       const createRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
         "knowledge",
         "create",
+        "--yes",
         "--name",
         `e2e-ck-${Date.now() % 100000000}`,
         "--description",
@@ -1705,6 +1707,7 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
       const kbCreateRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
         "knowledge",
         "create",
+        "--yes",
         "--name",
         `e2e-pk-${Date.now() % 100000000}`.slice(0, 20),
         "--description",

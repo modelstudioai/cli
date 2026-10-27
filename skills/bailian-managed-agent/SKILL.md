@@ -1,7 +1,7 @@
 ---
 name: bailian-managed-agent
 metadata:
-  version: "2.5.1"
+  version: "2.6.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -18,7 +18,13 @@ description: >-
 
 # Bailian managed agent IaC (`bl managed-agent`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): High-risk operation confirmation, Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): High-risk operation confirmation, Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. Examples in `reference/` stay bare; wrap with Call attribution when running. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-managed-agent`; replace `codex` with this host):
+
+```bash
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-managed-agent BAILIAN_SKILL_VERSION=2.5.0 bl managed-agent plan
+```
 
 ## Safety guardrail (the most important rule)
 

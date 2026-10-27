@@ -1,3 +1,4 @@
+import { updateKnowledgeService, getKnowledgeService } from "./operations/service.ts";
 import { readFileSync } from "node:fs";
 import {
   defineCommand,
@@ -9,8 +10,6 @@ import {
   type Client,
   type FlagsDef,
   type RagAgentConfig,
-  type RagAgentGetResponse,
-  type RagAgentMutationResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
@@ -257,11 +256,7 @@ async function fetchBetaConfig(
   workspaceId: string,
   agentId: string,
 ): Promise<RagAgentConfig> {
-  const response = await client.requestJson<RagAgentGetResponse>({
-    path: ragEndpoint(workspaceId, RAG_PATHS.agentGet),
-    method: "POST",
-    body: { agent_id: agentId, agent_version: "beta" },
-  });
+  const response = await getKnowledgeService(client, workspaceId, agentId, "beta");
   const betaDetail = (response.data?.agent_details ?? []).find(
     (detail) => detail.agent_version === "beta",
   );
@@ -277,6 +272,12 @@ export default defineCommand({
   usageArgs: "--agent-id <id> [flags]",
   flags: SERVICE_UPDATE_FLAGS,
   notes: [
+    {
+      "en-US":
+        "Rerank options depend on each knowledge base: image/multimedia or visual_perception_qa/basic_multimedia_qa use multimodal models (currently qwen3-vl-rerank). Hybrid rerank uses multimodal options if any bound base requires them. Explicit configs are preserved; the server validates model compatibility.",
+      "zh-CN":
+        "排序模型按库选择：图片/音视频类型或 visual_perception_qa/basic_multimedia_qa 场景使用多模态模型（当前 qwen3-vl-rerank）；混排只要包含这类库也使用多模态候选。显式配置原样保留，模型兼容性由服务端校验。",
+    },
     {
       "en-US":
         "Configuration changes only apply to the beta draft; published versions accept --version-desc only.",
@@ -413,11 +414,7 @@ export default defineCommand({
       return;
     }
 
-    const response = await ctx.client.requestJson<RagAgentMutationResponse>({
-      path: endpoint,
-      method: "POST",
-      body,
-    });
+    const response = await updateKnowledgeService(ctx.client, workspaceId, body);
 
     if (settings.quiet) return;
     if (format === "text") {

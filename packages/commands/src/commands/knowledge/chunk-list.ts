@@ -1,3 +1,5 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
+import { firstNonEmptyText, mediaSummary } from "./media-output.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -53,6 +55,9 @@ export default defineCommand({
     "--index-id idx-xxx --doc-id file-xxx --page-size 50",
   ],
   validate(flags) {
+    const nonemptyError = validateNonemptyFlags({ "index-id": flags.indexId });
+    if (nonemptyError) return nonemptyError;
+
     if (flags.pageSize !== undefined && (flags.pageSize < 1 || flags.pageSize > 100)) {
       return "--page-size must be between 1 and 100";
     }
@@ -103,8 +108,13 @@ export default defineCommand({
           emitBare(
             `[chunk] ${metadata._id ?? "?"}  (doc: ${metadata.doc_name ?? "?"}, doc_id: ${metadata.doc_id ?? "?"})${statusPart}${excludedPart}`,
           );
-          const contentText = metadata.content ?? node.text ?? "";
+          const contentText = firstNonEmptyText(
+            metadata.content,
+            node.text,
+            metadata.clip_description,
+          );
           emitBare(`  ${contentText.length > 200 ? `${contentText.slice(0, 200)}…` : contentText}`);
+          for (const line of mediaSummary(metadata)) emitBare(`  ${line}`);
         }
       }
       emitBare(`total: ${response.data?.total ?? nodes.length}`);

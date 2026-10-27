@@ -8,6 +8,7 @@ import {
   getBatchFileContent,
   resolveBatchChatEndpoint,
   uploadDataset,
+  httpTransport,
 } from "../src/index.ts";
 
 function client(baseUrl = "https://example.test", baseUrlIsDefault = false) {
@@ -40,7 +41,7 @@ afterEach(() => {
 describe("Batch 请求接缝", () => {
   test("Batch REST 路径、分页筛选和取消响应不改写", async () => {
     const requests: Array<{ url: string; method: string; body: unknown }> = [];
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    vi.spyOn(httpTransport, "fetch").mockImplementation(async (input, init) => {
       requests.push({
         url: typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
         method: init?.method ?? "GET",
@@ -95,7 +96,7 @@ describe("Batch 请求接缝", () => {
   });
   test("文件下载原始字节保真且只请求兼容路径", async () => {
     const raw = new Uint8Array([0xef, 0xbb, 0xbf, 123, 125, 13, 10, 10]);
-    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(raw));
+    const fetch = vi.spyOn(httpTransport, "fetch").mockResolvedValue(new Response(raw));
     expect(
       new Uint8Array(await (await getBatchFileContent(client(), "file/one")).arrayBuffer()),
     ).toEqual(raw);
@@ -107,7 +108,7 @@ describe("Batch 请求接缝", () => {
   test("上传使用已校验 Blob，不重新读取路径，purpose 显式 batch", async () => {
     const blob = new Blob(['{"custom_id":"original"}\n']);
     const fetch = vi
-      .spyOn(globalThis, "fetch")
+      .spyOn(httpTransport, "fetch")
       .mockResolvedValue(Response.json({ id: "file-one" }));
     const uploaded = await uploadDataset(client(), {
       filePath: "/missing/input.jsonl",
@@ -120,7 +121,7 @@ describe("Batch 请求接缝", () => {
     expect(uploaded).toMatchObject({ file_id: "file-one", size: blob.size, purpose: "batch" });
   });
   test("共享上传 failed_uploads 透传服务消息、错码、请求 ID", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    vi.spyOn(httpTransport, "fetch").mockResolvedValue(
       Response.json({
         request_id: "req-one",
         data: { failed_uploads: [{ code: "ServiceCode", message: "服务原始消息" }] },
@@ -140,7 +141,7 @@ describe("Batch 请求接缝", () => {
   });
   test("上传无 ID 不声称成功、不自动重发", async () => {
     const fetch = vi
-      .spyOn(globalThis, "fetch")
+      .spyOn(httpTransport, "fetch")
       .mockResolvedValue(Response.json({ request_id: "req-one" }));
     await expect(
       uploadDataset(client(), { filePath: "input.jsonl", fileBlob: new Blob(["test"]) }),
@@ -149,7 +150,7 @@ describe("Batch 请求接缝", () => {
   });
   test.each([400, 404, 429, 500])("Batch HTTP %s 错误原样透传而不换端点重试", async (status) => {
     const fetch = vi
-      .spyOn(globalThis, "fetch")
+      .spyOn(httpTransport, "fetch")
       .mockResolvedValue(
         new Response("raw service error", { status, headers: { "x-request-id": "req-raw" } }),
       );

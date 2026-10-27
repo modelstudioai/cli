@@ -1,6 +1,7 @@
 import type { Identity, Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import type { AuthRequirement } from "../types/command.ts";
+import type { CallerAttribution } from "./caller.ts";
 import { createTrackingEvent } from "./event.ts";
 import { localSink, remoteSink } from "./sink.ts";
 
@@ -89,6 +90,8 @@ export interface TrackingDeps {
   identity: Identity;
   settings: Settings;
   authMethod?: AuthRequirement;
+  /** From `readCaller(process.env)` in telemetryStage. */
+  caller: CallerAttribution;
 }
 
 export async function trackCommandExecution(
@@ -133,6 +136,7 @@ export async function trackCommandExecution(
       cliVersion: deps.identity.version,
       authMethod: deps.authMethod,
       params: extractParams(flags),
+      caller: deps.caller,
     });
 
     // Fire-and-forget — never block the CLI exit or mask errors

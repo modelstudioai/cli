@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { expect, test } from "vite-plus/test";
 import type { Identity, Settings } from "../src/index.ts";
 import {
@@ -125,9 +126,9 @@ test("Sandbox endpoint builders fix cn-beijing and encode path identifiers", () 
 });
 
 test("Client sends Sandbox REST requests with Bearer auth and no E2B API key", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let requestHeaders: RequestInit["headers"];
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     requestHeaders = init?.headers;
     return new Response(JSON.stringify({ sandboxID: "sandbox-test" }), {
       status: 200,
@@ -155,7 +156,7 @@ test("Client sends Sandbox REST requests with Bearer auth and no E2B API key", a
     expect(headers.get("Authorization")).toBe("Bearer bailian-api-key");
     expect(headers.has("X-API-Key")).toBe(false);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
@@ -220,12 +221,12 @@ test("toJSON splits service-error metadata into structured fields", () => {
 });
 
 test("callConsoleGateway verbose prints structured request payload", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const originalWrite = process.stderr.write.bind(process.stderr);
   let stderr = "";
   let requestBody: string | undefined;
 
-  globalThis.fetch = async (_url, init) => {
+  httpTransport.fetch = async (_url, init) => {
     requestBody = init?.body as string | undefined;
     return new Response(JSON.stringify({ data: { success: true, value: "response-body" } }), {
       status: 200,
@@ -254,7 +255,7 @@ test("callConsoleGateway verbose prints structured request payload", async () =>
       { verbose: true },
     );
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
     process.stderr.write = originalWrite;
   }
 
@@ -271,7 +272,7 @@ test("callConsoleGateway verbose prints structured request payload", async () =>
 });
 
 test("callConsoleGateway keeps readable message and raw gateway response separately", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const originalWrite = process.stderr.write.bind(process.stderr);
   const responseBody = {
     data: {
@@ -281,7 +282,7 @@ test("callConsoleGateway keeps readable message and raw gateway response separat
     },
   };
 
-  globalThis.fetch = async () =>
+  httpTransport.fetch = async () =>
     new Response(JSON.stringify(responseBody), {
       status: 200,
       statusText: "OK",
@@ -304,16 +305,16 @@ test("callConsoleGateway keeps readable message and raw gateway response separat
       exitCode: ExitCode.GENERAL,
     });
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
     process.stderr.write = originalWrite;
   }
 });
 
 test("request uses injected client identity for User-Agent", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let userAgent: string | undefined;
 
-  globalThis.fetch = async (_url, init) => {
+  httpTransport.fetch = async (_url, init) => {
     const headers = init?.headers as Record<string, string> | undefined;
     userAgent = headers?.["User-Agent"];
     return new Response("{}", { status: 200 });
@@ -324,19 +325,19 @@ test("request uses injected client identity for User-Agent", async () => {
       url: "https://example.test",
     });
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 
   expect(userAgent).toBe("test-client/9.8.7");
 });
 
 test("request propagates caller AbortSignal to fetch", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const controller = new AbortController();
   let fetchSignal: AbortSignal | undefined;
   let resolveFetch: ((response: Response) => void) | undefined;
   const fetchStarted = new Promise<void>((resolve) => {
-    globalThis.fetch = async (_url, init) => {
+    httpTransport.fetch = async (_url, init) => {
       fetchSignal = init?.signal as AbortSignal | undefined;
       resolve();
       return await new Promise<Response>((resolveResponse) => {
@@ -358,16 +359,16 @@ test("request propagates caller AbortSignal to fetch", async () => {
     resolveFetch?.(new Response("{}", { status: 200 }));
     await requestPromise;
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpClient uses injected client identity for initialize and User-Agent", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const bodies: unknown[] = [];
   const userAgents: string[] = [];
 
-  globalThis.fetch = async (_url, init) => {
+  httpTransport.fetch = async (_url, init) => {
     const headers = init?.headers as Record<string, string> | undefined;
     userAgents.push(headers?.["User-Agent"] ?? "");
     const body = init?.body;
@@ -385,7 +386,7 @@ test("McpClient uses injected client identity for initialize and User-Agent", as
     );
     await client.initialize();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 
   expect(userAgents).toEqual(["test-client/9.8.7", "test-client/9.8.7"]);

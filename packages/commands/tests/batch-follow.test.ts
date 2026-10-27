@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import { getEventListeners } from "node:events";
-import { Client, BailianError, ExitCode } from "bailian-cli-core";
+import { Client, BailianError, ExitCode, httpTransport } from "bailian-cli-core";
 import { followBatch } from "../src/commands/batch/shared.ts";
 
 function client() {
@@ -34,7 +34,7 @@ describe("Batch 轮询预算", () => {
   test("finalizing/cancelling/未知状态继续查询，请求开始遵守间隔", async () => {
     const statuses = ["finalizing", "cancelling", "future-state", "completed"];
     const starts: number[] = [];
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+    vi.spyOn(httpTransport, "fetch").mockImplementation(async () => {
       starts.push(Date.now());
       return Response.json({ id: "batch-one", status: statuses.shift() });
     });
@@ -51,7 +51,7 @@ describe("Batch 轮询预算", () => {
   });
   test("deadline 中断在途 HTTP，原样保留 TIMEOUT 并释放父监听", async () => {
     const parent = new AbortController();
-    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(
+    const fetch = vi.spyOn(httpTransport, "fetch").mockImplementation(
       (_input, init) =>
         new Promise((_resolve, reject) => {
           init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
@@ -71,7 +71,7 @@ describe("Batch 轮询预算", () => {
   });
   test("deadline 覆盖重试退避，不另开请求预算", async () => {
     const fetch = vi
-      .spyOn(globalThis, "fetch")
+      .spyOn(httpTransport, "fetch")
       .mockImplementation(async () => new Response("limited", { status: 429 }));
     await expect(
       followBatch(client(), "batch-one", { interval: 0, pollTimeout: 0.04 }),
@@ -80,7 +80,7 @@ describe("Batch 轮询预算", () => {
   });
   test("永久 HTTP 错误不重试", async () => {
     const fetch = vi
-      .spyOn(globalThis, "fetch")
+      .spyOn(httpTransport, "fetch")
       .mockImplementation(async () => new Response("access denied", { status: 403 }));
     await expect(followBatch(client(), "batch-one", { interval: 0 })).rejects.toMatchObject({
       message: "access denied",
@@ -90,7 +90,7 @@ describe("Batch 轮询预算", () => {
   });
   test("可重试错误最多三次重试，耗尽后仍透传服务错误", async () => {
     const fetch = vi
-      .spyOn(globalThis, "fetch")
+      .spyOn(httpTransport, "fetch")
       .mockImplementation(async () => new Response("service unavailable", { status: 503 }));
     await expect(followBatch(client(), "batch-one", { interval: 0 })).rejects.toMatchObject({
       message: "service unavailable",
@@ -102,7 +102,7 @@ describe("Batch 轮询预算", () => {
     const parent = new AbortController();
     const reason = new BailianError("interrupted", ExitCode.INTERRUPTED);
     const fetch = vi
-      .spyOn(globalThis, "fetch")
+      .spyOn(httpTransport, "fetch")
       .mockImplementation(async () => Response.json({ id: "batch-one", status: "in_progress" }));
     const pending = followBatch(client(), "batch-one", {
       interval: 65,
@@ -118,7 +118,7 @@ describe("Batch 轮询预算", () => {
   });
   test("超大 interval 不因 Node timer 溢出而快速重查", async () => {
     const fetch = vi
-      .spyOn(globalThis, "fetch")
+      .spyOn(httpTransport, "fetch")
       .mockImplementation(async () => Response.json({ id: "batch-one", status: "finalizing" }));
     await expect(
       followBatch(client(), "batch-one", { interval: 3_000_000, pollTimeout: 0.04 }),

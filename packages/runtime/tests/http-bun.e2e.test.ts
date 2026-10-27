@@ -1,7 +1,7 @@
 import { execFile, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { createServer, request as forwardRequest, type Server } from "node:http";
+import { createConnection, type AddressInfo, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +15,7 @@ const repositoryRoot = join(runtimeRoot, "../..");
 const bun = process.env.BAILIAN_TEST_BUN || "bun";
 const hasBun = spawnSync(bun, ["--version"], { stdio: "ignore" }).status === 0;
 
-describe.skipIf(!hasBun)("core HTTP with native Bun and compiled binaries", () => {
+describe("core HTTP across Node, native Bun and compiled binaries", () => {
   let server: Server;
   let proxy: Server;
   let serverUrl: string;
@@ -24,6 +24,7 @@ describe.skipIf(!hasBun)("core HTTP with native Bun and compiled binaries", () =
   let scriptPath: string;
   let binaryPath: string;
   const connects: string[] = [];
+  const tunnels = new Set<Socket>();
   const closedResponses = new Set<string>();
   const childEnv = {
     ...process.env,
@@ -90,9 +91,43 @@ describe.skipIf(!hasBun)("core HTTP with native Bun and compiled binaries", () =
       const timer = setTimeout(() => response.end("done"), incoming.url === "/body" ? 1_500 : 600);
       response.on("close", () => clearTimeout(timer));
     });
-    proxy = createServer();
-    proxy.on("connect", (incoming, socket) => {
+    proxy = createServer((incoming, response) => {
+      // Bun uses absolute-form HTTP forwarding; Undici uses CONNECT tunnels.
+      const target = new URL(incoming.url!);
+      connects.push(target.host);
+      const upstream = forwardRequest(
+        target,
+        { method: incoming.method, headers: incoming.headers },
+        (forwarded) => {
+          response.writeHead(forwarded.statusCode!, forwarded.headers);
+          forwarded.pipe(response);
+        },
+      );
+      upstream.on("error", () => response.destroy());
+      incoming.pipe(upstream);
+    });
+    proxy.on("connect", (incoming, socket, head) => {
       connects.push(incoming.url ?? "");
+      if (incoming.url === new URL(serverUrl).host) {
+        const upstream = createConnection({
+          host: "127.0.0.1",
+          port: (server.address() as AddressInfo).port,
+        });
+        tunnels.add(upstream);
+        upstream.on("close", () => {
+          tunnels.delete(upstream);
+          socket.destroy();
+        });
+        upstream.on("error", () => socket.destroy());
+        socket.on("error", () => upstream.destroy());
+        socket.on("close", () => upstream.destroy());
+        upstream.on("connect", () => {
+          socket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
+          if (head.length) upstream.write(head);
+          socket.pipe(upstream).pipe(socket);
+        });
+        return;
+      }
       // The client can reset a CONNECT socket after the intentional refusal.
       socket.on("error", () => {});
       socket.end("HTTP/1.1 502 Bad Gateway\r\n\r\n");
@@ -112,6 +147,7 @@ describe.skipIf(!hasBun)("core HTTP with native Bun and compiled binaries", () =
       scriptPath,
       `
 import { request, requestJson } from ${JSON.stringify(join(runtimeRoot, "../core/src/client/http.ts"))};
+import { httpTransport } from ${JSON.stringify(join(runtimeRoot, "../core/src/client/transport.ts"))};
 import { parseSSE } from ${JSON.stringify(join(runtimeRoot, "../core/src/client/stream.ts"))};
 import { setupProxyFromEnv } from ${JSON.stringify(join(runtimeRoot, "src/proxy.ts"))};
 setupProxyFromEnv();
@@ -123,7 +159,7 @@ async function verifyRemoteClosed() {
   checkUrl.searchParams.set("path", new URL(url).pathname);
   const deadline = performance.now() + 1500;
   do {
-    const check = await fetch(checkUrl, { signal: AbortSignal.timeout(1000) });
+    const check = await httpTransport.fetch(checkUrl, { signal: AbortSignal.timeout(1000) });
     if (await check.json()) {
       if (parent.signal.aborted) throw new Error("Body cancellation aborted its caller");
       console.log("closed");
@@ -136,7 +172,12 @@ async function verifyRemoteClosed() {
 const deps = { identity: { clientName: "native-bun-probe", version: "0" },
   settings: { timeout: Number(timeout), verbose: false } };
 try {
-  if (mode === "json") {
+  if (mode === "version") {
+    console.log(process.versions.bun || process.version);
+  } else if (mode === "transport") {
+    const response = await httpTransport.fetch(url);
+    console.log(await response.text());
+  } else if (mode === "json") {
     console.log(JSON.stringify(await requestJson(deps, { url })));
   } else {
     const form = new FormData();
@@ -163,6 +204,7 @@ try {
   });
 
   afterAll(async () => {
+    for (const tunnel of tunnels) tunnel.destroy();
     for (const listener of [server, proxy]) {
       if (!listener?.listening) continue;
       listener.closeAllConnections();
@@ -171,7 +213,9 @@ try {
     if (probeDirectory) rmSync(probeDirectory, { recursive: true, force: true });
   });
 
-  describe.each(["bun", "binary"])("%s", (runtime) => {
+  describe.each(
+    process.env.BAILIAN_TEST_NODE_ONLY ? ["node"] : ["node", ...(hasBun ? ["bun", "binary"] : [])],
+  )("%s", (runtime) => {
     beforeAll(async () => {
       if (runtime !== "binary") return;
       const target = `bun-${process.platform === "win32" ? "windows" : process.platform}-${process.arch}`;
@@ -209,8 +253,16 @@ try {
         mode,
       ];
       const { stdout } = await execFileAsync(
-        runtime === "bun" ? bun : binaryPath,
-        runtime === "bun" ? [scriptPath, ...args] : args,
+        runtime === "node"
+          ? process.env.BAILIAN_TEST_NODE || process.execPath
+          : runtime === "bun"
+            ? bun
+            : binaryPath,
+        runtime === "node"
+          ? [join(repositoryRoot, "node_modules/tsx/dist/cli.mjs"), scriptPath, ...args]
+          : runtime === "bun"
+            ? [scriptPath, ...args]
+            : args,
         { cwd: runtimeRoot, env: { ...childEnv, ...env }, timeout: 30_000 },
       ).catch((error) => {
         throw new Error(
@@ -226,6 +278,13 @@ try {
       return stdout.trim();
     }
 
+    test("uses the selected runtime version", async () => {
+      const executable =
+        runtime === "node" ? process.env.BAILIAN_TEST_NODE || process.execPath : bun;
+      const { stdout } = await execFileAsync(executable, ["--version"]);
+      const version = stdout.trim().replace(/^v/, "");
+      expect((await run("/headers", 2, "version")).replace(/^v/, "")).toBe(version);
+    });
     test("allows delayed headers within the configured deadline", async () => {
       expect(await run("/headers", 2)).toBe("done");
     });
@@ -261,7 +320,19 @@ try {
       expect(result.body).toContain('filename="probe.txt"');
       expect(result.body).toContain("file-content");
     });
-    test("native fetch still uses the configured proxy", async () => {
+    test.each(["body", "transport"])("successful local proxy round trip (%s)", async (mode) => {
+      connects.length = 0;
+      expect(await run("/headers", 2, mode, { HTTP_PROXY: proxyUrl })).toBe("done");
+      expect(connects).toContain(new URL(serverUrl).host);
+    });
+    test.each(["body", "transport"])("NO_PROXY bypasses the local proxy (%s)", async (mode) => {
+      connects.length = 0;
+      expect(await run("/headers", 2, mode, { HTTP_PROXY: proxyUrl, NO_PROXY: "127.0.0.1" })).toBe(
+        "done",
+      );
+      expect(connects).toEqual([]);
+    });
+    test("configured HTTPS proxy receives CONNECT", async () => {
       connects.length = 0;
       await run("https://bl-native-proxy.invalid/probe", 1, "body", { HTTPS_PROXY: proxyUrl });
       expect(connects).toContain("bl-native-proxy.invalid:443");

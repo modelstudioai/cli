@@ -382,3 +382,59 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc upload (live)", () => 
     }
   }, 120_000);
 });
+
+describe("media parser dry-run contract", () => {
+  test("parser configuration is mapped to addFile without uploading", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "rag-parser-dry-run-"));
+    const filePath = join(directory, "note.md");
+    const configPath = join(directory, "parser.json");
+    writeFileSync(filePath, "# sample");
+    writeFileSync(configPath, '{"future_field":true}');
+    const result = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      filePath,
+      "--parser",
+      "DOCMIND_LLM_VERSION_MEDIA",
+      "--parser-config-file",
+      configPath,
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const body = parseStdoutJson<{
+      steps: Array<{ step: string; request: Record<string, unknown> }>;
+    }>(result.stdout);
+    expect(body.steps.find((step) => step.step === "addFile")?.request).toMatchObject({
+      parser: "DOCMIND_LLM_VERSION_MEDIA",
+      parserConfig: { future_field: true },
+    });
+  });
+});
+
+test("51 known local media files fail before upload even in dry-run", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "rag-batch-boundary-"));
+  for (let fileIndex = 0; fileIndex < 51; fileIndex++)
+    writeFileSync(join(directory, `clip-${fileIndex}.mp4`), "tiny synthetic fixture");
+  const result = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+    "knowledge",
+    "doc",
+    "upload",
+    "--file",
+    directory,
+    "--index-id",
+    "index_test",
+    "--workspace-id",
+    "ws_test",
+    "--dry-run",
+    "--output",
+    "json",
+  ]);
+  expect(result.exitCode).toBe(2);
+  expect(result.stderr).toContain("50");
+});

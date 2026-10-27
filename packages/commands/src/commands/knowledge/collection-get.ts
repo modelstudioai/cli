@@ -15,7 +15,7 @@ const COLLECTION_GET_FLAGS = {
     valueHint: "<id>",
     description: {
       "en-US": "Collection ID; alternative to --name",
-      "zh-CN": "数据集合 ID；与 --name 二选一",
+      "zh-CN": "数据集 ID；与 --name 二选一",
     },
   },
   name: {
@@ -23,14 +23,14 @@ const COLLECTION_GET_FLAGS = {
     valueHint: "<text>",
     description: {
       "en-US": "Collection name; alternative to --collection-id",
-      "zh-CN": "数据集合名称；与 --collection-id 二选一",
+      "zh-CN": "数据集名称；与 --collection-id 二选一",
     },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: { "en-US": "Show data collection details", "zh-CN": "查看数据集合详情" },
+  description: { "en-US": "Show collection details", "zh-CN": "查看数据集详情" },
   auth: "apiKey",
   usageArgs: "(--collection-id <id> | --name <text>) [flags]",
   flags: COLLECTION_GET_FLAGS,

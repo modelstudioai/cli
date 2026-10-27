@@ -3,6 +3,8 @@
 
 // Entrypoint factory + identity
 export { createCli, registerInterruptHandler } from "./create-cli.ts";
+export { buildCommandSchema, serializeCommandSchema } from "./introspect.ts";
+export type { CommandSchema, CommandSchemaNode } from "./introspect.ts";
 export type { Cli, CliOptions } from "./create-cli.ts";
 
 // Command Pack product policy
@@ -25,7 +27,7 @@ export type { ParsePathResult } from "./args.ts";
 
 // Process-level setup / error handling
 export { setupProxyFromEnv } from "./proxy.ts";
-export { handleError } from "./error-handler.ts";
+export { handleError, normalizeError } from "./error-handler.ts";
 export { CLI_VERSION } from "./version.ts";
 
 // Console URLs referenced by commands (e.g. auth/status, banner)
@@ -33,6 +35,7 @@ export {
   BAILIAN_CONSOLE_ROOT,
   BAILIAN_CONSOLE,
   API_KEY_PAGE,
+  KNOWLEDGE_BILLING_PAGE,
   TOKEN_PLAN_PAGE,
   MCP_WEBSEARCH_PAGE,
   mcpMarketplaceDetailPage,

@@ -1,3 +1,4 @@
+import { httpTransport } from "../client/transport.ts";
 import type { Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
@@ -147,7 +148,7 @@ export async function callConsoleGateway(
     );
   }
 
-  const res = await fetch(endpoint, {
+  const res = await httpTransport.fetch(endpoint, {
     method: "POST",
     headers,
     body: body.toString(),

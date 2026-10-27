@@ -92,6 +92,7 @@ export default defineCommand({
               [
                 row.id,
                 row.name,
+                row.knowledgeType ?? "-",
                 row.embeddingModelName ?? "-",
                 row.chunkSize ?? "-",
                 row.description ?? "",
@@ -100,7 +101,7 @@ export default defineCommand({
           );
         }
       }
-      emitBare(`total: ${response.data?.total ?? rows.length}`);
+      emitBare(`total: ${response.data?.total_count ?? rows.length}`);
     } else {
       emitResult(response, format);
     }

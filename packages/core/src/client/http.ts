@@ -1,3 +1,4 @@
+import { httpTransport } from "./transport.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import type { ApiErrorBody } from "../errors/api.ts";
 import { BailianError } from "../errors/base.ts";
@@ -99,7 +100,7 @@ async function performRequest(
       : undefined,
     signal,
     // Bun's native fetch ignores dispatchers and its undici shim has no compose.
-    // Keep native fetch in both runtimes, adapting only transport controls.
+    // Node fetch and this dispatcher both come from the packaged Undici.
     ...(process.versions.bun
       ? { timeout: false as const }
       : {
@@ -109,7 +110,7 @@ async function performRequest(
           ) as unknown as RequestInit["dispatcher"],
         }),
   };
-  const res = await fetch(opts.url, requestInit);
+  const res = await httpTransport.fetch(opts.url, requestInit);
 
   if (deps.settings.verbose) {
     console.error(`< ${res.status} ${res.statusText}`);

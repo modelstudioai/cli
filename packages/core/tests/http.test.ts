@@ -1,3 +1,5 @@
+import { httpTransport } from "../src/client/transport.ts";
+import { Response as UndiciResponse } from "undici";
 import { getEventListeners } from "node:events";
 import { createServer, type RequestListener } from "node:http";
 import type { Socket } from "node:net";
@@ -79,7 +81,7 @@ describe("real HTTP response bodies", () => {
     { caller: "Client.requestJson", status: 200 },
     { caller: "request", status: 503 },
   ])("$caller times out while reading a partial $status JSON body", async ({ caller, status }) => {
-    const readBody = vi.spyOn(Response.prototype, "json");
+    const readBody = vi.spyOn(UndiciResponse.prototype, "json");
     await withServer(
       (_incoming, response) => {
         response.writeHead(status, { "content-type": "application/json" });
@@ -107,12 +109,14 @@ describe("real HTTP response bodies", () => {
       const parent = new AbortController();
       const reason = new BailianError("Caller wait budget exhausted", ExitCode.TIMEOUT);
       const bodyMethod = status === 200 ? "json" : "text";
-      const originalRead = Response.prototype[bodyMethod];
+      const originalRead = UndiciResponse.prototype[bodyMethod];
       let bodyStarted!: () => void;
       const readingBody = new Promise<void>((resolve) => {
         bodyStarted = resolve;
       });
-      vi.spyOn(Response.prototype, bodyMethod).mockImplementationOnce(function (this: Response) {
+      vi.spyOn(UndiciResponse.prototype, bodyMethod).mockImplementationOnce(function (
+        this: UndiciResponse,
+      ) {
         bodyStarted();
         return originalRead.call(this);
       });
@@ -225,7 +229,7 @@ describe("request signal cleanup", () => {
         });
         return originalRead();
       });
-      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+      const fetchMock = vi.spyOn(httpTransport, "fetch").mockResolvedValue(response);
       const pending = requestJson(testDeps(), {
         url: "http://127.0.0.1/unused",
         signal: parent.signal,
@@ -252,7 +256,7 @@ describe("request signal cleanup", () => {
     const reason = { budget: "exhausted" };
     if (aborted) parent.abort(reason);
     const failure = new TypeError("fetch failed");
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(failure);
+    const fetchMock = vi.spyOn(httpTransport, "fetch").mockRejectedValue(failure);
     await expect(
       requestJson(testDeps(), { url: "http://127.0.0.1/unused", signal: parent.signal }),
     ).rejects.toBe(aborted ? reason : failure);
@@ -268,7 +272,7 @@ describe("request signal cleanup", () => {
       vi.useFakeTimers();
       const parent = new AbortController();
       const reason = new Error("Parent budget exhausted");
-      const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const fetchMock = vi.spyOn(httpTransport, "fetch").mockImplementation(async (_url, init) => {
         const signal = init!.signal!;
         const response = new Response("{}");
         vi.spyOn(response, "json").mockImplementation(
@@ -307,7 +311,7 @@ describe("request signal cleanup", () => {
     vi.useFakeTimers();
     const parent = new AbortController();
     const response = new Response('{"stream":"still readable"}');
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const fetchMock = vi.spyOn(httpTransport, "fetch").mockResolvedValue(response);
     const result = await request(testDeps(), {
       url: "http://127.0.0.1/unused",
       signal: parent.signal,
@@ -454,7 +458,7 @@ describe("raw response explicit cancellation", () => {
     async (reason) => {
       const parent = new AbortController();
       const source = new ReadableStream<Uint8Array>();
-      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(source));
+      const fetchMock = vi.spyOn(httpTransport, "fetch").mockResolvedValue(new Response(source));
       const response = await request(testDeps(), {
         url: "http://127.0.0.1/unused",
         signal: parent.signal,

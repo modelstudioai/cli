@@ -6,6 +6,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.6.0] - 2026-10-27
+
+### Added
+
+- **Knowledge initialization**: Add `knowledge init` to upload a sample, create a knowledge base and retrieval service, and verify retrieval, with recovery and resource reuse.
+- **Directory sync and file import**: Add `knowledge doc sync` and `knowledge doc import` for local directories and existing files.
+- **Multimedia knowledge bases**: Support audio/video knowledge bases, parser configuration, streaming uploads, image-only search, and online search filters.
+- **Agent capability discovery**: Add `--introspect` and the `bailian-knowledge` skill, with corresponding capabilities in Knowledge Studio CLI.
+
+### Changed
+
+- **Chat output**: Separate answers, phases, tools, sources, and usage in structured output; quiet mode emits only the final answer.
+- **Knowledge-base creation**: Add billing notices, resource records, and cleanup guidance.
+
+### Fixed
+
+- Reject blank required inputs in knowledge commands.
+- Report completed, unconfirmed, and unexecuted batches when chunk deletion fails.
+
+## [2.5.1] - 2026-10-23
+
+### Added
+
+- **Console login**: Support `--no-browser` for manually opening the login URL and `--token-stdin` for importing and validating console credentials from standard input.
+- **Agent attribution**: Support declaring the calling Agent, Skill name and version; undeclared callers remain unknown.
+
+### Fixed
+
+- **Login completion**: Handle fast browser callbacks reliably and report a timeout when no credentials are received.
+- **Credential refresh**: Correct region selection and validate the retried request before saving refreshed credentials.
+
 ## [2.5.0] - 2026-10-20
 
 ### Added
