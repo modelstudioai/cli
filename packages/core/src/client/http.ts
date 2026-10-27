@@ -120,14 +120,21 @@ async function performRequest(
   }
 
   if (!res.ok) {
-    let body: ApiErrorBody = {};
+    const raw = await res.text();
+    let body: ApiErrorBody;
     try {
-      body = (await res.json()) as ApiErrorBody;
+      const parsed: unknown = JSON.parse(raw);
+      body =
+        parsed !== null && typeof parsed === "object" ? (parsed as ApiErrorBody) : { message: raw };
     } catch {
-      if (signal.aborted) throw signal.reason;
-      /* non-JSON */
+      body = { message: raw };
     }
-    throw mapApiError(res.status, body, opts.url);
+    body.request_id ??= res.headers.get("x-request-id") ?? undefined;
+    const mapped = mapApiError(res.status, body, opts.url);
+    throw new BailianError(mapped.message, mapped.exitCode, mapped.hint, {
+      api: mapped.api,
+      rawResponse: raw,
+    });
   }
 
   return res;
@@ -261,11 +268,12 @@ export async function requestJson<T>(deps: HttpDeps, opts: RequestOpts): Promise
   const requestSignal = createRequestSignal(timeoutMs, opts.signal);
   try {
     const res = await performRequest(deps, opts, requestSignal.signal);
-    let data: T & { code?: string; message?: string; request_id?: string };
+    let data: T & ApiErrorBody;
     try {
-      data = (await res.json()) as T & { code?: string; message?: string; request_id?: string };
-    } catch {
+      data = (await res.json()) as T & ApiErrorBody;
+    } catch (error) {
       if (requestSignal.signal.aborted) throw requestSignal.signal.reason;
+      if (!(error instanceof SyntaxError)) throw error;
       const contentType = res.headers.get("content-type") || "";
       throw new BailianError(
         `API returned non-JSON response (${contentType || "unknown type"}). Server may be experiencing issues.\nAPI 返回了非 JSON 响应（${contentType || "未知类型"}），服务器可能出现问题。`,
@@ -273,14 +281,25 @@ export async function requestJson<T>(deps: HttpDeps, opts: RequestOpts): Promise
       );
     }
 
-    // DashScope error format: { code: "ErrorCode", message: "..." }
     if (
-      data.code &&
-      typeof data.code === "string" &&
-      data.code !== "200" &&
-      data.code !== "Success"
+      data !== null &&
+      typeof data === "object" &&
+      ((data.code && data.code !== "200" && data.code !== 200 && data.code !== "Success") ||
+        data.error)
     ) {
-      throw mapApiError(200, { error: { message: data.message, type: data.code } }, opts.url);
+      const mapped = mapApiError(
+        res.status,
+        {
+          ...data,
+          request_id:
+            data.request_id ?? data.requestID ?? res.headers.get("x-request-id") ?? undefined,
+        },
+        opts.url,
+      );
+      throw new BailianError(mapped.message, mapped.exitCode, mapped.hint, {
+        api: mapped.api,
+        rawResponse: JSON.stringify(data),
+      });
     }
 
     return data;

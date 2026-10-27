@@ -26,6 +26,23 @@ export function chatPath(): string {
   return "/compatible-mode/v1/chat/completions";
 }
 
+// ---- Batch (OpenAI Compatible) ----
+export function batchesPath(): string {
+  return "/compatible-mode/v1/batches";
+}
+export function batchPath(batchId: string): string {
+  return `${batchesPath()}/${encodeURIComponent(batchId)}`;
+}
+export function batchCancelPath(batchId: string): string {
+  return `${batchPath(batchId)}/cancel`;
+}
+export function batchFileContentPath(fileId: string): string {
+  return `/compatible-mode/v1/files/${encodeURIComponent(fileId)}/content`;
+}
+export function batchChatBaseUrl(): string {
+  return "https://batch.dashscope.aliyuncs.com";
+}
+
 // ---- Responses (OpenAI Compatible) ----
 export function responsesPath(): string {
   return "/compatible-mode/v1/responses";

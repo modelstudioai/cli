@@ -40,6 +40,8 @@
     "check": "vp check"
   },
   "dependencies": {
+    "csv-parse": "catalog:",
+    "csv-stringify": "catalog:",
     "tar-stream": "catalog:",
     "undici": "catalog:",
     "yaml": "^2.8.3",

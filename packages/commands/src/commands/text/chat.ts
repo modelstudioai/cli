@@ -1,5 +1,7 @@
 import {
   defineCommand,
+  resolveBatchChatEndpoint,
+  batchUsage,
   chatPath,
   responsesPath,
   parseSSE,
@@ -51,8 +53,8 @@ const CHAT_FLAGS = {
     type: "string",
     valueHint: "<path>",
     description: {
-      "en-US": "JSON file with messages array (use - for stdin)",
-      "zh-CN": "包含 messages 数组的 JSON 文件（使用 - 从 stdin 读取）",
+      "en-US": "Messages array for one request (use - for stdin)",
+      "zh-CN": "同一请求的 messages 数组（使用 - 从 stdin 读取）",
     },
   },
   system: {
@@ -106,6 +108,13 @@ const CHAT_FLAGS = {
     description: {
       "en-US": "Max tokens for thinking (default: 4096)",
       "zh-CN": "思考过程最大 Token 数（默认：4096）",
+    },
+  },
+  batch: {
+    type: "switch",
+    description: {
+      "en-US": "Single synchronous Batch Chat request (non-streaming)",
+      "zh-CN": "单次同步 Batch Chat 请求（非流式）",
     },
   },
   ...PRIME_FLAGS,
@@ -166,7 +175,7 @@ export default defineCommand({
     "zh-CN": "发送文本模型请求（OpenAI 兼容，DashScope）",
   },
   auth: "apiKey",
-  usageArgs: "--message <text> [flags]",
+  usageArgs: "(--message <text> | --messages-file <path>) [flags]",
   flags: CHAT_FLAGS,
   exampleArgs: [
     { "en-US": '--message "What is Qwen?"', "zh-CN": '--message "通义千问是什么？"' },
@@ -183,6 +192,11 @@ export default defineCommand({
       "en-US": '--message "Hello" --message "assistant:Hi!" --message "How are you?"',
       "zh-CN": '--message "你好" --message "assistant:你好！" --message "你好吗？"',
     },
+    {
+      "en-US": '--batch --model qwen-plus --message "Hello" --timeout 3600',
+      "zh-CN": '--batch --model qwen-plus --message "你好" --timeout 3600',
+    },
+    "--batch --model qwen-plus --messages-file messages.json --timeout 3600",
     "--messages-file - --stream",
     { "en-US": '--message "Hello" --output json', "zh-CN": '--message "你好" --output json' },
     {
@@ -197,6 +211,16 @@ export default defineCommand({
   notes: [
     {
       "en-US":
+        "--batch sends one synchronous Batch Chat request, non-streaming even in TTY; cannot combine with --prime, --api responses or --stream. --message/--messages-file supply one request's conversation context, not independent file requests. File inference uses batch create/get/download: create returns a task ID without waiting for completion. Explicit realtime/international/Token Plan hosts are rejected; explicit Batch/custom proxy URLs retain existing credentials. No automatic fallback or POST replay.",
+      "zh-CN":
+        "--batch 发送单次同步 Batch Chat 请求，即使 TTY 也强制非流式；不能与 --prime、--api responses 或 --stream 同用。--message/--messages-file 提供同一请求的对话上下文，不表示文件中的独立请求。文件推理使用 batch create/get/download：create 返回任务 ID，不等待任务完成。拒绝显式实时/国际站/Token Plan 地址；显式 Batch/自定义代理地址沿用现有凭证。不自动回退或重放 POST。",
+    },
+    {
+      "en-US": "Batch Chat total request timeout defaults to 300s; --timeout must be 60–3600s.",
+      "zh-CN": "Batch Chat 请求总超时默认为 300 秒；--timeout 必须为 60–3600 秒。",
+    },
+    {
+      "en-US":
         "Prime mode requires an explicit model and currently supports only the Chat Completions API.",
       "zh-CN": "Prime 模式必须显式指定模型，且当前仅支持 Chat Completions API。",
     },
@@ -208,8 +232,9 @@ export default defineCommand({
     },
   ],
   validate: (flags) => {
-    if (!flags.message && !flags.messagesFile) {
-      return "Provide --message or --messages-file.";
+    if (!flags.message && !flags.messagesFile) return "Provide --message or --messages-file.";
+    if (flags.batch && (flags.prime || flags.api === "responses" || flags.stream)) {
+      return "--batch conflicts with --prime, --api responses and --stream. / --batch 与 --prime、--api responses、--stream 互斥。";
     }
     const primeValidation = validatePrimeFlags(flags);
     if (primeValidation) return primeValidation;
@@ -223,11 +248,18 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
+    if (
+      flags.batch &&
+      (!Number.isFinite(settings.timeout) || settings.timeout < 60 || settings.timeout > 3600)
+    )
+      batchUsage(
+        "Batch Chat --timeout must be 60–3600 seconds.",
+        "Batch Chat --timeout 必须为 60–3600 秒。",
+      );
     const { system, messages } = parseMessages(flags);
-
     const api = flags.api ?? "chat";
     const model = flags.model || settings.defaultTextModel || "qwen3.8-max";
-    const shouldStream = flags.stream || process.stdout.isTTY;
+    const shouldStream = flags.batch ? false : flags.stream || process.stdout.isTTY;
     const format = detectOutputFormat(settings.output);
 
     // Build messages array with system prompt
@@ -264,11 +296,13 @@ export default defineCommand({
       }
     }
 
-    const requestPath = flags.prime
-      ? resolvePrimeEndpoint(ctx, chatPath())
-      : api === "responses"
-        ? responsesPath()
-        : chatPath();
+    const requestPath = flags.batch
+      ? resolveBatchChatEndpoint(ctx.client)
+      : flags.prime
+        ? resolvePrimeEndpoint(ctx, chatPath())
+        : api === "responses"
+          ? responsesPath()
+          : chatPath();
 
     if (flags.tool) {
       const tools = flags.tool.map((toolValue) => {
@@ -284,7 +318,11 @@ export default defineCommand({
 
     if (settings.dryRun) {
       emitResult(
-        flags.prime ? { endpoint: requestPath, request: body } : { request: body },
+        flags.batch
+          ? { endpoint: requestPath, request: body, timeout: settings.timeout }
+          : flags.prime
+            ? { endpoint: requestPath, request: body }
+            : { request: body },
         format,
       );
       return;

@@ -95,7 +95,7 @@ describe("real HTTP response bodies", () => {
               ? request(testDeps(), { url, timeout: 0.15 })
               : requestJson(testDeps(), { url, timeout: 0.15 });
         await expect(pending).rejects.toMatchObject({ name: "AbortError" });
-        expect(readBody).toHaveBeenCalledOnce();
+        expect(readBody).toHaveBeenCalledTimes(status === 200 ? 1 : 0);
         expect(performance.now() - startedAt).toBeLessThan(2_000);
       },
     );
@@ -106,14 +106,15 @@ describe("real HTTP response bodies", () => {
     async (status) => {
       const parent = new AbortController();
       const reason = new BailianError("Caller wait budget exhausted", ExitCode.TIMEOUT);
-      const originalJson = Response.prototype.json;
+      const bodyMethod = status === 200 ? "json" : "text";
+      const originalRead = Response.prototype[bodyMethod];
       let bodyStarted!: () => void;
       const readingBody = new Promise<void>((resolve) => {
         bodyStarted = resolve;
       });
-      vi.spyOn(Response.prototype, "json").mockImplementationOnce(function (this: Response) {
+      vi.spyOn(Response.prototype, bodyMethod).mockImplementationOnce(function (this: Response) {
         bodyStarted();
-        return originalJson.call(this);
+        return originalRead.call(this);
       });
       await withServer(
         (_incoming, response) => {
@@ -152,9 +153,9 @@ describe("real HTTP response bodies", () => {
       label: "top-level service code",
       status: 200,
       contentType: "application/json",
-      body: '{"code":"ServiceBusy","message":"服务端原文 / original service message"}',
+      body: '{"code":"ServiceBusy","message":"服务端原文 / original service message","request_id":"business-request"}',
       message: "服务端原文 / original service message",
-      api: { httpStatus: 200, apiCode: "ServiceBusy" },
+      api: { httpStatus: 200, apiCode: "ServiceBusy", requestId: "business-request" },
     },
     {
       label: "HTTP service error",
@@ -177,7 +178,7 @@ describe("real HTTP response bodies", () => {
       status: 503,
       contentType: "text/html",
       body: "<html>unavailable</html>",
-      message: "HTTP 503",
+      message: "<html>unavailable</html>",
       api: { httpStatus: 503 },
     },
   ])("keeps $label behavior", async ({ status, contentType, body, message, api }) => {
@@ -211,17 +212,18 @@ describe("request signal cleanup", () => {
       const parent = new AbortController();
       let finishBody!: () => void;
       const response = new Response(body, { status });
-      const originalJson = response.json.bind(response);
+      const bodyMethod = status === 200 ? "json" : "text";
+      const originalRead = response[bodyMethod].bind(response);
       let bodyStarted!: () => void;
       const readingBody = new Promise<void>((resolve) => {
         bodyStarted = resolve;
       });
-      vi.spyOn(response, "json").mockImplementation(async () => {
+      vi.spyOn(response, bodyMethod).mockImplementation(async () => {
         bodyStarted();
         await new Promise<void>((resolve) => {
           finishBody = resolve;
         });
-        return originalJson();
+        return originalRead();
       });
       const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
       const pending = requestJson(testDeps(), {

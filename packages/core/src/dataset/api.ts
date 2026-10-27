@@ -30,31 +30,29 @@ export interface DatasetUploadParams {
    * uploading evaluation or other dataset kinds.
    */
   purpose?: string;
+  /** 已由调用方校验的不可变字节；提供时不再读取 filePath。 */
+  fileBlob?: Blob;
   signal?: AbortSignal;
 }
 
 /**
  * POST /compatible-mode/v1/files (multipart/form-data)
  *
- * Streams the file from disk so we don't buffer 300MB into memory. Node's
- * `fetch` accepts a `Blob` produced from a Readable stream via `Response`'s
- * body shim, but the simplest portable approach (and the one used in
- * `files/upload.ts`) is to wrap the buffer in a Blob. Here we use `Blob`
- * with a stream-backed lazy `arrayBuffer()` for >50MB files via
- * `Response`'s helper to avoid the buffer doubling. Fall back to readFileSync
- * for small files where streaming overhead isn't worth it.
+ * 文件读取通过 Response.blob 聚合，multipart 上传复用 Blob。
+ * 提供 fileBlob 时不再读取源路径，保证校验和上传的字节一致。
  */
 export async function uploadDataset(
   client: Client,
   params: DatasetUploadParams,
 ): Promise<DatasetFile & { request_id?: string }> {
   const { filePath, purpose = "fine-tune", signal } = params;
-  const stat = statSync(filePath);
+  const size = params.fileBlob?.size ?? statSync(filePath).size;
   const fileName = basename(filePath);
 
-  // Use a streaming Blob via Response wrapper to avoid loading the whole file.
-  const stream = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
-  const blob = await new Response(stream).blob();
+  // Response.blob 会聚合字节；Batch 调用方直接提供同一份已校验 Blob。
+  const blob =
+    params.fileBlob ??
+    (await new Response(Readable.toWeb(createReadStream(filePath)) as ReadableStream).blob());
 
   const form = new FormData();
   form.append("file", blob, fileName);
@@ -72,7 +70,7 @@ export async function uploadDataset(
     return {
       file_id: body.id,
       name: body.filename ?? fileName,
-      size: body.bytes ?? stat.size,
+      size: body.bytes ?? size,
       purpose: body.purpose ?? purpose,
       gmt_create: body.created_at ? new Date(body.created_at * 1000).toISOString() : undefined,
       request_id: body.request_id,
@@ -86,17 +84,22 @@ export async function uploadDataset(
   const failedUploads = body.data?.failed_uploads;
   if (Array.isArray(failedUploads) && failedUploads.length > 0) {
     const first = failedUploads[0] ?? {};
-    const code = first.code ? ` [${first.code}]` : "";
     throw new BailianError(
-      `Dataset upload failed${code}: ${first.message ?? "no message returned"}`,
+      first.message ??
+        "Upload failed without a service message. / 上传失败，服务端未提供错误消息。",
       ExitCode.GENERAL,
-      `Server reported failure for ${fileName}. Re-run with --verbose to see the raw response.`,
+      undefined,
+      {
+        api: { httpStatus: 200, apiCode: first.code, requestId: body.request_id },
+        rawResponse: JSON.stringify(body),
+      },
     );
   }
   throw new BailianError(
-    `Dataset upload of ${fileName} returned no file_id (HTTP 200 with empty payload).`,
+    `Upload response for ${fileName} has no usable file ID. / ${fileName} 的上传响应缺少可用文件 ID。`,
     ExitCode.GENERAL,
-    "The platform accepted the request but did not allocate a file_id. Retry the upload; if it recurs, contact platform support with the request id.",
+    "Success cannot be verified; inspect the file list before retrying. / 无法验证上传成功，请先检查文件列表，再决定是否重试。",
+    { api: { httpStatus: 200, requestId: body.request_id }, rawResponse: JSON.stringify(body) },
   );
 }
 

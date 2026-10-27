@@ -2,7 +2,7 @@
 // each entrypoint (bl / rag / …) injects its own command set via createCli().
 
 // Entrypoint factory + identity
-export { createCli } from "./create-cli.ts";
+export { createCli, registerInterruptHandler } from "./create-cli.ts";
 export type { Cli, CliOptions } from "./create-cli.ts";
 
 // Command Pack product policy
