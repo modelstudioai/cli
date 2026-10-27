@@ -64,6 +64,9 @@ importers:
       vite-plus:
         specifier: 'catalog:'
         version: 0.3.3(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
+      yaml:
+        specifier: 'catalog:'
+        version: 2.8.3
 
   packages/bailian-kb-dsh:
     dependencies:
