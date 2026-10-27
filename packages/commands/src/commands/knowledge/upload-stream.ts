@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 
@@ -29,7 +30,7 @@ export async function putFileStream(
       duplex: "half",
       signal,
     };
-    return await fetch(lease.url, request);
+    return await httpTransport.fetch(lease.url, request);
   } finally {
     source.destroy();
   }

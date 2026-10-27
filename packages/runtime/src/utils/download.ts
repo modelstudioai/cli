@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { createWriteStream, mkdirSync, unlinkSync } from "fs";
 import { dirname } from "path";
 import { BailianError, ExitCode } from "bailian-cli-core";
@@ -9,7 +10,7 @@ export async function downloadFile(
   destPath: string,
   opts?: { quiet?: boolean },
 ): Promise<{ size: number }> {
-  const res = await fetch(url);
+  const res = await httpTransport.fetch(url);
 
   if (!res.ok) {
     throw new BailianError(`Download failed: HTTP ${res.status}`, ExitCode.GENERAL);

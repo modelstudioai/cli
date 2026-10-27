@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import {
   BailianError,
   ExitCode,
@@ -204,7 +205,7 @@ export async function resolveOssPayload<T>(resp: Record<string, unknown>): Promi
   };
   if (originData !== undefined && originData !== null) return originData;
   if (dataDownloadUrl) {
-    const res = await fetch(dataDownloadUrl.replace(/^http:\/\//, "https://"));
+    const res = await httpTransport.fetch(dataDownloadUrl.replace(/^http:\/\//, "https://"));
     if (!res.ok) {
       throw new BailianError(
         `Failed to download telemetry data (HTTP ${res.status}).`,

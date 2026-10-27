@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { Client } from "bailian-cli-core";
 import memoryAdd from "../src/commands/memory/add.ts";
@@ -32,7 +33,7 @@ const deps = {
 
 for (const status of [401, 429, 500]) {
   test(`write HTTP ${status} preserves server diagnostics and is not retried`, async () => {
-    const transport = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    const transport = vi.spyOn(httpTransport, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
           code: "ServiceTestCode",
@@ -61,7 +62,7 @@ for (const status of [401, 429, 500]) {
 
 test("ambiguous write transport failure is not automatically resubmitted", async () => {
   const failure = new TypeError("fetch failed", { cause: { code: "ECONNRESET" } });
-  const transport = vi.spyOn(globalThis, "fetch").mockRejectedValue(failure);
+  const transport = vi.spyOn(httpTransport, "fetch").mockRejectedValue(failure);
   await expect(
     memoryAdd.run({
       flags: { userId: "test", workspaceId: "ws_test", content: "synthetic", wait: 0 },

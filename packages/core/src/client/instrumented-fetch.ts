@@ -1,3 +1,4 @@
+import { httpTransport } from "./transport.ts";
 import { maskToken } from "../utils/token.ts";
 import type { HttpDeps } from "./http.ts";
 import { trackingHeaders } from "./headers.ts";
@@ -61,7 +62,7 @@ export function createInstrumentedFetch(deps: HttpDeps): FetchImplementation {
       if (auth) console.error(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}`);
     }
 
-    const res = await fetch(input, { ...init, headers });
+    const res = await httpTransport.fetch(input, { ...init, headers });
 
     if (deps.settings.verbose) {
       console.error(`< ${res.status} ${res.statusText}`);

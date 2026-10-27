@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { createServer, type Server } from "http";
 import { tmpdir } from "os";
@@ -163,9 +164,9 @@ describe("e2e: auth", () => {
           console_switch_agent: 123,
         };
         await writeConfigFile(previous, "token-plan");
-        const originalFetch = globalThis.fetch;
+        const originalFetch = httpTransport.fetch;
         const requests: string[] = [];
-        globalThis.fetch = async (input, init) => {
+        httpTransport.fetch = async (input, init) => {
           const endpoint = new URL(input instanceof Request ? input.url : input);
           requests.push(endpoint.hostname);
           expect(readConfigFile("token-plan")).toEqual(previous);
@@ -246,7 +247,7 @@ describe("e2e: auth", () => {
                 ],
           );
         } finally {
-          globalThis.fetch = originalFetch;
+          httpTransport.fetch = originalFetch;
         }
       });
     },
@@ -354,9 +355,9 @@ describe("e2e: auth", () => {
         const stdin = vi
           .spyOn(process, "stdin", "get")
           .mockReturnValue(input as typeof process.stdin);
-        const originalFetch = globalThis.fetch;
+        const originalFetch = httpTransport.fetch;
         let validations = 0;
-        globalThis.fetch = async (url, init) => {
+        httpTransport.fetch = async (url, init) => {
           const endpoint = new URL(url instanceof Request ? url.url : url);
           expect(endpoint.hostname).toBe("bailian-singapore-cs.alibabacloud.com");
           expect(endpoint.searchParams.get("api")).toBe(
@@ -424,7 +425,7 @@ describe("e2e: auth", () => {
         } finally {
           stdin.mockRestore();
           input.destroy();
-          globalThis.fetch = originalFetch;
+          httpTransport.fetch = originalFetch;
         }
       });
     },

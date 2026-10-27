@@ -1,3 +1,4 @@
+import { httpTransport } from "../client/transport.ts";
 /**
  * Upload local files to DashScope temporary OSS storage.
  *
@@ -94,14 +95,16 @@ async function getUploadPolicy(
   const uploadApi = `${resolveUploadBaseUrl(baseUrl, apiKey)}/api/v1/uploads`;
   const url = `${uploadApi}?action=getPolicy&model=${encodeURIComponent(model)}`;
   const policySignal = combineWithTimeout(15_000, signal);
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      ...trackingHeaders(identity),
-    },
-    signal: policySignal.signal,
-  }).finally(policySignal.cleanup);
+  const res = await httpTransport
+    .fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        ...trackingHeaders(identity),
+      },
+      signal: policySignal.signal,
+    })
+    .finally(policySignal.cleanup);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -167,11 +170,13 @@ async function uploadToOSS(
   form.append("file", new Blob([fileData]), fileName);
 
   const uploadSignal = combineWithTimeout(timeoutSeconds * 1000, signal);
-  const res = await fetch(policy.upload_host, {
-    method: "POST",
-    body: form,
-    signal: uploadSignal.signal,
-  }).finally(uploadSignal.cleanup);
+  const res = await httpTransport
+    .fetch(policy.upload_host, {
+      method: "POST",
+      body: form,
+      signal: uploadSignal.signal,
+    })
+    .finally(uploadSignal.cleanup);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

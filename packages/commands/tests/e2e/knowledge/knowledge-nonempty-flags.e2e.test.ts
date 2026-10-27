@@ -1,8 +1,9 @@
+import { httpTransport } from "bailian-cli-core";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { runCommandInProcess } from "../helpers.ts";
 import type { E2eRouteExports } from "../topic-routes.ts";
 beforeEach(() => {
-  vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected network request"));
+  vi.spyOn(httpTransport, "fetch").mockRejectedValue(new Error("Unexpected network request"));
 });
 afterEach(() => vi.restoreAllMocks());
 const cases = [

@@ -119,3 +119,4 @@ export {
 } from "./mcp.ts";
 export type { ServerSentEvent } from "./stream.ts";
 export { parseSSE } from "./stream.ts";
+export { httpTransport } from "./transport.ts";

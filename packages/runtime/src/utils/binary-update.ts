@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import {
   chmod,
   copyFile,
@@ -61,7 +62,7 @@ export async function fetchBinaryChannelVersion(
   timeoutMs = 5000,
 ): Promise<string | null> {
   try {
-    const response = await fetch(channelManifestUrl(channel), {
+    const response = await httpTransport.fetch(channelManifestUrl(channel), {
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) return null;
@@ -77,7 +78,7 @@ export async function fetchBinaryChannelManifest(
   timeoutMs = 8000,
 ): Promise<ChannelManifest | null> {
   try {
-    const response = await fetch(channelManifestUrl(channel), {
+    const response = await httpTransport.fetch(channelManifestUrl(channel), {
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) return null;
@@ -115,7 +116,7 @@ async function fetchSha256FromVersionSums(
   timeoutMs = 8000,
 ): Promise<string | undefined> {
   try {
-    const response = await fetch(releaseAssetUrl(version, "SHA256SUMS"), {
+    const response = await httpTransport.fetch(releaseAssetUrl(version, "SHA256SUMS"), {
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) return undefined;
@@ -165,7 +166,7 @@ export async function resolveBinaryDownloadSpec(
 }
 
 async function downloadToFile(url: string, dest: string): Promise<Buffer> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(120_000) });
+  const response = await httpTransport.fetch(url, { signal: AbortSignal.timeout(120_000) });
   if (!response.ok || !response.body) {
     throw new Error(`Download failed (${response.status}): ${url}`);
   }

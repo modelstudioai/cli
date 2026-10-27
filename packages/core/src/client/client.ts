@@ -1,3 +1,4 @@
+import { httpTransport } from "./transport.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential } from "../auth/types.ts";
 import { BailianError } from "../errors/base.ts";
@@ -295,7 +296,7 @@ export class Client {
     }
 
     const timeoutMs = this.deps.settings.timeout * 1000;
-    const res = await fetch(endpoint, {
+    const res = await httpTransport.fetch(endpoint, {
       method: opts.method,
       headers: { ...headers, ...trackingHeaders(this.deps.identity) },
       body: bodyStr || undefined,

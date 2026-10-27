@@ -14,7 +14,7 @@ const execFileAsync = promisify(execFile);
 const runtimePackageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
- * 代理支持 E2E：验证 `setupProxyFromEnv()` 是否把代理 dispatcher 正确装到全局 fetch 上。
+ * 代理支持 E2E：验证 `setupProxyFromEnv()` 是否把代理 dispatcher 正确装到CLI transport 上。
  * 不经过 CLI 命令，CI 无需 api key。
  */
 
@@ -22,10 +22,11 @@ const FAKE_HOST = "bl-proxy-e2e.invalid";
 const FAKE_URL = `https://${FAKE_HOST}/probe`;
 
 const PROBE_SCRIPT = `
+import { httpTransport } from ${JSON.stringify(join(runtimePackageRoot, "../core/src/client/transport.ts"))};
 import { setupProxyFromEnv } from ${JSON.stringify(join(runtimePackageRoot, "src", "proxy.ts"))};
 setupProxyFromEnv();
 try {
-  await fetch(${JSON.stringify(FAKE_URL)}, { signal: AbortSignal.timeout(5000) });
+  await httpTransport.fetch(${JSON.stringify(FAKE_URL)}, { signal: AbortSignal.timeout(5000) });
 } catch {
   // 目标不可达/隧道被拒都正常
 }

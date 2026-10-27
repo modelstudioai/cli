@@ -1,7 +1,7 @@
 /** Subprocess-only fake backend. Every fetch is intercepted; no network fallback. */
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { RAG_PATHS } from "bailian-cli-core";
+import { httpTransport, RAG_PATHS } from "bailian-cli-core";
 import { createCli } from "bailian-cli-runtime";
 import init from "../../src/commands/knowledge/init.ts";
 import deleteIndex from "../../src/commands/knowledge/kb-delete.ts";
@@ -25,7 +25,7 @@ const remote: Remote = existsSync(remoteFile)
   ? JSON.parse(readFileSync(remoteFile, "utf8"))
   : { indexes: [], services: [] };
 const response = (data: unknown) => Response.json({ data });
-globalThis.fetch = async (input, options) => {
+httpTransport.fetch = async (input, options) => {
   const url = new URL(
     typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
   );

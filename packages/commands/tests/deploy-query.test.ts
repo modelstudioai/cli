@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import {
   BailianError,
   ExitCode,
@@ -137,8 +138,7 @@ beforeEach(() => {
     stdout += String(chunk);
     return true;
   });
-  vi.stubGlobal(
-    "fetch",
+  vi.spyOn(httpTransport, "fetch").mockImplementation(
     vi.fn().mockRejectedValue(new Error("Real network is forbidden in deploy query tests")),
   );
 });
@@ -153,7 +153,7 @@ afterEach(() => {
         expect(request).not.toHaveProperty("body");
       }
     }
-    expect(fetch).not.toHaveBeenCalled();
+    expect(httpTransport.fetch).not.toHaveBeenCalled();
     if (vi.isFakeTimers()) expect(vi.getTimerCount()).toBe(0);
   } finally {
     vi.useRealTimers();

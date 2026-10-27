@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,10 +44,11 @@ beforeEach(() => {
   fetchMock.mockReset();
   fetchMock.mockResolvedValueOnce(Response.json({ data: policy }));
   fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
-  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   rmSync(fixtureDir, { recursive: true, force: true });
 });

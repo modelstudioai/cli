@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import http from "node:http";
 import { Readable } from "node:stream";
 import { expect, test, vi } from "vite-plus/test";
@@ -355,7 +356,7 @@ test.each(["tty", "json", "bearer", "multiple"])(
     ]);
     Object.defineProperty(input, "isTTY", { configurable: true, value: kind === "tty" });
     const stdin = vi.spyOn(process, "stdin", "get").mockReturnValue(input as typeof process.stdin);
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const fetchSpy = vi.spyOn(httpTransport, "fetch");
     try {
       await expect(
         runConsoleTokenLogin({} as LoginDeps, {

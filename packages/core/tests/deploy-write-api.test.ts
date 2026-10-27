@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, test, vi } from "vite-plus/test";
 import { Client } from "../src/client/client.ts";
 import {
@@ -35,7 +36,9 @@ import {
 } from "../src/deploy/index.ts";
 
 beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Unexpected network request")));
+  vi.spyOn(httpTransport, "fetch").mockImplementation(
+    vi.fn().mockRejectedValue(new Error("Unexpected network request")),
+  );
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -222,7 +225,7 @@ describe.each(writes)("$name", ({ path, method, body, run }) => {
         },
       };
       const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json(response));
-      vi.stubGlobal("fetch", fetchMock);
+      vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
       expect(await run(offlineClient(), { requestId })).toEqual(response);
       expect(fetchMock).toHaveBeenCalledOnce();
       const [url, options] = fetchMock.mock.calls[0];
@@ -242,7 +245,7 @@ describe.each(writes)("$name", ({ path, method, body, run }) => {
       .mockResolvedValue(
         Response.json({ code: "ORIGINAL_CODE", message: "原始服务端错误" }, { status }),
       );
-    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
     await expect(run(offlineClient(), { requestId: "fixed-id" })).rejects.toMatchObject({
       message: "原始服务端错误",
     });
