@@ -35,11 +35,11 @@ Prime 视频命令通过 `Client.uploadFile` / `resolveImageInput` 的 `defaultB
 复用 `resolvePrimeEndpoint` 推导 model Workspace origin;上传策略与模型提交均保持该
 Workspace origin。显式配置的 model origin 仍优先;已有媒体 URL 不触发上传或求值上传默认地址。
 
-官方临时文件上传当前只支持 `cn-beijing` 与 `ap-southeast-1`;其他已知官方地域与
-Token Plan 在发送 API Key 前失败。显式自定义代理视为自身路由的权威来源,保持同源并由
-代理/服务决定能力。任何路径都不得回退公共站或跨 origin 重试;不支持时用户可改用服务
-可访问的 HTTPS 媒体 URL。服务端错误保留 message/code/request ID/raw response,并在
-message 的结构化上下文中展示本次有效上传 endpoint。
+官方临时文件上传当前只支持 `cn-beijing` 与 `ap-southeast-1`。Token Plan 主机,以及这些官方
+endpoint 上的 `sk-sp-` 密钥,在发送 API Key 前失败。显式自定义代理视为自身路由的权威来源,
+保持同源且不按密钥前缀拦截,由代理/服务决定能力。任何路径都不得回退公共站或跨 origin 重试;
+不支持时用户可改用服务可访问的 HTTPS 媒体 URL。服务端错误保留 message/code/request ID/raw
+response,并在 message 的结构化上下文中展示本次有效上传 endpoint。
 
 ## 必查清单
 

@@ -60,13 +60,11 @@ function makeClient(baseUrl: string, token = "sk-synthetic-profile-key"): Client
   });
 }
 
-function expectSuccessfulUpload(uploadOrigin: string): void {
+function expectSuccessfulUpload(uploadOrigin: string, token = "sk-synthetic-profile-key"): void {
   expect(fetchMock).toHaveBeenCalledTimes(2);
   const [policyUrl, policyOptions] = fetchMock.mock.calls[0]!;
   expect(policyUrl).toBe(`${uploadOrigin}/api/v1/uploads?action=getPolicy&model=wan3.0-video`);
-  expect(new Headers(policyOptions?.headers).get("Authorization")).toBe(
-    "Bearer sk-synthetic-profile-key",
-  );
+  expect(new Headers(policyOptions?.headers).get("Authorization")).toBe(`Bearer ${token}`);
   const [uploadUrl, uploadOptions] = fetchMock.mock.calls[1]!;
   expect(uploadUrl).toBe(policy.upload_host);
   expect(uploadOptions).toBeDefined();
@@ -131,14 +129,30 @@ describe("regional temporary file uploads", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test("rejects Token Plan keys before requesting a policy", async () => {
+  test.each([
+    REGIONS.cn,
+    REGIONS.intl,
+    "https://ws-example.cn-beijing.maas.aliyuncs.com",
+    "https://ws-example.ap-southeast-1.maas.aliyuncs.com",
+  ])(
+    "rejects Token Plan keys on official endpoint %s before requesting a policy",
+    async (baseUrl) => {
+      await expect(
+        makeClient(baseUrl, "sk-sp-synthetic-plan-key").uploadFile(fixturePath, "wan3.0-video"),
+      ).rejects.toMatchObject({
+        exitCode: ExitCode.USAGE,
+        message: expect.stringContaining("Token Plan"),
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  test("lets a Token Plan key reach an explicit custom proxy", async () => {
+    const proxy = "https://proxy.example.test";
     await expect(
-      makeClient(REGIONS.cn, "sk-sp-synthetic-plan-key").uploadFile(fixturePath, "wan3.0-video"),
-    ).rejects.toMatchObject({
-      exitCode: ExitCode.USAGE,
-      message: expect.stringContaining("Token Plan"),
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
+      makeClient(proxy, "sk-sp-synthetic-plan-key").uploadFile(fixturePath, "wan3.0-video"),
+    ).resolves.toBe("oss://temporary/sample.mp4");
+    expectSuccessfulUpload(proxy, "sk-sp-synthetic-plan-key");
   });
 
   test("preserves upload-policy service errors without retrying another region", async () => {

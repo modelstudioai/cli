@@ -24,20 +24,26 @@ function unsupportedTemporaryUpload(target: string): BailianError {
   );
 }
 
-/** Keep the configured origin when supported; reject known unsupported official regions. */
+/** Reject Token Plan keys only after the endpoint is recognized as official. */
+function rejectOfficialTokenPlanKey(apiKey: string): void {
+  if (getApiKeyLoginKind(apiKey) === "token-plan") {
+    throw unsupportedTemporaryUpload("Token Plan");
+  }
+}
+
+/** Keep supported official origins; reject known unsupported official regions. Custom proxies skip key-prefix checks. */
 function resolveUploadBaseUrl(baseUrl: string, apiKey: string): string {
   const normalizedBaseUrl = normalizeModelBaseUrl(baseUrl);
   const hostname = new URL(normalizedBaseUrl).hostname.toLowerCase();
 
-  if (
-    getApiKeyLoginKind(apiKey) === "token-plan" ||
-    /^token-plan\.[a-z0-9-]+\.maas\.aliyuncs\.com$/.test(hostname)
-  ) {
+  if (/^token-plan\.[a-z0-9-]+\.maas\.aliyuncs\.com$/.test(hostname)) {
     throw unsupportedTemporaryUpload("Token Plan");
   }
 
-  if (hostname === new URL(REGIONS.cn).hostname) return normalizedBaseUrl;
-  if (hostname === new URL(REGIONS.intl).hostname) return normalizedBaseUrl;
+  if (hostname === new URL(REGIONS.cn).hostname || hostname === new URL(REGIONS.intl).hostname) {
+    rejectOfficialTokenPlanKey(apiKey);
+    return normalizedBaseUrl;
+  }
   if (hostname === new URL(REGIONS.us).hostname) {
     throw unsupportedTemporaryUpload(hostname);
   }
@@ -45,11 +51,12 @@ function resolveUploadBaseUrl(baseUrl: string, apiKey: string): string {
   const maasMatch = /^[^.]+\.([a-z0-9-]+)\.maas\.aliyuncs\.com$/.exec(hostname);
   const cloudRegion = maasMatch?.[1];
   if (cloudRegion === "cn-beijing" || cloudRegion === "ap-southeast-1") {
+    rejectOfficialTokenPlanKey(apiKey);
     return normalizedBaseUrl;
   }
   if (cloudRegion) throw unsupportedTemporaryUpload(cloudRegion);
 
-  // Explicit custom proxies are authoritative for their own upload routing.
+  // Explicit custom proxies decide temporary-upload support themselves; do not gate on key prefix.
   return normalizedBaseUrl;
 }
 
