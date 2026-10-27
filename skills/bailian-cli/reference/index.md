@@ -11,7 +11,7 @@ Use this index for the skill-scoped quick index and global flags.
 
 | Command                         | Authentication | Description                                                                                                        | Detail                         |
 | ------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
-| `bl advisor recommend`          | API Key        | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)                     | [advisor.md](advisor.md)       |
+| `bl advisor recommend`          | API Key        | Recommend the best models for your use case (intent → routing → recall → score → rank, with agent clarification)   | [advisor.md](advisor.md)       |
 | `bl agents security alerts`     | API Key        | List Agent security alerts                                                                                         | [agents.md](agents.md)         |
 | `bl agents security overview`   | API Key        | Show the Agent security protection overview (last 24 hours)                                                        | [agents.md](agents.md)         |
 | `bl alert create`               | Console        | Create a model alert rule from an alert template                                                                   | [alert.md](alert.md)           |
