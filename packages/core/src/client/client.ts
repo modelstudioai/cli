@@ -148,11 +148,17 @@ export class Client {
     return requestJson<T>(this.http, this.toOpts(opts));
   }
 
-  /** Resolve a file arg: upload a local path to OSS (returns oss:// URL), or pass a URL through. */
-  uploadFile(source: string, model: string, opts: { signal?: AbortSignal } = {}): Promise<string> {
+  /** Resolve a file arg, honoring a lazy service default origin just like {@link url}. */
+  uploadFile(
+    source: string,
+    model: string,
+    opts: { signal?: AbortSignal; defaultBaseUrl?: () => string } = {},
+  ): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
-    return resolveFileUrl(source, this.requireApi().token, model, {
-      ...opts,
+    const credential = this.requireApi();
+    return resolveFileUrl(source, credential.token, model, {
+      signal: opts.signal,
+      baseUrl: this.url("", opts.defaultBaseUrl),
       identity: this.deps.identity,
       timeout: this.deps.settings.timeout,
     });
@@ -166,13 +172,13 @@ export class Client {
   resolveImageInput(
     source: string,
     model: string,
-    opts: { signal?: AbortSignal } = {},
+    opts: { signal?: AbortSignal; defaultBaseUrl?: () => string } = {},
   ): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
     if (this.usesTokenPlanEndpoint()) {
       return Promise.resolve(imageFileToDataUri(source));
     }
-    return this.uploadFile(source, model, { signal: opts.signal });
+    return this.uploadFile(source, model, opts);
   }
 
   usesTokenPlanEndpoint(): boolean {
