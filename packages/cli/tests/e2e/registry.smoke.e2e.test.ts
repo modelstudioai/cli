@@ -40,7 +40,11 @@ describe("e2e: bl registry smoke", () => {
     expect(schema).toMatchObject({ bin: "bl", scope: ["knowledge", "create"] });
     expect(schema.commands).toHaveLength(1);
     expect(schema.commands[0].usage).toMatch(/^bl knowledge create /);
-    expect(schema.commands[0].risk).toMatchObject({ reason: "billing" });
+    expect(schema.commands[0].risk).toBeUndefined();
+    expect(schema.commands[0].notes).toContainEqual({
+      "en-US": expect.stringContaining("running-time charges"),
+      "zh-CN": expect.stringContaining("按运行时长计费"),
+    });
   });
 
   test("根帮助展示 bl、逐命令鉴权域与全局 flag", async () => {

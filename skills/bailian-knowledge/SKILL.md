@@ -1,7 +1,7 @@
 ---
 name: bailian-knowledge
 metadata:
-  version: "2.5.0"
+  version: "2.6.0"
   requires:
     bins: ["bl"]
 description: >-

@@ -49,6 +49,9 @@ test("actual knowledge and protocol archives install with all reference bytes in
           "reference/index.md",
           "reference/knowledge.md",
           "reference/kscli.md",
+          "references/bindings.md",
+          "references/maintenance.md",
+          "references/setup.md",
         ]);
       }
       await installSkillFromBuffer(name, await archive(files));
