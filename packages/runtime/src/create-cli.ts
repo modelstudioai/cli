@@ -81,6 +81,19 @@ function pickConfigFlag(argv: string[]): Partial<SourceFlags> {
   return {};
 }
 
+const managedInterruptHandlers = new Set<() => void>();
+
+/** 临时接管 Ctrl-C，由命令中断异步工作并完成清理；必须在 finally 中调用返回的释放函数。 */
+export function registerInterruptHandler(handler: () => void): () => void {
+  const listener = () => handler();
+  managedInterruptHandlers.add(listener);
+  process.on("SIGINT", listener);
+  return () => {
+    managedInterruptHandlers.delete(listener);
+    process.removeListener("SIGINT", listener);
+  };
+}
+
 /**
  * 进程级一次性设置：代理初始化、Ctrl+C、stdout EPIPE。
  * 属进程生命周期行为，装一次即可，不进 per-command 中间件。
@@ -94,6 +107,8 @@ function installProcessHandlers(binName: string): void {
 
   // 处理 Ctrl+C
   process.on("SIGINT", () => {
+    // 有命令主动管理中断时，让它走统一错误出口，避免抢先退出跳过 finally。
+    if (managedInterruptHandlers.size > 0) return;
     process.stderr.write("\nInterrupted. Exiting.\n");
     void flushTelemetry(500).finally(() => process.exit(130));
   });

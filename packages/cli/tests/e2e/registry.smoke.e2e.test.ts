@@ -4,7 +4,7 @@ import { join } from "path";
 import { afterAll, describe, expect, test } from "vite-plus/test";
 import { captureRegistryHelp, deriveGroupPaths } from "e2e/registry-smoke";
 import { CommandRegistry, resolve } from "bailian-cli-runtime";
-import { commands } from "../../src/commands.ts";
+import { commands, commandAliases } from "../../src/commands.ts";
 import { runCli } from "./helpers.ts";
 
 const commandPaths = Object.keys(commands).sort();
@@ -19,6 +19,16 @@ function runCliSmoke(args: string[]) {
 }
 
 describe("e2e: bl registry smoke", () => {
+  test("Batch 仅注册 convert，prepare 不保留别名或可执行路径", async () => {
+    expect(resolve(["batch", "convert", "--help"], registry)).toMatchObject({
+      kind: "help",
+      path: ["batch", "convert"],
+    });
+    expect(commands).not.toHaveProperty("batch prepare");
+    expect(commandAliases).not.toHaveProperty("batch prepare");
+    const removed = await runCliSmoke(["batch", "prepare", "--help"]);
+    expect(removed.exitCode).toBe(2);
+  });
   test("knowledge init is registered with read-only preparation and billing risk", () => {
     expect(commands["knowledge init"]).toMatchObject({
       auth: "apiKey",

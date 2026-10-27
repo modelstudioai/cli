@@ -1,13 +1,13 @@
 ---
 name: bailian-cli
 metadata:
-  version: "2.6.0"
+  version: "2.6.1"
   requires:
     bins: ["bl"]
 description: >-
   阿里云百炼 / Aliyun Bailian / DashScope 资源管理与 `bl` CLI hub：
   应用调用（bl app）、决策模型推理（bl decision）、模型目录/模型列表、用量/额度/配额、免费额度、
-  工作空间、MCP 市场、pipeline、文件上传、console API、登录鉴权与配置、
+  工作空间、MCP 市场、pipeline、文件上传、Batch 批量推理与 CSV 转换、同步 Batch Chat、console API、登录鉴权与配置、
   Agent skill 安装/列表/更新/卸载（bl skill add|list|update|remove，百炼 skill registry）。
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
   共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
@@ -69,6 +69,8 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | User intent                                         | Command                                                                                                        | Notes                                                                                                                              |
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Explicit Bailian model chat / text execution        | `bl text chat`                                                                                                 | Default `qwen3.8-max`                                                                                                              |
+| 百炼异步文件批量推理 / CSV 转换                     | `bl batch convert` / `create` / `list` / `get` / `cancel` / `download`                                         | CSV → JSONL → 异步任务 → 原始结果，可额外导出 CSV；格式样例见 `reference/batch.md`                                                 |
+| 百炼单次同步 Batch Chat                             | `bl text chat --batch`                                                                                         | 等待单次响应，不创建任务 ID；messages-file 是同一请求的对话上下文，边界见 `reference/text.md`                                      |
 | Typed decision model inference                      | `bl decision`                                                                                                  | Workspace endpoint; returns `choice` / `noul` / `score` values and probabilities, not generated text                               |
 | Bailian agent / workflow                            | `bl app call`                                                                                                  | Needs `--app-id`                                                                                                                   |
 | Find app by name                                    | `bl app list` then `bl app call`                                                                               | Console auth                                                                                                                       |
@@ -126,6 +128,14 @@ More examples per command: see `reference/<group>.md` (e.g. [`reference/text.md`
 1. `bl app list --name <keyword> --output json`
 2. Pick `code` (app ID); handle `user_prompt_params` via `--biz-params '{"key":"value"}'`
 3. `bl app call --app-id <code> --prompt "..."`
+
+### Batch 文件工作流
+
+1. 文件推理统一使用异步任务。读取 `reference/batch.md` 的数据样例；CSV 用 `bl batch convert` 构造，已有标准 Batch JSONL 可直接使用。
+2. `batch create --dry-run` 完整校验；确认模型、数据上传和费用后创建任务。create 上传/提交后返回任务 ID，不等待完成。
+3. 用返回的 ID 执行 `batch get --follow` 等待终态，再 `batch download --csv` 下载。Ctrl-C 仅结束本地等待；JSONL 为保真产物，CSV 为有损展示。下载部分失败保留原文件，确认目标后按提示用 `--force` 恢复。
+
+单次同步推理使用 `text chat --batch`，通过 message 或 messages-file 提供同一请求的对话上下文，不用于独立请求文件；命令等待该次响应，不创建任务 ID。Batch 不适用于 Token Plan；显式 Batch/自定义代理使用现有解析凭证，不推断 Key 类型。端点、请求超时及互斥参数见 `reference/text.md`。
 
 ### Command metadata for agents
 

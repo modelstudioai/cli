@@ -27,6 +27,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **应用编排** — 调用百炼已发布的 Managed Agent、智能体和工作流，接入知识库、记忆库、联网搜索与 MCP 工具
 - **原生 MCP 接入** — 将百炼 MCP 服务注册到 Codex、Claude Code、Cursor、Qoder、Qoder Work、千问办公（QwenWork）、Qwen Code、Gemini CLI 或 Pi
 - **模型训推** — 数据集校验上传、模型精调、专属模型部署上线
+- **批量推理** — CSV/JSONL 构造、异步 Chat/Embedding 任务创建与跟踪、原始结果/错误下载及可选 CSV，或同步单请求 Batch Chat
 - **账号运维** — 授权登录、界面化配置、模型市场、用量与额度、限流提额、团队席位管理
 - **套餐接入** — 支持 Token Plan 等订阅计划一键接到 CLI 和常见 Coding Agent
 
@@ -136,6 +137,24 @@ bl knowledge init --workspace-id <workspace-id> --dry-run
 知识库创建成功即持续按时计费，即使没有检索也一样。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效；模型调用另计，当前账户剩余额度未知。查看计划与[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)，**确认本次操作后**，在同一命令中去掉 `--dry-run` 并添加 `--yes` 执行。
 
 保留返回的 ID 和恢复记录。退出 CLI 或后续步骤失败不会停止计费；按返回的清理动作删除不再需要的知识库。检索及清理示例见 [Knowledge Studio 快速开始](packages/kscli/README.zh.md#快速开始)。知识库 Skill `bailian-knowledge` 通过 `bl skill init` 安装。
+
+## 批量推理
+
+```bash
+bl batch convert --help
+bl batch convert --file input.csv --output-file input.jsonl --model qwen-plus
+bl batch create --file input.jsonl --dry-run
+bl batch create --file input.jsonl
+bl batch get --batch-id <id> --follow
+bl batch download --batch-id <id> --csv
+bl text chat --batch --model qwen-plus --message "你好" --timeout 3600
+```
+
+`--help` 提供 CSV、JSONL 和结果数据样例。`convert` 为本地转换，无需凭证；推理/任务命令使用模型 API Key。文件推理统一使用异步任务 `create → get → download`：`create` 上传/提交后返回任务 ID，不等待任务完成；通过 `get` 查询，完成后用 `download` 下载结果。转换/下载产物逐文件原子发布，不静默覆盖，部分下载失败可用 `--force` 重跑恢复。JSONL 是保真结果，CSV 为有损展示；导入 ID 请选择文本类型以保留前导零。Ctrl-C 仅停止本地轮询，不取消远端任务。
+
+`text chat --batch` 发送单次同步请求并等待响应，不创建异步任务 ID。使用 `--message` 或 `--messages-file`；后者表示同一请求的对话上下文，不表示文件中的独立请求。请求总超时默认为 300 秒（`--timeout`：60–3600 秒）。超时、Ctrl-C、断线不保证服务端已取消执行。
+
+同步 Batch Chat 强制非流式；拒绝显式实时/国际站/Token Plan 端点。显式实时 Profile 需指定 `--base-url https://batch.dashscope.aliyuncs.com`。Batch 可用范围和限制取决于服务与模型。dry-run 不调用业务 API、不写产物或目录，框架更新检查/遥测遵循其配置。
 
 ## 认证方式
 

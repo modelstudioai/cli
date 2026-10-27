@@ -28,6 +28,7 @@ _Built for AI Agents. Every command works as a structured tool call._
 - **App orchestration** — Call Managed Agents, agents, and workflows published on Aliyun Model Studio, wired to knowledge bases, memory, web search, and MCP tools
 - **Native MCP setup** — Register Bailian MCP servers in Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork (千问办公), Qwen Code, Gemini CLI, or Pi
 - **Training & deployment** — Validate and upload datasets, fine-tune models, deploy dedicated models as endpoints
+- **Batch inference** — Prepare CSV/JSONL, create and follow asynchronous Chat/Embedding tasks, download original results/errors with optional CSV, or send one synchronous Batch Chat request
 - **Account operations** — Login, UI-based configuration, model marketplace, usage and quota, rate-limit increases, team seat management
 - **Plan onboarding** — Connect subscription plans such as Token Plan to the CLI and common coding agents in one step
 
@@ -137,6 +138,24 @@ bl knowledge init --workspace-id <workspace-id> --dry-run
 Knowledge bases accrue running-time charges from creation, even without queries. The one-time Standard Edition 720-hour allowance is shared across knowledge bases and expires 30 days after activation for new users. Model calls cost extra; your remaining allowance is unknown. Review the plan and [billing rules](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base), then add `--yes` to the same command **after confirming the operation**, removing `--dry-run` to execute.
 
 Keep the returned IDs and recovery record. Closing the CLI or a later failure does not stop billing; follow the reported cleanup actions to delete unused knowledge bases. See the [Knowledge Studio quick start](packages/kscli/README.md#quick-start) for retrieval and cleanup. The `bailian-knowledge` Skill is available through `bl skill init`.
+
+## Batch Inference
+
+```bash
+bl batch convert --help
+bl batch convert --file input.csv --output-file input.jsonl --model qwen-plus
+bl batch create --file input.jsonl --dry-run
+bl batch create --file input.jsonl
+bl batch get --batch-id <id> --follow
+bl batch download --batch-id <id> --csv
+bl text chat --batch --model qwen-plus --message "Hello" --timeout 3600
+```
+
+`--help` includes CSV, JSONL and result data examples. `convert` is local and needs no key; inference/task commands use a model API key. File inference uses asynchronous tasks via `create → get → download`: `create` uploads/submits and returns a task ID without waiting for completion. Query with `get` and download results after completion. Conversion/download files are atomically published per file and never silently overwritten. Use `--force` to recover partial downloads. JSONL is the authoritative result, while CSV is a lossy display; import IDs as text to preserve leading zeros. Ctrl-C stops local polling, not the remote task.
+
+`text chat --batch` sends one synchronous request and waits for its response; it does not create an asynchronous task ID. Use `--message` or `--messages-file`, which contains one request's conversation context, not independent file requests. The total request timeout defaults to 300 seconds (`--timeout`: 60–3600 seconds). Timeout/Ctrl-C/disconnection do not guarantee server cancellation.
+
+Synchronous Batch Chat is non-streaming; explicit realtime/international/Token Plan endpoints are rejected. An explicit realtime profile requires `--base-url https://batch.dashscope.aliyuncs.com`. Batch availability and limits depend on the service/model. Dry-run avoids business requests and output/directory writes; framework update checks/telemetry follow their settings.
 
 ## Authentication
 

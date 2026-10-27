@@ -16,6 +16,15 @@ export const UPDATE_ROUTES: E2eRouteExports = {
 
 export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 
+export const BATCH_ROUTES: E2eRouteExports = {
+  "batch convert": "batchConvert",
+  "batch create": "batchCreate",
+  "batch list": "batchList",
+  "batch get": "batchGet",
+  "batch cancel": "batchCancel",
+  "batch download": "batchDownload",
+};
+
 export const DECISION_ROUTES: E2eRouteExports = { decision: "decisionPredict" };
 
 export const CONFIG_ROUTES: E2eRouteExports = {
