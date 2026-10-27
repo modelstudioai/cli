@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { BailianError, ExitCode, type Identity, type Settings } from "bailian-cli-core";
 import { expect, test } from "vite-plus/test";
 import {
@@ -105,9 +106,9 @@ test("显式 Base URL 只校验指定站点，并根据 Key 类型选择 /models
 });
 
 test("Token Plan 多地区并行校验选择实际接受 Key 的国际站点", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const requests: Array<{ authorization: string; url: string }> = [];
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     requests.push({
       authorization: new Headers(init?.headers).get("authorization") ?? "",
@@ -135,13 +136,13 @@ test("Token Plan 多地区并行校验选择实际接受 Key 的国际站点", a
       },
     ]);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("所有候选站点明确拒绝 Key 时返回 AUTH 校验失败", async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () =>
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async () =>
     jsonResponse({ code: "InvalidApiKey", message: "invalid key" }, 401);
 
   try {
@@ -149,7 +150,7 @@ test("所有候选站点明确拒绝 Key 时返回 AUTH 校验失败", async () 
     expect(error.exitCode).toBe(ExitCode.AUTH);
     expect(error.message).toMatch(/API key validation failed/);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
@@ -157,8 +158,8 @@ test.each([
   { name: "5xx", status: 503, message: "temporary outage" },
   { name: "429", status: 429, message: "too many requests" },
 ])("存在 $name 时校验结论不确定，不误报 Key 无效", async ({ status, message }) => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (input) => {
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async (input) => {
     if (requestUrl(input).startsWith("https://dashscope.aliyuncs.com/")) {
       return jsonResponse({ code: "TemporaryFailure", message }, status);
     }
@@ -170,6 +171,6 @@ test.each([
     expect(error.exitCode).toBe(ExitCode.GENERAL);
     expect(error.message).toBe(message);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });

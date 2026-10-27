@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -237,8 +238,8 @@ test("Console access token 自动刷新写回当前选中 Config", async () => {
     );
     await activateConfigProfile("dev");
 
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (input, init) => {
+    const originalFetch = httpTransport.fetch;
+    httpTransport.fetch = async (input, init) => {
       const isGeneration =
         new URL(input instanceof Request ? input.url : input).pathname ===
         "/modelstudio/cli/generateAccessToken";
@@ -273,7 +274,7 @@ test("Console access token 自动刷新写回当前选中 Config", async () => {
       expect(readConfigFile("dev").access_token).toBe("refreshed-dev");
       expect(readConfigFile().access_token).toBe("tok-default");
     } finally {
-      globalThis.fetch = originalFetch;
+      httpTransport.fetch = originalFetch;
     }
   });
 });
@@ -304,9 +305,9 @@ test.each([
 ])(
   "CLI token 地域解析：$baseUrl / $consoleRegion",
   async ({ baseUrl, consoleRegion, expected }) => {
-    const originalFetch = globalThis.fetch;
+    const originalFetch = httpTransport.fetch;
     const hosts: string[] = [];
-    globalThis.fetch = async (input) => {
+    httpTransport.fetch = async (input) => {
       hosts.push(new URL(input instanceof Request ? input.url : input).hostname);
       return new Response(JSON.stringify({ cliAccessToken: "candidate" }));
     };
@@ -320,7 +321,7 @@ test.each([
       });
       expect(hosts).toEqual([`modelstudio.${expected}.aliyuncs.com`]);
     } finally {
-      globalThis.fetch = originalFetch;
+      httpTransport.fetch = originalFetch;
     }
   },
 );
@@ -331,9 +332,9 @@ test.each([
   { baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com.evil.test" },
   { baseUrl: "https://dashscope.aliyuncs.com", consoleRegion: "unsupported-region" },
 ])("CLI token 无法解析地域时不请求北京：$baseUrl", async ({ baseUrl, consoleRegion }) => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let requests = 0;
-  globalThis.fetch = async () => {
+  httpTransport.fetch = async () => {
     requests++;
     return new Response(JSON.stringify({ cliAccessToken: "candidate" }));
   };
@@ -349,7 +350,7 @@ test.each([
     ).rejects.toMatchObject({ exitCode: 2 });
     expect(requests).toBe(0);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
@@ -381,10 +382,10 @@ test.each(["success", "NotLogined", "network"])(
           source: "config",
         },
       });
-      const originalFetch = globalThis.fetch;
+      const originalFetch = httpTransport.fetch;
       const authorizations: string[] = [];
       let generations = 0;
-      globalThis.fetch = async (input, init) => {
+      httpTransport.fetch = async (input, init) => {
         const endpoint = new URL(input instanceof Request ? input.url : input);
         if (endpoint.pathname === "/modelstudio/cli/generateAccessToken") {
           generations++;
@@ -431,7 +432,7 @@ test.each(["success", "NotLogined", "network"])(
         expect(generations).toBe(1);
         expect(readConfigFile().access_token).toBe("default-token");
       } finally {
-        globalThis.fetch = originalFetch;
+        httpTransport.fetch = originalFetch;
       }
     });
   },

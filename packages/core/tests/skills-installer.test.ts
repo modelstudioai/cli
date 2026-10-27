@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import {
   existsSync,
   lstatSync,
@@ -228,23 +229,13 @@ test("installer: contentHash mismatch → rejected, previous install preserved",
 
 // ---- installSkillWithFanout: download + install + fan-out + lock entry in one workflow ----
 
-/** Stub global fetch to serve the given archive for any asset URL */
+/** Stub the transport to serve the given archive for any asset URL. */
 function stubAssetDownload(tarBrBuffer: Buffer): void {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      arrayBuffer: async () =>
-        tarBrBuffer.buffer.slice(
-          tarBrBuffer.byteOffset,
-          tarBrBuffer.byteOffset + tarBrBuffer.byteLength,
-        ),
-    })),
+  vi.spyOn(httpTransport, "fetch").mockImplementation(
+    vi.fn(async () => new Response(new Uint8Array(tarBrBuffer))),
   );
 }
 
-/** Fake agent whose skills dir lives inside the temp config dir (never touches real HOME) */
 function fakeAgent(id: string, baseDir: string): AgentTarget {
   return {
     id,
@@ -256,6 +247,7 @@ function fakeAgent(id: string, baseDir: string): AgentTarget {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 test("fanout install: downloads, links agents, and builds lock entry with merged ledger", async () => {
@@ -289,8 +281,8 @@ test("fanout install: downloads, links agents, and builds lock entry with merged
 
 test("fanout install: download failure exhausts retries and leaves no canonical dir", async () => {
   await inTempConfigDir(async () => {
-    const fetchMock = vi.fn(async () => ({ ok: false, status: 404 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
     await expect(
       installSkillWithFanout("demo", { contentHash: "sha256:whatever" }, []),
     ).rejects.toThrow(BailianError);
@@ -336,9 +328,9 @@ test("registry: index fetch retries transient failures and succeeds", async () =
   const indexPayload = { skills: { demo: { contentHash: "sha256:abc" } } };
   const fetchMock = vi.fn(async () => {
     if (fetchMock.mock.calls.length < 3) throw new Error("network down");
-    return { ok: true, status: 200, json: async () => indexPayload };
+    return Response.json(indexPayload);
   });
-  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
   const index = await fetchSkillsIndex(1000);
   expect(index.skills.demo.contentHash).toBe("sha256:abc");
   expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -348,21 +340,17 @@ test("registry: attempts=1 keeps the silent channel fail-fast", async () => {
   const fetchMock = vi.fn(async () => {
     throw new Error("network down");
   });
-  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
   await expect(fetchSkillsIndex(1000, 1)).rejects.toThrow(BailianError);
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
 test("registry: asset download retries transient HTTP errors", async () => {
   const fetchMock = vi.fn(async () => {
-    if (fetchMock.mock.calls.length === 1) return { ok: false, status: 503 };
-    return {
-      ok: true,
-      status: 200,
-      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-    };
+    if (fetchMock.mock.calls.length === 1) return new Response(null, { status: 503 });
+    return new Response(new Uint8Array([1, 2, 3]));
   });
-  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
   const buffer = await downloadSkillAsset("demo");
   expect([...buffer]).toEqual([1, 2, 3]);
   expect(fetchMock).toHaveBeenCalledTimes(2);

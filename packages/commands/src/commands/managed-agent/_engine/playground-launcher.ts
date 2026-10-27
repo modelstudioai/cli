@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -310,7 +311,7 @@ async function waitForPlaygroundReady(
   while (Date.now() <= deadline) {
     if (child.exitCode !== null) return null;
     try {
-      const response = await fetch(`http://localhost:${port}/health`, {
+      const response = await httpTransport.fetch(`http://localhost:${port}/health`, {
         signal: AbortSignal.timeout(1_000),
       });
       const body = response.ok
@@ -327,7 +328,7 @@ async function waitForPlaygroundReady(
 
 async function probeExistingPlayground(port: number): Promise<ExistingPlayground | null> {
   try {
-    const response = await fetch(`http://localhost:${port}/health`, {
+    const response = await httpTransport.fetch(`http://localhost:${port}/health`, {
       signal: AbortSignal.timeout(2_000),
     });
     if (!response.ok) return null;
@@ -383,7 +384,7 @@ async function resolvePlaygroundBrowserTarget(
 ): Promise<PlaygroundBrowserTarget> {
   const baseUrl = `http://localhost:${port}`;
   try {
-    const response = await fetch(`${baseUrl}/api/project`, {
+    const response = await httpTransport.fetch(`${baseUrl}/api/project`, {
       signal: AbortSignal.timeout(3_000),
     });
     if (!response.ok) return { url: baseUrl };

@@ -1,7 +1,7 @@
 /** All requests are intercepted. This fixture never falls back to the network. */
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { RAG_PATHS } from "bailian-cli-core";
+import { httpTransport, RAG_PATHS } from "bailian-cli-core";
 import { createCli } from "bailian-cli-runtime";
 import sync from "../../src/commands/knowledge/doc-sync.ts";
 
@@ -16,7 +16,7 @@ const remote: Remote = existsSync(remoteFile)
   ? JSON.parse(readFileSync(remoteFile, "utf8"))
   : { files: [], documents: [{ doc_id: "sentinel", tags: [], status: "FINISH" }] };
 const response = (data: unknown) => Response.json({ data });
-globalThis.fetch = async (input, options) => {
+httpTransport.fetch = async (input, options) => {
   const url = new URL(
     typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
   );

@@ -35,9 +35,10 @@ beforeAll(async () => {
     scriptPath,
     `
 import { Agent, setGlobalDispatcher } from ${JSON.stringify(join(runtimeRoot, "node_modules/undici/index.js"))};
+import { httpTransport } from ${JSON.stringify(join(runtimeRoot, "../core/src/client/transport.ts"))};
 import { setupProxyFromEnv } from ${JSON.stringify(join(runtimeRoot, "src/proxy.ts"))};
 import { request } from ${JSON.stringify(join(runtimeRoot, "../core/src/client/http.ts"))};
-// Scale the hidden transport limit down while keeping real sockets and native fetch.
+// Scale the hidden transport limit down while keeping real sockets and the packaged fetch.
 const transport = new Agent().compose((dispatch) => (options, handler) =>
   dispatch({ ...options, headersTimeout: options.headersTimeout === 0 ? 0 : 100,
     bodyTimeout: options.bodyTimeout === 0 ? 0 : 100 }, handler));
@@ -49,7 +50,7 @@ setGlobalDispatcher(process.argv[4] === "custom" ? {
 setupProxyFromEnv();
 try {
   const response = process.argv[5] === "raw"
-    ? await fetch(process.argv[2])
+    ? await httpTransport.fetch(process.argv[2])
     : await request({
       identity: { clientName: "timeout-test", version: "0.0.0" },
       settings: { timeout: Number(process.argv[3]) / 1000, verbose: false },

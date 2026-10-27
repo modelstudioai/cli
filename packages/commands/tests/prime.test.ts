@@ -1,7 +1,14 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Client, ExitCode, REGIONS, type ApiKeyCredential, type Settings } from "bailian-cli-core";
+import {
+  httpTransport,
+  Client,
+  ExitCode,
+  REGIONS,
+  type ApiKeyCredential,
+  type Settings,
+} from "bailian-cli-core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { resolvePrimeEndpoint, validatePrimeFlags } from "../src/commands/shared/prime.ts";
 import videoGenerate from "../src/commands/video/generate.ts";
@@ -101,7 +108,7 @@ describe("Prime video upload origins", () => {
       }
       throw new Error(`Unexpected test request: ${url.href}`);
     });
-    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   });
 
