@@ -1,7 +1,6 @@
 import {
   defineCommand,
   taskPath,
-  detectOutputFormat,
   type CommandOutput,
   type Client,
   type Settings,
@@ -13,7 +12,6 @@ import {
   BailianError,
   ExitCode,
   type DashScopeAsyncResponse,
-  type OutputFormat,
   type DashScopeTaskResponse,
   generateFilename,
   resolveBooleanFlag,
@@ -25,7 +23,6 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
@@ -217,42 +214,24 @@ export default defineCommand({
             },
           };
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult(
-        { request: body, mode: route.useSync ? "sync" : "async", path: route.path },
-        format,
-      );
+      ctx.output.result({
+        request: body,
+        mode: route.useSync ? "sync" : "async",
+        path: route.path,
+      });
       return;
     }
 
-    if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}]\n`);
-    }
+    ctx.output.info({
+      "en-US": `[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}]`,
+      "zh-CN": `[模型：${model}] [模式：${route.useSync ? "同步" : "异步"}]`,
+    });
 
     if (route.useSync) {
-      await handleSyncMode(
-        ctx.client,
-        ctx.output,
-        settings,
-        route.path,
-        body,
-        flags,
-        format,
-        concurrent,
-      );
+      await handleSyncMode(ctx.client, ctx.output, settings, route.path, body, flags, concurrent);
     } else {
-      await handleAsyncMode(
-        ctx.client,
-        ctx.output,
-        settings,
-        route.path,
-        body,
-        flags,
-        format,
-        concurrent,
-      );
+      await handleAsyncMode(ctx.client, ctx.output, settings, route.path, body, flags, concurrent);
     }
   },
 });
@@ -266,7 +245,6 @@ async function handleSyncMode(
   path: string,
   body: DashScopeImageRequest,
   flags: GenerateFlags,
-  format: string,
   concurrent: number,
 ): Promise<void> {
   const results = await runConcurrent(concurrent, commandOutput, () =>
@@ -283,7 +261,7 @@ async function handleSyncMode(
     throw new BailianError("Generation completed but no images returned.", ExitCode.GENERAL);
   }
 
-  await saveImages(imageUrls, flags, settings, format);
+  await saveImages(imageUrls, flags, settings, commandOutput);
 }
 
 // ---- Async mode: wan2.6-t2i / wan2.6-image / legacy text2image ----
@@ -295,7 +273,6 @@ async function handleAsyncMode(
   path: string,
   body: DashScopeImageRequest,
   flags: GenerateFlags,
-  format: string,
   concurrent: number,
 ): Promise<void> {
   const responses = await runConcurrent(
@@ -314,7 +291,7 @@ async function handleAsyncMode(
 
   // --async: return all task IDs immediately
   if (flags.async) {
-    emitResult({ task_ids: taskIds }, format as OutputFormat);
+    commandOutput.result({ task_ids: taskIds });
     return;
   }
 
@@ -365,7 +342,7 @@ async function handleAsyncMode(
     imageUrls,
     flags,
     settings,
-    format,
+    commandOutput,
     taskIds.length === 1 ? taskIds[0] : undefined,
     taskIds,
   );
@@ -377,7 +354,7 @@ async function saveImages(
   imageUrls: string[],
   flags: GenerateFlags,
   settings: Settings,
-  format: string,
+  commandOutput: CommandOutput,
   taskId?: string,
   taskIds?: string[],
 ): Promise<void> {
@@ -398,18 +375,16 @@ async function saveImages(
         })
       : [{ url: imageUrls[0], destPath: join(outDir, `${prefix}.png`) }];
 
-  const results = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
+  const results = await downloadParallel(items, downloadFile, {
+    quiet: settings.quiet || settings.output === "json",
+  });
 
-  if (settings.quiet) {
-    emitBare(results.join("\n"));
-  } else {
-    const output: Record<string, unknown> = {
-      urls: imageUrls,
-      saved: results,
-      total: imageUrls.length,
-    };
-    if (taskId) output.task_id = taskId;
-    if (taskIds && taskIds.length > 1) output.task_ids = taskIds;
-    emitResult(output, format as OutputFormat);
-  }
+  const output: Record<string, unknown> = {
+    urls: imageUrls,
+    saved: results,
+    total: imageUrls.length,
+  };
+  if (taskId) output.task_id = taskId;
+  if (taskIds && taskIds.length > 1) output.task_ids = taskIds;
+  commandOutput.result(output);
 }

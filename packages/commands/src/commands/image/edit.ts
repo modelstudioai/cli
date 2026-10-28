@@ -1,7 +1,6 @@
 import {
   defineCommand,
   taskPath,
-  detectOutputFormat,
   resolveOutputDir,
   generateFilename,
   stripUndefined,
@@ -12,7 +11,6 @@ import {
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
   type FlagsDef,
-  type OutputFormat,
   type ParsedFlags,
   type Settings,
   ExitCode,
@@ -27,7 +25,6 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { join } from "path";
 import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
@@ -271,8 +268,6 @@ export default defineCommand({
     // Remove undefined parameters
     stripUndefined(body.parameters as Record<string, unknown>);
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
       let previewBody: DashScopeImageRequest = body;
       if ("messages" in body.input) {
@@ -307,43 +302,25 @@ export default defineCommand({
           },
         };
       }
-      emitResult(
-        { request: previewBody, mode: route.useSync ? "sync" : "async", path: route.path },
-        format,
-      );
+      ctx.output.result({
+        request: previewBody,
+        mode: route.useSync ? "sync" : "async",
+        path: route.path,
+      });
       return;
     }
 
-    if (!settings.quiet) {
-      process.stderr.write(
-        `[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}] [Images: ${resolvedImages.length}]\n`,
-      );
-    }
+    ctx.output.info({
+      "en-US": `[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}] [Images: ${resolvedImages.length}]`,
+      "zh-CN": `[模型：${model}] [模式：${route.useSync ? "同步" : "异步"}] [图片：${resolvedImages.length}]`,
+    });
 
     const concurrent = getConcurrency(flags);
 
     if (route.useSync) {
-      await handleSyncMode(
-        ctx.client,
-        ctx.output,
-        settings,
-        route.path,
-        body,
-        flags,
-        format,
-        concurrent,
-      );
+      await handleSyncMode(ctx.client, ctx.output, settings, route.path, body, flags, concurrent);
     } else {
-      await handleAsyncMode(
-        ctx.client,
-        ctx.output,
-        settings,
-        route.path,
-        body,
-        flags,
-        format,
-        concurrent,
-      );
+      await handleAsyncMode(ctx.client, ctx.output, settings, route.path, body, flags, concurrent);
     }
   },
 });
@@ -355,7 +332,6 @@ async function handleSyncMode(
   path: string,
   body: DashScopeImageRequest,
   flags: EditFlags,
-  format: OutputFormat,
   concurrent: number,
 ): Promise<void> {
   const results = await runConcurrent(concurrent, commandOutput, () =>
@@ -376,7 +352,7 @@ async function handleSyncMode(
     throw new BailianError("Edit completed but no images returned.", ExitCode.GENERAL);
   }
 
-  await saveImages(imageUrls, flags, settings, format);
+  await saveImages(imageUrls, flags, settings, commandOutput);
 }
 
 async function handleAsyncMode(
@@ -386,7 +362,6 @@ async function handleAsyncMode(
   path: string,
   body: DashScopeImageRequest,
   flags: EditFlags,
-  format: OutputFormat,
   concurrent: number,
 ): Promise<void> {
   const responses = await runConcurrent(
@@ -404,7 +379,7 @@ async function handleAsyncMode(
   const taskIds = responses.map((response) => response.output.task_id);
 
   if (flags.async) {
-    emitResult({ task_ids: taskIds }, format);
+    commandOutput.result({ task_ids: taskIds });
     return;
   }
 
@@ -448,14 +423,14 @@ async function handleAsyncMode(
     throw new BailianError("All tasks completed but no images returned.", ExitCode.GENERAL);
   }
 
-  await saveImages(imageUrls, flags, settings, format);
+  await saveImages(imageUrls, flags, settings, commandOutput);
 }
 
 async function saveImages(
   imageUrls: string[],
   flags: EditFlags,
   settings: Settings,
-  format: OutputFormat,
+  commandOutput: CommandOutput,
 ): Promise<void> {
   const outDir = resolveOutputDir(settings, {
     flagDir: flags.outDir,
@@ -473,11 +448,9 @@ async function saveImages(
         })
       : [{ url: imageUrls[0], destPath: join(outDir, `${prefix}.png`) }];
 
-  const saved = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
+  const saved = await downloadParallel(items, downloadFile, {
+    quiet: settings.quiet || settings.output === "json",
+  });
 
-  if (settings.quiet) {
-    emitBare(saved.join("\n"));
-  } else {
-    emitResult({ urls: imageUrls, saved, total: imageUrls.length }, format);
-  }
+  commandOutput.result({ urls: imageUrls, saved, total: imageUrls.length });
 }
