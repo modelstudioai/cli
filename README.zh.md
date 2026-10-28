@@ -138,6 +138,19 @@ bl knowledge init --workspace-id <workspace-id> --dry-run
 
 保留返回的 ID 和恢复记录。退出 CLI 或后续步骤失败不会停止计费；按返回的清理动作删除不再需要的知识库。检索及清理示例见 [Knowledge Studio 快速开始](packages/kscli/README.zh.md#快速开始)。知识库 Skill `bailian-knowledge` 通过 `bl skill init` 安装。
 
+## ParseX
+
+通过业务空间专属 ParseX API 解析文档、音视频，并按 Schema 抽取结构化字段：
+
+```bash
+bl parsex parse submit --workspace-id <workspace-id> --file-url "https://example.com/document.pdf" --file-name document.pdf --output-file-format markdown --output json
+bl parsex parse result --workspace-id <workspace-id> --biz-id <parse-biz-id> --follow --output json
+bl parsex extract submit --workspace-id <workspace-id> --parsed-file-biz-id <parse-biz-id> --schema-file schema.json --output json
+bl parsex extract result --workspace-id <workspace-id> --biz-id <extract-biz-id> --follow --output json
+```
+
+需要普通 API Key 和已获 ParseX 访问权限的业务空间。提交立即返回 `data.biz_id`，`result --follow` 等待完成。`schema.json` 为 JSON Schema 对象，例如 `{"type":"object","properties":{"title":{"type":"string"}}}`。输入使用可访问的 HTTP(S) URL；抽取还可复用保留期内的文档解析任务。处理配置、结果分片、OSS 凭证、dry-run 和轮询约定见 [ParseX 命令指南](docs/parsex.md)。
+
 ## 批量推理
 
 ```bash

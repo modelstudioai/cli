@@ -1,4 +1,6 @@
 export {
+  parsexBaseUrl,
+  parsexEndpoint,
   appCompletionPath,
   chatPath,
   imagePath,

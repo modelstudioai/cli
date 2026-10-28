@@ -27,6 +27,13 @@ export const BATCH_ROUTES: E2eRouteExports = {
 
 export const DECISION_ROUTES: E2eRouteExports = { decision: "decisionPredict" };
 
+export const PARSEX_ROUTES: E2eRouteExports = {
+  "parsex parse submit": "parsexParseSubmit",
+  "parsex parse result": "parsexParseResult",
+  "parsex extract submit": "parsexExtractSubmit",
+  "parsex extract result": "parsexExtractResult",
+};
+
 export const CONFIG_ROUTES: E2eRouteExports = {
   "config show": "configShow",
   "config set": "configSet",
