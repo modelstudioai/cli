@@ -8,7 +8,7 @@
 
 ## 当前迁移阶段
 
-公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
+公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get 已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
 
 ## 必查清单
 
@@ -16,6 +16,7 @@
 
 - [ ] 用 ctx.output.result(data, { text? }) 提交一次最终结果，text 只控制文本呈现；JSON 始终序列化 data，false/0/null/空列表都合法
 - [ ] progress 与 info 写 stderr，仅 text 且非 quiet 时显示；progress 当前在非 TTY 下仍输出普通进度文本，不创建动画定时器；仅动画要求 TTY
+- [ ] 并发请求提示通过 runConcurrent 的 output.info 输出，数量、请求顺序和失败传播不受 quiet/verbose 影响
 - [ ] 下载进度沿用 TTY 原地刷新，非 TTY 不输出；quiet／JSON 时关闭，不把逐数据块更新转换为追加日志
 - [ ] warning 始终保留；debug 仅 verbose 开启时显示；quiet 不关闭 verbose 明确请求的诊断
 - [ ] 可升级通知使用 UPDATE_AVAILABLE warning，JSON／quiet 下保留；details 提供 current_version、latest_version、upgrade_command，业务结果和退出码不变，联网检查仍按既有间隔执行，命中版本缓存时仍生成可升级通知；自动更新阈值不变

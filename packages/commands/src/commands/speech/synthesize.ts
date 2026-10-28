@@ -4,6 +4,7 @@ import {
   defineCommand,
   ExitCode,
   detectOutputFormat,
+  type CommandOutput,
   type Client,
   type Settings,
   type DashScopeTTSRequest,
@@ -440,13 +441,14 @@ export default defineCommand({
     if (useStream) {
       await handleStreamMode(ctx.client, settings, body, flags, format);
     } else {
-      await handleNonStreamMode(ctx.client, settings, body, flags, format);
+      await handleNonStreamMode(ctx.client, ctx.output, settings, body, flags, format);
     }
   },
 });
 
 async function handleNonStreamMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   body: DashScopeTTSRequest,
   flags: SynthesizeFlags,
@@ -454,7 +456,7 @@ async function handleNonStreamMode(
 ): Promise<void> {
   const concurrent = getConcurrency(flags);
 
-  const results = await runConcurrent(concurrent, settings, () =>
+  const results = await runConcurrent(concurrent, commandOutput, () =>
     client.requestJson<DashScopeTTSResponse>({
       path: speechSynthesizePath(),
       method: "POST",

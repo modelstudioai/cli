@@ -323,7 +323,16 @@ export default defineCommand({
     const concurrent = getConcurrency(flags);
 
     if (route.useSync) {
-      await handleSyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
+      await handleSyncMode(
+        ctx.client,
+        ctx.output,
+        settings,
+        route.path,
+        body,
+        flags,
+        format,
+        concurrent,
+      );
     } else {
       await handleAsyncMode(
         ctx.client,
@@ -341,6 +350,7 @@ export default defineCommand({
 
 async function handleSyncMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   path: string,
   body: DashScopeImageRequest,
@@ -348,7 +358,7 @@ async function handleSyncMode(
   format: OutputFormat,
   concurrent: number,
 ): Promise<void> {
-  const results = await runConcurrent(concurrent, settings, () =>
+  const results = await runConcurrent(concurrent, commandOutput, () =>
     client.requestJson<DashScopeImageSyncResponse>({
       path,
       method: "POST",
@@ -381,7 +391,7 @@ async function handleAsyncMode(
 ): Promise<void> {
   const responses = await runConcurrent(
     concurrent,
-    settings,
+    commandOutput,
     () =>
       client.requestJson<DashScopeAsyncResponse>({
         path,

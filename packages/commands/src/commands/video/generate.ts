@@ -3,7 +3,6 @@ import {
   videoGeneratePath,
   image2videoPath,
   taskPath,
-  detectOutputFormat,
   type DashScopeVideoRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
@@ -19,7 +18,6 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 import { PRIME_FLAGS, resolvePrimeEndpoint, validatePrimeFlags } from "../shared/prime.ts";
 
@@ -190,7 +188,6 @@ export default defineCommand({
       (flags.image
         ? settings.defaultImageToVideoModel || "wan3.0-video"
         : settings.defaultVideoModel || "wan3.0-video");
-    const format = detectOutputFormat(settings.output);
 
     const imageUrl = flags.image;
     const lastFrameUrl = flags.lastFrame as string | undefined;
@@ -309,9 +306,8 @@ export default defineCommand({
           },
         };
       }
-      emitResult(
+      ctx.output.result(
         flags.prime ? { endpoint: submitPath, request: previewBody } : { request: previewBody },
-        format,
       );
       return;
     }
@@ -321,7 +317,7 @@ export default defineCommand({
 
     const responses = await runConcurrent(
       concurrent,
-      settings,
+      ctx.output,
       () =>
         ctx.client.requestJson<DashScopeAsyncResponse>({
           path: submitPath,
@@ -334,13 +330,11 @@ export default defineCommand({
 
     const taskIds = responses.map((response) => response.output.task_id);
 
-    if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}]\n`);
-    }
+    ctx.output.info({ "en-US": `[Model: ${model}]`, "zh-CN": `[模型：${model}]` });
 
     // --async: return task ID(s) immediately
     if (flags.async) {
-      emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
+      ctx.output.result(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds });
       return;
     }
 
@@ -389,20 +383,13 @@ export default defineCommand({
         quiet: settings.quiet || settings.output === "json",
       });
 
-      if (settings.quiet) {
-        emitBare(destPath);
-      } else {
-        emitResult(
-          {
-            task_id: videos[0]!.taskId,
-            video_url: videos[0]!.videoUrl,
-            status: "SUCCEEDED",
-            saved: destPath,
-            size: formatBytes(size),
-          },
-          format,
-        );
-      }
+      ctx.output.result({
+        task_id: videos[0]!.taskId,
+        video_url: videos[0]!.videoUrl,
+        status: "SUCCEEDED",
+        saved: destPath,
+        size: formatBytes(size),
+      });
       return;
     }
 
@@ -423,9 +410,9 @@ export default defineCommand({
     );
 
     if (saved.length === 1) {
-      emitResult(saved[0]!, format);
+      ctx.output.result(saved[0]!);
     } else {
-      emitResult({ videos: saved, total: saved.length }, format);
+      ctx.output.result({ videos: saved, total: saved.length });
     }
   },
 });

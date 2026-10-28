@@ -2,7 +2,6 @@ import {
   defineCommand,
   videoGeneratePath,
   taskPath,
-  detectOutputFormat,
   type DashScopeVideoEditRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
@@ -17,7 +16,6 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -173,7 +171,6 @@ export default defineCommand({
     const prompt = flags.prompt;
 
     const model = flags.model || "happyhorse-1.0-video-edit";
-    const format = detectOutputFormat(settings.output);
 
     // Auto-upload local files
     const resolvedVideoUrl = await ctx.client.uploadFile(videoUrl, model);
@@ -187,7 +184,7 @@ export default defineCommand({
     if (refImageArg) {
       const images = refImageArg
         .split(",")
-        .map((s) => s.trim())
+        .map((image) => image.trim())
         .filter(Boolean);
       for (const imgUrl of images) {
         const resolved = await ctx.client.uploadFile(imgUrl, model);
@@ -218,14 +215,14 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult({ request: body }, format);
+      ctx.output.result({ request: body });
       return;
     }
 
     const concurrent = getConcurrency(flags);
     const responses = await runConcurrent(
       concurrent,
-      settings,
+      ctx.output,
       () =>
         ctx.client.requestJson<DashScopeAsyncResponse>({
           path: videoGeneratePath(),
@@ -236,16 +233,17 @@ export default defineCommand({
       "tasks",
     );
 
-    const taskIds = responses.map((r) => r.output.task_id);
+    const taskIds = responses.map((response) => response.output.task_id);
 
-    if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}]\n`);
-      process.stderr.write("Note: Video editing typically takes 5-8 minutes. Please be patient.\n");
-    }
+    ctx.output.info({ "en-US": `[Model: ${model}]`, "zh-CN": `[模型：${model}]` });
+    ctx.output.info({
+      "en-US": "Note: Video editing typically takes 5-8 minutes. Please be patient.",
+      "zh-CN": "提示：视频编辑通常需要 5–8 分钟，请耐心等待。",
+    });
 
     // --async: return task ID(s) immediately
     if (flags.async) {
-      emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
+      ctx.output.result(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds });
       return;
     }
 
@@ -261,23 +259,23 @@ export default defineCommand({
           url: ctx.client.url(taskPath(taskId)),
           intervalSec: pollInterval,
           timeoutSec: editTimeout,
-          isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-          isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
-          getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
-          getErrorMessage: (d) => {
-            const o = (d as DashScopeTaskResponse).output;
-            return o.message || o.code || undefined;
+          isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+          isFailed: (data) => (data as DashScopeTaskResponse).output.task_status === "FAILED",
+          getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
+          getErrorMessage: (data) => {
+            const output = (data as DashScopeTaskResponse).output;
+            return output.message || output.code || undefined;
           },
         }),
       ),
     );
 
     const videos: Array<{ taskId: string; videoUrl: string }> = [];
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i]!;
+    for (let resultIndex = 0; resultIndex < results.length; resultIndex++) {
+      const result = results[resultIndex]!;
       const videoUrl =
         result.output.video_url || (result.output.results && result.output.results[0]?.url);
-      if (videoUrl) videos.push({ taskId: taskIds[i]!, videoUrl });
+      if (videoUrl) videos.push({ taskId: taskIds[resultIndex]!, videoUrl });
     }
 
     if (videos.length === 0) {
@@ -291,20 +289,13 @@ export default defineCommand({
         quiet: settings.quiet || settings.output === "json",
       });
 
-      if (settings.quiet) {
-        emitBare(destPath);
-      } else {
-        emitResult(
-          {
-            task_id: videos[0]!.taskId,
-            video_url: videos[0]!.videoUrl,
-            status: "SUCCEEDED",
-            saved: destPath,
-            size: formatBytes(size),
-          },
-          format,
-        );
-      }
+      ctx.output.result({
+        task_id: videos[0]!.taskId,
+        video_url: videos[0]!.videoUrl,
+        status: "SUCCEEDED",
+        saved: destPath,
+        size: formatBytes(size),
+      });
       return;
     }
 
@@ -323,9 +314,9 @@ export default defineCommand({
     );
 
     if (saved.length === 1) {
-      emitResult(saved[0]!, format);
+      ctx.output.result(saved[0]!);
     } else {
-      emitResult({ videos: saved, total: saved.length }, format);
+      ctx.output.result({ videos: saved, total: saved.length });
     }
   },
 });
