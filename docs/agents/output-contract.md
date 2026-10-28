@@ -8,7 +8,7 @@
 
 ## 当前迁移阶段
 
-公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit 和语音热词表 create / update / delete / get / list 已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
+公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit、语音热词表 create / update / delete / get / list 和 speech synthesize 已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
 
 ## 必查清单
 
@@ -33,7 +33,8 @@
 - [ ] core 通过可选 debug 回调上报传输诊断，无回调时保持安静；runtime 注入 ctx.output.debug。请求体、认证头和查询参数值不直接打印
 - [ ] 错误 cause 中的结构化对象复用安全序列化；服务端 message、api_code、request_id 不改写
 - [ ] JSON 诊断每条一行；stdout 为单个业务 JSON 文档，stderr 单独解析
-- [ ] 原始音频/字节流、既有事件流和 Command Pack API 1 仍走现有专用入口；不得绕过新接口承诺后混入 stdout
+- [ ] speech synthesize 的原始音频仅在 text 流式模式下直接写 stdout；JSON 流式需 --out 文件并返回元数据，未指定文件时在请求和文件操作前报用法错误；dry-run 仍允许 JSON 预览。--list-voices 的 JSON 返回音色条目与已有文档链接，内置列表未知时 voices/total 为 null
+- [ ] 其他原始字节流、既有事件流和 Command Pack API 1 仍走现有专用入口；不得绕过新接口承诺后混入 stdout
 - [ ] 每个调用使用独立 reporter，不共享结果状态、不替换全局 stdout/stderr
 - [ ] 进程共用 SIGINT / stdout error 监听器，调用结束清理输出上下文；并发不触发 MaxListenersExceededWarning，单次中断只输出一条终止错误，EPIPE 保护覆盖 run 返回后的异步写入
 
