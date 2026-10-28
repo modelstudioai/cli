@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import { parseCommaList } from "../shared/params.ts";
@@ -104,7 +105,7 @@ function printSeries(allSeries: MonitorSeries[]): void {
   }
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Query time-series monitor metrics (RPM/TPM, latency percentiles, token usage)",
     "zh-CN": "查询时序监控指标（RPM/TPM、耗时分位数、Token 用量等）",
@@ -192,7 +193,7 @@ export default defineCommand({
         {
           api: METRICS_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult } from "bailian-cli-runtime";
 import {
   ALERT_RULE_WRITE_FLAGS,
@@ -9,7 +10,7 @@ import {
 
 const UPDATE_RULE_API = "zeldaEasy.bailian-telemetry.alertRule.updateAlertRule";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Update a model alert rule (full replacement; same fields as create)",
     "zh-CN": "更新模型告警规则（整体替换，字段与 create 一致）",
@@ -36,7 +37,7 @@ export default defineCommand({
   validate: (flags) => validateAlertRuleFlags(flags),
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const reqDTO = {
       ...(settings.workspaceId ? { workspaceId: settings.workspaceId } : {}),
@@ -49,7 +50,7 @@ export default defineCommand({
         {
           api: UPDATE_RULE_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

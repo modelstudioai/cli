@@ -1,10 +1,11 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult } from "bailian-cli-runtime";
 import { ensureAlertReady, parseCondition, validateTemplateConditions } from "./shared.ts";
 
 const UPDATE_TEMPLATE_API = "zeldaEasy.bailian-telemetry.alertTemplate.updateAlertTemplate";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Update a custom alert template (full replacement of conditions)",
     "zh-CN": "更新自定义告警模板（整体替换条件）",
@@ -58,7 +59,7 @@ export default defineCommand({
   validate: (flags) => validateTemplateConditions(flags.condition, false),
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const reqDTO = {
       templateId: flags.templateId,
@@ -73,7 +74,7 @@ export default defineCommand({
         {
           api: UPDATE_TEMPLATE_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

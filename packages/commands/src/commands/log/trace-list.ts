@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
@@ -71,7 +72,7 @@ function printTraceTable(list: TraceEntry[]): void {
   for (const line of lines) process.stdout.write(line + "\n");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "List call traces for a model or app",
     "zh-CN": "查询模型或应用的调用链列表",
@@ -141,7 +142,7 @@ export default defineCommand({
         {
           api: LIST_TRACES_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

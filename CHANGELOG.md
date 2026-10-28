@@ -6,6 +6,42 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.6.2] - 2026-10-28
+
+### Changed
+
+- **Default telemetry output (BREAKING)**: Business results from `bl alert`, `bl monitor`, and `bl log` now default to JSON, even when the Profile specifies text. Scripts relying on text must pass `--output text` or set `DASHSCOPE_OUTPUT=text`.
+
+### Fixed
+
+- **Workspace identity**: Resolve the selected workspace's Console identity automatically and share it across preflight, business requests, asynchronous polling, and follow-up requests, fixing ineffective `--workspace-id` filtering and incorrect cross-workspace results without changing saved configuration.
+- **Audit log parsing**: Normalize timestamps, models, request IDs, workspace IDs, and usage; fix missing fields, NaN timestamps, and malformed count displays, and reject audit results from a mismatched workspace.
+- **Log counts**: Use each corresponding list API's `totalCount` for `log audit count` and `log inference count`, fixing zero counts for non-empty lists without paginating or fetching full log content.
+- **Inference count filters and completion**: Preserve multiple-model and multiple-API-key filters by deduplicating and querying single-value combinations. Support asynchronous polling and emit totals only after every query succeeds; reject empty filters, invalid counts, and aggregate overflow.
+- **Dry-run previews**: Show the workspace identity resolution plan and actual count request combinations without sending business requests.
+
+## [2.6.1] - 2026-10-28
+
+### Added
+
+- **Asynchronous Batch inference**: Add `bl batch convert/create/list/get/cancel/download` for CSV-to-JSONL conversion, Chat/Embedding task creation, progress tracking, cancellation, and result/error downloads with optional CSV export.
+- **Synchronous Batch Chat**: Add `bl text chat --batch` for one non-streaming request, separate from asynchronous file-based Batch tasks, with request timeouts of 60–3600 seconds.
+- **Model recommendation options**: Add `--top`, `--model`, `--no-agent`, `--trace`, `--think`, and `--no-thinking` to `bl advisor recommend`.
+
+### Changed
+
+- **Model recommendations**: Upgrade intent analysis, routing, recall, scoring, and ranking; support Agent clarification in interactive terminals and multi-step recommendations while preserving the existing recommendation JSON envelope.
+
+### Removed
+
+- **Advisor library interfaces (BREAKING)**: Remove legacy recommendation exports, including `getModels`, `recallCandidates`, `recallSemantic`, and `rankModels`. Library consumers must adapt to the new recommendation engine; legacy types are exported as `LegacyIntentProfile`, `LegacyModelProfile`, and `LegacyRecommendResult`.
+
+### Fixed
+
+- **Temporary file uploads**: Select the upload service from the active model endpoint, fixing Singapore and Prime video uploads incorrectly using Beijing. Official temporary uploads support only Beijing and Singapore; unsupported regions and Token Plan fail explicitly, while explicit custom upload proxies are no longer rejected based on key type.
+- **Node 26 compatibility**: Fix fetch/dispatcher incompatibility and proxy initialization across model requests, console requests, uploads, and downloads.
+- **API error passthrough**: Recognize nested business errors and preserve non-JSON error bodies and request IDs instead of treating error responses as successful results.
+
 ## [2.6.0] - 2026-10-27
 
 ### Added

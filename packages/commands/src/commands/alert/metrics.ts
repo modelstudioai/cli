@@ -1,9 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  effectiveConsoleGatewayConfig,
-  unwrapResponse,
-} from "bailian-cli-core";
+import { detectOutputFormat, unwrapResponse } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { ensureAlertReady } from "./shared.ts";
 
@@ -17,7 +13,7 @@ interface AlertMetric {
   resourceType?: string;
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "List metrics that alert rules can be created on, with supported aggregations",
     "zh-CN": "查看可创建告警的指标及其支持的聚合方式",
@@ -27,14 +23,14 @@ export default defineCommand({
   exampleArgs: ["", "--output json"],
   async run(ctx) {
     const { settings } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
       emitResult(
         {
           api: LIST_METRICS_API,
           data: { reqDTO: { workspaceId: settings.workspaceId, resourceType: "model" } },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

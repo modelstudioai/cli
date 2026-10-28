@@ -1,7 +1,8 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand } from "../shared/telemetry.ts";
 import { disableLogDelivery } from "./shared.ts";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Disable audit log delivery for all models in the workspace",
     "zh-CN": "关闭当前业务空间全部模型的审计日志投递",

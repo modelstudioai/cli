@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult } from "bailian-cli-runtime";
 import {
   buildGroupSwitchReqDTO,
@@ -38,7 +39,7 @@ async function waitFor(
   return status;
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US":
       "Activate monitoring delivery: CMS SLR authorization, CMS service, and the dedicated Prometheus instance",
@@ -88,7 +89,7 @@ export default defineCommand({
               telemetryType: MONITOR_GROUP_TYPE,
             },
           },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

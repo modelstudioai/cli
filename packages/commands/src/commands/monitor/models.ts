@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
@@ -95,7 +96,7 @@ function printTable(items: ModelStatisticItem[], startTime: number, endTime: num
   process.stdout.write(color.dim(`\nTotal: ${items.length} rows`) + "\n");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "List per-model / per-API-key call statistics with server-side sort and paging",
     "zh-CN": "按模型 / API Key 维度查看调用明细统计（服务端排序与分页）",
@@ -187,7 +188,7 @@ export default defineCommand({
         {
           api: LIST_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

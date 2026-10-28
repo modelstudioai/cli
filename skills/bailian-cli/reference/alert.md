@@ -58,6 +58,8 @@ Index: [index.md](index.md)
 #### Notes
 
 - Alert conditions come from the template; browse `alert template list` first. Notification contacts/contact groups are created in the CloudMonitor console — pass their IDs via --contact/--contact-group.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -104,6 +106,8 @@ bl alert create --name test --template-id 123 --model qwen3.6-plus --dry-run
 #### Notes
 
 - Irreversible — the alert rules are permanently removed.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -139,6 +143,11 @@ bl alert delete --rule-id 789 --yes
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
+
 #### Examples
 
 ```bash
@@ -167,6 +176,11 @@ bl alert disable --rule-id 789 --dry-run
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -204,6 +218,11 @@ bl alert enable --rule-id 789 --dry-run
 | `--console-site <site>`          | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>`   | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`            | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -248,6 +267,11 @@ bl alert history --level ERROR --output json
 | `--console-switch-agent <uid>`   | number  | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`            | string  | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
+
 #### Examples
 
 ```bash
@@ -284,6 +308,11 @@ bl alert list --output json
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
+
 #### Examples
 
 ```bash
@@ -315,6 +344,11 @@ bl alert metrics --output json
 | `--console-site <site>`                     | string | no       | Console site: domestic, international                                                                                                                           |
 | `--console-switch-agent <uid>`              | number | no       | Switch agent UID for delegated access                                                                                                                           |
 | `--workspace-id <id>`                       | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                                                                                                        |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -361,6 +395,8 @@ bl alert template create --name test --condition 'model_call_count:sum:>:100:60'
 #### Notes
 
 - Irreversible — the alert templates are permanently removed.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -399,6 +435,11 @@ bl alert template delete --template-id 123 --yes
 | `--console-site <site>`          | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>`   | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`            | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -439,6 +480,11 @@ bl alert template list --template-id 123 --output json
 | `--console-site <site>`                     | string | no       | Console site: domestic, international                                                                                     |
 | `--console-switch-agent <uid>`              | number | no       | Switch agent UID for delegated access                                                                                     |
 | `--workspace-id <id>`                       | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                                                                  |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -481,6 +527,11 @@ bl alert template update --template-id 123 --name test --condition 'model_call_c
 | `--console-site <site>`          | string | no       | Console site: domestic, international                                             |
 | `--console-switch-agent <uid>`   | number | no       | Switch agent UID for delegated access                                             |
 | `--workspace-id <id>`            | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                          |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
