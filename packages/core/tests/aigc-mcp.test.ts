@@ -15,6 +15,10 @@ import {
   parseAigcTtsResult,
   parseAigcVideoTaskId,
   parseAigcVideoTaskResult,
+  resolveMcpImageSize,
+  isMcpTtsVoice,
+  MCP_IMAGE_GEN_RATIO_SIZES,
+  MCP_TTS_VOICES,
 } from "../src/client/aigc-mcp.ts";
 import type { McpToolResult } from "../src/client/mcp.ts";
 
@@ -141,11 +145,49 @@ describe("response parsers", () => {
       parseAigcVideoTaskResult({ task_status: "SUCCEEDED", video_url: "https://x/v.mp4" }),
     ).toEqual({ taskStatus: "SUCCEEDED", videoUrl: "https://x/v.mp4" });
     expect(parseAigcVideoTaskResult({})).toEqual({ taskStatus: "UNKNOWN" });
+    // 失败原因原样保留，供命令层透传。
+    expect(
+      parseAigcVideoTaskResult({
+        task_status: "FAILED",
+        task_id: "t1",
+        message: "boom",
+        code: "E1",
+      }),
+    ).toEqual({ taskStatus: "FAILED", taskId: "t1", message: "boom", code: "E1" });
+    expect(parseAigcVideoTaskResult({ task_status: "FAILED", message: "" })).toEqual({
+      taskStatus: "FAILED",
+    });
   });
 
   test("parseAigcAsrTexts keeps only string entries", () => {
     expect(parseAigcAsrTexts({ results: ["hello", "world"] })).toEqual(["hello", "world"]);
     expect(parseAigcAsrTexts({ results: ["hello", 42] })).toEqual(["hello"]);
     expect(parseAigcAsrTexts({})).toEqual([]);
+  });
+});
+
+describe("MCP input contract mapping", () => {
+  test("resolveMcpImageSize maps ratios onto the server pixel presets", () => {
+    expect(resolveMcpImageSize("16:9")).toBe(MCP_IMAGE_GEN_RATIO_SIZES["16:9"]);
+    expect(resolveMcpImageSize("1:1")).toBe("1328*1328");
+    expect(resolveMcpImageSize("9:16")).toBe("928*1664");
+  });
+
+  test("resolveMcpImageSize passes pixel input through (x normalized to *)", () => {
+    expect(resolveMcpImageSize("2048*2048")).toBe("2048*2048");
+    expect(resolveMcpImageSize("1024x768")).toBe("1024*768");
+  });
+
+  test("resolveMcpImageSize rejects values MCP cannot accept", () => {
+    expect(resolveMcpImageSize("2:3")).toBeUndefined();
+    expect(resolveMcpImageSize("huge")).toBeUndefined();
+    expect(resolveMcpImageSize("")).toBeUndefined();
+  });
+
+  test("isMcpTtsVoice accepts only the live schema enum", () => {
+    expect(MCP_TTS_VOICES).toContain("温柔女声");
+    expect(isMcpTtsVoice("温柔女声")).toBe(true);
+    expect(isMcpTtsVoice("longxiaochun_v3")).toBe(false);
+    expect(isMcpTtsVoice("")).toBe(false);
   });
 });

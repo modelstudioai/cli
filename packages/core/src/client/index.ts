@@ -103,6 +103,7 @@ export {
 export type {
   McpTool,
   McpToolResult,
+  McpToolResultContent,
   McpConnectedClient,
   ConnectBailianMcpOptions,
 } from "./mcp.ts";
@@ -113,9 +114,14 @@ export {
   isUrlOverrideSseFallbackCandidate,
   connectBailianMcpWithFallback,
 } from "./mcp.ts";
+export { McpClient } from "./mcp-sdk.ts";
 export {
   AIGC_MCP_SERVER,
   AIGC_MCP_TOOL,
+  MCP_IMAGE_GEN_RATIO_SIZES,
+  MCP_TTS_VOICES,
+  isMcpTtsVoice,
+  resolveMcpImageSize,
   parseAigcToolResult,
   buildImageGenArgs,
   buildImageEditArgs,

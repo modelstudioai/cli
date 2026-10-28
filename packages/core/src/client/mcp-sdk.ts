@@ -32,6 +32,39 @@ import { trackingHeaders } from "./headers.ts";
 import type { HttpDeps } from "./http.ts";
 import type { McpConnectedClient, McpTool, McpToolResult } from "./mcp.ts";
 
+/**
+ * Low-level Streamable HTTP MCP client keeping the constructor and method
+ * signatures published by earlier `bailian-cli-core` versions; delegates to
+ * {@link SdkMcpAdapter}. It drives a single transport at a caller-supplied URL
+ * and token — for the orchestrated entry (URL/credential resolution,
+ * Streamable→SSE fallback, channel attribution) use `Client.connectBailianMcp`
+ * / `connectBailianMcpWithFallback`.
+ */
+export class McpClient implements McpConnectedClient {
+  private readonly adapter: SdkMcpAdapter;
+
+  constructor(deps: HttpDeps, url: string, authToken?: string) {
+    this.adapter = new SdkMcpAdapter({ deps, url, authToken, transport: "streamable" });
+  }
+
+  /** Initialize the MCP session. Must be called before any other method. */
+  initialize(): Promise<void> {
+    return this.adapter.initialize();
+  }
+
+  listTools(): Promise<McpTool[]> {
+    return this.adapter.listTools();
+  }
+
+  callTool(name: string, args: Record<string, unknown>): Promise<McpToolResult> {
+    return this.adapter.callTool(name, args);
+  }
+
+  close(): void {
+    this.adapter.close();
+  }
+}
+
 /** Which transport the adapter drives: Streamable HTTP (/mcp) or classic SSE (/sse). */
 export type SdkMcpTransportKind = "streamable" | "sse";
 
@@ -102,7 +135,11 @@ function rawMcpMessage(error: McpError): string {
  * Build the transport-level fetch. It reproduces the old client's error contract
  * for message POSTs and mirrors its `--verbose` wire logging. GET responses are
  * passed through untouched so the SDK's own SSE-stream handling (including the
- * tolerated 405 on a standalone Streamable GET) stays intact.
+ * tolerated 405 on a standalone Streamable GET) stays intact. Redirect responses
+ * are likewise passed through: the SDK wraps this fetch with its same-origin
+ * redirect policy (`fetchWithinOrigin`) and must see the 3xx to follow or
+ * reject it itself — intercepting it here would break same-origin redirects
+ * the old client's default `redirect: "follow"` used to honor.
  */
 function createMcpFetch(deps: HttpDeps): FetchLike {
   return async (url, init) => {
@@ -127,7 +164,7 @@ function createMcpFetch(deps: HttpDeps): FetchLike {
       console.error(`< ${response.status} ${response.statusText}`);
     }
 
-    if (!response.ok && method === "POST") {
+    if (!response.ok && method === "POST" && !isRedirectStatus(response.status)) {
       let message = `MCP request failed: ${response.status} ${response.statusText}`;
       try {
         const errorBody = await response.text();
@@ -140,6 +177,11 @@ function createMcpFetch(deps: HttpDeps): FetchLike {
 
     return response;
   };
+}
+
+/** True for 3xx statuses the SDK's same-origin redirect policy handles itself. */
+function isRedirectStatus(status: number): boolean {
+  return status >= 300 && status < 400;
 }
 
 /**
@@ -203,25 +245,26 @@ export class SdkMcpAdapter implements McpConnectedClient {
         { name, arguments: args },
         undefined,
         this.requestOptions(),
-      )) as {
-        content?: Array<{ type: string; text?: string; data?: string; mimeType?: string }>;
-        isError?: boolean;
-      };
-      // Non-task tools (all Bailian MCP tools) resolve to the `content` shape;
-      // the task shape carries `toolResult` instead and is out of scope here.
+      )) as McpToolResult;
+      // The SDK already validates the envelope against CallToolResultSchema;
+      // only a missing content array is an unexpected shape for our callers.
       if (!Array.isArray(result.content)) {
         throw new BailianError("MCP tool returned an unexpected result shape.", ExitCode.GENERAL);
       }
-      return {
-        content: result.content.map((part) => mapContentPart(part)),
-        ...(result.isError !== undefined ? { isError: result.isError } : {}),
-      };
+      // Returned verbatim (the SDK-validated object): generic consumers such as
+      // `bl mcp call` keep every standard field (resource / resource_link
+      // blocks, structuredContent, annotations, …). AIGC-specific extraction
+      // lives in the business adapter (`aigc-mcp.ts`), not here.
+      return result;
     } catch (error) {
       throw mapSdkError(error);
     }
   }
 
-  /** Close the transport (fire-and-forget; aborts any background SSE stream). */
+  /**
+   * Close the transport (fire-and-forget; aborts any background SSE stream or
+   * in-flight handshake, since the transport is published before awaiting).
+   */
   close(): void {
     const transport = this.transport;
     this.client = undefined;
@@ -256,9 +299,48 @@ export class SdkMcpAdapter implements McpConnectedClient {
       { capabilities: {} },
     );
 
-    await client.connect(transport, this.requestOptions());
-
+    // Publish the transport before awaiting so close() can abort handshake
+    // phases the SDK's per-request timeout does not cover (the SSE endpoint
+    // wait and the initialize/initialized POSTs).
     this.transport = transport;
+
+    const handshake = client.connect(transport, this.requestOptions());
+    // When we give up on the handshake (timeout / close) its later rejection
+    // must not surface as an unhandled rejection.
+    handshake.catch(() => undefined);
+
+    let handshakeTimer: ReturnType<typeof setTimeout> | undefined;
+    const handshakeTimeout = new Promise<never>((_, reject) => {
+      handshakeTimer = setTimeout(
+        () =>
+          reject(
+            new BailianError(
+              `MCP session handshake timed out after ${this.deps.settings.timeout}s.`,
+              ExitCode.TIMEOUT,
+            ),
+          ),
+        this.deps.settings.timeout * 1000,
+      );
+    });
+
+    try {
+      await Promise.race([handshake, handshakeTimeout]);
+    } catch (error) {
+      // Cancel the in-flight handshake: abort pending POSTs / SSE streams and
+      // clear the partial state so a later initialize() starts fresh.
+      this.transport = undefined;
+      await transport.close().catch(() => undefined);
+      throw error;
+    } finally {
+      if (handshakeTimer) clearTimeout(handshakeTimer);
+    }
+
+    if (this.transport !== transport) {
+      // close() ran while the handshake was finishing; drop the half-open client.
+      await transport.close().catch(() => undefined);
+      throw new BailianError("MCP connection was closed during the handshake.", ExitCode.NETWORK);
+    }
+
     this.client = client;
 
     if (this.deps.settings.verbose) {
@@ -283,24 +365,4 @@ export class SdkMcpAdapter implements McpConnectedClient {
   private requestOptions(): { timeout: number } {
     return { timeout: this.deps.settings.timeout * 1000 };
   }
-}
-
-/** Map an SDK content part onto the loose {@link McpToolResult} content shape. */
-function mapContentPart(part: { type: string; text?: string; data?: string; mimeType?: string }): {
-  type: string;
-  text?: string;
-  data?: string;
-  mimeType?: string;
-} {
-  if (part.type === "text" && typeof part.text === "string") {
-    return { type: "text", text: part.text };
-  }
-  if ((part.type === "image" || part.type === "audio") && typeof part.data === "string") {
-    return {
-      type: part.type,
-      data: part.data,
-      ...(typeof part.mimeType === "string" ? { mimeType: part.mimeType } : {}),
-    };
-  }
-  return { type: part.type };
 }

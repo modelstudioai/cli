@@ -167,7 +167,7 @@ describe("e2e: aigc auto → mcp", () => {
     expect(data.arguments?.first_frame_url).toBe("https://example.com/a.png");
   });
 
-  test("speech synthesize auto dry-run 预览走 TextGenerateSpeech/bailian_tts（透传 voice）", async () => {
+  test("speech synthesize auto dry-run 预览走 TextGenerateSpeech/bailian_tts（MCP 枚举音色）", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
       "speech",
       "synthesize",
@@ -176,7 +176,7 @@ describe("e2e: aigc auto → mcp", () => {
       "--text",
       "hello",
       "--voice",
-      "longxiaochun_v3",
+      "温柔女声",
       "--dry-run",
       "--output",
       "json",
@@ -187,7 +187,7 @@ describe("e2e: aigc auto → mcp", () => {
     expect(data.server).toBe("TextGenerateSpeech");
     expect(data.tool).toBe("bailian_tts");
     expect(data.arguments?.text).toBe("hello");
-    expect(data.arguments?.voice).toBe("longxiaochun_v3");
+    expect(data.arguments?.voice).toBe("温柔女声");
   });
 
   test("speech recognize auto dry-run 预览走 SpeechGenerateText/bailian_speech_to_text", async () => {
@@ -229,6 +229,25 @@ describe("e2e: aigc auto → mcp", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<McpPreview>(stdout);
     expect(data.arguments?.file_urls).toEqual(["data:audio/wav;base64,<omitted>"]);
+  });
+
+  test("image generate auto dry-run 预览把 --size 比例映射为 MCP 宽*高", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
+      "image",
+      "generate",
+      "--model",
+      "auto",
+      "--prompt",
+      "sunset",
+      "--size",
+      "16:9",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<McpPreview>(stdout);
+    expect(data.arguments?.size).toBe("1664*928");
   });
 
   // auto + MCP 承接不了的 flag → USAGE(2)，绝不静默回退 REST。
@@ -285,11 +304,21 @@ describe("e2e: aigc auto → mcp", () => {
         "--text",
         "x",
         "--voice",
-        "longxiaochun_v3",
+        "温柔女声",
         "--format",
         "mp3",
       ],
       /--format/,
+    ],
+    [
+      "speech synthesize 非 MCP 枚举音色",
+      ["speech", "synthesize", "--model", "auto", "--text", "x", "--voice", "longxiaochun_v3"],
+      /longxiaochun_v3/,
+    ],
+    [
+      "image generate 不可映射的 --size",
+      ["image", "generate", "--model", "auto", "--prompt", "x", "--size", "2:3"],
+      /--size/,
     ],
     [
       "speech synthesize --list-voices",
@@ -375,9 +404,9 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "auto",
         "--text",
         "端到端 auto 语音测试",
-        // voice 原样透传给 MCP，需为服务端音色枚举内的值（与 REST live 用例一致）。
+        // voice 需为 MCP 音色枚举内的值（REST 音色 ID 会被前置校验拒绝）。
         "--voice",
-        "longxiaochun_v3",
+        "温柔女声",
         "--out",
         outWav,
         "--output",
@@ -387,7 +416,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       const data = parseStdoutJson<{ saved?: string; audio_url?: string; voice?: string }>(stdout);
       expect(data.saved).toBe(outWav);
       expect(data.audio_url?.length ?? 0).toBeGreaterThan(0);
-      expect(data.voice).toBe("longxiaochun_v3");
+      expect(data.voice).toBe("温柔女声");
     }, 180_000);
   },
 );

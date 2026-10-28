@@ -31,7 +31,9 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { VOICE_TTS_PAGE } from "bailian-cli-runtime";
 import {
   isAutoModel,
+  assertAutoMcpAvailable,
   assertMcpCompatible,
+  assertMcpTtsVoice,
   withAigcMcpSession,
   type Localize,
 } from "../shared/aigc-mcp.ts";
@@ -484,6 +486,7 @@ async function handleAutoMcpMode(
   flags: SynthesizeFlags,
   format: OutputFormat,
 ): Promise<void> {
+  assertAutoMcpAvailable(client, localize);
   assertMcpCompatible("tts", flags, localize);
 
   // Same text precedence as REST: --text, else --text-file.
@@ -496,9 +499,10 @@ async function handleAutoMcpMode(
       throw new BailianError(`Cannot read text file: ${filePath}`, ExitCode.USAGE);
     }
   }
-  // Voice is passed through verbatim (validate enforces its presence); the MCP
-  // server validates it against its own voice enum.
+  // Voice must be one of the MCP enum values; REST voice IDs are rejected up
+  // front so dry-run never previews a request the server cannot accept.
   const voice = flags.voice as string;
+  assertMcpTtsVoice(voice, localize);
   const args = buildTtsArgs({ text, voice });
 
   if (settings.dryRun) {

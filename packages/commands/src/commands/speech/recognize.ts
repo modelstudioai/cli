@@ -36,6 +36,7 @@ import { poll } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   isAutoModel,
+  assertAutoMcpAvailable,
   assertMcpCompatible,
   withAigcMcpSession,
   resolveAutoAudioInput,
@@ -351,6 +352,7 @@ async function handleAutoMcpMode(
   rawUrls: string[],
   format: OutputFormat,
 ): Promise<void> {
+  assertAutoMcpAvailable(client, localize);
   assertMcpCompatible("asr", flags, localize);
 
   if (rawUrls.length === 0) {

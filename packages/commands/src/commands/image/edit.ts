@@ -37,6 +37,7 @@ import { join } from "path";
 import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 import {
   isAutoModel,
+  assertAutoMcpAvailable,
   assertMcpCompatible,
   withAigcMcpSession,
   resolveAutoImageInput,
@@ -371,6 +372,7 @@ async function handleAutoMcpMode(
   rawImages: string[],
   format: OutputFormat,
 ): Promise<void> {
+  assertAutoMcpAvailable(client, localize);
   assertMcpCompatible("imageEdit", flags, localize);
 
   // bailian_image_edit takes a single source image; bailian_image_fusion is out

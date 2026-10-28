@@ -34,7 +34,9 @@ import { resolveImageSize } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 import {
   isAutoModel,
+  assertAutoMcpAvailable,
   assertMcpCompatible,
+  resolveAutoImageSize,
   withAigcMcpSession,
   type Localize,
 } from "../shared/aigc-mcp.ts";
@@ -278,12 +280,13 @@ async function handleAutoMcpMode(
   flags: GenerateFlags,
   format: string,
 ): Promise<void> {
+  assertAutoMcpAvailable(client, localize);
   assertMcpCompatible("imageGen", flags, localize);
 
   const concurrent = getConcurrency(flags);
   const args = buildImageGenArgs({
     prompt: flags.prompt,
-    size: flags.size || undefined,
+    size: resolveAutoImageSize(flags.size, localize),
     n: flags.n,
     negativePrompt: flags.negativePrompt || undefined,
     promptExtend: flags.promptExtend,

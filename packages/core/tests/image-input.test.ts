@@ -90,3 +90,42 @@ describe("Token Plan image input compatibility", () => {
     );
   });
 });
+
+describe("Token Plan connection detection", () => {
+  const STANDARD = "https://dashscope.aliyuncs.com";
+  const PLAN = "https://token-plan.cn-beijing.maas.aliyuncs.com";
+
+  function makeClientWithKey(baseUrl: string, token: string): Client {
+    return new Client({
+      identity: {
+        binName: "bl",
+        version: "test",
+        npmPackage: "bailian-cli",
+        clientName: "bailian-cli-test",
+      },
+      settings: makeSettings(),
+      baseUrl,
+      apiCred: { token, baseUrl, source: "env" },
+    });
+  }
+
+  test("plan key on a token-plan endpoint is a Token Plan connection", () => {
+    expect(makeClientWithKey(PLAN, "sk-sp-plan").usesTokenPlanConnection()).toBe(true);
+  });
+
+  test("plan key on the standard endpoint is a Token Plan connection", () => {
+    expect(makeClientWithKey(STANDARD, "sk-sp-plan").usesTokenPlanConnection()).toBe(true);
+  });
+
+  test("standard key on a token-plan endpoint is a Token Plan connection", () => {
+    expect(makeClientWithKey(PLAN, "sk-standard").usesTokenPlanConnection()).toBe(true);
+  });
+
+  test("standard key on the standard endpoint is not", () => {
+    expect(makeClientWithKey(STANDARD, "sk-standard").usesTokenPlanConnection()).toBe(false);
+  });
+
+  test("missing credential on the standard endpoint is not", () => {
+    expect(makeClient(STANDARD).usesTokenPlanConnection()).toBe(false);
+  });
+});

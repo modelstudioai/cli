@@ -25,13 +25,33 @@ export interface McpTool {
   inputSchema?: Record<string, unknown>;
 }
 
+/**
+ * One content block of an MCP tool result (text / image / audio / resource /
+ * resource_link …). Mirrors the standard fields the SDK validation retains;
+ * the index signature keeps further standard fields visible to consumers.
+ */
+export interface McpToolResultContent {
+  type: string;
+  /** `text` content payload. */
+  text?: string;
+  /** base64 payload of `image` / `audio` content. */
+  data?: string;
+  mimeType?: string;
+  /** `resource_link` / embedded-resource identifiers. */
+  uri?: string;
+  name?: string;
+  title?: string;
+  description?: string;
+  /** Embedded resource payload of `resource` content. */
+  resource?: Record<string, unknown>;
+  annotations?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface McpToolResult {
-  content: Array<{
-    type: string;
-    text?: string;
-    data?: string;
-    mimeType?: string;
-  }>;
+  content: McpToolResultContent[];
+  /** Structured tool output carried alongside `content`; preserved verbatim. */
+  structuredContent?: Record<string, unknown>;
   isError?: boolean;
 }
 

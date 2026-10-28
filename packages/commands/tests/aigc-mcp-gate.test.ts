@@ -1,11 +1,14 @@
 import { describe, expect, test } from "vite-plus/test";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { BailianError, ExitCode, type Client } from "bailian-cli-core";
 import {
   AUTO_MODEL,
+  assertAutoMcpAvailable,
   assertMcpCompatible,
+  assertMcpTtsVoice,
   isAutoModel,
   mcpSingleImageOnlyError,
   mcpUnsupportedError,
+  resolveAutoImageSize,
   type AigcMcpOperation,
   type Localize,
 } from "../src/commands/shared/aigc-mcp.ts";
@@ -145,5 +148,56 @@ describe("error message builders", () => {
     expect(singleImageError).toBeInstanceOf(BailianError);
     expect(singleImageError.exitCode).toBe(ExitCode.USAGE);
     expect(singleImageError.message).toContain("single image");
+  });
+});
+
+describe("assertAutoMcpAvailable rejects Token Plan connections", () => {
+  /** Minimal Client stub: only the accessor the applicability gate reads. */
+  function stubClient(tokenPlanConnection: boolean): Client {
+    return {
+      usesTokenPlanConnection: () => tokenPlanConnection,
+    } as unknown as Client;
+  }
+
+  test("Token Plan connection throws USAGE with an actionable hint (en-US)", () => {
+    const error = captureUsage(() => assertAutoMcpAvailable(stubClient(true), enUS));
+    expect(error.message).toContain("Token Plan");
+    expect(error.hint).toContain("--model");
+  });
+
+  test("zh-CN localization mentions Token Plan and the model fallback", () => {
+    const error = captureUsage(() => assertAutoMcpAvailable(stubClient(true), zhCN));
+    expect(error.message).toContain("Token Plan");
+    expect(error.hint).toContain("Token Plan 模型");
+  });
+
+  test("non-Token-Plan connection passes", () => {
+    expect(() => assertAutoMcpAvailable(stubClient(false), enUS)).not.toThrow();
+  });
+});
+
+describe("resolveAutoImageSize maps or rejects --size for MCP", () => {
+  test("ratios map to pixel presets and pixels pass through", () => {
+    expect(resolveAutoImageSize("16:9", enUS)).toBe("1664*928");
+    expect(resolveAutoImageSize("2048*2048", enUS)).toBe("2048*2048");
+    expect(resolveAutoImageSize(undefined, enUS)).toBeUndefined();
+  });
+
+  test("unmappable values throw the unsupported-parameter USAGE error", () => {
+    const error = captureUsage(() => resolveAutoImageSize("2:3", enUS));
+    expect(error.message).toContain("--size 2:3");
+  });
+});
+
+describe("assertMcpTtsVoice rejects REST voice IDs", () => {
+  test("enum voices pass", () => {
+    expect(() => assertMcpTtsVoice("温柔女声", enUS)).not.toThrow();
+  });
+
+  test("REST voice IDs throw USAGE listing the MCP enum", () => {
+    const error = captureUsage(() => assertMcpTtsVoice("longxiaochun_v3", enUS));
+    expect(error.message).toContain("longxiaochun_v3");
+    expect(error.message).toContain("温柔女声");
+    expect(error.hint).toContain("--model");
   });
 });

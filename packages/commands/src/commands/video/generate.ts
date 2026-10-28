@@ -34,10 +34,12 @@ import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailia
 import { PRIME_FLAGS, resolvePrimeEndpoint, validatePrimeFlags } from "../shared/prime.ts";
 import {
   isAutoModel,
+  assertAutoMcpAvailable,
   assertMcpCompatible,
   withAigcMcpSession,
   resolveAutoImageInput,
   type AigcMcpCallTool,
+  type Localize,
 } from "../shared/aigc-mcp.ts";
 
 export default defineCommand({
@@ -214,6 +216,7 @@ export default defineCommand({
 
     // auto model → official AIGC MCP (VideoGenerate); specific models keep the REST path.
     if (isAutoModel(resolvedModel)) {
+      assertAutoMcpAvailable(ctx.client, ctx.localize);
       const imageInput = flags.image;
       assertMcpCompatible(
         imageInput !== undefined ? "videoImageToVideo" : "videoTextToVideo",
@@ -273,7 +276,9 @@ export default defineCommand({
             "tasks",
           );
           return Promise.all(
-            taskIds.map((taskId) => pollMcpVideoTask(callTool, taskId, settings, pollInterval)),
+            taskIds.map((taskId) =>
+              pollMcpVideoTask(callTool, taskId, settings, pollInterval, ctx.localize),
+            ),
           );
         },
       );
@@ -519,6 +524,14 @@ export default defineCommand({
   },
 });
 
+/** Supplementary context for a failed MCP video task (server message is primary). */
+function videoTaskIdHint(localize: Localize, taskId: string): string {
+  return localize({
+    "en-US": `The failed video task id is ${taskId}.`,
+    "zh-CN": `失败的视频任务 ID 为 ${taskId}。`,
+  });
+}
+
 /**
  * Poll a video task to completion over MCP `bailian_text_to_video_fetch_result`.
  * Mirrors the REST `poll` UX (spinner + status), but the transport is a repeated
@@ -529,6 +542,7 @@ async function pollMcpVideoTask(
   taskId: string,
   settings: Settings,
   pollInterval: number,
+  localize: Localize,
 ): Promise<{ taskId: string; videoUrl: string }> {
   const deadline = Date.now() + settings.timeout * 1000;
   const spinner = createSpinner("Polling...");
@@ -554,6 +568,12 @@ async function pollMcpVideoTask(
 
       if (result.taskStatus === "FAILED") {
         spinner.stop("Failed.");
+        // Pass the server's failure reason through verbatim (AGENTS.md §3);
+        // the task id stays as supplementary context in the hint.
+        const serverReason = result.message ?? result.code;
+        if (serverReason) {
+          throw new BailianError(serverReason, ExitCode.GENERAL, videoTaskIdHint(localize, taskId));
+        }
         throw new BailianError(`Video task failed: ${taskId}`, ExitCode.GENERAL);
       }
 

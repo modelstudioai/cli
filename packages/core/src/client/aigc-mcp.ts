@@ -181,6 +181,54 @@ export function buildSpeechToTextArgs(fileUrls: string[]): Record<string, unknow
   return { file_urls: fileUrls };
 }
 
+// ---- MCP input contract mapping (auto mode) ----
+
+/**
+ * Aspect-ratio → pixel table for `bailian_image_gen`. The MCP tool only accepts
+ * "width*height" strings (live inputSchema: 格式为宽*高, default 1328*1328), so
+ * CLI ratios map onto the server's qwen-image preset resolutions; pixel input
+ * passes through and anything else is rejected by the command layer before the
+ * request goes out.
+ */
+export const MCP_IMAGE_GEN_RATIO_SIZES: Readonly<Record<string, string>> = {
+  "1:1": "1328*1328",
+  "3:4": "1104*1472",
+  "4:3": "1472*1104",
+  "9:16": "928*1664",
+  "16:9": "1664*928",
+};
+
+/**
+ * Resolve an `auto`-mode `--size` value for `bailian_image_gen`: pixel input
+ * (`W*H`, with `x` normalized to `*`) passes through, ratios map via
+ * {@link MCP_IMAGE_GEN_RATIO_SIZES}. Returns `undefined` for values MCP cannot
+ * accept so the command layer can reject them up front.
+ */
+export function resolveMcpImageSize(size: string): string | undefined {
+  const pixels = /^(\d+)[*xX](\d+)$/.exec(size.trim());
+  if (pixels) return `${pixels[1]}*${pixels[2]}`;
+  return MCP_IMAGE_GEN_RATIO_SIZES[size.trim()];
+}
+
+/** `bailian_tts` voice enum, verbatim from the live tool inputSchema. */
+export const MCP_TTS_VOICES: readonly string[] = [
+  "电商直播男",
+  "电商直播女",
+  "温柔女声",
+  "沉稳男声",
+  "英文男声",
+  "英文女生",
+  "老年女声",
+  "老年男声",
+  "童声男",
+  "童声女",
+];
+
+/** True when `voice` is one of the MCP TTS enum values (REST voice IDs are not). */
+export function isMcpTtsVoice(voice: string): boolean {
+  return MCP_TTS_VOICES.includes(voice);
+}
+
 // ---- Response parsers (pure) ----
 
 /** Pull a URL out of a result entry that may be a bare string or `{ url }`. */
@@ -238,18 +286,28 @@ export interface AigcVideoTaskResult {
   taskStatus: string;
   videoUrl?: string;
   taskId?: string;
+  /** Server-provided failure reason, verbatim (present on FAILED tasks). */
+  message?: string;
+  /** Server-provided failure code, verbatim. */
+  code?: string;
 }
 
-/** Parse the video fetch result `{ task_status, video_url, task_id }`. */
+/** Parse the video fetch result `{ task_status, video_url, task_id }`, keeping
+ * the server's failure reason (`message` / `code`) verbatim when present. */
 export function parseAigcVideoTaskResult(inner: Record<string, unknown>): AigcVideoTaskResult {
   const taskStatus = typeof inner.task_status === "string" ? inner.task_status : "UNKNOWN";
   const videoUrl =
     typeof inner.video_url === "string" && inner.video_url.length > 0 ? inner.video_url : undefined;
   const taskId = typeof inner.task_id === "string" ? inner.task_id : undefined;
+  const message =
+    typeof inner.message === "string" && inner.message.length > 0 ? inner.message : undefined;
+  const code = typeof inner.code === "string" && inner.code.length > 0 ? inner.code : undefined;
   return {
     taskStatus,
     ...(videoUrl !== undefined ? { videoUrl } : {}),
     ...(taskId !== undefined ? { taskId } : {}),
+    ...(message !== undefined ? { message } : {}),
+    ...(code !== undefined ? { code } : {}),
   };
 }
 

@@ -14,6 +14,7 @@ import {
 import { SdkMcpAdapter } from "./mcp-sdk.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
 import { refreshAccessToken } from "../auth/refresh-token.ts";
+import { getApiKeyLoginKind } from "../config/profile-presets.ts";
 import { maskToken } from "../utils/token.ts";
 import { trackingHeaders } from "./headers.ts";
 
@@ -181,6 +182,20 @@ export class Client {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * True when the effective model-domain connection is a Token Plan one: either
+   * the token-plan endpoint or a plan key (`sk-sp-`). Both shapes are verified
+   * unable to reach Bailian MCP (the plan gateway has no `/api/v1/mcps` route —
+   * bare 404 — and plan keys get 401 InvalidApiKey on the standard MCP path),
+   * so callers routing through MCP (AIGC `auto` mode) reject up front.
+   */
+  usesTokenPlanConnection(): boolean {
+    return (
+      this.usesTokenPlanEndpoint() ||
+      getApiKeyLoginKind(this.deps.apiCred?.token ?? "") === "token-plan"
+    );
   }
 
   /** Open an MCP client. Accepts a path (prepended with the model baseUrl) or an absolute URL. */

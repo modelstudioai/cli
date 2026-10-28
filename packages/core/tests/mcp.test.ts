@@ -11,7 +11,7 @@ import {
   isStreamableHttpUnsupported,
   isUrlOverrideSseFallbackCandidate,
 } from "../src/index.ts";
-import { SdkMcpAdapter, mapSdkError } from "../src/client/mcp-sdk.ts";
+import { McpClient, SdkMcpAdapter, mapSdkError } from "../src/client/mcp-sdk.ts";
 
 function testDeps(overrides?: Partial<Settings>): { identity: Identity; settings: Settings } {
   return {
@@ -221,6 +221,76 @@ test("SdkMcpAdapter：serviceSource 覆写 X-Dashscope-Service（AIGC auto → b
   }
 });
 
+test("SdkMcpAdapter：握手挂死时整体超时为 TIMEOUT 并清理状态可重试", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  // 挂死：不 resolve 也不 reject，模拟服务端吞掉 initialize POST。
+  globalThis.fetch = () => {
+    calls += 1;
+    return new Promise<Response>(() => undefined);
+  };
+
+  try {
+    const adapter = new SdkMcpAdapter({
+      deps: testDeps({ timeout: 1 }),
+      url: "https://example.test/api/v1/mcps/WebParser/mcp",
+      authToken: "sk-test",
+      transport: "streamable",
+    });
+    const firstError = await adapter.initialize().catch((caught) => caught);
+    expect(firstError).toBeInstanceOf(BailianError);
+    expect((firstError as BailianError).exitCode).toBe(ExitCode.TIMEOUT);
+    expect((firstError as BailianError).message).toContain("handshake timed out");
+    expect(calls).toBeGreaterThan(0);
+
+    // 失败后状态已清理：再次 initialize() 重新发起握手，而非复用挂死的 promise。
+    const secondError = await adapter.initialize().catch((caught) => caught);
+    expect((secondError as BailianError).exitCode).toBe(ExitCode.TIMEOUT);
+    expect(calls).toBeGreaterThan(1);
+    adapter.close();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("SdkMcpAdapter：握手期间 close() abort 在途请求并使 initialize 结束", async () => {
+  const originalFetch = globalThis.fetch;
+  const signals: Array<AbortSignal | null | undefined> = [];
+
+  globalThis.fetch = (_input, init) =>
+    new Promise<Response>((_resolve, reject) => {
+      signals.push(init?.signal);
+      init?.signal?.addEventListener("abort", () => reject(new Error("fetch aborted")), {
+        once: true,
+      });
+    });
+
+  try {
+    const adapter = new SdkMcpAdapter({
+      deps: testDeps({ timeout: 30 }),
+      url: "https://example.test/api/v1/mcps/WebParser/mcp",
+      authToken: "sk-test",
+      transport: "streamable",
+    });
+    const pending = adapter.initialize();
+    // 等待首个请求进入 fetch 拦截器。
+    for (let tick = 0; tick < 50 && signals.length === 0; tick += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    expect(signals.length).toBeGreaterThan(0);
+
+    adapter.close();
+
+    const error = await pending.catch((caught) => caught);
+    // close() 使 SDK 以 ConnectionClosed 拒绝挂起的握手请求，映射为 NETWORK。
+    expect(error).toBeInstanceOf(BailianError);
+    expect((error as BailianError).exitCode).toBe(ExitCode.NETWORK);
+    expect(signals.some((signal) => signal?.aborted)).toBe(true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("SdkMcpAdapter：无 token 时 initialize 抛 AUTH（不发请求）", async () => {
   const originalFetch = globalThis.fetch;
   let called = false;
@@ -304,6 +374,147 @@ test("SdkMcpAdapter：listTools 与 callTool 结果映射回 McpTool / McpToolRe
     });
     expect(result.content[1]).toEqual({ type: "image", data: "AAAA", mimeType: "image/png" });
     adapter.close();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("SdkMcpAdapter：callTool 原样保留 resource / resource_link 与 structuredContent", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (_input, init) => {
+    const body = parseBody(init);
+    if (body.method === "initialize") {
+      return jsonResponse(jsonRpc(body.id!, INIT_RESULT));
+    }
+    if (body.method === "tools/call") {
+      return jsonResponse(
+        jsonRpc(body.id!, {
+          content: [
+            { type: "text", text: "summary" },
+            { type: "resource_link", uri: "https://x/doc", name: "doc", title: "Doc" },
+            {
+              type: "resource",
+              resource: { uri: "https://x/r", mimeType: "text/plain", text: "body" },
+            },
+          ],
+          structuredContent: { total: 1 },
+          isError: false,
+        }),
+      );
+    }
+    return new Response(null, { status: 200 });
+  };
+
+  try {
+    const adapter = new SdkMcpAdapter({
+      deps: testDeps(),
+      url: "https://example.test/mcp",
+      authToken: "sk-test",
+      transport: "streamable",
+    });
+    await adapter.initialize();
+
+    const result = await adapter.callTool("some_tool", {});
+    expect(result.content).toEqual([
+      { type: "text", text: "summary" },
+      { type: "resource_link", uri: "https://x/doc", name: "doc", title: "Doc" },
+      {
+        type: "resource",
+        resource: { uri: "https://x/r", mimeType: "text/plain", text: "body" },
+      },
+    ]);
+    expect(result.structuredContent).toEqual({ total: 1 });
+    expect(result.isError).toBe(false);
+    adapter.close();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("SdkMcpAdapter：同源 307 重定向交给 SDK 跟随并完成握手", async () => {
+  const originalFetch = globalThis.fetch;
+  const seenUrls: string[] = [];
+
+  globalThis.fetch = async (input, init) => {
+    const url = requestUrl(input);
+    seenUrls.push(url);
+    const body = parseBody(init);
+    if (url.endsWith("/mcp2")) {
+      if (body.method === "initialize") {
+        return jsonResponse(jsonRpc(body.id!, INIT_RESULT));
+      }
+      return new Response(null, { status: 202 });
+    }
+    // /mcp：同源 307 到 /mcp2，由 SDK 的同源重定向策略跟随。
+    return new Response(null, {
+      status: 307,
+      headers: { Location: "https://example.test/mcp2" },
+    });
+  };
+
+  try {
+    const adapter = new SdkMcpAdapter({
+      deps: testDeps(),
+      url: "https://example.test/mcp",
+      authToken: "sk-test",
+      transport: "streamable",
+    });
+    await adapter.initialize();
+
+    expect(seenUrls).toContain("https://example.test/mcp");
+    expect(seenUrls).toContain("https://example.test/mcp2");
+    adapter.close();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("SdkMcpAdapter：跨源 307 不被跟随，保留 `MCP request failed: <status>` 文案", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response(null, {
+      status: 307,
+      headers: { Location: "https://other.test/mcp" },
+    });
+
+  try {
+    const adapter = new SdkMcpAdapter({
+      deps: testDeps(),
+      url: "https://example.test/mcp",
+      authToken: "sk-test",
+      transport: "streamable",
+    });
+    const error = await adapter.initialize().catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(BailianError);
+    expect((error as BailianError).message).toMatch(/^MCP request failed: 307/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("McpClient 兼容导出：原构造签名委托 SdkMcpAdapter 完成调用", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (_input, init) => {
+    const body = parseBody(init);
+    if (body.method === "initialize") {
+      return jsonResponse(jsonRpc(body.id!, INIT_RESULT));
+    }
+    if (body.method === "tools/call") {
+      return jsonResponse(jsonRpc(body.id!, { content: [{ type: "text", text: "hi" }] }));
+    }
+    return new Response(null, { status: 200 });
+  };
+
+  try {
+    const client = new McpClient(testDeps(), "https://example.test/mcp", "sk-test");
+    await client.initialize();
+    const result = await client.callTool("some_tool", {});
+    expect(result.content[0]).toEqual({ type: "text", text: "hi" });
+    client.close();
   } finally {
     globalThis.fetch = originalFetch;
   }

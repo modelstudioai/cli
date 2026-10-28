@@ -20,7 +20,10 @@ import {
   parseAigcToolResult,
   imageFileToDataUri,
   audioFileToDataUri,
+  isMcpTtsVoice,
+  MCP_TTS_VOICES,
   MCP_CALL_SERVICE,
+  resolveMcpImageSize,
   type Client,
   type LocalizedText,
   type McpConnectedClient,
@@ -197,6 +200,70 @@ export function mcpSingleImageOnlyError(localize: Localize): BailianError {
     "zh-CN": '传入 --model <id> 指定具体模型，或在配置中把默认模型设为具体值而非 "auto"。',
   });
   return new BailianError(message, ExitCode.USAGE, hint);
+}
+
+// ---- Connection applicability gate ----
+
+/**
+ * Reject `auto` mode up front when the effective connection cannot reach the
+ * Bailian AIGC MCP servers. Both Token Plan shapes were verified against the
+ * live gateways: the token-plan endpoint has no `/api/v1/mcps` route at all
+ * (bare 404, empty body) and plan keys (`sk-sp-`) are refused on the standard
+ * MCP path (401 InvalidApiKey). Neither server response is self-explanatory,
+ * and this applicability fact is authoritative on the client side, so it is
+ * raised before any request instead of passing the opaque error through.
+ */
+export function assertAutoMcpAvailable(client: Client, localize: Localize): void {
+  if (!client.usesTokenPlanConnection()) return;
+  const message = localize({
+    "en-US":
+      "The current model (auto) routes generation through Bailian MCP, which the Token Plan connection (endpoint or API key) does not provide.",
+    "zh-CN": "当前模型（auto）经百炼 MCP 路由生成，Token Plan 连接（端点或 API Key）不提供该能力。",
+  });
+  const hint = localize({
+    "en-US":
+      "Switch to a config profile with a standard DashScope API key, or pass --model <id> to keep using Token Plan models.",
+    "zh-CN":
+      "请切换到含标准 DashScope API Key 的配置，或传入 --model <id> 继续使用 Token Plan 模型。",
+  });
+  throw new BailianError(message, ExitCode.USAGE, hint);
+}
+
+// ---- MCP input value gates (auto mode) ----
+
+/**
+ * Resolve an `auto`-mode `--size` for MCP image generation: ratios map to the
+ * server's pixel presets and pixel input passes through; values MCP cannot
+ * accept are rejected up front with the unsupported-parameter USAGE error.
+ */
+export function resolveAutoImageSize(
+  size: string | undefined,
+  localize: Localize,
+): string | undefined {
+  if (size === undefined) return undefined;
+  const mapped = resolveMcpImageSize(size);
+  if (mapped === undefined) {
+    throw mcpUnsupportedError(localize, [`--size ${size}`]);
+  }
+  return mapped;
+}
+
+/**
+ * Reject `auto`-mode TTS voices outside the MCP enum before any request: REST
+ * voice IDs (e.g. `longxiaochun_v3`) are not accepted by `bailian_tts`.
+ */
+export function assertMcpTtsVoice(voice: string, localize: Localize): void {
+  if (isMcpTtsVoice(voice)) return;
+  const list = MCP_TTS_VOICES.join(", ");
+  const message = localize({
+    "en-US": `The current model (auto) does not support voice "${voice}". MCP TTS voices: ${list}.`,
+    "zh-CN": `当前模型（auto）不支持音色 "${voice}"。MCP 可选音色：${list}。`,
+  });
+  const hint = localize({
+    "en-US": "Pass one of the listed MCP voices, or use --model <id> for the REST system voices.",
+    "zh-CN": "请传入所列 MCP 音色，或使用 --model <id> 改用 REST 系统音色。",
+  });
+  throw new BailianError(message, ExitCode.USAGE, hint);
 }
 
 // ---- Local file input (auto mode inlines files as base64 data URIs) ----
