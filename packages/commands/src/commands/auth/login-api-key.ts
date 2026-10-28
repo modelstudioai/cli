@@ -1,6 +1,4 @@
 import {
-  BailianError,
-  ExitCode,
   getApiKeyLoginKind,
   normalizeModelBaseUrl,
   requestJson,
@@ -53,7 +51,6 @@ export interface ApiKeyValidationResult {
 }
 
 const API_KEY_VALIDATION_TIMEOUT_SECONDS = 5;
-const DEFINITIVE_VALIDATION_FAILURE_STATUSES = new Set([200, 400, 401, 403, 404, 405]);
 const ORDINARY_WORKSPACE_REGIONS = [
   "cn-beijing",
   "ap-southeast-1",
@@ -165,12 +162,6 @@ export function apiKeyValidationCandidates(
   return candidates;
 }
 
-function isDefinitiveCandidateFailure(error: unknown): boolean {
-  if (!(error instanceof BailianError)) return false;
-  const status = error.api?.httpStatus;
-  return status !== undefined && DEFINITIVE_VALIDATION_FAILURE_STATUSES.has(status);
-}
-
 /** Validate a key without consuming model quota and return the first matching endpoint. */
 export async function validateApiKey(
   deps: ApiKeyValidationDeps,
@@ -196,17 +187,10 @@ export async function validateApiKey(
   const success = results.find((result) => result.error === undefined);
   if (success) return { baseUrl: success.candidate.baseUrl, kind: success.candidate.kind };
 
-  const inconclusive = results.find((result) => !isDefinitiveCandidateFailure(result.error));
-  if (inconclusive?.error !== undefined) throw inconclusive.error;
+  const failure = results.find((result) => result.error !== undefined);
+  if (failure?.error !== undefined) throw failure.error;
 
-  const explicitHint = options.explicitBaseUrl
-    ? "Check that the API key belongs to this Base URL."
-    : "For a workspace-specific or custom endpoint, retry with --base-url <url>.";
-  throw new BailianError(
-    "API key validation failed: the key was not accepted by any supported model endpoint.",
-    ExitCode.AUTH,
-    explicitHint,
-  );
+  throw new TypeError("API key validation completed without a success or failure result.");
 }
 
 /**

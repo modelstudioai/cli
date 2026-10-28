@@ -40,7 +40,10 @@ beforeAll(async () => {
       return;
     }
     if (request.headers.authorization === "Bearer sk-rejected-placeholder") {
-      response.writeHead(401, { "content-type": "application/json" });
+      response.writeHead(401, {
+        "content-type": "application/json",
+        "x-request-id": "req-auth-rejected",
+      });
       response.end(JSON.stringify({ code: "InvalidApiKey", message: "invalid key" }));
       return;
     }
@@ -991,8 +994,10 @@ describe("e2e: auth", () => {
         DASHSCOPE_BASE_URL: "",
       },
     );
-    expect(login.exitCode).toBe(3);
-    expect(login.stderr).toMatch(/API key validation failed/);
+    expect(login.exitCode).toBe(1);
+    expect(login.stderr).toMatch(/invalid key/);
+    expect(login.stderr).toMatch(/Status:\s+HTTP 401 \(InvalidApiKey\)/);
+    expect(login.stderr).toMatch(/Request ID:\s+req-auth-rejected/);
     expect(existsSync(join(configDir, "config.json"))).toBe(false);
   });
 

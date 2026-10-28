@@ -25,10 +25,10 @@ const settings: Settings = {
   telemetry: false,
 };
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
   });
 }
 
@@ -202,15 +202,53 @@ test("Token Plan 多地区并行校验选择实际接受 Key 的国际站点", a
   }
 });
 
-test("所有候选站点明确拒绝 Key 时返回 AUTH 校验失败", async () => {
+test("所有候选站点拒绝 Key 时透传首个服务端错误", async () => {
   const originalFetch = httpTransport.fetch;
-  httpTransport.fetch = async () =>
-    jsonResponse({ code: "InvalidApiKey", message: "invalid key" }, 401);
+  httpTransport.fetch = async (input) => {
+    const requestId = requestUrl(input).includes("cn-beijing")
+      ? "req-cn-rejected"
+      : "req-sg-rejected";
+    return jsonResponse(
+      { code: "InvalidApiKey", message: "invalid key", request_id: requestId },
+      401,
+    );
+  };
 
   try {
     const error = await captureValidationError("sk-sp-placeholder");
-    expect(error.exitCode).toBe(ExitCode.AUTH);
-    expect(error.message).toMatch(/API key validation failed/);
+    expect(error.exitCode).toBe(ExitCode.GENERAL);
+    expect(error.message).toBe("invalid key");
+    expect(error.api).toEqual({
+      httpStatus: 401,
+      apiCode: "InvalidApiKey",
+      requestId: "req-cn-rejected",
+    });
+  } finally {
+    httpTransport.fetch = originalFetch;
+  }
+});
+
+test("显式 Base URL 返回 404 时保留状态和 request ID", async () => {
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async () =>
+    jsonResponse({ code: "NotFound", message: "models route not found" }, 404, {
+      "x-request-id": "req-route-not-found",
+    });
+
+  try {
+    const error = await validateApiKey({ identity, settings }, "sk-ws-placeholder", {
+      explicitBaseUrl: "https://ws-explicit.ap-southeast-1.maas.aliyuncs.com",
+    }).catch((caught) => caught);
+    expect(error).toBeInstanceOf(BailianError);
+    expect(error).toMatchObject({
+      exitCode: ExitCode.GENERAL,
+      message: "models route not found",
+      api: {
+        httpStatus: 404,
+        apiCode: "NotFound",
+        requestId: "req-route-not-found",
+      },
+    });
   } finally {
     httpTransport.fetch = originalFetch;
   }
