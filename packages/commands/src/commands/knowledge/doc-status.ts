@@ -120,6 +120,7 @@ export default defineCommand({
       // Reuse the shared polling (timeout → TIMEOUT(5)); failure detection happens
       // uniformly after return, based on per-document status
       response = await pollImportJob(ctx.client, settings, {
+        output: ctx.output,
         statusUrl: endpoint,
         intervalSec: flags.pollInterval ?? 5,
       });

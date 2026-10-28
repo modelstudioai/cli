@@ -180,7 +180,12 @@ export default defineCommand({
     const callApi = async (api: string, data: Record<string, unknown> = {}) => {
       if (verbose) process.stderr.write(`> ${api}\n`);
       try {
-        const resp = await callConsoleGateway(target, settings.timeout, { api, data }, settings);
+        const resp = await callConsoleGateway(
+          target,
+          settings.timeout,
+          { api, data },
+          { debug: (diagnostic) => ctx.output.debug(diagnostic) },
+        );
         if (verbose) process.stderr.write(`< ${JSON.stringify(resp)}\n`);
         return resp;
       } catch (err) {

@@ -351,7 +351,8 @@ export default defineCommand({
       const pollUrl = flags.prime
         ? resolvePrimeEndpoint(ctx, taskPath(taskId))
         : ctx.client.url(taskPath(taskId));
-      return poll<DashScopeTaskResponse>(ctx.client, settings, {
+      return poll<DashScopeTaskResponse>(ctx.client, {
+        output: ctx.output,
         url: pollUrl,
         intervalSec: pollInterval,
         timeoutSec: settings.timeout,
@@ -385,7 +386,7 @@ export default defineCommand({
     if (flags.download) {
       const destPath = flags.download;
       const { size } = await downloadFile(videos[0]!.videoUrl, destPath, {
-        quiet: settings.quiet,
+        quiet: settings.quiet || settings.output === "json",
       });
 
       if (settings.quiet) {
@@ -414,7 +415,9 @@ export default defineCommand({
     await Promise.all(
       videos.map(async ({ taskId, videoUrl }) => {
         const destPath = join(destDir, `${taskId}.mp4`);
-        await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+        await downloadFile(videoUrl, destPath, {
+          quiet: settings.quiet || settings.output === "json",
+        });
         saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
       }),
     );

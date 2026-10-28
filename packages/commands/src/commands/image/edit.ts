@@ -5,6 +5,7 @@ import {
   resolveOutputDir,
   generateFilename,
   stripUndefined,
+  type CommandOutput,
   type Client,
   type DashScopeImageRequest,
   type DashScopeImageSyncResponse,
@@ -324,7 +325,16 @@ export default defineCommand({
     if (route.useSync) {
       await handleSyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
     } else {
-      await handleAsyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
+      await handleAsyncMode(
+        ctx.client,
+        ctx.output,
+        settings,
+        route.path,
+        body,
+        flags,
+        format,
+        concurrent,
+      );
     }
   },
 });
@@ -361,6 +371,7 @@ async function handleSyncMode(
 
 async function handleAsyncMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   path: string,
   body: DashScopeImageRequest,
@@ -389,7 +400,8 @@ async function handleAsyncMode(
 
   const pollInterval = flags.pollInterval ?? 3;
   const pollPromises = taskIds.map((taskId) =>
-    poll<DashScopeTaskResponse>(client, settings, {
+    poll<DashScopeTaskResponse>(client, {
+      output: commandOutput,
       url: client.url(taskPath(taskId)),
       intervalSec: pollInterval,
       timeoutSec: settings.timeout,

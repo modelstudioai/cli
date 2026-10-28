@@ -8,9 +8,9 @@ import {
   type OutputMessage,
   type Settings,
 } from "bailian-cli-core";
-import { classifyRuntimeError } from "../error-handler.ts";
+import { errorHint, normalizeError } from "../error-handler.ts";
 import { createTranslator } from "../i18n.ts";
-import { diagnosticPayload, sanitizeDiagnosticDetails } from "./diagnostics.ts";
+import { diagnosticPayload } from "./diagnostics.ts";
 
 export interface OutputWriter {
   write(chunk: string): unknown;
@@ -94,26 +94,25 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
     },
     error(error) {
       if (errorCode !== undefined) return errorCode;
-      const failure =
-        error instanceof BailianError
-          ? error
-          : ((error instanceof Error
-              ? classifyRuntimeError(error, options.binName ?? "cli", localize)
-              : undefined) ??
-            new BailianError(
-              error instanceof Error ? error.message : describeThrownValue(error),
-              ExitCode.GENERAL,
-              undefined,
-              error instanceof Error ? { cause: error } : undefined,
-            ));
+      const failure = normalizeError(error, options.binName ?? "cli", localize);
+      const hint = errorHint(failure, options.binName ?? "cli", localize);
+      if (verbose && error instanceof Error && !(error instanceof BailianError)) {
+        diagnostic("debug", {
+          code: "ERROR_STACK",
+          message: { "en-US": "Error stack", "zh-CN": "错误调用栈" },
+          details: { stack: error.stack },
+        });
+      }
       if (format === "json") {
-        stderr.write(JSON.stringify(failure.toJSON()) + "\n");
+        const payload = failure.toJSON();
+        if (hint !== undefined) payload.error.hint = hint;
+        stderr.write(JSON.stringify(payload) + "\n");
       } else {
         const lines: string[] = [];
         const field = (label: LocalizedText, value: string | number) =>
           lines.push(`${localize(label)}: ${value}`);
         field({ "en-US": "Error", "zh-CN": "错误" }, failure.message);
-        if (failure.hint) field({ "en-US": "Hint", "zh-CN": "提示" }, failure.hint);
+        if (hint) field({ "en-US": "Hint", "zh-CN": "提示" }, hint);
         if (failure.api?.httpStatus !== undefined) {
           const suffix = failure.api.apiCode ? ` (${failure.api.apiCode})` : "";
           field({ "en-US": "Status", "zh-CN": "状态" }, `HTTP ${failure.api.httpStatus}${suffix}`);
@@ -139,11 +138,4 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
       return errorCode;
     },
   };
-}
-
-function describeThrownValue(value: unknown): string {
-  if (value !== null && typeof value === "object") {
-    return JSON.stringify(sanitizeDiagnosticDetails(value));
-  }
-  return String(value);
 }

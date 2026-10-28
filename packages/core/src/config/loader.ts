@@ -1,3 +1,4 @@
+import type { OutputDiagnostic } from "../types/output.ts";
 import { readFileSync, writeFileSync, renameSync, existsSync } from "fs";
 import { CONFIG_FILE_KEYS, parseConfigFile, type ConfigFile, type Settings } from "./schema.ts";
 import { ensureConfigDir, getConfigPath } from "./paths.ts";
@@ -38,7 +39,9 @@ export function normalizeConfigName(name?: unknown): string | undefined {
 }
 
 /** 读完整 config.json 原始对象（不经过 `parseConfigFile` 过滤），保留其他命名配置 block。 */
-function readRawConfigObject(): Record<string, unknown> {
+function readRawConfigObject(
+  onWarning?: (warning: OutputDiagnostic) => void,
+): Record<string, unknown> {
   const path = getConfigPath();
   if (!existsSync(path)) return {};
   try {
@@ -49,7 +52,13 @@ function readRawConfigObject(): Record<string, unknown> {
   } catch (err) {
     const e = err as Error;
     if (e instanceof SyntaxError || e.message.includes("JSON")) {
-      console.warn("Warning: config file is corrupted; using defaults.");
+      onWarning?.({
+        code: "CONFIG_CORRUPTED",
+        message: {
+          "en-US": "Config file is corrupted; using defaults.",
+          "zh-CN": "配置文件已损坏，将使用默认配置。",
+        },
+      });
     }
     return {};
   }
@@ -235,8 +244,11 @@ export function selectApiKeyResolutionSources(
   };
 }
 
-export function buildSources(flags: Partial<SourceFlags>): ResolutionSources {
-  const raw = readRawConfigObject();
+export function buildSources(
+  flags: Partial<SourceFlags>,
+  onWarning?: (warning: OutputDiagnostic) => void,
+): ResolutionSources {
+  const raw = readRawConfigObject(onWarning);
   const configExplicit = flags.config !== undefined;
   const activeConfigName = readStoredActiveConfigName(raw, !configExplicit);
   const configName = configExplicit ? normalizeConfigName(flags.config) : activeConfigName;
@@ -246,6 +258,24 @@ export function buildSources(flags: Partial<SourceFlags>): ResolutionSources {
     env: process.env,
     configName,
     configPath: getConfigPath(),
+  };
+}
+
+/** Presentation-only resolution, also safe before config loading or unrelated validation. */
+export function buildOutputSettings({
+  flags,
+  env,
+  file = {},
+}: Pick<ResolutionSources, "flags" | "env"> & { file?: ConfigFile }): Pick<
+  Settings,
+  "output" | "outputExplicit" | "quiet" | "verbose"
+> {
+  const output = flags.output || env.DASHSCOPE_OUTPUT || file.output;
+  return {
+    output: detectOutputFormat(output),
+    outputExplicit: Boolean(output),
+    quiet: flags.quiet || env.DASHSCOPE_QUIET === "1",
+    verbose: flags.verbose || env.DASHSCOPE_VERBOSE === "1",
   };
 }
 
@@ -267,8 +297,7 @@ export function buildSettings(s: ResolutionSources): Settings {
   return {
     configPath: s.configPath ?? getConfigPath(),
     configName: s.configName,
-    output: detectOutputFormat(flags.output || env.DASHSCOPE_OUTPUT || file.output),
-    outputExplicit: Boolean(flags.output || env.DASHSCOPE_OUTPUT || file.output),
+    ...buildOutputSettings(s),
     outputDir: file.output_dir || undefined,
     timeout,
     watermark: file.watermark ?? true,
@@ -284,8 +313,6 @@ export function buildSettings(s: ResolutionSources): Settings {
     consoleRegion: flags.consoleRegion || file.console_region || undefined,
     consoleSite: (flags.consoleSite as Settings["consoleSite"]) || file.console_site || undefined,
     consoleSwitchAgent: flags.consoleSwitchAgent || file.console_switch_agent || undefined,
-    verbose: flags.verbose || env.DASHSCOPE_VERBOSE === "1",
-    quiet: flags.quiet || env.DASHSCOPE_QUIET === "1",
     dryRun: flags.dryRun || false,
     telemetry: env.DO_NOT_TRACK === "1" ? false : (file.telemetry ?? true),
   };

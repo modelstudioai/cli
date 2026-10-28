@@ -25,7 +25,6 @@ import {
   trackCommandExecution,
 } from "bailian-cli-core";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
-import { ansi } from "./output/color.ts";
 import { createTranslator } from "./i18n.ts";
 import {
   checkForUpdate,
@@ -85,26 +84,16 @@ function formatApiKeyFallbackNotice(
 function writeApiKeyFallbackNotice(ctx: RunContext, fallbackFrom: string): void {
   const commandPath = ctx.path.join(" ");
   const message = formatApiKeyFallbackNotice(ctx, fallbackFrom, commandPath);
-  if (ctx.settings.output === "json") {
-    process.stderr.write(
-      JSON.stringify(
-        {
-          warning: {
-            code: "PROFILE_API_KEY_FALLBACK",
-            message,
-            profile: fallbackFrom,
-            command_path: ctx.path,
-            fallback_profile: "default",
-            credential_fields: ["api_key", "base_url"],
-          },
-        },
-        null,
-        2,
-      ) + "\n\n",
-    );
-    return;
-  }
-  process.stderr.write(`${message}\n`);
+  ctx.output.warning({
+    code: "PROFILE_API_KEY_FALLBACK",
+    message,
+    details: {
+      profile: fallbackFrom,
+      command_path: ctx.path,
+      fallback_profile: "default",
+      credential_fields: ["api_key", "base_url"],
+    },
+  });
 }
 
 /** Fold a middleware list into a single runnable function. */
@@ -130,13 +119,14 @@ export const authStage: Middleware = async (ctx, next) => {
   const base = {
     identity: ctx.identity,
     settings,
+    debug: (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic),
     ...resolveModelBaseUrlState(sources),
   };
   if (command.auth === "apiKey") {
     const capability = ctx.path.join(".");
     const selection = selectApiKeyResolutionSources(sources, capability);
     const apiSources = selection.sources;
-    if (selection.fallbackFrom && !settings.quiet) {
+    if (selection.fallbackFrom) {
       writeApiKeyFallbackNotice(ctx, selection.fallbackFrom);
     }
     let cred: ApiKeyCredential | undefined;
@@ -150,7 +140,7 @@ export const authStage: Middleware = async (ctx, next) => {
       ...resolveModelBaseUrlState(apiSources),
       apiCred: cred,
     });
-    if (cred) maybeShowStatusBar(settings, cred.token, cred);
+    if (cred) maybeShowStatusBar(settings, cred.token, cred, ctx.output);
   } else if (command.auth === "console") {
     let cred: ConsoleCredential | undefined;
     try {
@@ -201,7 +191,7 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
 
   const isUpdateCommand = ctx.path.length === 1 && ctx.path[0] === "update";
   const newVersion = getPendingUpdateNotification();
-  if (newVersion && !ctx.settings.quiet && !isUpdateCommand) {
+  if (newVersion && !isUpdateCommand) {
     if (shouldAutoUpdate(newVersion, ctx.identity.version)) {
       // 大版本差距且目标为稳定版,自动更新
       await performAutoUpdate(
@@ -209,13 +199,21 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
         newVersion,
         ctx.identity.npmPackage,
         ctx.identity.clientName,
+        { output: ctx.output, binName: ctx.identity.binName },
       );
     } else {
-      const color = ansi(process.stderr);
-      process.stderr.write(
-        `\n  ${color.yellow(`Update available: ${ctx.identity.version} → ${newVersion}`)}\n`,
-      );
-      process.stderr.write(`  Run ${color.cyan(`${ctx.identity.binName} update`)} to upgrade\n\n`);
+      ctx.output.warning({
+        code: "UPDATE_AVAILABLE",
+        message: {
+          "en-US": `Update available: ${ctx.identity.version} → ${newVersion}. Run ${ctx.identity.binName} update to upgrade.`,
+          "zh-CN": `发现新版本：${ctx.identity.version} → ${newVersion}。运行 ${ctx.identity.binName} update 升级。`,
+        },
+        details: {
+          current_version: ctx.identity.version,
+          latest_version: newVersion,
+          upgrade_command: `${ctx.identity.binName} update`,
+        },
+      });
     }
   }
 };

@@ -1,3 +1,4 @@
+import type { HttpDeps } from "../client/http.ts";
 import { REGIONS, type Region } from "../config/schema.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import { readConfigFile, writeConfigFile } from "../config/loader.ts";
@@ -27,6 +28,8 @@ function modelStudioHost(baseUrl: string): string {
 export async function generateCLIAccessToken(opts: {
   identity: Identity;
   settings: Settings;
+  // TODO(output-contract): Pass ctx.output.debug from auth generate-access-token, auth login and workspace init.
+  debug?: HttpDeps["debug"];
   baseUrl: string;
   accessKeyId: string;
   accessKeySecret: string;
@@ -37,6 +40,7 @@ export async function generateCLIAccessToken(opts: {
   const client = new Client({
     identity,
     settings,
+    debug: opts.debug,
     baseUrl,
     openApiCred: { accessKeyId, accessKeySecret, securityToken, source: "flag" },
   });
@@ -60,6 +64,7 @@ export async function generateCLIAccessToken(opts: {
 export async function refreshAccessToken(opts: {
   identity: Identity;
   settings: Settings;
+  debug?: HttpDeps["debug"];
   baseUrl: string;
 }): Promise<string | null> {
   const configName = opts.settings.configName;
@@ -68,13 +73,12 @@ export async function refreshAccessToken(opts: {
   const accessKeySecret = config.access_key_secret;
   if (!accessKeyId || !accessKeySecret) return null;
 
-  if (opts.settings.verbose) {
-    process.stderr.write("Refreshing access token...\n");
-  }
+  opts.debug?.({ message: { "en-US": "Refreshing access token", "zh-CN": "正在刷新访问令牌" } });
 
   const resp = await generateCLIAccessToken({
     identity: opts.identity,
     settings: opts.settings,
+    debug: opts.debug,
     baseUrl: opts.baseUrl,
     accessKeyId,
     accessKeySecret,

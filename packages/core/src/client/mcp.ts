@@ -1,3 +1,4 @@
+import { debugRequest, debugResponse } from "./diagnostics.ts";
 /**
  * MCP (Model Context Protocol) streamable HTTP client.
  *
@@ -179,7 +180,7 @@ export class McpClient {
       throw new BailianError("This command needs a model-domain API key.", ExitCode.AUTH);
     }
 
-    const result = await this.rpc("initialize", {
+    await this.rpc("initialize", {
       protocolVersion: "2025-03-26",
       capabilities: {},
       clientInfo: {
@@ -188,10 +189,9 @@ export class McpClient {
       },
     });
 
-    if (this.deps.settings.verbose) {
-      console.error(`[MCP] Session initialized: ${this.sessionId ?? "no session"}`);
-      console.error(`[MCP] Server: ${JSON.stringify(result)}`);
-    }
+    this.deps.debug?.({
+      message: { "en-US": "MCP session initialized", "zh-CN": "MCP 会话已初始化" },
+    });
 
     await this.notify("notifications/initialized");
   }
@@ -294,10 +294,7 @@ export class McpClient {
       headers["Mcp-Session-Id"] = this.sessionId;
     }
 
-    if (this.deps.settings.verbose) {
-      console.error(`> POST ${this.url}`);
-      console.error(`> Method: ${(body as { method?: string }).method}`);
-    }
+    debugRequest(this.deps, "POST", this.url, { rpc_method: (body as { method?: string }).method });
 
     const timeoutMs = this.deps.settings.timeout * 1000;
     const res = await fetch(this.url, {
@@ -307,9 +304,7 @@ export class McpClient {
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    if (this.deps.settings.verbose) {
-      console.error(`< ${res.status} ${res.statusText}`);
-    }
+    debugResponse(this.deps, res);
 
     const sid = res.headers.get("Mcp-Session-Id") || res.headers.get("mcp-session-id");
     if (sid) this.sessionId = sid;

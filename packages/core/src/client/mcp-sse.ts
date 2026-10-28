@@ -1,3 +1,4 @@
+import { debugRequest, debugResponse } from "./diagnostics.ts";
 /**
  * MCP classic HTTP+SSE client (protocol 2024-11-05 transport).
  *
@@ -62,7 +63,7 @@ export class McpSseClient {
 
     await this.openSse();
 
-    const result = await this.rpc("initialize", {
+    await this.rpc("initialize", {
       protocolVersion: "2025-03-26",
       capabilities: {},
       clientInfo: {
@@ -71,10 +72,9 @@ export class McpSseClient {
       },
     });
 
-    if (this.deps.settings.verbose) {
-      console.error(`[MCP SSE] Session initialized`);
-      console.error(`[MCP SSE] Server: ${JSON.stringify(result)}`);
-    }
+    this.deps.debug?.({
+      message: { "en-US": "MCP session initialized", "zh-CN": "MCP 会话已初始化" },
+    });
 
     await this.notify("notifications/initialized");
   }
@@ -132,9 +132,7 @@ export class McpSseClient {
       headers["Authorization"] = `Bearer ${this.authToken}`;
     }
 
-    if (this.deps.settings.verbose) {
-      console.error(`> GET ${this.sseUrl}`);
-    }
+    debugRequest(this.deps, "GET", this.sseUrl);
 
     let response: Response;
     try {
@@ -157,9 +155,7 @@ export class McpSseClient {
       throw error;
     }
 
-    if (this.deps.settings.verbose) {
-      console.error(`< ${response.status} ${response.statusText}`);
-    }
+    debugResponse(this.deps, response);
 
     if (!response.ok) {
       // Keep headerTimer until error body is read (or times out).
@@ -338,10 +334,9 @@ export class McpSseClient {
       headers["Authorization"] = `Bearer ${this.authToken}`;
     }
 
-    if (this.deps.settings.verbose) {
-      console.error(`> POST ${this.messageUrl}`);
-      console.error(`> Method: ${(body as { method?: string }).method}`);
-    }
+    debugRequest(this.deps, "POST", this.messageUrl, {
+      rpc_method: (body as { method?: string }).method,
+    });
 
     const timeoutMs = this.deps.settings.timeout * 1000;
     // Combine per-RPC timeout with session abort so close() cancels in-flight POSTs.
@@ -362,9 +357,7 @@ export class McpSseClient {
         throw error;
       }
 
-      if (this.deps.settings.verbose) {
-        console.error(`< ${res.status} ${res.statusText}`);
-      }
+      debugResponse(this.deps, res);
 
       if (!res.ok) {
         // Keep signal until error body is read (same class of bug as GET openSse).

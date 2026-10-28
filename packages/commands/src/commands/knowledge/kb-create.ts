@@ -193,6 +193,7 @@ export default defineCommand({
     let finalStatus: string | undefined;
     if (flags.wait && pipelineId && ingestionId) {
       const statusResponse = await pollImportJob(ctx.client, settings, {
+        output: ctx.output,
         statusUrl: importJobStatusUrl(workspaceId, pipelineId, ingestionId).toString(),
         intervalSec: flags.pollInterval ?? 5,
       });

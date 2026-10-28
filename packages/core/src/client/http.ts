@@ -3,13 +3,16 @@ import type { ApiErrorBody } from "../errors/api.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { mapApiError } from "../errors/api.ts";
-import { maskToken } from "../utils/token.ts";
-import { sourceConfig, trackingHeaders } from "./headers.ts";
+import type { OutputMessage } from "../types/output.ts";
+import { debugRequest, debugResponse } from "./diagnostics.ts";
+import { trackingHeaders } from "./headers.ts";
 
 /** 传输层依赖:UA 用 identity,timeout/verbose 用 settings。凭证由调用方(Client)注头。 */
 export interface HttpDeps {
   identity: Identity;
   settings: Settings;
+  /** Optional diagnostic sink; core never writes to terminal streams. */
+  debug?: (diagnostic: OutputMessage) => void;
 }
 
 export interface RequestOpts {
@@ -70,12 +73,7 @@ async function performRequest(
     headers["X-DashScope-OssResourceResolve"] = "enable";
   }
 
-  if (deps.settings.verbose) {
-    console.error(`> ${opts.method ?? "GET"} ${opts.url}`);
-    const auth = headers["Authorization"];
-    if (auth) console.error(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}`);
-    console.error(`> x-dashscope-source-config: ${sourceConfig(deps.identity)}`);
-  }
+  debugRequest(deps, opts.method ?? "GET", opts.url);
 
   const res = await fetch(opts.url, {
     method: opts.method ?? "GET",
@@ -88,13 +86,7 @@ async function performRequest(
     signal,
   });
 
-  if (deps.settings.verbose) {
-    console.error(`< ${res.status} ${res.statusText}`);
-    const reqId = res.headers.get("x-request-id");
-    if (reqId) {
-      console.error(`request_id: ${reqId}`);
-    }
-  }
+  debugResponse(deps, res);
 
   if (!res.ok) {
     let body: ApiErrorBody = {};

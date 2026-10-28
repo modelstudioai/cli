@@ -1,4 +1,4 @@
-import { defineCommand } from "bailian-cli-core";
+import { BailianError, ExitCode, defineCommand } from "bailian-cli-core";
 import { createCli } from "../../src/create-cli.ts";
 
 const probe = defineCommand({
@@ -12,8 +12,52 @@ const probe = defineCommand({
   },
 });
 
+const fail = defineCommand({
+  description: "Failure probe",
+  auth: "none",
+  flags: { kind: { type: "string", valueHint: "kind", description: "Failure kind" } },
+  async run(context) {
+    if (context.flags.kind === "network") {
+      throw new TypeError("fetch failed", {
+        cause: Object.assign(new Error("DNS failed"), { code: "ENOTFOUND" }),
+      });
+    }
+    if (context.flags.kind === "report") {
+      context.output.warning("One item skipped");
+      context.output.debug("Failure report ready");
+      context.output.result({ successful: ["task-demo"], failed: ["row-2"] });
+      throw new BailianError("Partial failure", ExitCode.GENERAL, "Retry row-2", {
+        api: { httpStatus: 500, apiCode: "ServerFailure", requestId: "request-demo" },
+      });
+    }
+    throw new SyntaxError("Invalid local JSON");
+  },
+});
+
+const transport = defineCommand({
+  description: "HTTP output probe",
+  auth: "apiKey",
+  async run(context) {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          code: "ServiceUnavailable",
+          message: "mock server rejected",
+          request_id: "request-transport",
+        }),
+        { status: 503 },
+      );
+    try {
+      await context.client.requestJson({ path: "/task?token=fake-query-secret" });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  },
+});
+
 await createCli(
-  { probe },
+  { probe, fail, transport },
   {
     binName: "test-cli",
     version: "0.0.0",

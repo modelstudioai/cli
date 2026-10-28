@@ -1,4 +1,6 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { createOutputReporter } from "../src/output/reporter.ts";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
@@ -22,6 +24,8 @@ vi.mock("child_process", async (importOriginal) => {
 });
 
 import {
+  checkForUpdate,
+  getPendingUpdateNotification,
   compareVersion,
   isMajorUpgrade,
   isNewerVersion,
@@ -171,14 +175,18 @@ test("shouldAutoUpdate only targets stable releases with a significant gap", () 
 });
 
 function expectSkillUpdateNotInit(): void {
-  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "inherit" });
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "pipe" });
   expect(
     childProcessMocks.execSync.mock.calls.some((call) => String(call[0]).includes("skill init")),
   ).toBe(false);
 }
 
 test("binary auto-update refreshes installed skills and does not run skill init", async () => {
-  const updated = await performAutoUpdate("1.14.3", "2.0.0");
+  const updated = await performAutoUpdate("1.14.3", "2.0.0", "bailian-cli", "bailian-cli", {
+    output: createOutputReporter({ settings: { output: "text", quiet: true, verbose: false } })
+      .output,
+    binName: "bl",
+  });
 
   expect(updated).toBe(true);
   expect(binaryUpdateMocks.performBinaryUpdate).toHaveBeenCalledWith("2.0.0");
@@ -189,11 +197,171 @@ test("npm auto-update refreshes installed skills and does not run skill init", a
   process.env.BAILIAN_INSTALL_METHOD = "npm";
   childProcessMocks.execSync.mockReturnValue("");
 
-  const updated = await performAutoUpdate("1.14.3", "2.0.0");
+  const updated = await performAutoUpdate("1.14.3", "2.0.0", "bailian-cli", "bailian-cli", {
+    output: createOutputReporter({ settings: { output: "text", quiet: true, verbose: false } })
+      .output,
+    binName: "bl",
+  });
 
   expect(updated).toBe(true);
   expect(childProcessMocks.execSync).toHaveBeenCalledWith("npm install -g bailian-cli@latest", {
-    stdio: "inherit",
+    stdio: "pipe",
   });
   expectSkillUpdateNotInit();
+});
+
+test("auto-update uses the injected output and captures subprocess streams", async () => {
+  let stderr = "";
+  const output = createOutputReporter({
+    settings: { output: "json", quiet: true, verbose: false },
+    stderr: {
+      write: (chunk) => {
+        stderr += chunk;
+      },
+    },
+  }).output;
+  const direct = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    expect(
+      await performAutoUpdate("1.14.3", "2.0.0", "bailian-cli", "bailian-cli", {
+        output,
+        binName: "bl",
+      }),
+    ).toBe(true);
+    expect(stderr).toBe("");
+    expect(direct).not.toHaveBeenCalled();
+    expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "pipe" });
+  } finally {
+    direct.mockRestore();
+  }
+});
+
+test.each([false, true])(
+  "kscli updates retain the existing bl skill sync with failure=%s",
+  async (fails) => {
+    const output = { info: vi.fn(), warning: vi.fn() };
+    if (fails) {
+      childProcessMocks.execSync.mockImplementation((command) => {
+        if (command === "bl skill update" || command === "kscli skill update") {
+          throw new Error("mock skill sync failure");
+        }
+        return "";
+      });
+    }
+    expect(
+      await performAutoUpdate("1.14.3", "2.0.0", "knowledge-studio-cli", "knowledge-studio-cli", {
+        output,
+        binName: "kscli",
+      }),
+    ).toBe(true);
+    expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "pipe" });
+    expect(childProcessMocks.execSync).not.toHaveBeenCalledWith(
+      "kscli skill update",
+      expect.anything(),
+    );
+    if (fails) {
+      expect(output.warning).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: "SKILL_SYNC_FAILED",
+          message: {
+            "en-US": expect.stringContaining("Run bl skill update manually."),
+            "zh-CN": expect.stringContaining("请手动运行 bl skill update。"),
+          },
+        }),
+      );
+    } else {
+      expect(output.warning).not.toHaveBeenCalledWith(
+        expect.objectContaining({ code: "SKILL_SYNC_FAILED" }),
+      );
+    }
+  },
+);
+
+test.each([false, true])(
+  "npm root diagnostics never bypass JSON output with failure=%s",
+  async (fails) => {
+    process.env.BAILIAN_INSTALL_METHOD = "npm";
+    const globalRoot = join(configDir, "global");
+    mkdirSync(join(globalRoot, "bailian-cli"), { recursive: true });
+    writeFileSync(
+      join(globalRoot, "bailian-cli", "package.json"),
+      JSON.stringify({ version: "2.0.0" }),
+    );
+    childProcessMocks.execSync.mockImplementation((command, options) => {
+      if (command !== "npm root -g") return "";
+      // Exercise Node's actual child stderr forwarding, without running npm or an installation.
+      return execFileSync(
+        process.execPath,
+        [
+          "-e",
+          [
+            'process.stderr.write("npm WARN mock-root-diagnostic\\n");',
+            `process.stdout.write(${JSON.stringify(globalRoot)});`,
+            `process.exit(${fails ? 1 : 0});`,
+          ].join("\n"),
+        ],
+        options as ExecFileSyncOptionsWithStringEncoding,
+      );
+    });
+    let diagnostics = "";
+    const output = createOutputReporter({
+      settings: { output: "json", quiet: true, verbose: false },
+      stderr: {
+        write: (chunk) => {
+          diagnostics += chunk;
+        },
+      },
+    }).output;
+    let bypassed = "";
+    const direct = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      bypassed += String(chunk);
+      return true;
+    });
+    try {
+      expect(
+        await performAutoUpdate("1.0.0", "2.0.0", "bailian-cli", "bailian-cli", {
+          output,
+          binName: "bl",
+        }),
+      ).toBe(true);
+      expect(bypassed).toBe("");
+      if (fails) {
+        const records = diagnostics
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line));
+        expect(records).toHaveLength(1);
+        expect(records[0].warning.code).toBe("UPDATE_VERSION_UNVERIFIED");
+        expect(records[0].warning.message).toContain("npm WARN mock-root-diagnostic");
+      } else {
+        expect(diagnostics).toBe("");
+      }
+    } finally {
+      direct.mockRestore();
+    }
+  },
+);
+
+test("cached newer versions notify without another network check and clear after upgrading", async () => {
+  writeFileSync(
+    join(configDir, "update-state.json"),
+    JSON.stringify({
+      lastChecked: Date.now(),
+      latestVersion: "2.6.1",
+    }),
+  );
+  const network = vi
+    .spyOn(globalThis, "fetch")
+    .mockRejectedValue(new Error("Network must not be used"));
+  try {
+    await checkForUpdate("2.3.0");
+    expect(getPendingUpdateNotification()).toBe("2.6.1");
+    await checkForUpdate("2.6.1");
+    expect(getPendingUpdateNotification()).toBeNull();
+    await checkForUpdate("2.7.0");
+    expect(getPendingUpdateNotification()).toBeNull();
+    expect(network).not.toHaveBeenCalled();
+  } finally {
+    network.mockRestore();
+  }
 });

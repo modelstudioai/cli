@@ -2,6 +2,7 @@ import {
   defineCommand,
   taskPath,
   detectOutputFormat,
+  type CommandOutput,
   type Client,
   type Settings,
   type FlagsDef,
@@ -233,7 +234,16 @@ export default defineCommand({
     if (route.useSync) {
       await handleSyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
     } else {
-      await handleAsyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
+      await handleAsyncMode(
+        ctx.client,
+        ctx.output,
+        settings,
+        route.path,
+        body,
+        flags,
+        format,
+        concurrent,
+      );
     }
   },
 });
@@ -270,6 +280,7 @@ async function handleSyncMode(
 
 async function handleAsyncMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   path: string,
   body: DashScopeImageRequest,
@@ -302,7 +313,8 @@ async function handleAsyncMode(
 
   const pollPromises = taskIds.map((taskId) => {
     const pollUrl = client.url(taskPath(taskId));
-    return poll<DashScopeTaskResponse>(client, settings, {
+    return poll<DashScopeTaskResponse>(client, {
+      output: commandOutput,
       url: pollUrl,
       intervalSec: pollInterval,
       timeoutSec: settings.timeout,

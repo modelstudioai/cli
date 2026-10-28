@@ -80,6 +80,13 @@ function makeContext(
 }
 
 async function runAuth(context: RunContext): Promise<void> {
+  Object.assign(context, {
+    output: createOutputReporter({
+      settings: context.settings,
+      localize: (text) =>
+        typeof text === "string" ? text : text[context.sources.file.language ?? "en-US"],
+    }).output,
+  });
   await authStage(context, async () => {});
 }
 
@@ -210,7 +217,7 @@ test("authStage 在 --api-key 覆盖 Profile API Key 时跳过 capability fallba
   });
 });
 
-test("authStage fallback 准确描述 Profile 文件层降级，--quiet 可抑制提示", async () => {
+test("authStage fallback 准确描述 Profile 文件层降级，--quiet 保留警告", async () => {
   useTempConfigDir();
   await writeConfigFile({ api_key: "sk-default" });
   await writeConfigFile(
@@ -233,10 +240,10 @@ test("authStage fallback 准确描述 Profile 文件层降级，--quiet 可抑�
   const quietContext = makeContext(["text", "chat"]);
   const quiet = await captureStderr(() => runAuth(quietContext));
   expect(quiet.error).toBeUndefined();
-  expect(quiet.output).toBe("");
+  expect(quiet.output).toContain("company-plan");
 });
 
-test("authStage 在 JSON 模式输出多行结构化 fallback warning", async () => {
+test("authStage 在 JSON 模式输出单行结构化 fallback warning", async () => {
   useTempConfigDir();
   await writeConfigFile({ api_key: "sk-default" });
   await writeConfigFile(
@@ -254,16 +261,18 @@ test("authStage 在 JSON 模式输出多行结构化 fallback warning", async ()
   const captured = await captureStderr(() => runAuth(context));
 
   expect(captured.error).toBeUndefined();
-  expect(captured.output).toMatch(/^\{\n {2}"warning": \{\n/);
+  expect(captured.output.trim().split("\n")).toHaveLength(1);
   expect(JSON.parse(captured.output.trim())).toEqual({
     warning: {
       code: "PROFILE_API_KEY_FALLBACK",
       message:
         'Profile "company-plan" 不支持命令 "text chat"，本次将从 Profile "default" 读取 API Key 配置。',
-      profile: "company-plan",
-      command_path: ["text", "chat"],
-      fallback_profile: "default",
-      credential_fields: ["api_key", "base_url"],
+      details: {
+        profile: "company-plan",
+        command_path: ["text", "chat"],
+        fallback_profile: "default",
+        credential_fields: ["api_key", "base_url"],
+      },
     },
   });
 });

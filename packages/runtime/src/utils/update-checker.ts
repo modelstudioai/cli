@@ -6,6 +6,7 @@ import {
   DEFAULT_INSTALL_SCRIPT_URL,
   getConfigDir,
   getUpdateInstallMethod,
+  type CommandOutput,
 } from "bailian-cli-core";
 
 export const NPM_REGISTRY = "https://registry.npmjs.org";
@@ -209,124 +210,89 @@ function errorMessage(err: unknown): string {
   return String(err);
 }
 
-async function syncAgentSkillsAfterUpdate(
-  dim: string,
-  green: string,
-  yellow: string,
-  reset: string,
-): Promise<void> {
+type UpdateOutput = Pick<CommandOutput, "info" | "warning">;
+
+async function syncAgentSkillsAfterUpdate(output: UpdateOutput): Promise<void> {
   try {
-    process.stderr.write(`  ${dim}Syncing agent skill...${reset}\n`);
+    output.info({ "en-US": "Syncing agent skills...", "zh-CN": "正在同步 Agent 技能……" });
     const { execSync } = await import("child_process");
-    execSync("bl skill update", { stdio: "inherit" });
-    process.stderr.write(`  ${green}\u2713 Agent skill updated.${reset}\n\n`);
+    execSync("bl skill update", { stdio: "pipe" });
+    output.info({ "en-US": "Agent skills updated.", "zh-CN": "Agent 技能已更新。" });
   } catch (error) {
-    process.stderr.write(
-      `  ${yellow}\u26a0 Agent skill sync failed: ${errorMessage(error)}${reset}\n`,
-    );
-    process.stderr.write(`  ${yellow}  Run manually: bl skill update${reset}\n\n`);
+    output.warning({
+      code: "SKILL_SYNC_FAILED",
+      message: {
+        "en-US": `Agent skill sync failed: ${errorMessage(error)}. Run bl skill update manually.`,
+        "zh-CN": `Agent 技能同步失败：${errorMessage(error)}。请手动运行 bl skill update。`,
+      },
+    });
   }
 }
 
-/**
- * Perform auto-update for npm or binary installs.
- * Returns true if update succeeded, false otherwise.
- */
+/** Updating is independent of presentation; subprocess output never inherits CLI channels. */
 export async function performAutoUpdate(
   currentVersion: string,
   latestVersion: string,
   npmPackage: string = NPM_PACKAGE,
   clientName: string = NPM_PACKAGE,
+  options: { output: UpdateOutput; binName: string },
 ): Promise<boolean> {
-  const isTTY = process.stderr.isTTY;
-  const green = isTTY ? "\x1b[32m" : "";
-  const yellow = isTTY ? "\x1b[33m" : "";
-  const cyan = isTTY ? "\x1b[36m" : "";
-  const dim = isTTY ? "\x1b[2m" : "";
-  const reset = isTTY ? "\x1b[0m" : "";
-
+  const { output, binName } = options;
   const method = getUpdateInstallMethod({ clientName, npmPackage });
-  if (method === "brew" || method === "winget") {
-    return false;
-  }
-
-  const [latestMajor] = parseVersion(latestVersion);
-  const [currentMajor] = parseVersion(currentVersion);
-  const isMajorBump = latestMajor > currentMajor;
-
-  process.stderr.write("\n");
-  process.stderr.write(`  ${yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${reset}\n`);
-  if (isMajorBump) {
-    process.stderr.write(
-      `  ${yellow}⚡ Major update detected: ${currentVersion} → ${latestVersion}${reset}\n`,
-    );
-  } else {
-    process.stderr.write(
-      `  ${yellow}⚡ Significant update detected: ${currentVersion} → ${latestVersion}${reset}\n`,
-    );
-  }
-  process.stderr.write(`  ${dim}Auto-updating to keep your CLI up to date...${reset}\n`);
-  process.stderr.write(`  ${yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${reset}\n\n`);
-
-  if (method === "binary") {
-    try {
-      const { performBinaryUpdate } = await import("./binary-update.ts");
-      const newVer = await performBinaryUpdate(latestVersion);
-      writeState({ lastChecked: Date.now(), latestVersion: newVer });
-      process.stderr.write(`  ${green}✓ Update complete: ${currentVersion} → ${newVer}${reset}\n`);
-      process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
-      await syncAgentSkillsAfterUpdate(dim, green, yellow, reset);
-      pendingNotification = null;
-      return true;
-    } catch (err) {
-      process.stderr.write(`  ${yellow}⚠ Auto-update failed: ${errorMessage(err)}${reset}\n`);
-      const reinstall =
-        err instanceof BailianError && err.hint
-          ? err.hint.replace(/^Re-run:\s*/i, "")
-          : process.platform === "win32"
-            ? `irm ${DEFAULT_INSTALL_PS1_URL} | iex`
-            : `curl -fsSL ${DEFAULT_INSTALL_SCRIPT_URL} | bash`;
-      process.stderr.write(`  ${yellow}  Re-run:${reset} ${cyan}${reinstall}${reset}\n\n`);
-      return false;
-    }
-  }
-
-  const cmd = `npm install -g ${npmPackage}@latest`;
-
+  if (method === "brew" || method === "winget") return false;
+  output.info({
+    "en-US": `Auto-updating: ${currentVersion} → ${latestVersion}`,
+    "zh-CN": `正在自动更新：${currentVersion} → ${latestVersion}`,
+  });
+  const command = `npm install -g ${npmPackage}@latest`;
   try {
-    const { execSync } = await import("child_process");
-    execSync(cmd, { stdio: "inherit" });
-
-    let newVer: string | null = null;
-    try {
-      const globalRoot = execSync("npm root -g", { encoding: "utf-8" }).trim();
-      const pkgPath = join(globalRoot, npmPackage, "package.json");
-      const rawPkg = readFileSync(pkgPath, "utf-8");
-      const pkg = JSON.parse(rawPkg) as { version?: string };
-      newVer = pkg.version ?? null;
-    } catch (err) {
-      process.stderr.write(
-        `  ${yellow}⚠ Could not verify installed version: ${errorMessage(err)}${reset}\n`,
-      );
+    let newVersion: string | null = null;
+    if (method === "binary") {
+      const { performBinaryUpdate } = await import("./binary-update.ts");
+      newVersion = await performBinaryUpdate(latestVersion);
+    } else {
+      const { execSync } = await import("child_process");
+      execSync(command, { stdio: "pipe" });
+      try {
+        const globalRoot = execSync("npm root -g", { encoding: "utf-8", stdio: "pipe" }).trim();
+        const pkg = JSON.parse(
+          readFileSync(join(globalRoot, npmPackage, "package.json"), "utf-8"),
+        ) as { version?: string };
+        newVersion = pkg.version ?? null;
+      } catch (error) {
+        output.warning({
+          code: "UPDATE_VERSION_UNVERIFIED",
+          message: {
+            "en-US": `Could not verify installed version: ${errorMessage(error)}`,
+            "zh-CN": `无法验证已安装版本：${errorMessage(error)}`,
+          },
+        });
+      }
     }
-
-    writeState({ lastChecked: Date.now(), latestVersion: newVer ?? latestVersion });
-
-    process.stderr.write(
-      `  ${green}✓ Update complete: ${currentVersion} → ${newVer ?? latestVersion}${reset}\n`,
-    );
-    process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
-
-    await syncAgentSkillsAfterUpdate(dim, green, yellow, reset);
-
+    writeState({ lastChecked: Date.now(), latestVersion: newVersion ?? latestVersion });
+    output.info({
+      "en-US": `Update complete: ${currentVersion} → ${newVersion ?? latestVersion}. Run ${binName} --version to verify.`,
+      "zh-CN": `更新完成：${currentVersion} → ${newVersion ?? latestVersion}。运行 ${binName} --version 验证。`,
+    });
+    await syncAgentSkillsAfterUpdate(output);
     pendingNotification = null;
     return true;
-  } catch (err) {
-    process.stderr.write(`  ${yellow}⚠ Auto-update failed: ${errorMessage(err)}${reset}\n`);
-    process.stderr.write(
-      `  ${yellow}  If this is a permissions error (EACCES), retry with sudo or fix npm perms.${reset}\n`,
-    );
-    process.stderr.write(`  ${yellow}  Run manually:${reset} ${cyan}${cmd}${reset}\n\n`);
+  } catch (error) {
+    const retry =
+      method === "binary"
+        ? error instanceof BailianError && error.hint
+          ? error.hint.replace(/^Re-run:\s*/i, "")
+          : process.platform === "win32"
+            ? `irm ${DEFAULT_INSTALL_PS1_URL} | iex`
+            : `curl -fsSL ${DEFAULT_INSTALL_SCRIPT_URL} | bash`
+        : command;
+    output.warning({
+      code: "AUTO_UPDATE_FAILED",
+      message: {
+        "en-US": `Auto-update failed: ${errorMessage(error)}. Run manually: ${retry}`,
+        "zh-CN": `自动更新失败：${errorMessage(error)}。请手动运行：${retry}`,
+      },
+    });
     return false;
   }
 }
@@ -339,7 +305,12 @@ export async function checkForUpdate(
   const state = readState();
   const now = Date.now();
 
-  if (state && now - state.lastChecked < CHECK_INTERVAL_MS) return;
+  if (state && now - state.lastChecked < CHECK_INTERVAL_MS) {
+    pendingNotification = isNewerVersion(state.latestVersion, currentVersion)
+      ? state.latestVersion
+      : null;
+    return;
+  }
 
   const method = getUpdateInstallMethod({ clientName, npmPackage });
   let latest: string | null = null;

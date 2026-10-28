@@ -14,19 +14,26 @@ function env(): NodeJS.ProcessEnv {
     DO_NOT_TRACK: "1",
     DASHSCOPE_API_KEY: "",
     DASHSCOPE_BASE_URL: "",
+    DASHSCOPE_OUTPUT: "",
+    DASHSCOPE_QUIET: "0",
+    DASHSCOPE_VERBOSE: "0",
   };
 }
 
 function parseStderrJsonDiagnostics(stderr: string): unknown[] {
   return stderr
     .trim()
-    .split(/\n\s*\n/)
+    .split("\n")
     .map((diagnostic) => JSON.parse(diagnostic) as unknown);
 }
 
 describe("e2e: Command Pack", () => {
   beforeAll(async () => {
     configDir = await mkdtemp(join(tmpdir(), "bl-command-pack-e2e-"));
+    await writeFile(
+      join(configDir, "update-state.json"),
+      JSON.stringify({ lastChecked: Date.now(), latestVersion: "0.0.0" }),
+    );
   });
 
   afterAll(async () => {
@@ -102,18 +109,20 @@ describe("e2e: Command Pack", () => {
     );
     const fallbackFailure = await runCli(["agent", "credential", "--output", "json"], env());
     expect(fallbackFailure.exitCode).toBe(3);
-    expect(fallbackFailure.stderr).toMatch(/^\{\n {2}"warning": \{/);
-    expect(fallbackFailure.stderr).toContain("\n\n{\n");
+    expect(fallbackFailure.stderr.trim().split("\n")).toHaveLength(2);
+    expect(fallbackFailure.stderr.endsWith("\n")).toBe(true);
     expect(parseStderrJsonDiagnostics(fallbackFailure.stderr)).toEqual([
       {
         warning: {
           code: "PROFILE_API_KEY_FALLBACK",
           message:
             'Profile "company-plan" does not support command "agent credential"; API Key settings will be read from Profile "default" for this run.',
-          profile: "company-plan",
-          command_path: ["agent", "credential"],
-          fallback_profile: "default",
-          credential_fields: ["api_key", "base_url"],
+          details: {
+            profile: "company-plan",
+            command_path: ["agent", "credential"],
+            fallback_profile: "default",
+            credential_fields: ["api_key", "base_url"],
+          },
         },
       },
       {

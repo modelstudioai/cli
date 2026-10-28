@@ -203,11 +203,12 @@ test("toJSON splits service-error metadata into structured fields", () => {
   });
 });
 
-test("callConsoleGateway verbose prints structured request payload", async () => {
+test("callConsoleGateway emits injected diagnostics without printing request payload", async () => {
   const originalFetch = globalThis.fetch;
   const originalWrite = process.stderr.write.bind(process.stderr);
   let stderr = "";
   let requestBody: string | undefined;
+  const diagnostics: unknown[] = [];
 
   globalThis.fetch = async (_url, init) => {
     requestBody = init?.body as string | undefined;
@@ -235,7 +236,7 @@ test("callConsoleGateway verbose prints structured request payload", async () =>
         api: "test.api",
         data: { workspaceId: "ws-1", cornerstoneParam: { custom: "value" } },
       },
-      { verbose: true },
+      { debug: (diagnostic) => diagnostics.push(diagnostic) },
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -243,15 +244,16 @@ test("callConsoleGateway verbose prints structured request payload", async () =>
   }
 
   expect(requestBody).toBeDefined();
-  expect(stderr).toContain('> payload {\n  "params": {');
-  expect(stderr).toContain('  "region": "ap-southeast-1"');
-  expect(stderr).toContain('    "Api": "test.api"');
-  expect(stderr).toContain('      "workspaceId": "ws-1"');
-  expect(stderr).toContain('        "switchUserType": 3');
-  expect(stderr).toContain('        "switchAgent": 123');
-  expect(stderr).toContain('        "custom": "value"');
-  expect(stderr).toContain("< 200 OK");
-  expect(stderr).not.toContain("response-body");
+  const params = new URLSearchParams(requestBody).get("params");
+  expect(params).toContain('"workspaceId":"ws-1"');
+  expect(params).toContain('"switchAgent":123');
+  expect(params).toContain('"custom":"value"');
+  expect(stderr).toBe("");
+  expect(diagnostics).toMatchObject([
+    { details: { method: "POST", api: "test.api" } },
+    { details: { status: 200 } },
+  ]);
+  expect(JSON.stringify(diagnostics)).not.toContain("response-body");
 });
 
 test("callConsoleGateway keeps readable message and raw gateway response separately", async () => {
@@ -276,12 +278,10 @@ test("callConsoleGateway keeps readable message and raw gateway response separat
 
   try {
     await expect(
-      callConsoleGateway(
-        { region: "cn-beijing", site: "domestic", token: "token" },
-        30,
-        { api: "test.api", data: {} },
-        { verbose: true },
-      ),
+      callConsoleGateway({ region: "cn-beijing", site: "domestic", token: "token" }, 30, {
+        api: "test.api",
+        data: {},
+      }),
     ).rejects.toMatchObject({
       message: "Console gateway error: BailianGateway.Team.NotAuthorised",
       rawResponse: JSON.stringify(responseBody),

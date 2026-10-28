@@ -16,14 +16,19 @@ import type {
   LocalizedText,
   ParsedFlags,
   SourceFlags,
+  ResolutionSources,
+  OutputDiagnostic,
 } from "bailian-cli-core";
 import {
   DEFAULT_LANGUAGE,
+  BailianError,
+  ExitCode,
   GLOBAL_FLAGS,
   UsageError,
   credentialFlagDefs,
   buildSources,
   buildSettings,
+  buildOutputSettings,
   describeAuthState,
   resolveModelBaseUrlState,
   makeConfigStore,
@@ -33,7 +38,7 @@ import {
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
-import { createOutputReporter } from "./output/reporter.ts";
+import { type OutputReporter, createOutputReporter } from "./output/reporter.ts";
 import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
 import type { CommandPackPolicy } from "./command-packs/types.ts";
@@ -66,43 +71,74 @@ function pick(obj: Record<string, unknown>, keys: string[]): Record<string, unkn
   return out;
 }
 
-/** Read only the existing `--config` flag so locale follows the selected Profile before dispatch. */
-function pickConfigFlag(argv: string[]): Partial<SourceFlags> {
-  for (let argumentIndex = 0; argumentIndex < argv.length; argumentIndex++) {
-    const argument = argv[argumentIndex];
-    if (argument === "--config") {
-      const value = argv[argumentIndex + 1];
-      return value === undefined || value.startsWith("--") ? {} : { config: value };
-    }
-    if (argument?.startsWith("--config=")) {
-      return { config: argument.slice("--config=".length) };
-    }
+/** Tolerant, read-only presentation flags for failures before full parsing. */
+function presentationFlags(argv: string[]): Partial<SourceFlags> {
+  const flags: Partial<SourceFlags> = {};
+  for (let index = 0; index < argv.length; index++) {
+    const argument = argv[index]!;
+    if (argument === "--") break;
+    if (argument === "--quiet") flags.quiet = true;
+    else if (argument === "--verbose") flags.verbose = true;
+    else
+      for (const key of ["output", "config"] as const) {
+        if (argument.startsWith(`--${key}=`)) flags[key] = argument.slice(key.length + 3);
+        else if (argument === `--${key}`) {
+          const value = argv[index + 1];
+          if (value !== undefined && !value.startsWith("--")) {
+            flags[key] = value;
+            index++;
+          }
+        }
+      }
   }
-  return {};
+  return flags;
 }
 
-/**
- * 进程级一次性设置：代理初始化、Ctrl+C、stdout EPIPE。
- * 属进程生命周期行为，装一次即可，不进 per-command 中间件。
- */
-function installProcessHandlers(binName: string): void {
-  try {
-    setupProxyFromEnv();
-  } catch (err) {
-    handleError(err, binName);
+interface ProcessOutputContext {
+  getReporter: () => OutputReporter;
+  localize: (text: LocalizedText) => string;
+}
+
+const activeProcessOutputs = new Set<ProcessOutputContext>();
+
+/** One process event produces one error, using the first still-active invocation. */
+function handleInterrupt(): void {
+  const active = activeProcessOutputs.values().next().value;
+  if (!active) return;
+  active
+    .getReporter()
+    .error(
+      new BailianError(
+        active.localize({ "en-US": "Interrupted. Exiting.", "zh-CN": "操作已中断，正在退出。" }),
+        130 as ExitCode,
+      ),
+    );
+  void flushTelemetry(500).finally(() => process.exit(130));
+}
+
+/** Keep EPIPE protection after run() returns, without retaining completed invocations. */
+function handleStdoutPipeError(error: NodeJS.ErrnoException): void {
+  if (error.code === "EPIPE") process.exit(0);
+  const active = activeProcessOutputs.values().next().value;
+  if (active) process.exit(active.getReporter().error(error));
+  // Outside an invocation, let other listeners handle errors or retain Node's failure behavior.
+  if (process.stdout.listenerCount("error") === 1) throw error;
+}
+
+function installProcessHandlers(
+  getReporter: () => OutputReporter,
+  localize: (text: LocalizedText) => string,
+): () => void {
+  if (!process.stdout.listeners("error").includes(handleStdoutPipeError)) {
+    process.stdout.on("error", handleStdoutPipeError);
   }
-
-  // 处理 Ctrl+C
-  process.on("SIGINT", () => {
-    process.stderr.write("\nInterrupted. Exiting.\n");
-    void flushTelemetry(500).finally(() => process.exit(130));
-  });
-
-  // 处理 stdout EPIPE（例如管道到提前退出的 `mpv`）
-  process.stdout.on("error", (e: NodeJS.ErrnoException) => {
-    if (e.code === "EPIPE") process.exit(0);
-    else throw e;
-  });
+  if (activeProcessOutputs.size === 0) process.once("SIGINT", handleInterrupt);
+  const context = { getReporter, localize };
+  activeProcessOutputs.add(context);
+  return () => {
+    activeProcessOutputs.delete(context);
+    if (activeProcessOutputs.size === 0) process.removeListener("SIGINT", handleInterrupt);
+  };
 }
 
 /**
@@ -116,8 +152,6 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   const commandPackPolicy = opts.commandPacks ?? { supported: {} };
   const commandPackManager = createCommandPackManager(identity, commandPackPolicy);
   let loadedCommandPacksPromise: ReturnType<typeof loadCommandPacks> | undefined;
-
-  installProcessHandlers(binName);
 
   const runMiddleware = compose([
     telemetryStage,
@@ -134,17 +168,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     return loadedCommandPacksPromise;
   }
 
-  async function getRegistry(argv: string[]): Promise<{
-    registry: CommandRegistry;
-    localize: (text: LocalizedText) => string;
-  }> {
-    const localeSources = buildSources(pickConfigFlag(argv));
-    const translator = createTranslator(localeSources.file.language ?? DEFAULT_LANGUAGE);
+  async function getRegistry(
+    translator: ReturnType<typeof createTranslator>,
+  ): Promise<CommandRegistry> {
     const loaded = await getLoadedCommandPacks();
-    return {
-      registry: new CommandRegistry(loaded.commands, binName, translator),
-      localize: (text) => translator.localize(text),
-    };
+    return new CommandRegistry(loaded.commands, binName, translator);
   }
 
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
@@ -174,6 +202,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     registry: CommandRegistry,
     argv: string[],
     localize: (text: LocalizedText) => string,
+    initialSources: ResolutionSources,
+    reporter: OutputReporter,
   ): Promise<void> {
     const res = resolve(argv, registry, localize);
 
@@ -187,8 +217,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         return;
 
       case "usageError":
-        handleError(res.error, binName);
-        return;
+        throw res.error;
 
       case "run": {
         try {
@@ -207,11 +236,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           if (invalid) throw new UsageError(invalid);
 
           // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
-          const sources = buildSources(globalFlags);
+          const sources = { ...initialSources, flags: globalFlags };
           const settings = buildSettings(sources);
           const ctx: RunContext = {
             identity,
-            output: createOutputReporter({ settings, localize, binName: identity.binName }).output,
+            output: reporter.output,
             path: res.path,
             command: res.command,
             flags: ownFlags,
@@ -225,6 +254,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             client: new Client({
               identity,
               settings,
+              debug: (diagnostic) => reporter.output.debug(diagnostic),
               ...resolveModelBaseUrlState(sources),
             }),
           };
@@ -237,8 +267,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             registry.printHelp(res.path, process.stderr);
             return;
           }
-          await flushTelemetry(1000);
-          handleError(err, binName);
+          throw err;
         }
         return;
       }
@@ -246,13 +275,33 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   }
 
   return {
-    run(argv: string[] = process.argv.slice(2)) {
-      return Promise.resolve()
-        .then(() => getRegistry(argv))
-        .then(({ registry, localize }) => dispatch(registry, argv, localize))
-        .catch(
-          (err) => flushTelemetry(1000).finally(() => handleError(err, binName)) as unknown as void,
-        );
+    async run(argv: string[] = process.argv.slice(2)) {
+      const flags = presentationFlags(argv);
+      let translator = createTranslator(DEFAULT_LANGUAGE);
+      const localize = (text: LocalizedText) => translator.localize(text);
+      const initialSettings = buildOutputSettings({ flags, env: process.env });
+      let reporter = createOutputReporter({ settings: initialSettings, localize, binName });
+      const warnings: OutputDiagnostic[] = [];
+      const cleanup = installProcessHandlers(() => reporter, localize);
+      try {
+        const sources = buildSources(flags, (warning) => warnings.push(warning));
+        translator = createTranslator(sources.file.language ?? DEFAULT_LANGUAGE);
+        reporter = createOutputReporter({
+          settings: buildOutputSettings(sources),
+          localize,
+          binName,
+        });
+        for (const warning of warnings.splice(0)) reporter.output.warning(warning);
+        setupProxyFromEnv();
+        const registry = await getRegistry(translator);
+        await dispatch(registry, argv, localize, sources, reporter);
+      } catch (error) {
+        for (const warning of warnings.splice(0)) reporter.output.warning(warning);
+        await flushTelemetry(1000);
+        handleError(error, reporter);
+      } finally {
+        cleanup();
+      }
     },
   };
 }

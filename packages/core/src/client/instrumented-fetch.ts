@@ -1,4 +1,4 @@
-import { maskToken } from "../utils/token.ts";
+import { debugRequest, debugResponse } from "./diagnostics.ts";
 import type { HttpDeps } from "./http.ts";
 import { trackingHeaders } from "./headers.ts";
 
@@ -55,21 +55,11 @@ export function createInstrumentedFetch(deps: HttpDeps): FetchImplementation {
       }
     }
 
-    if (deps.settings.verbose) {
-      console.error(`> ${init.method ?? "GET"} ${url}`);
-      const auth = headers.get("authorization");
-      if (auth) console.error(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}`);
-    }
+    debugRequest(deps, init.method ?? (input instanceof Request ? input.method : "GET"), url);
 
     const res = await fetch(input, { ...init, headers });
 
-    if (deps.settings.verbose) {
-      console.error(`< ${res.status} ${res.statusText}`);
-      const reqId = res.headers.get("x-request-id");
-      if (reqId) {
-        console.error(`request_id: ${reqId}`);
-      }
-    }
+    debugResponse(deps, res);
 
     return res;
   };

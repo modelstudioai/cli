@@ -4,6 +4,7 @@ import {
   defineCommand,
   ExitCode,
   detectOutputFormat,
+  type CommandOutput,
   type Client,
   type Settings,
   type DashScopeASRRequest,
@@ -305,7 +306,15 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}] [Mode: async] [Files: ${resolvedUrls.length}]\n`);
     }
 
-    await handleAsyncMode(ctx.client, settings, body, flags, format, resolvedUrls.length);
+    await handleAsyncMode(
+      ctx.client,
+      ctx.output,
+      settings,
+      body,
+      flags,
+      format,
+      resolvedUrls.length,
+    );
   },
 });
 
@@ -363,6 +372,7 @@ async function handleSyncFlashMode(
 
 async function handleAsyncMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   body: DashScopeASRRequest,
   flags: RecognizeFlags,
@@ -389,7 +399,8 @@ async function handleAsyncMode(
   const pollInterval = flags.pollInterval ?? 2;
   const pollUrl = client.url(taskPath(taskId));
 
-  const result = await poll<DashScopeASRTaskResult>(client, settings, {
+  const result = await poll<DashScopeASRTaskResult>(client, {
+    output: commandOutput,
     url: pollUrl,
     intervalSec: pollInterval,
     timeoutSec: settings.timeout,

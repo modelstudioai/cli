@@ -1,7 +1,7 @@
-import { BailianError, ExitCode, type Client, type Settings } from "bailian-cli-core";
-import { createSpinner } from "../output/progress.ts";
+import { BailianError, ExitCode, type Client, type CommandOutput } from "bailian-cli-core";
 
 export interface PollOptions {
+  output: Pick<CommandOutput, "progress" | "debug">;
   /** Absolute task URL (Client passes absolute URLs through as-is). */
   url: string;
   intervalSec: number;
@@ -12,42 +12,36 @@ export interface PollOptions {
   getErrorMessage?: (data: unknown) => string | undefined;
 }
 
-export async function poll<T>(client: Client, settings: Settings, opts: PollOptions): Promise<T> {
+export async function poll<T>(client: Client, opts: PollOptions): Promise<T> {
   const deadline = Date.now() + opts.timeoutSec * 1000;
-  const spinner = createSpinner("Polling...");
+  const { output } = opts;
+  output.progress({ "en-US": "Polling...", "zh-CN": "正在查询任务状态……" });
 
-  if (!settings.quiet) spinner.start();
+  while (Date.now() < deadline) {
+    const data = await client.requestJson<T>({ path: opts.url });
 
-  try {
-    while (Date.now() < deadline) {
-      const data = await client.requestJson<T>({ path: opts.url });
-
-      if (opts.getStatus && !settings.quiet) {
-        spinner.update(`Status: ${opts.getStatus(data)}`);
-      }
-
-      if (opts.isComplete(data)) {
-        spinner.stop("Done.");
-        return data;
-      }
-
-      if (opts.isFailed(data)) {
-        spinner.stop("Failed.");
-        if (settings.verbose) {
-          process.stderr.write(`[verbose] Task response: ${JSON.stringify(data, null, 2)}\n`);
-        }
-        const errMsg = opts.getErrorMessage?.(data);
-        throw new BailianError(
-          errMsg ? `Task failed: ${errMsg}` : "Task failed.",
-          ExitCode.GENERAL,
-          errMsg ? undefined : "Use --verbose to see full API response details.",
-        );
-      }
-
-      await new Promise((r) => setTimeout(r, opts.intervalSec * 1000));
+    if (opts.getStatus) {
+      const status = opts.getStatus(data);
+      output.progress({ "en-US": `Status: ${status}`, "zh-CN": `状态：${status}` });
     }
-  } finally {
-    spinner.stop();
+
+    if (opts.isComplete(data)) {
+      output.progress({ "en-US": "Done.", "zh-CN": "已完成。" });
+      return data;
+    }
+
+    if (opts.isFailed(data)) {
+      output.progress({ "en-US": "Failed.", "zh-CN": "任务失败。" });
+      output.debug({ message: { "en-US": "Task response", "zh-CN": "任务响应" }, details: data });
+      const errMsg = opts.getErrorMessage?.(data);
+      throw new BailianError(
+        errMsg ? `Task failed: ${errMsg}` : "Task failed.",
+        ExitCode.GENERAL,
+        errMsg ? undefined : "Use --verbose to see full API response details.",
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, opts.intervalSec * 1000));
   }
 
   throw new BailianError(

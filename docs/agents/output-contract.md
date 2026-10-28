@@ -8,7 +8,7 @@
 
 ## 当前迁移阶段
 
-第一波仅提供 DASHSCOPE_QUIET、ctx.output 和 reporter 组件。旧 emitResult/emitBare、底层 HTTP logger 和公共 handleError 尚未迁移；不能宣称任意命令的 JSON stderr 已经遵循新协议。
+公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
 
 ## 必查清单
 
@@ -16,7 +16,9 @@
 
 - [ ] 用 ctx.output.result(data, { text? }) 提交一次最终结果，text 只控制文本呈现；JSON 始终序列化 data，false/0/null/空列表都合法
 - [ ] progress 与 info 写 stderr，仅 text 且非 quiet 时显示；progress 当前在非 TTY 下仍输出普通进度文本，不创建动画定时器；仅动画要求 TTY
+- [ ] 下载进度沿用 TTY 原地刷新，非 TTY 不输出；quiet／JSON 时关闭，不把逐数据块更新转换为追加日志
 - [ ] warning 始终保留；debug 仅 verbose 开启时显示；quiet 不关闭 verbose 明确请求的诊断
+- [ ] 可升级通知使用 UPDATE_AVAILABLE warning，JSON／quiet 下保留；details 提供 current_version、latest_version、upgrade_command，业务结果和退出码不变，联网检查仍按既有间隔执行，命中版本缓存时仍生成可升级通知；自动更新阈值不变
 - [ ] 消息支持 LocalizedText；warning/debug 可携带 code 与 details，details 的凭证键统一脱敏、循环/深层引用受控
 - [ ] 结果自身的凭证与敏感字段继续由命令在提交前按现有业务规则脱敏；不要把真实凭证拼进诊断 message
 
@@ -25,10 +27,14 @@
 - [ ] 业务不调用 error 或 process.exit；终止失败抛异常，由 runtime 统一处理
 - [ ] report 包含失败项时，先保留业务报告；若契约要求失败退出，再抛一次失败摘要。查询 FAILED 资源不自动等价于查询失败
 - [ ] text 错误保留 HTTP 状态、API 错误码、Request ID、cause 链及退出码；本地网络、超时、文件错误与旧出口共用分类，服务端错误原样透传
-- [ ] reporter.error 是后续 runtime 接入的内部渲染能力，只返回退出码，不自行退出进程；不把它添加到 CommandOutput
+- [ ] 普通异常的调用栈通过 ERROR_STACK debug 记录输出，仅 verbose 开启时保留；quiet 不隐藏，JSON 模式仍逐条单行，终止 error 不重复输出
+- [ ] reporter.error 是 runtime 内部渲染能力，只返回退出码；handleError 接收本次 reporter 并负责退出，不把 error 添加到 CommandOutput
+- [ ] core 通过可选 debug 回调上报传输诊断，无回调时保持安静；runtime 注入 ctx.output.debug。请求体、认证头和查询参数值不直接打印
+- [ ] 错误 cause 中的结构化对象复用安全序列化；服务端 message、api_code、request_id 不改写
 - [ ] JSON 诊断每条一行；stdout 为单个业务 JSON 文档，stderr 单独解析
 - [ ] 原始音频/字节流、既有事件流和 Command Pack API 1 仍走现有专用入口；不得绕过新接口承诺后混入 stdout
 - [ ] 每个调用使用独立 reporter，不共享结果状态、不替换全局 stdout/stderr
+- [ ] 进程共用 SIGINT / stdout error 监听器，调用结束清理输出上下文；并发不触发 MaxListenersExceededWarning，单次中断只输出一条终止错误，EPIPE 保护覆盖 run 返回后的异步写入
 
 ### C. 后续迁移
 

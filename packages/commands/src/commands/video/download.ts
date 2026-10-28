@@ -72,7 +72,9 @@ export default defineCommand({
       throw new BailianError("No download URL available for this task.", ExitCode.GENERAL);
     }
 
-    const { size } = await downloadFile(downloadUrl, outPath, { quiet: settings.quiet });
+    const { size } = await downloadFile(downloadUrl, outPath, {
+      quiet: settings.quiet || settings.output === "json",
+    });
 
     if (settings.quiet) {
       emitBare(outPath);

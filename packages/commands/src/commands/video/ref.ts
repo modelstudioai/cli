@@ -318,7 +318,8 @@ export default defineCommand({
 
     const results = await Promise.all(
       taskIds.map((taskId) =>
-        poll<DashScopeTaskResponse>(ctx.client, settings, {
+        poll<DashScopeTaskResponse>(ctx.client, {
+          output: ctx.output,
           url: ctx.client.url(taskPath(taskId)),
           intervalSec: pollInterval,
           timeoutSec: refTimeout,
@@ -348,7 +349,9 @@ export default defineCommand({
     // --download: save to file
     if (flags.download) {
       const destPath = flags.download;
-      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, { quiet: settings.quiet });
+      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, {
+        quiet: settings.quiet || settings.output === "json",
+      });
 
       if (settings.quiet) {
         emitBare(destPath);
@@ -375,7 +378,9 @@ export default defineCommand({
     await Promise.all(
       videos.map(async ({ taskId, videoUrl }) => {
         const destPath = join(destDir, `${taskId}.mp4`);
-        await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+        await downloadFile(videoUrl, destPath, {
+          quiet: settings.quiet || settings.output === "json",
+        });
         saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
       }),
     );

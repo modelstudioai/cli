@@ -445,3 +445,58 @@ test.each(["info", "progress"] as const)(
     }
   },
 );
+
+test("structured error causes redact credentials without executing serialization hooks", () => {
+  const streams = capture({ output: "json", quiet: false, verbose: true });
+  let calls = 0;
+  const cause = {
+    api_key: "fake-error-secret",
+    details: { password: "fake-error-password" },
+    toJSON() {
+      calls++;
+      return { leaked: "fake-error-secret" };
+    },
+  };
+  streams.reporter.error(
+    new BailianError("Original failure", ExitCode.GENERAL, undefined, { cause }),
+  );
+  expect(calls).toBe(0);
+  expect(streams.stderr()).not.toContain("fake-error-secret");
+  expect(streams.stderr()).not.toContain("fake-error-password");
+  expect(JSON.parse(JSON.parse(streams.stderr()).error.cause.message).api_key).toBe("[REDACTED]");
+});
+
+test.each(matrix)(
+  "ordinary error stack follows verbose with $output quiet=$quiet verbose=$verbose",
+  (settings) => {
+    const streams = capture(settings);
+    const failure = new SyntaxError("Invalid local JSON");
+    failure.stack = "SyntaxError: Invalid local JSON\n    at parseInput (/fixture/command.ts:42:7)";
+    expect(streams.reporter.error(failure)).toBe(ExitCode.GENERAL);
+    expect(streams.reporter.error(failure)).toBe(ExitCode.GENERAL);
+    expect(streams.stdout()).toBe("");
+    expect(streams.stderr().includes("/fixture/command.ts:42:7")).toBe(settings.verbose);
+    if (settings.output === "json") {
+      const records = streams
+        .stderr()
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      expect(records.filter((record) => record.error)).toHaveLength(1);
+      expect(records.filter((record) => record.debug)).toEqual(
+        settings.verbose
+          ? [
+              {
+                debug: {
+                  code: "ERROR_STACK",
+                  message: "Error stack",
+                  details: { stack: failure.stack },
+                },
+              },
+            ]
+          : [],
+      );
+      expect(records.at(-1).error.code).toBe(ExitCode.GENERAL);
+    }
+  },
+);
