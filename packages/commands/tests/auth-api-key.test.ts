@@ -73,12 +73,12 @@ test("普通 Key 优先使用已保存地址，再尝试 Workspace 专属地址�
     }),
   ).toEqual([
     "https://stored.example.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.cn-beijing.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.ap-southeast-1.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.cn-hongkong.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.ap-northeast-1.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.eu-central-1.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.us-east-1.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+    "https://llm-test-workspace.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.cn-hongkong.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.ap-northeast-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.eu-central-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.us-east-1.maas.aliyuncs.com/compatible-mode/v1/models",
     "https://dashscope.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
     "https://dashscope-intl.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
     "https://dashscope-us.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
@@ -86,10 +86,67 @@ test("普通 Key 优先使用已保存地址，再尝试 Workspace 专属地址�
   ]);
 });
 
+test("已保存的 Workspace MaaS 地址使用 Compatible /models", () => {
+  expect(
+    candidateUrls("sk-ws-placeholder", {
+      storedBaseUrl: "https://ws-stored.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+    }),
+  ).toEqual([
+    "https://ws-stored.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://dashscope.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+    "https://dashscope-intl.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+    "https://dashscope-us.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+    "https://cn-hongkong.dashscope.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+  ]);
+});
+
+test("Workspace 地域候选先于公共站点选择首个成功地域", async () => {
+  const originalFetch = httpTransport.fetch;
+  const workspaceOrigin = "https://llm-test-workspace.ap-southeast-1.maas.aliyuncs.com";
+  httpTransport.fetch = async (input) => {
+    const url = requestUrl(input);
+    if (url === `${workspaceOrigin}/compatible-mode/v1/models`) {
+      return jsonResponse({ object: "list", data: [{ id: "workspace-model" }] });
+    }
+    if (url.startsWith("https://dashscope-intl.aliyuncs.com/")) {
+      return jsonResponse({ data: [{ id: "public-model" }] });
+    }
+    const status = url.includes(".maas.aliyuncs.com/") ? 404 : 401;
+    return jsonResponse({ code: "Rejected", message: "candidate rejected" }, status);
+  };
+
+  try {
+    await expect(
+      validateApiKey({ identity, settings }, "sk-ws-placeholder", {
+        workspaceId: "llm-test-workspace",
+      }),
+    ).resolves.toEqual({
+      baseUrl: workspaceOrigin,
+      kind: "ordinary",
+    });
+  } finally {
+    httpTransport.fetch = originalFetch;
+  }
+});
+
 test("其他格式 Key 不限制端点类型", () => {
   expect(
     apiKeyValidationCandidates("custom-key-placeholder", {}).map((candidate) => candidate.kind),
   ).toEqual(["ordinary", "ordinary", "ordinary", "ordinary", "token-plan", "token-plan"]);
+});
+
+test("未知格式 Key 指向 Token Plan host 时保留 Token Plan kind", () => {
+  expect(
+    apiKeyValidationCandidates("custom-key-placeholder", {
+      explicitBaseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com",
+    }),
+  ).toEqual([
+    {
+      baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com",
+      kind: "token-plan",
+      modelsUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    },
+  ]);
 });
 
 test("显式 Base URL 只校验指定站点，并根据 Key 类型选择 /models 路径", () => {
@@ -103,6 +160,11 @@ test("显式 Base URL 只校验指定站点，并根据 Key 类型选择 /models
       explicitBaseUrl: "https://workspace.example.com/compatible-mode/v1",
     }),
   ).toEqual(["https://workspace.example.com/api/v1/models?page_no=1&page_size=1"]);
+  expect(
+    candidateUrls("sk-ws-placeholder", {
+      explicitBaseUrl: "https://ws-explicit.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+    }),
+  ).toEqual(["https://ws-explicit.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/models"]);
 });
 
 test("Token Plan 多地区并行校验选择实际接受 Key 的国际站点", async () => {

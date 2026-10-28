@@ -76,12 +76,15 @@ const KNOWN_BASE_URLS: Readonly<Record<ApiKeyEndpointKind, readonly string[]>> =
   ],
 };
 
+function usesCompatibleModelsApi(baseUrl: string, kind: ApiKeyEndpointKind): boolean {
+  const hostname = new URL(normalizeModelBaseUrl(baseUrl)).hostname;
+  return kind === "token-plan" || hostname.endsWith(".maas.aliyuncs.com");
+}
+
 function modelsUrl(baseUrl: string, kind: ApiKeyEndpointKind): string {
-  const url = new URL(
-    kind === "token-plan" ? "/compatible-mode/v1/models" : "/api/v1/models",
-    `${baseUrl}/`,
-  );
-  if (kind === "ordinary") {
+  const compatible = usesCompatibleModelsApi(baseUrl, kind);
+  const url = new URL(compatible ? "/compatible-mode/v1/models" : "/api/v1/models", `${baseUrl}/`);
+  if (!compatible) {
     url.searchParams.set("page_no", "1");
     url.searchParams.set("page_size", "1");
   }
@@ -95,6 +98,14 @@ function validationKinds(apiKeyKind: ApiKeyLoginKind): ApiKeyEndpointKind[] {
 
 function isTokenPlanBaseUrl(baseUrl: string): boolean {
   return new URL(normalizeModelBaseUrl(baseUrl)).hostname.startsWith("token-plan.");
+}
+
+function kindsForBaseUrl(
+  kinds: readonly ApiKeyEndpointKind[],
+  baseUrl: string,
+): ApiKeyEndpointKind[] {
+  if (!isTokenPlanBaseUrl(baseUrl) || !kinds.includes("token-plan")) return [...kinds];
+  return ["token-plan", ...kinds.filter((kind) => kind !== "token-plan")];
 }
 
 function addCandidate(
@@ -120,13 +131,15 @@ export function apiKeyValidationCandidates(
   const seenUrls = new Set<string>();
 
   if (options.explicitBaseUrl) {
-    for (const kind of kinds) addCandidate(candidates, seenUrls, options.explicitBaseUrl, kind);
+    for (const kind of kindsForBaseUrl(kinds, options.explicitBaseUrl)) {
+      addCandidate(candidates, seenUrls, options.explicitBaseUrl, kind);
+    }
     return candidates;
   }
 
   if (options.storedBaseUrl) {
     const storedIsTokenPlan = isTokenPlanBaseUrl(options.storedBaseUrl);
-    for (const kind of kinds) {
+    for (const kind of kindsForBaseUrl(kinds, options.storedBaseUrl)) {
       if (apiKeyKind === "unknown" || storedIsTokenPlan === (kind === "token-plan")) {
         addCandidate(candidates, seenUrls, options.storedBaseUrl, kind);
       }
