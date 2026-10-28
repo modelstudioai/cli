@@ -1,13 +1,11 @@
 import {
   defineCommand,
-  detectOutputFormat,
   speechVocabularyPath,
   buildVocabularyRequest,
   deleteVocabulary,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { VOCABULARY_ID_FLAG } from "./shared.ts";
 
 const DELETE_FLAGS = {
@@ -34,27 +32,21 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const vocabularyId = (flags as DeleteFlags).id;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          endpoint: ctx.client.url(speechVocabularyPath()),
-          request: buildVocabularyRequest("delete_vocabulary", {
-            vocabulary_id: vocabularyId,
-          }),
-        },
-        format,
-      );
+      ctx.output.result({
+        endpoint: ctx.client.url(speechVocabularyPath()),
+        request: buildVocabularyRequest("delete_vocabulary", {
+          vocabulary_id: vocabularyId,
+        }),
+      });
       return;
     }
 
     const response = await deleteVocabulary(ctx.client, vocabularyId);
 
-    if (settings.quiet || format === "text") {
-      emitBare(vocabularyId);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(response, {
+      text: vocabularyId,
+    });
   },
 });

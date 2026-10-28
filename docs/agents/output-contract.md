@@ -8,7 +8,7 @@
 
 ## 当前迁移阶段
 
-公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get 和图片 generate / edit 已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
+公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit 和语音热词表 create / update / delete / get / list 已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
 
 ## 必查清单
 
@@ -42,6 +42,10 @@
 - [ ] 按命令完整调用链迁移：业务、middleware、传输日志、轮询/下载、错误出口必须一起核对
 - [ ] 移除 quiet 裁剪/吞结果分支，更新依赖 quiet 提取 ID/path 的示例
 - [ ] 迁移完后再为相应路径启用直接打印约束，保留协议/原始流等窄例外；不要先全仓禁用旧代码
+
+### D. 回归测试隔离
+
+- [ ] 本地假服务的子进程测试显式覆盖 HTTP_PROXY / HTTPS_PROXY / ALL_PROXY / NO_PROXY 及小写变量，关闭 NODE_USE_ENV_PROXY；仅代理专项测试按场景注入代理，不继承开发机的代理设置
 
 ## 完成后自查
 
