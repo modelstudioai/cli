@@ -215,6 +215,15 @@ export class Client {
     });
   }
 
+  /** 创建仅本次调用链使用的 Console 身份；不修改原 Client、Settings 或持久化配置。 */
+  withConsoleSwitchAgent(switchAgent: number): Client {
+    return new Client({
+      ...this.deps,
+      settings: { ...this.deps.settings, consoleSwitchAgent: switchAgent },
+      consoleCred: this.deps.consoleCred ? { ...this.deps.consoleCred, switchAgent } : undefined,
+    });
+  }
+
   async console<T>(api: string, data: Record<string, unknown>): Promise<T> {
     if (!this.deps.consoleCred) {
       throw new BailianError("This command needs a console access token.", ExitCode.AUTH);

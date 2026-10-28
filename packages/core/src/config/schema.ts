@@ -225,6 +225,8 @@ export interface Settings {
    * (e.g. `advisor recommend` defaults to json) branch on this.
    */
   outputExplicit: boolean;
+  /** 输出来源；命令默认格式可覆盖 Profile 默认值，保留 flag/env 的显式选择。 */
+  outputSource?: "flag" | "env" | "file" | "default";
   outputDir?: string;
   timeout: number;
   watermark: boolean;

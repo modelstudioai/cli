@@ -6,10 +6,60 @@ import {
   effectiveConsoleGatewayConfig,
   unwrapResponse,
   type Client,
+  type Command,
   type FlagsDef,
   type Settings,
 } from "bailian-cli-core";
 import { parseCommaList } from "./params.ts";
+import { consoleWorkspaceIdentityPreview, resolveConsoleWorkspaceAgent } from "./workspace.ts";
+
+/** 三组遥测命令共用策略：默认 JSON，整条业务调用链绑定一次解析的空间身份。 */
+export function defineTelemetryCommand<F extends FlagsDef>(spec: Command<F>): Command<F> {
+  return {
+    ...spec,
+    notes: [
+      ...(spec.notes ?? []),
+      {
+        "en-US":
+          "Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.",
+        "zh-CN":
+          "默认输出 JSON，即使 Profile 默认格式为 text。可用 --output text 或 DASHSCOPE_OUTPUT=text 显式选择文本。",
+      },
+      {
+        "en-US":
+          "When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.",
+        "zh-CN":
+          "选定工作空间时，在业务请求前将该空间的 tenantId 解析为 switchAgent，仅对本次执行覆盖 --console-switch-agent。预检、轮询和后续请求共享此身份，不修改已保存配置。",
+      },
+    ],
+    async run(ctx) {
+      const source = ctx.settings.outputSource;
+      // 兼容旧宿主手工构造的 Settings；正式 CLI 使用 loader 提供的来源。
+      const explicitOutput =
+        source === undefined ? ctx.settings.outputExplicit : source === "flag" || source === "env";
+      const settings: Settings = {
+        ...ctx.settings,
+        output: explicitOutput ? ctx.settings.output : "json",
+        outputExplicit: true,
+      };
+      let client = ctx.client;
+      if (!settings.dryRun) {
+        ensureTelemetryRegionSupported(settings);
+        const switchAgent = await resolveConsoleWorkspaceAgent(ctx);
+        if (switchAgent !== undefined) client = client.withConsoleSwitchAgent(switchAgent);
+      }
+      await spec.run({ ...ctx, settings, client });
+    },
+  };
+}
+
+/** dry-run 只展示空间身份解析计划；配置中的旧 agent 不是本次执行的最终身份。 */
+export function telemetryGatewayPreview(settings: Settings) {
+  const gateway = effectiveConsoleGatewayConfig(settings);
+  if (!settings.workspaceId) return gateway;
+  const { consoleSwitchAgent: _configuredAgent, ...target } = gateway;
+  return { ...target, ...consoleWorkspaceIdentityPreview(settings) };
+}
 
 // ---------------------------------------------------------------------------
 // Async task polling for the console gateway
@@ -51,9 +101,9 @@ export async function pollTelemetryApi(
   api: string,
   reqDTO: Record<string, unknown>,
 ): Promise<unknown> {
-  return pollConsoleUntilDone(client, api, (taskId) =>
-    taskId ? { reqDTO: { ...reqDTO, asyncTaskId: taskId } } : { reqDTO },
-  );
+  return pollConsoleUntilDone(client, api, (taskId) => ({
+    reqDTO: taskId ? { ...reqDTO, asyncTaskId: taskId } : reqDTO,
+  }));
 }
 
 /** Poll a telemetry API and unwrap the payload; throws TIMEOUT when the budget runs out. */

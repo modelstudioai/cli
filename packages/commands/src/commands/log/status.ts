@@ -1,6 +1,9 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
 import { ansi, emitResult, displayWidth, padEnd } from "bailian-cli-runtime";
 import {
+  defineTelemetryCommand,
+  telemetryGatewayPreview,
+  TELEMETRY_SERVICE_STATUS_API,
   ensureTelemetryRegionSupported,
   getTelemetryServiceStatus,
   unwrapConsolePrimitive,
@@ -53,7 +56,7 @@ function switchText(enabled: boolean | null): string {
   return enabled ? "On" : "Off";
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US":
       "Show model log delivery status (SLS authorization, audit / inference service and switches)",
@@ -72,6 +75,29 @@ export default defineCommand({
   async run(ctx) {
     const { settings, identity } = ctx;
     const format = detectOutputFormat(settings.output);
+
+    if (settings.dryRun) {
+      emitResult(
+        {
+          apis: [
+            SLR_STATUS_API,
+            TELEMETRY_SERVICE_STATUS_API,
+            "zeldaEasy.bailian-telemetry.telemetryGroup.getTelemetryGroupStatus",
+          ],
+          data: {
+            reqDTO: {
+              workspaceId: settings.workspaceId,
+              slrType: "Log",
+              serviceTypes: Object.values(LOG_SERVICE_TYPES),
+              telemetryTypes: ["AuditLog", "InferenceLog"],
+            },
+          },
+          ...telemetryGatewayPreview(settings),
+        },
+        format,
+      );
+      return;
+    }
 
     ensureTelemetryRegionSupported(settings);
     const status = await fetchLogServiceStatus(ctx.client, settings.workspaceId);

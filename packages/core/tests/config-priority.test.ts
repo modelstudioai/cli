@@ -169,10 +169,26 @@ test("命名 config 仍保持 flag > env > selected file", () => {
 test("output:flag > env > file > text", () => {
   const env = { DASHSCOPE_OUTPUT: "json" };
   const file: ConfigFile = { output: "json" };
-  expect(resolve({ flags: { output: "text" }, env, file }).output).toBe("text");
-  expect(resolve({ env, file: { output: "text" } }).output).toBe("json");
-  expect(resolve({ file }).output).toBe("json");
-  expect(resolve({}).output).toBe("text");
+  expect(resolve({ flags: { output: "text" }, env, file })).toMatchObject({
+    output: "text",
+    outputSource: "flag",
+    outputExplicit: true,
+  });
+  expect(resolve({ env, file: { output: "text" } })).toMatchObject({
+    output: "json",
+    outputSource: "env",
+    outputExplicit: true,
+  });
+  expect(resolve({ file })).toMatchObject({
+    output: "json",
+    outputSource: "file",
+    outputExplicit: true,
+  });
+  expect(resolve({})).toMatchObject({
+    output: "text",
+    outputSource: "default",
+    outputExplicit: false,
+  });
 });
 
 test("timeout:flag > 合法 env > file > 300;非法 env 被跳过;非法 flag 抛错", () => {
