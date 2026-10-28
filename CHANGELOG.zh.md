@@ -6,6 +6,42 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.6.2] - 2026-10-28
+
+### 变更
+
+- **遥测默认输出（BREAKING）**：`bl alert`、`bl monitor` 和 `bl log` 的业务结果统一默认 JSON，即使 Profile 配置为 text。依赖文本输出的脚本需显式传入 `--output text` 或设置 `DASHSCOPE_OUTPUT=text`。
+
+### 修复
+
+- **工作空间身份**：遥测命令根据选定空间自动解析 Console 身份，预检、业务请求、异步轮询及后续请求使用同一身份，修复 `--workspace-id` 过滤失效及跨空间结果异常；不修改已保存配置。
+- **审计日志解析**：规范化时间、模型、请求 ID、工作空间及用量字段，修复缺失字段、NaN 时间及异常计数展示；拒绝空间不匹配的审计结果。
+- **日志计数**：`log audit count` 和 `log inference count` 分别采用对应列表接口的 `totalCount`，修复列表非空而计数为 0 的问题，不遍历分页或获取完整日志内容。
+- **推理计数过滤与完成判定**：保留多模型、多 API Key 过滤，去重后按单值组合查询并汇总；支持异步轮询，仅全部成功后输出，空过滤、无效计数及累计溢出明确报错。
+- **Dry-run 预览**：展示工作空间身份解析计划和实际计数请求组合，不发送业务请求。
+
+## [2.6.1] - 2026-10-28
+
+### 新增
+
+- **异步批量推理**：新增 `bl batch convert/create/list/get/cancel/download`，支持 CSV 转 JSONL、创建 Chat/Embedding 批量任务、跟踪进度、取消任务及下载结果和错误文件，可选导出 CSV。
+- **同步 Batch Chat**：`bl text chat --batch` 支持单次非流式请求，与异步文件批量任务分开使用；支持 60–3600 秒请求超时。
+- **模型推荐参数**：`bl advisor recommend` 新增 `--top`、`--model`、`--no-agent`、`--trace`、`--think` 和 `--no-thinking`。
+
+### 变更
+
+- **模型推荐**：升级意图分析、路由、候选召回、评分及排序流程；交互终端支持 Agent 澄清与多步骤推荐，推荐结果保留原有 JSON 主结构。
+
+### 已移除
+
+- **Advisor 库接口（BREAKING）**：移除旧推荐流程导出，包括 `getModels`、`recallCandidates`、`recallSemantic` 和 `rankModels`。库调用方需适配新的推荐引擎接口；旧类型通过 `LegacyIntentProfile`、`LegacyModelProfile` 和 `LegacyRecommendResult` 导出。
+
+### 修复
+
+- **临时文件上传**：根据当前模型 Endpoint 选择上传服务，修复新加坡地域及 Prime 视频上传误用北京地址的问题；官方临时上传仅支持北京和新加坡，不支持的地域及 Token Plan 明确报错，显式自定义上传代理不再因 Key 类型被提前拒绝。
+- **Node 26 兼容**：修复 fetch 与 dispatcher 不兼容及代理初始化问题，覆盖模型请求、控制台请求、文件上传和下载。
+- **API 错误透传**：正确识别嵌套业务错误，保留非 JSON 错误正文及请求 ID，避免将错误响应作为成功结果。
+
 ## [2.6.0] - 2026-10-27
 
 ### 新增
