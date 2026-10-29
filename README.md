@@ -139,6 +139,10 @@ Knowledge bases accrue running-time charges from creation, even without queries.
 
 Keep the returned IDs and recovery record. Closing the CLI or a later failure does not stop billing; follow the reported cleanup actions to delete unused knowledge bases. See the [Knowledge Studio quick start](packages/kscli/README.md#quick-start) for retrieval and cleanup. The `bailian-knowledge` Skill is available through `bl skill init`.
 
+### RAG audio and video
+
+`bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode emits only the final answer. See the [command guide](docs/knowledge/knowledge-cli-guide.md).
+
 ## ParseX
 
 Parse documents or audio/video and extract structured fields through the workspace-scoped ParseX API:
@@ -265,7 +269,3 @@ Memory documentation (Chinese): [capability matrix](https://github.com/modelstud
 | Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key                   |
 | Get Token Plan API Key       | https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                                                            |
-
-### RAG audio and video
-
-`bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode emits only the final answer. See the [command guide](docs/knowledge/knowledge-cli-guide.md).
