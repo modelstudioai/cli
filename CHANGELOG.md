@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.7.1] - 2026-10-29
+
+### Fixed
+
+- **Token Plan quota queries**: Display all quota windows returned by the API, and add `hasQuotaData` to JSON output to distinguish missing quota data from a normal result.
+
 ## [2.7.0] - 2026-10-29
 
 ### Added
@@ -16,7 +22,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- **Token Plan quota windows**: `bl usage token-plan` now reads every quota window returned by the API (hourly/daily/weekly/monthly) instead of only the monthly one, and JSON output adds `hasQuotaData` to tell missing quota data apart from a normal result.
 - **Workspace API key login**: Fix `bl auth login` rejecting valid workspace API keys on MaaS endpoints.
 - **Login validation errors**: Preserve service and network errors during API key validation instead of reporting every failure as an invalid key.
 
