@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagAddCategoryResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CATEGORY_ADD_FLAGS = {
@@ -54,7 +52,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // categoryType fixed to UNSTRUCTURED (the only valid value for knowledge-base creation today)
     const body = {
@@ -66,7 +64,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.addCategory);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -77,14 +75,10 @@ export default defineCommand({
     });
 
     const categoryId = response.data?.categoryId;
-    if (settings.quiet) {
-      emitBare(categoryId ?? "");
-      return;
-    }
-    if (format === "text") {
-      emitBare(`created: ${categoryId ?? "-"}  (${flags.name})`);
-      return;
-    }
-    emitResult(response, format);
+
+    ctx.output.result(
+      response,
+      format === "text" ? { text: `created: ${categoryId ?? "-"}  (${flags.name})` } : undefined,
+    );
   },
 });

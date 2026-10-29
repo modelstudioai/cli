@@ -1,3 +1,4 @@
+import type { RagIndexListResponse } from "bailian-cli-core";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -338,9 +339,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc upload (live)", () => 
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(listRun.exitCode, listRun.stderr).toBe(0);
-    const indexId = listRun.stdout.trim().split("\n")[0];
+    const indexId = parseStdoutJson<RagIndexListResponse>(listRun.stdout).data?.rows?.[0]?.id ?? "";
     if (!indexId) return;
 
     const pollFilePath = join(fixtureDir, `poll-${Date.now()}.md`);

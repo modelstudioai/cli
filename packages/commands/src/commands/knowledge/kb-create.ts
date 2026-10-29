@@ -2,13 +2,11 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type FlagsDef,
   type RagCreateIndexV2Response,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   resolveWorkspaceId,
   WORKSPACE_FLAG,
@@ -160,7 +158,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // Fixed values, not exposed as flags in this version: structureType unstructured, sinkType BUILT_IN.
     // Note: the public docs' example uses sinkType DEFAULT, but BUILT_IN is what works against the live API.
@@ -178,7 +176,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.indexCreateV2);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -210,17 +208,18 @@ export default defineCommand({
       }
     }
 
-    if (settings.quiet) {
-      emitBare(pipelineId ?? "");
-      return;
+    ctx.output.result(
+      finalStatus ? { ...response, final_status: finalStatus } : response,
+      format === "text" ? { text: renderText() } : undefined,
+    );
+    function renderText(): string {
+      const lines: string[] = [];
+
+      lines.push(`index_id: ${pipelineId ?? "-"}`);
+      if (ingestionId) lines.push(`ingestion_id: ${ingestionId}`);
+      if (finalStatus) lines.push(`status: ${finalStatus}`);
+      lines.push("Next: check the import job status, then search against this knowledge base.");
+      return lines.join("\n");
     }
-    if (format === "text") {
-      emitBare(`index_id: ${pipelineId ?? "-"}`);
-      if (ingestionId) emitBare(`ingestion_id: ${ingestionId}`);
-      if (finalStatus) emitBare(`status: ${finalStatus}`);
-      emitBare("Next: check the import job status, then search against this knowledge base.");
-      return;
-    }
-    emitResult(finalStatus ? { ...response, final_status: finalStatus } : response, format);
   },
 });

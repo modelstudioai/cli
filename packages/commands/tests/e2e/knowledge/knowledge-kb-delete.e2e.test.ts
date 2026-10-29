@@ -1,3 +1,4 @@
+import type { RagCreateIndexV2Response, RagIndexListResponse } from "bailian-cli-core";
 // The live group chains the full lifecycle: upload → create → update → upload --index-id
 // (import orchestration) → delete → list to verify removal.
 import { mkdtempSync, writeFileSync } from "node:fs";
@@ -119,9 +120,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
         "--poll-interval",
         "3",
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(createRun.exitCode, createRun.stderr).toBe(0);
-      indexId = createRun.stdout.trim().split("\n")[0]!;
+      indexId = parseStdoutJson<RagCreateIndexV2Response>(createRun.stdout).data?.pipelineId ?? "";
       expect(indexId).toBeTruthy();
 
       // 2.5) Live update coverage: name / description / rerank threshold in one call
@@ -258,9 +261,13 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listRun.exitCode, listRun.stderr).toBe(0);
-      const remainingIds = listRun.stdout.trim().split("\n");
+      const remainingIds = (
+        parseStdoutJson<RagIndexListResponse>(listRun.stdout).data?.rows ?? []
+      ).map((row) => row.id);
       expect(remainingIds).not.toContain(indexId);
       chainCompleted = true;
     } finally {

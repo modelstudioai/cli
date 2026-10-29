@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagListCategoryResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, truncateLine, WORKSPACE_FLAG } from "./shared.ts";
 
 const CATEGORY_LIST_FLAGS = {
@@ -66,7 +64,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // type fixed to UNSTRUCTURED, not exposed as a flag (the only valid value today); note: maxResult is singular
     const body = {
@@ -80,7 +78,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.listCategory);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -91,23 +89,25 @@ export default defineCommand({
     });
 
     const categories = response.data?.categoryList ?? [];
-    if (settings.quiet) {
-      for (const category of categories) emitBare(category.categoryId ?? "");
-      return;
-    }
-    if (format === "text") {
+
+    ctx.output.result(response, format === "text" ? { text: renderText() } : undefined);
+    function renderText(): string {
+      const lines: string[] = [];
+
       if (categories.length === 0) {
-        emitBare("No categories found.");
+        lines.push("No categories found.");
       } else {
         for (const category of categories) {
           const defaultMark = category.isDefault ? "  [default]" : "";
-          emitBare(truncateLine(`${category.categoryId}  ${category.categoryName}${defaultMark}`));
+          lines.push(
+            truncateLine(`${category.categoryId}  ${category.categoryName}${defaultMark}`),
+          );
         }
       }
       const nextToken = response.data?.nextToken;
-      if (nextToken) emitBare(`next: --next-token ${nextToken}`);
-    } else {
-      emitResult(response, format);
+      if (nextToken) lines.push(`next: --next-token ${nextToken}`);
+
+      return lines.join("\n");
     }
   },
 });

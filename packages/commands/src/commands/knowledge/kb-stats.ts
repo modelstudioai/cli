@@ -2,13 +2,11 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type FlagsDef,
   type RagMonitorResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const KB_STATS_FLAGS = {
@@ -88,7 +86,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const nowSeconds = Math.floor(Date.now() / 1000);
     const startTimestamp = flags.start
@@ -114,7 +112,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.indexMonitor);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -124,21 +122,26 @@ export default defineCommand({
       body,
     });
 
-    if (format !== "text") {
-      emitResult(response, format);
-      return;
+    if (clampedEnd)
+      ctx.output.info({
+        "en-US": "note: end time was in the future, clamped to now.",
+        "zh-CN": "提示：结束时间晚于当前时间，已截断为当前时间。",
+      });
+    ctx.output.result(response, format === "text" ? { text: renderText() } : undefined);
+    function renderText(): string {
+      const lines: string[] = [];
+
+      // Shape verified against the live API: the monitor fields are objects, not arrays
+      const storage = response.data?.storageMonitorData;
+      const qps = response.data?.qpsMonitorData;
+      lines.push(`plan: ${response.data?.pipelineCommercialType ?? "-"}`);
+      lines.push(
+        `storage: ${storage?.indexStorageUsage ?? "-"} / ${storage?.indexStorageLimit ?? "-"}`,
+      );
+      lines.push(`peak qps: ${qps?.peakQps ?? "-"}`);
+      lines.push(`qps windows: ${qps?.monitorData?.length ?? 0} data point(s)`);
+
+      return lines.join("\n");
     }
-    if (clampedEnd) {
-      emitBare("note: end time was in the future, clamped to now.");
-    }
-    // Shape verified against the live API: the monitor fields are objects, not arrays
-    const storage = response.data?.storageMonitorData;
-    const qps = response.data?.qpsMonitorData;
-    emitBare(`plan: ${response.data?.pipelineCommercialType ?? "-"}`);
-    emitBare(
-      `storage: ${storage?.indexStorageUsage ?? "-"} / ${storage?.indexStorageLimit ?? "-"}`,
-    );
-    emitBare(`peak qps: ${qps?.peakQps ?? "-"}`);
-    emitBare(`qps windows: ${qps?.monitorData?.length ?? 0} data point(s)`);
   },
 });

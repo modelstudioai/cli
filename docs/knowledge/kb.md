@@ -38,7 +38,7 @@ idx-xxx  my-kb  text-embedding-v4  600  product docs
 total: 1
 ```
 
-quiet 模式：每行一个知识库 ID。
+quiet 模式：仅隐藏过程提示，保留完整最终结果；程序解析请使用 `--output json`。
 
 json 模式：返回 API 原始响应，`data.rows[]` 包含完整知识库信息。
 
@@ -104,7 +104,7 @@ Data:
   connectorId: ...
 ```
 
-quiet 模式：输出知识库 ID。
+quiet 模式：仅隐藏过程提示，保留完整最终结果；程序解析请使用 `--output json`。
 
 json 模式：返回知识库完整配置 JSON。
 
@@ -163,7 +163,7 @@ status: COMPLETED
 Next: check the import job status, then search against this knowledge base.
 ```
 
-quiet 模式：只输出知识库 ID。
+quiet 模式：仅隐藏过程提示，保留完整最终结果；程序解析请使用 `--output json`。
 
 json 模式：返回 API 原始响应，包含 `pipelineId`（知识库 ID）和 `ingestionId`（导入任务 ID）。`--wait` 时追加 `final_status` 字段。
 
@@ -222,7 +222,7 @@ text 模式：
 updated: idx-xxx
 ```
 
-quiet 模式：无输出。
+quiet 模式：仅隐藏过程提示，保留完整最终结果；程序解析请使用 `--output json`。
 
 json 模式：返回 API 原始响应。
 
@@ -267,7 +267,7 @@ text 模式：
 deleted: idx-xxx
 ```
 
-quiet 模式：无输出。
+quiet 模式：仅隐藏过程提示，保留完整最终结果；程序解析请使用 `--output json`。
 
 json 模式：返回 API 原始响应。
 
@@ -318,7 +318,7 @@ peak qps: 5
 qps windows: 24 data point(s)
 ```
 
-quiet 模式：输出 json 格式。
+quiet 模式：仅隐藏过程提示，保留完整最终结果；程序解析请使用 `--output json`。
 
 json 模式：返回 API 原始响应，包含 `storageMonitorData` 和 `qpsMonitorData`。
 

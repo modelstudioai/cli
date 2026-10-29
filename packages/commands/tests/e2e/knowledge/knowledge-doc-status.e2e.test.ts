@@ -1,3 +1,4 @@
+import type { RagCreateIndexV2Response } from "bailian-cli-core";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -156,9 +157,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc status (live, 自清�
         workspaceId,
         "--wait",
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(createRun.exitCode, createRun.stderr).toBe(0);
-      indexId = createRun.stdout.trim().split("\n")[0]!;
+      indexId = parseStdoutJson<RagCreateIndexV2Response>(createRun.stdout).data?.pipelineId ?? "";
       expect(indexId).toBeTruthy();
 
       // 3) Upload file B to the base (--index-id --wait --output json) → ingestion_id

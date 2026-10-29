@@ -2,7 +2,6 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type Client,
@@ -10,7 +9,6 @@ import {
   type RagIndexListResponse,
   type RagIndexRow,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const KB_INFO_FLAGS = {
@@ -79,54 +77,49 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          endpoint: indexDetailUrl(workspaceId, flags.indexId),
-          request: null,
-        },
-        format,
-      );
+      ctx.output.result({
+        endpoint: indexDetailUrl(workspaceId, flags.indexId),
+        request: null,
+      });
       return;
     }
 
     const row = await fetchIndexDetail(ctx.client, workspaceId, flags.indexId);
 
-    if (settings.quiet) {
-      emitBare(row.id ?? "");
-      return;
-    }
-    if (format !== "text") {
-      emitResult(row, format);
-      return;
-    }
+    ctx.output.result(row, format === "text" ? { text: renderText() } : undefined);
+    function renderText(): string {
+      const lines: string[] = [];
 
-    // Grouped by diagnostic concern; the immutable annotation on Indexing tells
-    // users which settings require recreating the knowledge base
-    emitBare("Basic:");
-    emitBare(formatField("id", row.id));
-    emitBare(formatField("name", row.name));
-    emitBare(formatField("description", row.description));
-    emitBare(formatField("dataType", row.dataType));
-    emitBare("Indexing:   [immutable — recreate required to change]");
-    emitBare(formatField("embeddingModelName", row.embeddingModelName));
-    emitBare(formatField("embeddingDimension", row.embeddingDimension));
-    emitBare(formatField("chunkSize", row.chunkSize));
-    emitBare(formatField("overlapSize", row.overlapSize));
-    emitBare(formatField("chunkMode", row.chunkMode));
-    emitBare(formatField("separator", row.separator));
-    emitBare("Retrieval:");
-    emitBare(formatField("rerankModelName", row.rerankModelName));
-    emitBare(formatField("rerankMinScore", row.rerankMinScore));
-    emitBare(formatField("rerankTopN", row.rerankTopN));
-    emitBare(formatField("rerankMode", row.rerankMode));
-    emitBare(formatField("enableRewrite", row.enableRewrite));
-    emitBare(formatField("denseSimilarityTopK", row.denseSimilarityTopK));
-    emitBare(formatField("sparseSimilarityTopK", row.sparseSimilarityTopK));
-    emitBare("Data:");
-    emitBare(formatField("sourceType", row.sourceType));
-    emitBare(formatField("connectorId", row.connectorId));
+      // Grouped by diagnostic concern; the immutable annotation on Indexing tells
+      // users which settings require recreating the knowledge base
+      lines.push("Basic:");
+      lines.push(formatField("id", row.id));
+      lines.push(formatField("name", row.name));
+      lines.push(formatField("description", row.description));
+      lines.push(formatField("dataType", row.dataType));
+      lines.push("Indexing:   [immutable — recreate required to change]");
+      lines.push(formatField("embeddingModelName", row.embeddingModelName));
+      lines.push(formatField("embeddingDimension", row.embeddingDimension));
+      lines.push(formatField("chunkSize", row.chunkSize));
+      lines.push(formatField("overlapSize", row.overlapSize));
+      lines.push(formatField("chunkMode", row.chunkMode));
+      lines.push(formatField("separator", row.separator));
+      lines.push("Retrieval:");
+      lines.push(formatField("rerankModelName", row.rerankModelName));
+      lines.push(formatField("rerankMinScore", row.rerankMinScore));
+      lines.push(formatField("rerankTopN", row.rerankTopN));
+      lines.push(formatField("rerankMode", row.rerankMode));
+      lines.push(formatField("enableRewrite", row.enableRewrite));
+      lines.push(formatField("denseSimilarityTopK", row.denseSimilarityTopK));
+      lines.push(formatField("sparseSimilarityTopK", row.sparseSimilarityTopK));
+      lines.push("Data:");
+      lines.push(formatField("sourceType", row.sourceType));
+      lines.push(formatField("connectorId", row.connectorId));
+
+      return lines.join("\n");
+    }
   },
 });

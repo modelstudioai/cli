@@ -8,7 +8,7 @@
 
 ## 当前迁移阶段
 
-公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit、语音热词表 create / update / delete / get / list、speech synthesize / recognize、memory 全部 7 个命令、quota 全部 5 个命令、agents security overview / alerts、monitor 全部 7 个命令、log 全部 14 个命令、usage 全部 6 个命令和 token-plan 全部 5 个命令已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
+公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit、语音热词表 create / update / delete / get / list、speech synthesize / recognize、memory 全部 7 个命令、quota 全部 5 个命令、agents security overview / alerts、monitor 全部 7 个命令、log 全部 14 个命令、usage 全部 6 个命令、token-plan 全部 5 个命令及知识库管理 6 个命令、类目 3 个命令、数据中心文件 3 个命令、数据集合 2 个命令已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
 
 ## 必查清单
 
@@ -44,7 +44,7 @@
 ### C. 后续迁移
 
 - [ ] 按命令完整调用链迁移：业务、middleware、传输日志、轮询/下载、错误出口必须一起核对
-- [ ] 移除 quiet 裁剪/吞结果分支，更新依赖 quiet 提取 ID/path 的示例
+- [ ] 移除 quiet 裁剪/吞结果分支；同步检查测试（含 live 门控用例）、脚本及示例中依赖 quiet 提取 ID/path 的调用方，改为显式 JSON 并读取对应字段
 - [ ] 迁移完后再为相应路径启用直接打印约束，保留协议/原始流等窄例外；不要先全仓禁用旧代码
 
 ### D. 回归测试隔离

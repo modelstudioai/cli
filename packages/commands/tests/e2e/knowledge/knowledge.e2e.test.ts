@@ -1,3 +1,4 @@
+import type { RagIndexListResponse } from "bailian-cli-core";
 import { describe, expect, test } from "vite-plus/test";
 import {
   isDashScopeE2EReady,
@@ -207,9 +208,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge retrieve 参数补全 (liv
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(listRun.exitCode, listRun.stderr).toBe(0);
-    const indexId = listRun.stdout.trim().split("\n")[0];
+    const indexId = parseStdoutJson<RagIndexListResponse>(listRun.stdout).data?.rows?.[0]?.id ?? "";
     if (!indexId) return;
 
     // P6: --rerank-instruct (live)

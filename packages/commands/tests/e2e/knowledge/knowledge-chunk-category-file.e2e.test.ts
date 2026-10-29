@@ -1,3 +1,10 @@
+import type {
+  RagCreateIndexV2Response,
+  RagGetConnectorResponse,
+  RagAddCategoryResponse,
+  RagListCategoryResponse,
+  RagListFileResponse,
+} from "bailian-cli-core";
 // chunk / stats / category / file / collection / import-oss commands: the static
 // group covers help/missing-args/dry-run gotchas per command; the live group runs
 // the full chunk chain (add → list → update → delete) plus category/file read-write chains.
@@ -927,8 +934,13 @@ describe.skipIf(!isKbAdminE2EReady())(
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
-      let connectorId = firstGetRun.exitCode === 0 ? firstGetRun.stdout.trim() : "";
+      let connectorId =
+        firstGetRun.exitCode === 0
+          ? (parseStdoutJson<RagGetConnectorResponse>(firstGetRun.stdout).data?.connectorId ?? "")
+          : "";
 
       if (!connectorId) {
         const createRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
@@ -942,9 +954,12 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(createRun.exitCode, createRun.stderr).toBe(0);
-        connectorId = createRun.stdout.trim();
+        connectorId =
+          parseStdoutJson<RagGetConnectorResponse>(createRun.stdout).data?.connectorId ?? "";
       }
       expect(connectorId).toBeTruthy();
 
@@ -1002,9 +1017,12 @@ describe.skipIf(!isKbAdminE2EReady())(
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(secondPageRun.exitCode, secondPageRun.stderr).toBe(0);
-      const secondCategoryId = secondPageRun.stdout.trim().split("\n")[0];
+      const secondCategoryId = parseStdoutJson<RagListCategoryResponse>(secondPageRun.stdout).data
+        ?.categoryList?.[0]?.categoryId;
       expect(secondCategoryId).toBeTruthy();
       expect(secondCategoryId).not.toBe(firstCategoryId);
     }, 60_000);
@@ -1022,9 +1040,12 @@ describe.skipIf(!isKbAdminE2EReady())(
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(categoryAddRun.exitCode, categoryAddRun.stderr).toBe(0);
-      const categoryId = categoryAddRun.stdout.trim();
+      const categoryId =
+        parseStdoutJson<RagAddCategoryResponse>(categoryAddRun.stdout).data?.categoryId ?? "";
       expect(categoryId).toMatch(/^cate_/);
 
       // category list asserts the new category is found via exact-name filtering
@@ -1038,9 +1059,15 @@ describe.skipIf(!isKbAdminE2EReady())(
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(categoryListRun.exitCode, categoryListRun.stderr).toBe(0);
-      expect(categoryListRun.stdout.trim().split("\n")).toContain(categoryId);
+      expect(
+        (
+          parseStdoutJson<RagListCategoryResponse>(categoryListRun.stdout).data?.categoryList ?? []
+        ).map((category) => category.categoryId),
+      ).toContain(categoryId);
 
       try {
         const fixtureDir = mkdtempSync(join(tmpdir(), "file-chain-e2e-"));
@@ -1072,9 +1099,15 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(fileListRun.exitCode, fileListRun.stderr).toBe(0);
-        expect(fileListRun.stdout.trim().split("\n")).toContain(fileId);
+        expect(
+          (parseStdoutJson<RagListFileResponse>(fileListRun.stdout).data?.fileList ?? []).map(
+            (file) => file.fileId,
+          ),
+        ).toContain(fileId);
 
         const getRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
           "knowledge",
@@ -1110,9 +1143,12 @@ describe.skipIf(!isKbAdminE2EReady())(
           workspaceId,
           "--wait",
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(kbCreateRun.exitCode, kbCreateRun.stderr).toBe(0);
-        const categoryKbId = kbCreateRun.stdout.trim().split("\n")[0]!;
+        const categoryKbId =
+          parseStdoutJson<RagCreateIndexV2Response>(kbCreateRun.stdout).data?.pipelineId ?? "";
         expect(categoryKbId).toBeTruthy();
         const kbDeleteRun = await deleteKbWithRetry(
           (args) => runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, args),
@@ -1144,9 +1180,15 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(postFileListRun.exitCode, postFileListRun.stderr).toBe(0);
-        expect(postFileListRun.stdout.trim()).not.toContain(fileId);
+        expect(
+          (parseStdoutJson<RagListFileResponse>(postFileListRun.stdout).data?.fileList ?? []).map(
+            (file) => file.fileId,
+          ),
+        ).not.toContain(fileId);
       } finally {
         // Clean up the self-created category (doubles as live coverage of category delete)
         const categoryDeleteRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
@@ -1171,9 +1213,16 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(postCategoryListRun.exitCode, postCategoryListRun.stderr).toBe(0);
-        expect(postCategoryListRun.stdout.trim()).not.toContain(categoryId);
+        expect(
+          (
+            parseStdoutJson<RagListCategoryResponse>(postCategoryListRun.stdout).data
+              ?.categoryList ?? []
+          ).map((category) => category.categoryId),
+        ).not.toContain(categoryId);
       }
       // kb create --wait adds a full import phase — generous timeout
     }, 600_000);
@@ -1212,9 +1261,12 @@ describe.skipIf(!isKbAdminE2EReady())(
         workspaceId,
         "--wait",
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(createRun.exitCode, createRun.stderr).toBe(0);
-      const indexId = createRun.stdout.trim().split("\n")[0]!;
+      const indexId =
+        parseStdoutJson<RagCreateIndexV2Response>(createRun.stdout).data?.pipelineId ?? "";
 
       try {
         // add
@@ -1579,9 +1631,12 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(categoryAddRun.exitCode, categoryAddRun.stderr).toBe(0);
-    const categoryId = categoryAddRun.stdout.trim();
+    const categoryId =
+      parseStdoutJson<RagAddCategoryResponse>(categoryAddRun.stdout).data?.categoryId ?? "";
     expect(categoryId).toMatch(/^cate_/);
 
     // ── empty-result contract: a freshly created category has no files —
@@ -1637,8 +1692,14 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
             "--workspace-id",
             workspaceId,
             "--quiet",
+            "--output",
+            "json",
           ]),
-        (run) => run.exitCode === 0 && run.stdout.trim().split("\n").includes(fileId),
+        (run) =>
+          run.exitCode === 0 &&
+          (parseStdoutJson<RagListFileResponse>(run.stdout).data?.fileList ?? [])
+            .map((file) => file.fileId)
+            .includes(fileId),
         { timeoutMs: 60_000, intervalMs: 5_000 },
       );
       expect(
@@ -1658,9 +1719,15 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(fileListByFileIdRun.exitCode, fileListByFileIdRun.stderr).toBe(0);
-      expect(fileListByFileIdRun.stdout.trim().split("\n")).toContain(fileId);
+      expect(
+        (parseStdoutJson<RagListFileResponse>(fileListByFileIdRun.stdout).data?.fileList ?? []).map(
+          (file) => file.fileId,
+        ),
+      ).toContain(fileId);
 
       // ── P2: file list --max-result 1 ──
       const fileListMaxResultRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
@@ -1674,10 +1741,13 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(fileListMaxResultRun.exitCode, fileListMaxResultRun.stderr).toBe(0);
-      const maxResultLines = fileListMaxResultRun.stdout.trim().split("\n").filter(Boolean);
-      expect(maxResultLines.length).toBeLessThanOrEqual(1);
+      const maxResultFiles =
+        parseStdoutJson<RagListFileResponse>(fileListMaxResultRun.stdout).data?.fileList ?? [];
+      expect(maxResultFiles.length).toBeLessThanOrEqual(1);
 
       // ── P2: file list --next-token (if paginated) ──
       const fileListJsonRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
@@ -1710,6 +1780,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(fileListNextTokenRun.exitCode, fileListNextTokenRun.stderr).toBe(0);
       }
@@ -1724,6 +1796,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listByParentRun.exitCode, listByParentRun.stderr).toBe(0);
 
@@ -1739,6 +1813,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listByCollectionRun.exitCode, "不存在的 collection id 应被服务端拒绝").not.toBe(0);
       expect(listByCollectionRun.stderr).toMatch(/Invalid connectorId|InvalidParameter/i);
@@ -1757,9 +1833,12 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         workspaceId,
         "--wait",
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(kbCreateRun.exitCode, kbCreateRun.stderr).toBe(0);
-      indexId = kbCreateRun.stdout.trim().split("\n")[0]!;
+      indexId =
+        parseStdoutJson<RagCreateIndexV2Response>(kbCreateRun.stdout).data?.pipelineId ?? "";
       expect(indexId).toBeTruthy();
 
       try {
@@ -2208,8 +2287,13 @@ describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
-    let connectorId = firstGetRun.exitCode === 0 ? firstGetRun.stdout.trim() : "";
+    let connectorId =
+      firstGetRun.exitCode === 0
+        ? (parseStdoutJson<RagGetConnectorResponse>(firstGetRun.stdout).data?.connectorId ?? "")
+        : "";
 
     if (!connectorId) {
       const createRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
@@ -2229,9 +2313,12 @@ describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(createRun.exitCode, createRun.stderr).toBe(0);
-      connectorId = createRun.stdout.trim();
+      connectorId =
+        parseStdoutJson<RagGetConnectorResponse>(createRun.stdout).data?.connectorId ?? "";
     }
     expect(connectorId).toBeTruthy();
 
@@ -2269,9 +2356,12 @@ describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(categoryAddRun.exitCode, categoryAddRun.stderr).toBe(0);
-    const categoryId = categoryAddRun.stdout.trim();
+    const categoryId =
+      parseStdoutJson<RagAddCategoryResponse>(categoryAddRun.stdout).data?.categoryId ?? "";
     expect(categoryId).toMatch(/^cate_/);
 
     try {
@@ -2308,9 +2398,15 @@ describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(fileListRun.exitCode, fileListRun.stderr).toBe(0);
-        expect(fileListRun.stdout.trim().split("\n")).toContain(fileId);
+        expect(
+          (parseStdoutJson<RagListFileResponse>(fileListRun.stdout).data?.fileList ?? []).map(
+            (file) => file.fileId,
+          ),
+        ).toContain(fileId);
 
         // file get read-back: tags contain "e2e-oss-tag"
         const fileGetRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [

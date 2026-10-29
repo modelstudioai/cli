@@ -120,8 +120,8 @@
 | `--api-key <key>`     | string | DashScope API Key                                           |
 | `--base-url <url>`    | string | API 基地址（一般不需要指定）                                |
 | `--timeout <seconds>` | number | 请求超时秒数                                                |
-| `--quiet`             | switch | 静默模式，只输出关键结果（如 ID 列表）                      |
-| `--verbose`           | switch | 详细模式，打印 HTTP 请求/响应详情到 stderr                  |
+| `--quiet`             | switch | 隐藏过程提示；已迁移命令保留完整结果                        |
+| `--verbose`           | switch | 详细模式，向 stderr 输出诊断摘要                            |
 | `--dry-run`           | switch | 干跑模式，预览将发送的请求结构，不实际调用 API              |
 | `--config <name>`     | string | 使用指定配置 profile 执行命令                               |
 
@@ -131,7 +131,7 @@
 
 - **text 模式**（默认）：人类友好的表格/结构化文本，适合终端查看。不同命令的输出格式见各命令的「输出」部分。
 - **json 模式**（`--output json`）：返回 API 原始 JSON 响应，适合程序化处理和 agent 解析。
-- **quiet 模式**（`--quiet`）：只输出最精简的结果（通常只有 ID），适合管道串联。
+- **quiet 模式**（`--quiet`）：知识库管理、类目、数据中心文件和数据集合命令仅隐藏过程提示，保留完整最终结果。需要 ID 时使用 `--output json` 并读取对应字段；其他命令尚在迁移，行为见各自手册。
 
 ### 危险操作确认
 

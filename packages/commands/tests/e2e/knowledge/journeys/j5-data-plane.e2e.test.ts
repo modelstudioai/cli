@@ -1,3 +1,9 @@
+import type {
+  RagGetConnectorResponse,
+  RagAddCategoryResponse,
+  RagListCategoryResponse,
+  RagListFileResponse,
+} from "bailian-cli-core";
 // J5 data-plane governance: the collection/category/file read-write loop (decoupled from the index plane).
 // collection reuse-or-create (no delete API, fixed-name idempotent) → category add → visible in list
 // → upload a file into the self-created category → file list/get → file delete
@@ -29,8 +35,14 @@ describe.skipIf(!isConnectorE2EReady())("journey J5: 数据面治理 (live, 自�
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
-      let collectionId = collectionGetRun.exitCode === 0 ? collectionGetRun.stdout.trim() : "";
+      let collectionId =
+        collectionGetRun.exitCode === 0
+          ? (parseStdoutJson<RagGetConnectorResponse>(collectionGetRun.stdout).data?.connectorId ??
+            "")
+          : "";
       if (!collectionId) {
         const collectionCreateRun = await reporter.runStep("collection create", JOURNEY_J5_ROUTES, [
           "knowledge",
@@ -43,9 +55,13 @@ describe.skipIf(!isConnectorE2EReady())("journey J5: 数据面治理 (live, 自�
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(collectionCreateRun.exitCode, collectionCreateRun.stderr).toBe(0);
-        collectionId = collectionCreateRun.stdout.trim();
+        collectionId =
+          parseStdoutJson<RagGetConnectorResponse>(collectionCreateRun.stdout).data?.connectorId ??
+          "";
       }
       expect(collectionId).toBeTruthy();
       reporter.trackResource("collection", collectionId, { persistent: true });
@@ -61,9 +77,12 @@ describe.skipIf(!isConnectorE2EReady())("journey J5: 数据面治理 (live, 自�
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(categoryAddRun.exitCode, categoryAddRun.stderr).toBe(0);
-      categoryId = categoryAddRun.stdout.trim();
+      categoryId =
+        parseStdoutJson<RagAddCategoryResponse>(categoryAddRun.stdout).data?.categoryId ?? "";
       expect(categoryId).toMatch(/^cate_/);
       reporter.trackResource("category", categoryId);
 
@@ -76,9 +95,15 @@ describe.skipIf(!isConnectorE2EReady())("journey J5: 数据面治理 (live, 自�
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(categoryListRun.exitCode, categoryListRun.stderr).toBe(0);
-      expect(categoryListRun.stdout.trim().split("\n")).toContain(categoryId);
+      expect(
+        (
+          parseStdoutJson<RagListCategoryResponse>(categoryListRun.stdout).data?.categoryList ?? []
+        ).map((category) => category.categoryId),
+      ).toContain(categoryId);
 
       // 3) Upload a file into the self-created category → file list/get → file delete
       // (only touch self-created artifacts)
@@ -110,9 +135,15 @@ describe.skipIf(!isConnectorE2EReady())("journey J5: 数据面治理 (live, 自�
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(fileListRun.exitCode, fileListRun.stderr).toBe(0);
-      expect(fileListRun.stdout.trim().split("\n")).toContain(fileId);
+      expect(
+        (parseStdoutJson<RagListFileResponse>(fileListRun.stdout).data?.fileList ?? []).map(
+          (file) => file.fileId,
+        ),
+      ).toContain(fileId);
 
       const fileGetRun = await reporter.runStep("file get", JOURNEY_J5_ROUTES, [
         "knowledge",
@@ -193,10 +224,17 @@ describe.skipIf(!isConnectorE2EReady())("journey J5: 数据面治理 (live, 自�
               "--workspace-id",
               workspaceId,
               "--quiet",
+              "--output",
+              "json",
             ],
           );
           if (goneListRun.exitCode === 0) {
-            expect(goneListRun.stdout.trim().split("\n")).not.toContain(categoryId);
+            expect(
+              (
+                parseStdoutJson<RagListCategoryResponse>(goneListRun.stdout).data?.categoryList ??
+                []
+              ).map((category) => category.categoryId),
+            ).not.toContain(categoryId);
           }
         }
       }
