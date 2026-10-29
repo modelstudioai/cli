@@ -12,6 +12,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **ParseX parsing**: Add `bl parsex parse submit/result` for document and audio/video parsing, result queries, and Markdown output.
 - **ParseX field extraction**: Add `bl parsex extract submit/result` to extract fields with a JSON Schema from documents or existing parsing results, including source citations.
+- **Configuration source diagnostics**: Show API key and Base URL sources in `bl config show`, and warn when requests use values from different configuration sources.
+
+### Fixed
+
+- **Workspace API key login**: Fix `bl auth login` rejecting valid workspace API keys on MaaS endpoints.
+- **Login validation errors**: Preserve service and network errors during API key validation instead of reporting every failure as an invalid key.
 
 ## [2.6.2] - 2026-10-28
 
