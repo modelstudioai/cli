@@ -21,8 +21,18 @@ import { SdkMcpAdapter } from "./mcp-sdk.ts";
 
 export interface McpTool {
   name: string;
+  /** Human-readable tool title, when the server declares one. */
+  title?: string;
   description?: string;
   inputSchema?: Record<string, unknown>;
+  /** JSON Schema for the tool output, when the server declares one. */
+  outputSchema?: Record<string, unknown>;
+  /** Server-provided behavioral hints (readOnlyHint, destructiveHint, …). */
+  annotations?: Record<string, unknown>;
+  /** Reserved extension slot, carried verbatim. */
+  _meta?: Record<string, unknown>;
+  /** Further standard fields the SDK validation retains. */
+  [key: string]: unknown;
 }
 
 /**

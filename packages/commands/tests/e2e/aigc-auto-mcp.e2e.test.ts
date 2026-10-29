@@ -418,6 +418,67 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       expect(data.audio_url?.length ?? 0).toBeGreaterThan(0);
       expect(data.voice).toBe("温柔女声");
     }, 180_000);
+
+    test("【auto】image edit 真实经 MCP(bailian_image_edit) 内联本地图并落地", async () => {
+      // Self-contained chain: generate a source image first (local path exercises
+      // the auto-mode base64 data-URI inlining against the live server).
+      const outDir = makeE2eOutputDir("aigc-auto-live-image-edit");
+      const generated = await runCommandE2e(AUTO_ROUTES, [
+        "image",
+        "generate",
+        "--model",
+        "auto",
+        "--prompt",
+        "一个红色圆点，白底",
+        "--out-dir",
+        outDir,
+        "--out-prefix",
+        "e2e-auto-edit-src",
+        "--output",
+        "json",
+      ]);
+      expect(generated.exitCode, generated.stderr).toBe(0);
+      const sourceImage = parseStdoutJson<{ saved?: string[] }>(generated.stdout).saved?.[0];
+      expect(sourceImage).toBeDefined();
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
+        "image",
+        "edit",
+        "--model",
+        "auto",
+        "--image",
+        sourceImage!,
+        "--prompt",
+        "把红色圆点改成蓝色圆点",
+        "--out-dir",
+        outDir,
+        "--out-prefix",
+        "e2e-auto-edit-out",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ saved?: string[]; total?: number }>(stdout);
+      expect(data.saved?.length ?? 0).toBeGreaterThan(0);
+      expect(data.saved?.[0]).toContain("e2e-auto-edit-out");
+    }, 600_000);
+
+    test("【auto】speech recognize 真实经 MCP(bailian_speech_to_text) 转写公网音频", async () => {
+      // The live MCP ASR server only transcribes public http(s) URLs now:
+      // data-URI input returns an empty transcript without error, so the live
+      // case feeds the official sample audio instead of a local file.
+      const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
+        "speech",
+        "recognize",
+        "--model",
+        "auto",
+        "--url",
+        "https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_female2.wav",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      // The auto ASR branch emits bare transcript lines on stdout.
+      expect(stdout).toContain("hello world");
+    }, 300_000);
   },
 );
 

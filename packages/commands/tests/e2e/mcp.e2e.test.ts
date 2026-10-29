@@ -437,4 +437,22 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: mcp (live)", () => {
     expect(data.tools?.length ?? 0).toBeGreaterThan(0);
     expect(data.tools?.some((t) => t.name === "bailian_web_search")).toBe(true);
   }, 60_000);
+
+  test("mcp call 真实调用内置 WebSearch 工具并原样返回 content", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
+      "mcp",
+      "call",
+      "--target",
+      "WebSearch.bailian_web_search",
+      "--query",
+      "阿里云百炼",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ content?: Array<{ type?: string; text?: string }> }>(stdout);
+    expect(data.content?.length ?? 0).toBeGreaterThan(0);
+    expect(data.content?.[0]?.type).toBe("text");
+    expect((data.content?.[0]?.text ?? "").length).toBeGreaterThan(0);
+  }, 120_000);
 });

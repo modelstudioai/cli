@@ -92,4 +92,19 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
     expect(pages.length).toBeGreaterThan(0);
     expect(pages[0]?.url).toBeDefined();
   }, 120_000);
+
+  test("--list-tools 真实拉取 WebSearch MCP 工具列表并正常退出", async () => {
+    // The --list-tools branch opens its own MCP session; a leaked transport
+    // would hang the subprocess, so a clean exit is part of the contract.
+    const { stdout, stderr, exitCode } = await runCommandE2e(SEARCH_WEB_ROUTES, [
+      "search",
+      "web",
+      "--list-tools",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ tools?: Array<{ name?: string }> }>(stdout);
+    expect(data.tools?.some((tool) => tool.name === "bailian_web_search")).toBe(true);
+  }, 60_000);
 });

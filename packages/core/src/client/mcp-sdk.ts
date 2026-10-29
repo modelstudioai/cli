@@ -88,9 +88,14 @@ export interface SdkMcpAdapterOptions {
  * Translate an SDK/transport error into the CLI error contract.
  *
  * - `BailianError` (already ours, produced by the fetch interceptor) passes through.
- * - `McpError`: RequestTimeout → TIMEOUT, ConnectionClosed → NETWORK, otherwise a
- *   server-side JSON-RPC error → GENERAL with the `MCP error (code): message` shape
- *   (message passed through verbatim per AGENTS.md §3).
+ * - `McpError`: SDK-local failures only — the protocol timer (`Request timed
+ *   out` / `Maximum total timeout exceeded`, carrying its payload in `data`) →
+ *   TIMEOUT, and the transport-close rejection (`Connection closed`) → NETWORK.
+ *   A server-side JSON-RPC error reusing those codes (-32000 / -32001) carries
+ *   the server's own message, so it falls through to GENERAL with the
+ *   `MCP error (code): message` shape (message passed through verbatim per
+ *   AGENTS.md §3) — the exit code must not mislead callers into retrying a
+ *   business error as a network/timeout failure.
  * - `StreamableHTTPError` (HTTP status in `.code`) → GENERAL with the
  *   `MCP request failed: <status>` shape so the fallback detectors still match.
  * - `SseError` (classic SSE): when the fetch interceptor captured the failing
@@ -107,10 +112,10 @@ export function mapSdkError(error: unknown, sseGetFailure?: SseGetFailure): unkn
 
   if (error instanceof McpError) {
     const raw = rawMcpMessage(error);
-    if (error.code === ErrorCode.RequestTimeout) {
+    if (error.code === ErrorCode.RequestTimeout && isLocalTimeoutSignature(error, raw)) {
       return new BailianError(raw || "MCP request timed out.", ExitCode.TIMEOUT);
     }
-    if (error.code === ErrorCode.ConnectionClosed) {
+    if (error.code === ErrorCode.ConnectionClosed && raw === LOCAL_CLOSE_MESSAGE) {
       return new BailianError(raw || "MCP connection closed.", ExitCode.NETWORK);
     }
     return new BailianError(`MCP error (${error.code}): ${raw}`, ExitCode.GENERAL);
@@ -147,6 +152,24 @@ export function mapSdkError(error: unknown, sseGetFailure?: SseGetFailure): unkn
 function rawMcpMessage(error: McpError): string {
   const prefix = `MCP error ${error.code}: `;
   return error.message.startsWith(prefix) ? error.message.slice(prefix.length) : error.message;
+}
+
+/** Fixed message of the SDK's transport-close rejection of pending requests. */
+const LOCAL_CLOSE_MESSAGE = "Connection closed";
+
+/**
+ * True when a `RequestTimeout` McpError came from the SDK's own request timer,
+ * not from a server JSON-RPC error response reusing code -32001. The protocol
+ * timer attaches its payload as `data` (`{ timeout }` / `{ maxTotalTimeout, … }`);
+ * the fixed timer messages are matched as a fallback so the contract survives
+ * SDK builds that drop the payload.
+ */
+function isLocalTimeoutSignature(error: McpError, raw: string): boolean {
+  const data = error.data as Record<string, unknown> | undefined;
+  if (data && (typeof data.timeout === "number" || typeof data.maxTotalTimeout === "number")) {
+    return true;
+  }
+  return raw === "Request timed out" || raw === "Maximum total timeout exceeded";
 }
 
 /**
@@ -286,13 +309,11 @@ export class SdkMcpAdapter implements McpConnectedClient {
     const client = await this.requireClient();
     try {
       const result = await client.listTools(undefined, this.requestOptions());
-      return result.tools.map((tool) => ({
-        name: tool.name,
-        ...(tool.description !== undefined ? { description: tool.description } : {}),
-        ...(tool.inputSchema !== undefined
-          ? { inputSchema: tool.inputSchema as Record<string, unknown> }
-          : {}),
-      }));
+      // Returned verbatim (the SDK-validated Tool objects): callers such as
+      // `bl mcp tools --output json` keep every standard field the server
+      // declares (outputSchema / annotations / title / `_meta`, …), matching
+      // the old hand-rolled client's passthrough.
+      return result.tools as McpTool[];
     } catch (error) {
       throw this.mapTransportError(error);
     }

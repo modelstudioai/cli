@@ -148,6 +148,35 @@ test("mapSdkError：超时/连接关闭映射 ExitCode；服务端 JSON-RPC 错�
   expect(mapSdkError(typeError)).toBe(typeError);
 });
 
+test("mapSdkError：服务端 JSON-RPC 错复用 -32000/-32001 仍按 GENERAL 透传，本地计时器错才判 TIMEOUT/NETWORK", () => {
+  // Server-authored messages on the locally-interpreted codes must stay GENERAL
+  // (exit 1) so callers do not retry business errors as network/timeout.
+  const serverClosed = mapSdkError(new McpError(-32000, "session expired"));
+  expect(serverClosed).toBeInstanceOf(BailianError);
+  expect((serverClosed as BailianError).exitCode).toBe(ExitCode.GENERAL);
+  expect((serverClosed as BailianError).message).toBe("MCP error (-32000): session expired");
+
+  const serverTimeout = mapSdkError(new McpError(-32001, "tool execution timed out"));
+  expect((serverTimeout as BailianError).exitCode).toBe(ExitCode.GENERAL);
+  expect((serverTimeout as BailianError).message).toBe(
+    "MCP error (-32001): tool execution timed out",
+  );
+
+  // The SDK protocol timer attaches its payload as `data` — local signature.
+  const timer = mapSdkError(
+    McpError.fromError(ErrorCode.RequestTimeout, "Request timed out", { timeout: 5000 }),
+  );
+  expect((timer as BailianError).exitCode).toBe(ExitCode.TIMEOUT);
+
+  const maxTotal = mapSdkError(
+    McpError.fromError(ErrorCode.RequestTimeout, "Maximum total timeout exceeded", {
+      maxTotalTimeout: 1000,
+      totalElapsed: 1200,
+    }),
+  );
+  expect((maxTotal as BailianError).exitCode).toBe(ExitCode.TIMEOUT);
+});
+
 test("mapSdkError：SseError 结合捕获的 SSE GET 失败重建文案契约；无捕获时原样返回", () => {
   const sseError = new SseError(404, "Non-200 status code (404)", {} as never);
   const failure: SseGetFailure = {
@@ -354,8 +383,12 @@ test("SdkMcpAdapter：listTools 与 callTool 结果映射回 McpTool / McpToolRe
           tools: [
             {
               name: "bailian_image_gen",
+              title: "图片生成",
               description: "生成图片",
               inputSchema: { type: "object", properties: {}, required: ["prompt"] },
+              outputSchema: { type: "object", properties: {} },
+              annotations: { readOnlyHint: true },
+              _meta: { "biz/source": "probe" },
             },
           ],
         }),
@@ -368,6 +401,9 @@ test("SdkMcpAdapter：listTools 与 callTool 结果映射回 McpTool / McpToolRe
             { type: "text", text: JSON.stringify({ results: ["https://x/y.png"] }) },
             { type: "image", data: "AAAA", mimeType: "image/png" },
           ],
+          // The listed tool declares an outputSchema, so the SDK client
+          // validates that the call result carries structuredContent.
+          structuredContent: { results: ["https://x/y.png"] },
           isError: false,
         }),
       );
@@ -388,8 +424,12 @@ test("SdkMcpAdapter：listTools 与 callTool 结果映射回 McpTool / McpToolRe
     expect(tools).toEqual([
       {
         name: "bailian_image_gen",
+        title: "图片生成",
         description: "生成图片",
         inputSchema: { type: "object", properties: {}, required: ["prompt"] },
+        outputSchema: { type: "object", properties: {} },
+        annotations: { readOnlyHint: true },
+        _meta: { "biz/source": "probe" },
       },
     ]);
 
