@@ -5,7 +5,13 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
+import {
+  isKbAdminE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  runCommandInProcess,
+} from "../helpers.ts";
 import { KNOWLEDGE_SERVICE_ROUTES } from "../topic-routes.ts";
 import { pickDifferentAgentModel } from "./verified-models.ts";
 
@@ -83,7 +89,7 @@ describe("e2e: knowledge service list", () => {
   });
 
   test("--dry-run 断言 body agent_scene 与分页走 body", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "list",
@@ -106,7 +112,7 @@ describe("e2e: knowledge service list", () => {
   });
 
   test("--dry-run 断言 --status/--name/--agent-id 的 snake_case body 映射", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "list",
@@ -145,7 +151,7 @@ describe("e2e: knowledge service get / create / copy", () => {
   });
 
   test("get: --dry-run 断言 agent_version 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "get",
@@ -226,7 +232,7 @@ describe("e2e: knowledge service get / create / copy", () => {
   });
 
   test("create: --dry-run + --index-id 断言最简 kb_search_configs", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "create",
@@ -251,7 +257,7 @@ describe("e2e: knowledge service get / create / copy", () => {
   });
 
   test("copy: --dry-run 断言 body agent_id", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "copy",
@@ -414,7 +420,7 @@ describe("e2e: knowledge service update", () => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "svc-update-e2e-"));
     const badJson = join(fixtureDir, "bad.json");
     writeFileSync(badJson, "{not json");
-    const { exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "update",
@@ -430,7 +436,7 @@ describe("e2e: knowledge service update", () => {
   });
 
   test("--dry-run + --version-desc 断言 body 与标量合并说明", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "update",
@@ -475,7 +481,7 @@ describe("e2e: knowledge service deploy / delete (危险)", () => {
   });
 
   test("deploy: --dry-run 断言 body", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "deploy",
@@ -516,7 +522,7 @@ describe("e2e: knowledge service deploy / delete (危险)", () => {
   });
 
   test("delete: --dry-run 断言 body", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "delete",
@@ -1078,4 +1084,23 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
       }
     }
   }, 300_000);
+});
+
+test("create rejects ambiguous configuration sources", async () => {
+  const result = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    "knowledge",
+    "service",
+    "create",
+    "--name",
+    "test",
+    "--scene",
+    "search",
+    "--index-id",
+    "index_test",
+    "--config-file",
+    "not-read.json",
+    "--dry-run",
+  ]);
+  expect(result.exitCode).toBe(2);
+  expect(result.stderr).toContain("either --config-file or --index-id");
 });

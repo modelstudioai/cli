@@ -1,7 +1,9 @@
-import { defineCommand } from "bailian-cli-core";
 import { ansi, displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatDateTime } from "../shared/format.ts";
 import {
+  defineTelemetryCommand,
+  telemetryGatewayPreview,
+  TELEMETRY_SERVICE_STATUS_API,
   ensureTelemetryRegionSupported,
   getTelemetryGroupSwitch,
   getTelemetryServiceStatus,
@@ -56,7 +58,7 @@ function renderStatus(
   return textChunks.join("").replace(/\n$/, "");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show monitoring delivery (Prometheus instance) status",
     "zh-CN": "查看监控数据投递（Prometheus 实例）状态",
@@ -67,6 +69,25 @@ export default defineCommand({
   async run(ctx) {
     const { settings, identity } = ctx;
     const format = settings.output;
+
+    if (settings.dryRun) {
+      ctx.output.result({
+        apis: [
+          "zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus",
+          TELEMETRY_SERVICE_STATUS_API,
+          "zeldaEasy.bailian-telemetry.telemetryGroup.getTelemetryGroupStatus",
+        ],
+        data: {
+          reqDTO: {
+            workspaceId: settings.workspaceId,
+            serviceType: SERVICE_TYPE,
+            telemetryType: MONITOR_GROUP_TYPE,
+          },
+        },
+        ...telemetryGatewayPreview(settings),
+      });
+      return;
+    }
 
     ensureTelemetryRegionSupported(settings);
     // All three lookups are independent reads; fan them out in parallel.

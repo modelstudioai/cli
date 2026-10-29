@@ -11,7 +11,7 @@ const CATEGORY_LIST_FLAGS = {
   collectionId: {
     type: "string",
     valueHint: "<id>",
-    description: { "en-US": "Filter by exact collection ID", "zh-CN": "按数据集合 ID 精确筛选" },
+    description: { "en-US": "Filter by exact collection ID", "zh-CN": "按数据集 ID 精确筛选" },
   },
   parentId: {
     type: "string",

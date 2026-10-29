@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from "vite-plus/test";
 import {
   BailianError,
   buildSettings,
+  httpTransport,
   ExitCode,
   type AnyCommand,
   type LocalizedText,
@@ -19,7 +20,10 @@ const service = {
   instanceStatus: "Ready",
   instanceInfo: { instanceId: "instance-test", instanceUrl: "https://example.com/instance" },
 };
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const mappedAgent = 87654321;
 const entry = {
+  workspaceId: "ws-test",
   modelRequestId: requestId,
   model: "qwen-test",
   startTime: timestamp,
@@ -235,7 +239,8 @@ let cold = false;
 let guardInference = false;
 let pendingFirst = false;
 let originEmpty = false;
-let calls: Array<{ api: string; data: Record<string, unknown> }> = [];
+let calls: Array<{ api: string; data: Record<string, unknown>; switchAgent?: number }> = [];
+const businessCalls = () => calls.filter((call) => call.api !== workspaceApi);
 afterEach(() => {
   vi.restoreAllMocks();
   failure = false;
@@ -291,56 +296,70 @@ async function invoke(
   let authorized = !cold,
     ready = !cold,
     opened = !cold;
-  const client = {
-    baseUrl: "http://127.0.0.1:1",
-    console: async (api: string, data: Record<string, unknown>) => {
-      calls.push({ api, data: structuredClone(data) });
-      if (failure) throw new BailianError("Original gateway failure", ExitCode.GENERAL);
-      if (
-        pendingFirst &&
-        api.endsWith("getModelStatistic") &&
-        calls.filter((call) => call.api === api).length === 1
-      )
-        return { taskId: "async-task" };
-      if (api.includes("getTelemetrySlrStatus")) return { result: authorized };
-      if (api.includes("createTelemetrySlr")) {
-        authorized = true;
-        return {};
-      }
-      if (api.includes("getTelemetryServiceStatus"))
-        return ready
-          ? structuredClone(service)
-          : { openStatus: opened, instanceStatus: "NotExist" };
-      if (api.includes("initCmsService")) {
-        opened = true;
-        return {};
-      }
-      if (api.includes("initTelemetryStoreInstance")) {
-        ready = true;
-        opened = true;
-        return {};
-      }
-      if (api.includes("getTelemetryGroupStatus")) {
-        const reqDTO = data.reqDTO as { telemetryType: string };
-        return {
-          list: [
-            {
-              workspaceId: "ws-test",
-              telemetryStatus:
-                reqDTO.telemetryType === "AuditLog" || guardInference ? "enable" : "disable",
-            },
-          ],
-        };
-      }
-      if (api.includes("countModelLogs")) return { result: 5 };
-      if (api.includes("getModelOriginLog"))
-        return originEmpty
-          ? {}
-          : { originLog: { request: "Request body", response: "Response body" } };
-      if (api.includes("enableTelemetryGroup") || api.includes("disableTelemetryGroup")) return {};
-      return structuredClone(scenario.payload ?? {});
-    },
-  };
+  interface FixtureClient {
+    baseUrl: string;
+    withConsoleSwitchAgent(agent: number): FixtureClient;
+    console(api: string, data: Record<string, unknown>): Promise<unknown>;
+  }
+  function makeClient(switchAgent?: number): FixtureClient {
+    return {
+      withConsoleSwitchAgent: makeClient,
+      baseUrl: "http://127.0.0.1:1",
+      console: async (api: string, data: Record<string, unknown>) => {
+        calls.push({ api, data: structuredClone(data), switchAgent });
+        if (failure) throw new BailianError("Original gateway failure", ExitCode.GENERAL);
+        if (api === workspaceApi)
+          return { data: [{ workspaceId: "ws-test", tenantId: String(mappedAgent) }] };
+        if (
+          pendingFirst &&
+          api.endsWith("getModelStatistic") &&
+          calls.filter((call) => call.api === api).length === 1
+        )
+          return { taskId: "async-task" };
+        if (api.includes("getTelemetrySlrStatus")) return { result: authorized };
+        if (api.includes("createTelemetrySlr")) {
+          authorized = true;
+          return {};
+        }
+        if (api.includes("getTelemetryServiceStatus"))
+          return ready
+            ? structuredClone(service)
+            : { openStatus: opened, instanceStatus: "NotExist" };
+        if (api.includes("initCmsService")) {
+          opened = true;
+          return {};
+        }
+        if (api.includes("initTelemetryStoreInstance")) {
+          ready = true;
+          opened = true;
+          return {};
+        }
+        if (api.includes("getTelemetryGroupStatus")) {
+          const reqDTO = data.reqDTO as { telemetryType: string };
+          return {
+            list: [
+              {
+                workspaceId: "ws-test",
+                telemetryStatus:
+                  reqDTO.telemetryType === "AuditLog" || guardInference ? "enable" : "disable",
+              },
+            ],
+          };
+        }
+        if (scenario.name.endsWith(" count") && api.endsWith("listModelLogs")) {
+          return { list: [], totalCount: 5 };
+        }
+        if (api.includes("getModelOriginLog"))
+          return originEmpty
+            ? {}
+            : { originLog: { request: "Request body", response: "Response body" } };
+        if (api.includes("enableTelemetryGroup") || api.includes("disableTelemetryGroup"))
+          return {};
+        return structuredClone(scenario.payload ?? {});
+      },
+    };
+  }
+  const client = makeClient();
   let exitCode = 0;
   try {
     try {
@@ -379,7 +398,10 @@ test.each(matrix)(
       expect(JSON.parse(result.stdout)).toEqual(scenario.want);
       expect(result.stderr).toBe("");
     } else expect(result.stdout).toContain(scenario.text);
-    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.filter((call) => call.api === workspaceApi)).toHaveLength(1);
+    expect(calls[0]?.switchAgent).toBeUndefined();
+    expect(businessCalls().length).toBeGreaterThan(0);
+    for (const call of businessCalls()) expect(call.switchAgent, call.api).toBe(mappedAgent);
   },
 );
 test.each(cases.filter((scenario) => !scenario.noDryRun))(
@@ -472,8 +494,9 @@ test("console async task IDs are reissued without interim JSON output", async ()
   expect(JSON.parse(result.stdout)).toEqual(scenario.want);
   expect(result.strayOut).toBe("");
   expect(result.strayErr).toBe("");
-  expect(calls).toHaveLength(2);
-  expect(calls[1]!.data.reqDTO).toMatchObject({ asyncTaskId: "async-task" });
+  expect(calls.filter((call) => call.api === workspaceApi)).toHaveLength(1);
+  expect(businessCalls()).toHaveLength(2);
+  expect(businessCalls()[1]!.data.reqDTO).toMatchObject({ asyncTaskId: "async-task" });
 });
 
 test.each([true, false])(
@@ -481,7 +504,7 @@ test.each([true, false])(
   async (success) => {
     const base = cases.find((scenario) => scenario.name === "monitor metrics")!;
     const urls: string[] = [];
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+    vi.spyOn(httpTransport, "fetch").mockImplementation(async (url) => {
       urls.push(typeof url === "string" ? url : url instanceof URL ? url.href : url.url);
       return new Response(JSON.stringify(series), { status: success ? 200 : 503 });
     });
@@ -506,7 +529,7 @@ test.each([true, false])(
 test("audit and inference queries retain different timestamp and filter contracts", async () => {
   const audit = cases.find((scenario) => scenario.name === "log audit list")!;
   await invoke(audit, { format: "json", quiet: true });
-  expect(calls[0]!.data.reqDTO).toMatchObject({
+  expect(businessCalls()[0]!.data.reqDTO).toMatchObject({
     startTime: timestamp,
     needFullContent: false,
     nextToken: "cursor-in",
@@ -514,7 +537,7 @@ test("audit and inference queries retain different timestamp and filter contract
   calls = [];
   const inference = cases.find((scenario) => scenario.name === "log inference list")!;
   await invoke(inference, { format: "json", quiet: true });
-  expect(calls[0]!.data.reqDTO).toMatchObject({
+  expect(businessCalls()[0]!.data.reqDTO).toMatchObject({
     startTime: String(timestamp),
     needFullContent: false,
     statusCodeTypes: ["SUCCESS", "SERVER_ERROR"],

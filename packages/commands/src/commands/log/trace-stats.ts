@@ -1,4 +1,4 @@
-import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import { parseCommaList } from "../shared/params.ts";
@@ -24,8 +24,11 @@ interface TraceStatistic {
 }
 
 function renderStatistics(items: TraceStatistic[]): string {
+  const textChunks: string[] = [];
+
   if (items.length === 0) {
-    return "No trace statistics found in this range.";
+    textChunks.push("No trace statistics found in this range.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   const lines = renderBoxTable({
@@ -41,10 +44,12 @@ function renderStatistics(items: TraceStatistic[]): string {
     ]),
     align: ["left", "right", "right", "right", "right"],
   });
-  return lines.join("\n");
+  for (const line of lines) textChunks.push(line + "\n");
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show per-resource trace statistics (calls, tokens, latency)",
     "zh-CN": "查看调用链维度统计（调用量、Token、延迟）",
@@ -91,7 +96,7 @@ export default defineCommand({
       ctx.output.result({
         api: TRACE_STATISTIC_API,
         data: { reqDTO },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }
@@ -101,7 +106,14 @@ export default defineCommand({
     // Keyed by resource id.
     const items = Object.values(resp) as TraceStatistic[];
 
-    const text = format === "text" ? renderStatistics(items) : undefined;
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
+
+      textChunks.push(renderStatistics(items) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
     ctx.output.result(
       {
         period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },

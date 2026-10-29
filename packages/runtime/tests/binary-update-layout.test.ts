@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readlinkSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -111,9 +112,9 @@ test("resolveBinaryDownloadSpec targets version assets, not latest manifest url"
   const { os, arch } = detectBinaryPlatform();
   const zipName = binaryAssetFileName(version, os, arch);
   const sumsSha = "deadbeef".repeat(8);
-  const previousFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const url = String(input);
+  const previousFetch = httpTransport.fetch;
+  httpTransport.fetch = (async (input: RequestInfo | URL) => {
+    const url = input instanceof Request ? input.url : String(input);
     if (url.endsWith("/SHA256SUMS")) {
       return new Response(`${sumsSha}  ${zipName}\n`, { status: 200 });
     }
@@ -142,7 +143,7 @@ test("resolveBinaryDownloadSpec targets version assets, not latest manifest url"
     expect(spec.url).not.toContain("wrong.zip");
     expect(spec.expectedSha).toBe(sumsSha);
   } finally {
-    globalThis.fetch = previousFetch;
+    httpTransport.fetch = previousFetch;
   }
 });
 

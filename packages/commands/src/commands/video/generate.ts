@@ -200,14 +200,18 @@ export default defineCommand({
       );
     }
 
+    const uploadOptions = flags.prime
+      ? { defaultBaseUrl: () => resolvePrimeEndpoint(ctx, "") }
+      : undefined;
+
     // Auto-upload local image file for i2v
     let resolvedImageUrl: string | undefined;
     if (imageUrl) {
-      resolvedImageUrl = await ctx.client.resolveImageInput(imageUrl, model);
+      resolvedImageUrl = await ctx.client.resolveImageInput(imageUrl, model, uploadOptions);
     }
     let resolvedLastFrameUrl: string | undefined;
     if (lastFrameUrl) {
-      resolvedLastFrameUrl = await ctx.client.resolveImageInput(lastFrameUrl, model);
+      resolvedLastFrameUrl = await ctx.client.resolveImageInput(lastFrameUrl, model, uploadOptions);
     }
 
     // kf2v mode: both --image and --last-frame provided.
@@ -222,7 +226,7 @@ export default defineCommand({
 
     let resolvedFileUrl: string | undefined;
     if (fileUrl) {
-      resolvedFileUrl = await ctx.client.uploadFile(fileUrl, model);
+      resolvedFileUrl = await ctx.client.uploadFile(fileUrl, model, uploadOptions);
     }
 
     const watermark = resolveWatermark(flags.watermark, settings.watermark);

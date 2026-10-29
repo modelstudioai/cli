@@ -1,6 +1,10 @@
 # `bl knowledge` 命令完整用法指南
 
-> `bl knowledge` / `kscli` 知识库 CLI 命令总览，覆盖全部 34 个子命令。完整参数与示例请参阅各子域手册。
+> `bl knowledge` / `kscli` 知识库 CLI 命令总览，覆盖知识库子命令。完整参数与示例请参阅各子域手册。
+
+首次体验请参阅 [init 初始化完整手册](init.md)：包含样例内容、参数、预览与确认、恢复及清理说明。
+
+新增文档命令：[doc sync 目录增量同步](doc.md#doc-sync) · [doc import 已有文件导入](doc.md#doc-import)。
 
 ---
 
@@ -11,13 +15,13 @@
 3. [通用约定](#通用约定)
 4. [典型工作流](#典型工作流)
 5. [命令手册](#命令手册)
-   - [知识库管理](#知识库管理) → [完整手册](knowledge/kb.md)
-   - [文档管理](#文档管理) → [完整手册](knowledge/doc.md)
-   - [检索服务管理](#检索服务管理) → [完整手册](knowledge/service.md)
-   - [Chunk 管理](#chunk-管理) → [完整手册](knowledge/chunk.md)
-   - [数据中心文件管理](#数据中心文件管理) → [完整手册](knowledge/file.md)
-   - [数据中心集合与分类](#数据中心集合与分类) → [完整手册](knowledge/collection-category.md)
-   - [检索与对话](#检索与对话) → [完整手册](knowledge/search-chat.md)
+   - [知识库管理](#知识库管理) → [完整手册](kb.md)
+   - [文档管理](#文档管理) → [完整手册](doc.md)
+   - [检索服务管理](#检索服务管理) → [完整手册](service.md)
+   - [Chunk 管理](#chunk-管理) → [完整手册](chunk.md)
+   - [数据中心文件管理](#数据中心文件管理) → [完整手册](file.md)
+   - [数据中心数据集与分类](#数据中心数据集与分类) → [完整手册](collection-category.md)
+   - [检索与对话](#检索与对话) → [完整手册](search-chat.md)
 6. [常见错误与排查](#常见错误与排查)
 7. [附录：命令速查表](#附录命令速查表)
 
@@ -31,10 +35,10 @@
 - **文档管理**：上传本地文件、从 OSS 批量导入、查看解析状态、删除、打标签
 - **Chunk 级运维**：直接增删改查知识库中的内容切片
 - **检索服务管理**：创建/部署/复制/删除 Q&A 和检索服务（agent），管理 draft 与发布版本
-- **数据中心管理**：文件、集合（connector）、分类的增删查
-- **检索与对话**：语义检索（search）、多轮对话（chat）、兼容旧检索（retrieve）
+- **数据中心管理**：文件、数据集（collection）、分类的增删查
+- **检索与对话**：语义检索（search）、多轮对话（chat）
 
-共 34 个子命令，按功能域分为 7 组。所有命令均使用 DashScope API Key 鉴权。
+命令按功能域分为 7 组。所有命令均使用 DashScope API Key 鉴权。
 
 ---
 
@@ -44,8 +48,8 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                     数据中心 (Data Center)                    │
 │                                                             │
-│  集合 (Collection) ──┬── 分类 (Category) ── 文件 (File)      │
-│                      │   "connector"        可多级嵌套       │
+│  数据集 (Collection) ──┬── 分类 (Category) ── 文件 (File)      │
+│                      │                      可多级嵌套       │
 │                      └── 默认分类                              │
 │                                                             │
 │  文件来源：doc upload(本地上传) / doc import-oss(OSS导入)     │
@@ -90,7 +94,7 @@
 
 ### 鉴权
 
-所有 `bl knowledge` 命令均使用 **DashScope API Key**（Bearer token）鉴权。获取方式：百炼控制台 API Key 页面。
+`bl knowledge` 业务命令使用 **DashScope API Key**（Bearer token）鉴权；`--help` 和 `--introspect` 无需凭证。获取方式：百炼控制台 API Key 页面。
 
 优先级（高 → 低）：
 
@@ -114,16 +118,17 @@
 
 以下参数在所有 `bl knowledge` 子命令中通用，后续命令手册中不再逐条列出：
 
-| 参数                  | 类型   | 说明                                                        |
-| --------------------- | ------ | ----------------------------------------------------------- |
-| `--output <format>`   | string | 输出格式：`text`（默认，人类友好）或 `json`（API 原始响应） |
-| `--api-key <key>`     | string | DashScope API Key                                           |
-| `--base-url <url>`    | string | API 基地址（一般不需要指定）                                |
-| `--timeout <seconds>` | number | 请求超时秒数                                                |
-| `--quiet`             | switch | 隐藏过程提示；已迁移命令保留完整结果                        |
-| `--verbose`           | switch | 详细模式，向 stderr 输出诊断摘要                            |
-| `--dry-run`           | switch | 干跑模式，预览将发送的请求结构，不实际调用 API              |
-| `--config <name>`     | string | 使用指定配置 profile 执行命令                               |
+| 参数                  | 类型   | 说明                                                         |
+| --------------------- | ------ | ------------------------------------------------------------ |
+| `--output <format>`   | string | 输出格式：`text`（默认，人类友好）或 `json`（API 原始响应）  |
+| `--api-key <key>`     | string | DashScope API Key                                            |
+| `--base-url <url>`    | string | API 基地址（一般不需要指定）                                 |
+| `--timeout <seconds>` | number | 请求超时秒数                                                 |
+| `--quiet`             | switch | 隐藏过程提示；已迁移命令保留完整结果                         |
+| `--verbose`           | switch | 详细模式，向 stderr 输出诊断摘要                             |
+| `--dry-run`           | switch | 预览请求或执行计划，不写入；带只读预检的命令可能读取远端资源 |
+| `--introspect`        | switch | 输出当前命令范围的结构化能力说明，无需凭证                   |
+| `--config <name>`     | string | 使用指定配置 profile 执行命令                                |
 
 > **注意**：命令手册中每个命令的参数表只列出该命令**特有**的参数。上述全局参数对所有命令有效。
 
@@ -131,15 +136,44 @@
 
 - **text 模式**（默认）：人类友好的表格/结构化文本，适合终端查看。不同命令的输出格式见各命令的「输出」部分。
 - **json 模式**（`--output json`）：返回 API 原始 JSON 响应，适合程序化处理和 agent 解析。
-- **quiet 模式**（`--quiet`）：知识库管理、类目、数据中心文件和数据集合命令仅隐藏过程提示，保留完整最终结果。需要 ID 时使用 `--output json` 并读取对应字段；其他命令尚在迁移，行为见各自手册。
+- **quiet 模式**（`--quiet`）：已迁移的知识库管理、类目、数据中心文件和数据集合命令仅隐藏过程提示，保留完整最终结果。需要 ID 时使用 `--output json` 并读取对应字段；其余及新增命令尚在迁移，行为见各自手册。
 
 ### 危险操作确认
 
 涉及删除的命令（`kb delete`、`doc delete`、`chunk delete`、`file delete`、`category delete`、`service delete`、`service deploy`）属于高风险操作。未带 `--yes` 时 CLI 不会执行，也不会弹出交互式 Y/N，而是返回 exit code 7 和 `requires_confirmation`；确认后在原命令中添加 `--yes` 重新执行。
 
+直接创建知识库（`bl knowledge create` / `kscli kb create`）无需 `--yes`，不会因缺少确认参数返回退出码 7。计费提示展示在 `--help` 和创建结果中；JSON 结果的 `notices` 包含 `KNOWLEDGE_BILLING` 提示，stderr 也保留费用提醒和已创建资源诊断，`--quiet` 不抑制这些提醒。
+
+`init` 根据只读预检计划判断是否需要新建，涉及新建时仍需要 `--yes`。已授权且范围未改变时无需重复征询，但不能因为存在免费额度就自动确认。
+
 ### Dry-run 模式
 
-`--dry-run` 模式下，命令会输出将发送的 endpoint 和 request body，但**不实际发起网络请求**。部分命令在 dry-run 下仍会执行本地校验（如文件扩展名检查、参数约束检查）。
+普通静态命令的 `--dry-run` 输出请求预览，不发起网络请求，可能执行文件扩展名等本地校验。声明 `preparation: "read-only"` 的命令（如 `init`）会鉴权并读取已有资源以生成真实计划；不修改云端资源或本地恢复记录，也不运行样例检索。不要把所有 dry-run 都当成离线模式。
+
+### 命令能力发现
+
+```bash
+bl --introspect
+bl knowledge --introspect
+bl knowledge init --introspect
+kscli --introspect
+```
+
+分别获取根、分组或叶子范围的单份 JSON，包含真实产品命令路径、双语描述、参数、示例、鉴权域、风险和只读预检标识。它无需凭证，不执行业务请求，也不返回凭证值。当前 `schema_version` 为 1，同版本只做兼容性字段增加；消费者应忽略未知字段，遇到不支持的 schema 版本明确报错。跨参数校验不在 schema 中导出，不能从描述推断结构化默认值。Skill 参数参考与此 schema 使用同一数据源。
+
+### 初始化与持续计费
+
+```bash
+bl knowledge init --workspace-id <workspace-id> --dry-run
+```
+
+查看计划后确认创建及费用，再去掉 `--dry-run` 并添加 `--yes`。初始化会上传样例、创建或复用归属明确的知识库与 beta 检索服务，以检索到样例内容为成功标准；不会自动创建问答服务或发布服务。
+
+知识库从创建成功起持续按时计费。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效，模型调用另计；CLI 不假定账户余额。见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。
+
+初始化成功后，文本输出展示实际样例查询、命中文档名称（服务端提供时）和最多 400 字符的内容摘要。`--output json` 的 `sampleSearch.query` 是实际查询，`sampleSearch.response` 保留该次成功检索的完整响应（包括命中内容、评分和 request_id）；原有 `sampleMatched` 字段保持兼容。展示复用初始化验证中的响应，不额外调用检索接口，也不将检索响应写入恢复记录。
+
+保留返回的 index/agent ID、created/reused 信息和恢复记录。默认记录在 `~/.bailian/knowledge/init/<key>.json`，按 Workspace 和名称自动隔离，可用 `--state-file` 覆盖；在任意目录切回原目标会继续使用对应记录。重复执行先核对已有资源；同名但归属不明或请求结果不确定时不会擅自重建。创建后失败仍会输出已创建资源与计费提醒。按返回的清理动作处理本次新建资源，复用资源不属于默认清理范围；关闭终端不停止计费，成功删除知识库才能停止其规格计费。
 
 ---
 
@@ -152,7 +186,7 @@
 bl knowledge doc upload --file ./docs/intro.md --workspace-id ws-xxx
 # → 返回 file-id
 
-# 2. 用文件创建知识库
+# 2. 用文件创建知识库（无需 --yes，结果包含计费提示）
 bl knowledge create --name my-kb --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx --wait
 # → 返回 index-id (pipelineId) 和导入任务状态
 
@@ -255,7 +289,7 @@ bl knowledge search --query "相关内容" --agent-id aid-xxx --workspace-id ws-
 
 ## 命令手册
 
-以下按功能域分组，覆盖全部 34 个子命令。每个条目包含功能说明、用法签名（kscli 前缀）和详细手册链接。
+以下按功能域分组，覆盖知识库子命令。每个条目包含功能说明、用法签名（kscli 前缀）和详细手册链接。
 
 > 完整参数表、参数约束、输出说明、注意事项与示例请参阅各子域手册。子域手册中的用法签名使用 `bl knowledge` 前缀。
 
@@ -263,7 +297,7 @@ bl knowledge search --query "相关内容" --agent-id aid-xxx --workspace-id ws-
 
 ### 知识库管理
 
-> 📖 [完整手册](knowledge/kb.md) — 6 个命令
+> 📖 [完整手册](kb.md) — 6 个命令
 
 #### `kscli kb list`
 
@@ -273,7 +307,7 @@ bl knowledge search --query "相关内容" --agent-id aid-xxx --workspace-id ws-
 kscli kb list [flags]
 ```
 
-→ [完整参数与示例](knowledge/kb.md#bl-knowledge-list)
+→ [完整参数与示例](kb.md#bl-knowledge-list)
 
 ---
 
@@ -285,7 +319,7 @@ kscli kb list [flags]
 kscli kb info --index-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/kb.md#bl-knowledge-info)
+→ [完整参数与示例](kb.md#bl-knowledge-info)
 
 ---
 
@@ -297,7 +331,7 @@ kscli kb info --index-id <id> [flags]
 kscli kb create --name <text> (--doc-id <id> | --category-id <id>) [flags]
 ```
 
-→ [完整参数与示例](knowledge/kb.md#bl-knowledge-create)
+→ [完整参数与示例](kb.md#bl-knowledge-create)
 
 ---
 
@@ -309,7 +343,7 @@ kscli kb create --name <text> (--doc-id <id> | --category-id <id>) [flags]
 kscli kb update --index-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/kb.md#bl-knowledge-update)
+→ [完整参数与示例](kb.md#bl-knowledge-update)
 
 ---
 
@@ -321,7 +355,7 @@ kscli kb update --index-id <id> [flags]
 kscli kb delete --index-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/kb.md#bl-knowledge-delete)
+→ [完整参数与示例](kb.md#bl-knowledge-delete)
 
 ---
 
@@ -333,13 +367,13 @@ kscli kb delete --index-id <id> [flags]
 kscli kb stats --index-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/kb.md#bl-knowledge-stats)
+→ [完整参数与示例](kb.md#bl-knowledge-stats)
 
 ---
 
 ### 文档管理
 
-> 📖 [完整手册](knowledge/doc.md) — 6 个命令
+> 📖 [完整手册](doc.md) — 6 个命令
 
 #### `kscli doc list`
 
@@ -349,7 +383,7 @@ kscli kb stats --index-id <id> [flags]
 kscli doc list --index-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/doc.md#bl-knowledge-doc-list)
+→ [完整参数与示例](doc.md#bl-knowledge-doc-list)
 
 ---
 
@@ -361,7 +395,7 @@ kscli doc list --index-id <id> [flags]
 kscli doc status --index-id <id> --job-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/doc.md#bl-knowledge-doc-status)
+→ [完整参数与示例](doc.md#bl-knowledge-doc-status)
 
 ---
 
@@ -373,7 +407,7 @@ kscli doc status --index-id <id> --job-id <id> [flags]
 kscli doc upload --file <path> [flags]
 ```
 
-→ [完整参数与示例](knowledge/doc.md#bl-knowledge-doc-upload)
+→ [完整参数与示例](doc.md#bl-knowledge-doc-upload)
 
 ---
 
@@ -385,7 +419,7 @@ kscli doc upload --file <path> [flags]
 kscli doc delete --index-id <id> --doc-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/doc.md#bl-knowledge-doc-delete)
+→ [完整参数与示例](doc.md#bl-knowledge-doc-delete)
 
 ---
 
@@ -397,7 +431,7 @@ kscli doc delete --index-id <id> --doc-id <id> [flags]
 kscli doc tag --doc-id <id> --tag <text> [flags]
 ```
 
-→ [完整参数与示例](knowledge/doc.md#bl-knowledge-doc-tag)
+→ [完整参数与示例](doc.md#bl-knowledge-doc-tag)
 
 ---
 
@@ -409,13 +443,13 @@ kscli doc tag --doc-id <id> --tag <text> [flags]
 kscli doc import-oss --bucket <name> --region <id> --oss-key <key> [flags]
 ```
 
-→ [完整参数与示例](knowledge/doc.md#bl-knowledge-doc-import-oss)
+→ [完整参数与示例](doc.md#bl-knowledge-doc-import-oss)
 
 ---
 
 ### 检索服务管理
 
-> 📖 [完整手册](knowledge/service.md) — 7 个命令
+> 📖 [完整手册](service.md) — 7 个命令
 
 #### `kscli service list`
 
@@ -425,7 +459,7 @@ kscli doc import-oss --bucket <name> --region <id> --oss-key <key> [flags]
 kscli service list --scene <chat|search> [flags]
 ```
 
-→ [完整参数与示例](knowledge/service.md#bl-knowledge-service-list)
+→ [完整参数与示例](service.md#bl-knowledge-service-list)
 
 ---
 
@@ -437,7 +471,7 @@ kscli service list --scene <chat|search> [flags]
 kscli service get --agent-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/service.md#bl-knowledge-service-get)
+→ [完整参数与示例](service.md#bl-knowledge-service-get)
 
 ---
 
@@ -449,7 +483,7 @@ kscli service get --agent-id <id> [flags]
 kscli service create --name <text> --scene <chat|search> [flags]
 ```
 
-→ [完整参数与示例](knowledge/service.md#bl-knowledge-service-create)
+→ [完整参数与示例](service.md#bl-knowledge-service-create)
 
 ---
 
@@ -461,7 +495,7 @@ kscli service create --name <text> --scene <chat|search> [flags]
 kscli service update --agent-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/service.md#bl-knowledge-service-update)
+→ [完整参数与示例](service.md#bl-knowledge-service-update)
 
 ---
 
@@ -473,7 +507,7 @@ kscli service update --agent-id <id> [flags]
 kscli service deploy --agent-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/service.md#bl-knowledge-service-deploy)
+→ [完整参数与示例](service.md#bl-knowledge-service-deploy)
 
 ---
 
@@ -485,7 +519,7 @@ kscli service deploy --agent-id <id> [flags]
 kscli service delete --agent-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/service.md#bl-knowledge-service-delete)
+→ [完整参数与示例](service.md#bl-knowledge-service-delete)
 
 ---
 
@@ -497,13 +531,13 @@ kscli service delete --agent-id <id> [flags]
 kscli service copy --agent-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/service.md#bl-knowledge-service-copy)
+→ [完整参数与示例](service.md#bl-knowledge-service-copy)
 
 ---
 
 ### Chunk 管理
 
-> 📖 [完整手册](knowledge/chunk.md) — 4 个命令
+> 📖 [完整手册](chunk.md) — 4 个命令
 
 #### `kscli chunk add`
 
@@ -513,7 +547,7 @@ kscli service copy --agent-id <id> [flags]
 kscli chunk add --index-id <id> (--content <text> | --field <k=v>) [flags]
 ```
 
-→ [完整参数与示例](knowledge/chunk.md#bl-knowledge-chunk-add)
+→ [完整参数与示例](chunk.md#bl-knowledge-chunk-add)
 
 ---
 
@@ -525,7 +559,7 @@ kscli chunk add --index-id <id> (--content <text> | --field <k=v>) [flags]
 kscli chunk list --index-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/chunk.md#bl-knowledge-chunk-list)
+→ [完整参数与示例](chunk.md#bl-knowledge-chunk-list)
 
 ---
 
@@ -537,7 +571,7 @@ kscli chunk list --index-id <id> [flags]
 kscli chunk update --index-id <id> --chunk-id <id> --doc-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/chunk.md#bl-knowledge-chunk-update)
+→ [完整参数与示例](chunk.md#bl-knowledge-chunk-update)
 
 ---
 
@@ -549,13 +583,13 @@ kscli chunk update --index-id <id> --chunk-id <id> --doc-id <id> [flags]
 kscli chunk delete --index-id <id> --chunk-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/chunk.md#bl-knowledge-chunk-delete)
+→ [完整参数与示例](chunk.md#bl-knowledge-chunk-delete)
 
 ---
 
 ### 数据中心文件管理
 
-> 📖 [完整手册](knowledge/file.md) — 3 个命令
+> 📖 [完整手册](file.md) — 3 个命令
 
 #### `kscli file list`
 
@@ -565,7 +599,7 @@ kscli chunk delete --index-id <id> --chunk-id <id> [flags]
 kscli file list --category-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/file.md#bl-knowledge-file-list)
+→ [完整参数与示例](file.md#bl-knowledge-file-list)
 
 ---
 
@@ -577,7 +611,7 @@ kscli file list --category-id <id> [flags]
 kscli file get --file-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/file.md#bl-knowledge-file-get)
+→ [完整参数与示例](file.md#bl-knowledge-file-get)
 
 ---
 
@@ -589,35 +623,35 @@ kscli file get --file-id <id> [flags]
 kscli file delete --file-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/file.md#bl-knowledge-file-delete)
+→ [完整参数与示例](file.md#bl-knowledge-file-delete)
 
 ---
 
-### 数据中心集合与分类
+### 数据中心数据集与分类
 
-> 📖 [完整手册](knowledge/collection-category.md) — 5 个命令
+> 📖 [完整手册](collection-category.md) — 5 个命令
 
 #### `kscli collection create`
 
-创建 FILE 数据集合。
+创建 FILE 数据集。
 
 ```bash
 kscli collection create --name <text> --description <text> [flags]
 ```
 
-→ [完整参数与示例](knowledge/collection-category.md#bl-knowledge-collection-create)
+→ [完整参数与示例](collection-category.md#bl-knowledge-collection-create)
 
 ---
 
 #### `kscli collection get`
 
-查看数据集合详情。
+查看数据集详情。
 
 ```bash
 kscli collection get (--collection-id <id> | --name <text>) [flags]
 ```
 
-→ [完整参数与示例](knowledge/collection-category.md#bl-knowledge-collection-get)
+→ [完整参数与示例](collection-category.md#bl-knowledge-collection-get)
 
 ---
 
@@ -629,7 +663,7 @@ kscli collection get (--collection-id <id> | --name <text>) [flags]
 kscli category list [flags]
 ```
 
-→ [完整参数与示例](knowledge/collection-category.md#bl-knowledge-category-list)
+→ [完整参数与示例](collection-category.md#bl-knowledge-category-list)
 
 ---
 
@@ -641,7 +675,7 @@ kscli category list [flags]
 kscli category add --name <text> [flags]
 ```
 
-→ [完整参数与示例](knowledge/collection-category.md#bl-knowledge-category-add)
+→ [完整参数与示例](collection-category.md#bl-knowledge-category-add)
 
 ---
 
@@ -653,25 +687,13 @@ kscli category add --name <text> [flags]
 kscli category delete --category-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/collection-category.md#bl-knowledge-category-delete)
+→ [完整参数与示例](collection-category.md#bl-knowledge-category-delete)
 
 ---
 
 ### 检索与对话
 
-> 📖 [完整手册](knowledge/search-chat.md) — 3 个命令
-
-#### `kscli retrieve`
-
-从知识库检索（已废弃，请用 `search` 替代）。
-
-```bash
-kscli retrieve --index-id <id> --query <text> [flags]
-```
-
-→ [完整参数与示例](knowledge/search-chat.md#bl-knowledge-retrieve)
-
----
+> 📖 [完整手册](search-chat.md) — 2 个命令
 
 #### `kscli search`
 
@@ -681,7 +703,7 @@ kscli retrieve --index-id <id> --query <text> [flags]
 kscli search --query <text> --agent-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/search-chat.md#bl-knowledge-search)
+→ [完整参数与示例](search-chat.md#bl-knowledge-search)
 
 ---
 
@@ -693,7 +715,7 @@ kscli search --query <text> --agent-id <id> [flags]
 kscli chat --message <text> --agent-id <id> [flags]
 ```
 
-→ [完整参数与示例](knowledge/search-chat.md#bl-knowledge-chat)
+→ [完整参数与示例](search-chat.md#bl-knowledge-chat)
 
 ---
 
@@ -742,12 +764,6 @@ bl config set workspace_id ws-xxx
 
 **解决**：始终用 `doc list --quiet` 获取 `doc_id`。
 
-### retrieve 已废弃
-
-**问题**：`retrieve` 命令输出废弃警告。
-
-**解决**：改用 `search` 命令。`search` 通过 `--agent-id` 驱动检索策略，支持多知识库、路由、rerank 等高级特性。`retrieve` 直接操作 `--index-id`，功能受限且不再迭代。
-
 ### OSS 导入权限错误
 
 **报错**：服务端返回权限相关错误。
@@ -772,13 +788,13 @@ bl config set workspace_id ws-xxx
 
 **解决**：通过 `file get` 的 category 字段或 `category list` 获取真实分类 ID。
 
-### 集合无法删除
+### 数据集无法删除
 
 **问题**：没有 `collection delete` 命令。
 
 **原因**：暂不支持通过 CLI 删除。
 
-**解决**：创建集合需谨慎。如需隔离，创建新集合并迁移文件。
+**解决**：创建数据集需谨慎。如需隔离，创建新数据集并迁移文件。
 
 ---
 
@@ -812,11 +828,14 @@ bl config set workspace_id ws-xxx
 | `kscli file list`         | 文件列表     | `--category-id`                                             |
 | `kscli file get`          | 文件详情     | `--file-id`                                                 |
 | `kscli file delete`       | 删除文件     | `--file-id`, `--yes`                                        |
-| `kscli collection create` | 创建集合     | `--name`, `--description`                                   |
-| `kscli collection get`    | 集合详情     | `--collection-id`/`--name`                                  |
+| `kscli collection create` | 创建数据集   | `--name`, `--description`                                   |
+| `kscli collection get`    | 数据集详情   | `--collection-id`/`--name`                                  |
 | `kscli category list`     | 分类列表     | `--collection-id`, `--parent-id`                            |
 | `kscli category add`      | 创建分类     | `--name`, `--parent-id`                                     |
 | `kscli category delete`   | 删除分类     | `--category-id`, `--yes`                                    |
-| `kscli retrieve`          | 检索（废弃） | `--index-id`, `--query`                                     |
 | `kscli search`            | 语义检索     | `--query`, `--agent-id`                                     |
 | `kscli chat`              | RAG 对话     | `--message`, `--agent-id`                                   |
+
+## 音视频升级入口
+
+已有文件接入已有库使用 `bl knowledge doc import --index-id <id> --doc-id <fileId>`，kscli 对应 `kscli doc import`。与 `doc upload`（本地上传）和 `doc import-oss`（OSS 注册）分开；历史 fileId 的发现步骤见 [数据集与分类](collection-category.md#从-collection-查历史-fileid)。媒体接入参数见 [文档管理](doc.md#已有文件导入与音视频接入)，输出合同见 [检索与问答](search-chat.md)。

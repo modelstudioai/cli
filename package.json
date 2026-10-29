@@ -29,7 +29,8 @@
   "dependencies": {},
   "devDependencies": {
     "tsx": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "yaml": "catalog:"
   },
   "engines": {
     "node": "^22.18.0 || >=24.11.0"

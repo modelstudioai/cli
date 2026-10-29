@@ -1,12 +1,68 @@
 # 文档管理命令手册
 
-文档管理覆盖文件上传、OSS 导入、解析状态跟踪、文档删除和标签管理。文档导入知识库后自动解析为 chunk。
+文档管理覆盖目录同步、文件上传、OSS 导入、解析状态跟踪、文档删除和标签管理。文档导入知识库后自动解析为 chunk。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
+> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](knowledge-cli-guide.md#通用约定)。
 
 ---
 
-#### `bl knowledge doc list`
+## 命令目录
+
+- [doc sync](#doc-sync)
+- [doc list](#doc-list)
+- [doc status](#doc-status)
+- [doc upload](#doc-upload)
+- [doc delete](#doc-delete)
+- [doc tag](#doc-tag)
+- [doc import-oss](#doc-import-oss)
+- [doc import](#doc-import)
+
+## doc sync
+
+将本地目录增量同步到已有知识库；`kscli` 的对应路径是 `kscli doc sync`。
+
+```bash
+# 先预览；允许读取远端，不创建状态目录、不上传、不删除
+bl knowledge doc sync --dir ./docs --index-id idx-xxx --dry-run
+
+# 仅新增不要求删除确认；替换或删除会返回确认要求（退出码 7）
+bl knowledge doc sync --dir ./docs --index-id idx-xxx
+
+# 确认预览中的替换范围后执行
+bl knowledge doc sync --dir ./docs --index-id idx-xxx --yes
+
+# 本地删文件默认保留远端；显式删除也先预览
+bl knowledge doc sync --dir ./docs --index-id idx-xxx --delete --dry-run
+bl knowledge doc sync --dir ./docs --index-id idx-xxx --delete --yes
+```
+
+| 参数                        | 说明                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| `--dir <path>`              | 必填，本地文档目录；不跟随符号链接                                            |
+| `--index-id <id>`           | 必填，已有文档知识库 ID                                                       |
+| `--state-file <path>`       | 显式指定状态路径；默认 `<dir>/.bailian/sync/<key>.json`，按知识库 ID 自动隔离 |
+| `--category-id <id>`        | 首次默认解析工作空间默认类目；后续使用状态中绑定的真实类目                    |
+| `--sync-id <uuid>`          | 指定同步集；恢复丢失状态时需提供原 UUID                                       |
+| `--delete`                  | 删除此同步集中本地已移除的索引文档                                            |
+| `--poll-interval <seconds>` | 正数，默认 5 秒                                                               |
+
+每次扫描完整内容哈希，不因大小和修改时间相同而跳过校验。内容未变的已验证文档跳过上传；更新先等待新版就绪，再删除旧索引版本。重命名视为新路径添加与旧路径保留（启用 `--delete` 才删除旧路径）。不支持的格式、音视频、符号链接以及内部目录会列入跳过项；已托管路径变为不支持或不可读时，不将其视为可以删除。
+
+同步仅管理该同步集建立的文档；手工上传和其他同步集文档不会被 `--delete` 清理。源文件始终保留在数据中心。导入可能产生解析、向量化模型费用；删除文档甚至清空文档都不等于删除知识库，不会停止知识库运行时长计费。
+
+默认文件名中的 key 是 `[indexId]` 的 JSON 表示的 SHA-256 摘要，只由知识库 ID 决定。同一文档目录切换 `--index-id` 时自动使用独立状态，切回原 ID 时继续原同步集，无需手动指定 `--state-file`。实际路径显示在预览和执行结果中。当前测试阶段不读取或迁移旧默认路径 `<dir>/.bailian/sync-state.json`。
+
+保留状态文件；CI 中将它作为持久数据保存，并为同一个同步集配置全局串行执行。本地锁不能防止不同机器同时写入。路径按知识库 ID 选择，记录内容仍校验 API 地址、工作空间、知识库、类目和同步集，不应复制到其他目标使用。显式 `--state-file` 优先于自动路径，并保留这些校验。
+
+状态丢失后，显式提供原 `--sync-id` 才尝试恢复当前仍存在的本地路径。只有唯一的远端路径标签匹配才恢复关联，并经确认重新上传，以重新建立内容验证；不会把远端 MD5 当成完整内容证明。远端无法还原路径的文档作为 orphan 保留，不自动删除。多个版本对应同一路径或导入结果未知时停止，需先核对资源。
+
+执行失败后保留状态文件；下一次运行先恢复未完成操作，恢复完成后重新预览剩余变更。不要删除状态或换名称来绕过未知写请求。确认之后若本地内容、状态版本或远端清单变化，执行停止，需重新预览。
+
+JSON 输出包含 `summary`、`actions`、`skipped`、`unmanaged`、`orphans`、`notices`、`stateFile`；失败时 stderr 的 `KNOWLEDGE_SYNC_INCOMPLETE` 提供最新可读 checkpoint，原错误继续输出并返回非零退出码。中途已完成的项目以 checkpoint 为准，不将部分失败报告为全部成功。
+
+---
+
+## doc list
 
 列出知识库中的文档及其解析/索引状态。
 
@@ -58,7 +114,7 @@ bl knowledge doc list --index-id idx-xxx --page-size 100
 
 ---
 
-#### `bl knowledge doc status`
+## doc status
 
 查看知识库导入任务状态。
 
@@ -111,7 +167,7 @@ bl knowledge doc status --index-id idx-xxx --job-id job-xxx --wait --poll-interv
 
 ---
 
-#### `bl knowledge doc upload`
+## doc upload
 
 上传本地文件或目录到数据中心，可选导入到知识库。
 
@@ -178,7 +234,7 @@ bl knowledge doc upload --file ./docs/ --dry-run --verbose
 
 ---
 
-#### `bl knowledge doc delete`
+## doc delete
 
 从知识库中删除文档及其 chunk。
 
@@ -229,7 +285,7 @@ bl knowledge doc delete --index-id idx-xxx --doc-id doc-a --doc-id doc-b --yes
 
 ---
 
-#### `bl knowledge doc tag`
+## doc tag
 
 批量更新数据中心文件的标签。
 
@@ -283,7 +339,7 @@ bl knowledge doc tag --doc-id file-a --doc-id file-b --tag final --mode overwrit
 
 ---
 
-#### `bl knowledge doc import-oss`
+## doc import-oss
 
 从已授权的 OSS bucket 批量导入文件到数据中心。
 
@@ -341,4 +397,68 @@ bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key doc
 
 ---
 
-← [返回总览](../knowledge-cli-guide.md)
+← [返回总览](knowledge-cli-guide.md)
+
+## doc import
+
+`doc upload` 从本地上传到数据中心，`doc import-oss` 从已授权 OSS 注册到数据中心；两者产生 fileId。新增 `doc import` 把这些已有文件加入已有知识库，不重复上传。kscli 使用相同参数，省略 `knowledge` 前缀。
+
+```bash
+bl knowledge doc import --index-id idx-xxx --doc-id file-xxx --wait
+bl knowledge doc import --index-id idx-xxx --category-id cate-xxx --dry-run
+bl knowledge doc list --index-id idx-xxx --details --page-number 2 --page-size 10
+```
+
+`--doc-id` 与 `--category-id` 可重复但互斥，必须选一种。`--wait` 与 `--poll-interval` 控制等待；返回 ingestionId。等待会汇总任务所有页的文件状态，失败文件不会因不在第一页而漏掉。超时后用原 ingestionId 继续查询，不必重新导入。
+
+普通文档可传 `--chunk-mode h1|h2|h3|h4|h5|length|page|regex`、`--chunk-size`、`--overlap-size`、`--separator`、`--enable-headers true|false`。length 需要 chunk-size，regex 需要 separator；这些不是音视频的按秒切片参数。
+
+### 参数与输出
+
+| 参数               | 类型    | 说明                                                           |
+| ------------------ | ------- | -------------------------------------------------------------- |
+| `--index-id`       | string  | 必填，目标已有知识库 ID。                                      |
+| `--doc-id`         | array   | 数据中心 fileId，可重复；与 category-id 二选一，不是本地路径。 |
+| `--category-id`    | array   | 数据中心分类 ID，可重复；与 doc-id 互斥。                      |
+| `--workspace-id`   | string  | 目标工作空间；也可使用已配置值。                               |
+| `--wait`           | switch  | 等待导入完成；不传时提交任务后返回。                           |
+| `--poll-interval`  | number  | 轮询间隔秒数，默认 5，必须为正数。                             |
+| `--chunk-mode`     | string  | h1/h2/h3/h4/h5/length/page/regex，文档切片模式。               |
+| `--chunk-size`     | number  | 1–6000 的整数；length 模式必填。                               |
+| `--overlap-size`   | number  | 0–1024 的整数。                                                |
+| `--separator`      | string  | regex 模式必填的分隔表达式。                                   |
+| `--enable-headers` | boolean | 显式传 true 或 false，控制标题提取。                           |
+| `--dry-run`        | switch  | 预览请求，不执行导入。                                         |
+
+导入复用已有 fileId，不重新上传文件或创建知识库。任务返回 ingestionId；需要实际完成状态时使用 --wait。已有文件的类型和导入数量由服务端校验，不能用分类个数代替文件数。文档切片参数不是音视频按秒切片参数。
+
+### 不同场景怎么处理
+
+- 已上传单个文件：使用 --doc-id fileId，向已有知识库发起导入。
+- 已上传多个文件：重复传 --doc-id；不要传逗号拼接的 ID 字符串。
+- 按分类导入：使用 --category-id，可重复；不能与 --doc-id 混用。
+- 两种来源均未提供或同时提供：本地校验失败，不发起导入。
+- 等待超时或任务部分失败：保留返回的 ingestionId，通过 doc status 核对；不要直接重复提交。等待会检查所有页的文件状态，不把部分失败报告为全部成功。
+
+```bash
+bl knowledge doc import --index-id idx-xxx --doc-id file-a --doc-id file-b --workspace-id ws-xxx --wait
+kscli doc import --index-id idx-xxx --category-id cate-xxx --workspace-id ws-xxx --dry-run
+bl knowledge doc import --index-id idx-xxx --doc-id file-xxx --chunk-mode length --chunk-size 600 --overlap-size 100 --enable-headers true --dry-run
+```
+
+## 文件详情与音视频接入补充
+
+`doc list --details` 调用文件详情列表接口，文本显示 chunkSize、overlapSize、separator、chunkMode、enableHeaders；JSON 保留原始响应。详情接口每页最多 **10** 条，默认普通列表仍为最多 100 条。
+
+音视频格式：aac、amr、flac、flv、m4a、mp3、mpeg、ogg、opus、wav、webm、wma、mp4、mkv、avi、mov、wmv。后缀不区分大小写，目录扫描包含这些格式。单文件本地上限 **2 GiB = 2,147,483,648 字节**，用户已确认采用二进制单位。原有文档/图片的大小限制保持不变。
+
+```bash
+bl knowledge doc upload --file ./short.mp4 --parser DOCMIND_LLM_VERSION_MEDIA --index-id idx-xxx --wait
+bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key samples/short.mp4 --parser DOCMIND_LLM_VERSION_MEDIA
+```
+
+两个接入命令均支持 `--parser-config-file <JSON对象文件>`，保留未知配置键；OSS 参数应用到本批每个 fileDetails 元素。未指定 parser 时保持原有默认行为。上传使用流式 MD5 和流式 PUT，不把整个媒体加载进内存。
+
+带 `--index-id` 时，一次最多接入 50 个已知本地媒体文件，超限在上传前拒绝，不自动拆批。历史 fileId 和类目的类型/数量由服务端验证；类目个数不等于文件数。OSS 注册仍最多 10 个对象，与知识库导入上限不同。
+
+临时问答附件使用 `doc upload --category-type SESSION_FILE`，租约和注册都传同一类型；不能同时指定 index-id 或自定义 parser/config。会话附件不是长期知识库入库方式。

@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync } from "fs";
 import { basename, join } from "path";
 import { fileURLToPath } from "url";
-import { E2E_RUN_SESSION_FILENAME } from "./global-setup.ts";
+import { RUN_SESSION_FILE } from "./global-setup.ts";
 import { monorepoRoot } from "./monorepo-root.ts";
 import type { RunCliResult } from "./run-subprocess.ts";
 
@@ -9,7 +9,7 @@ let e2eOutputSessionId: string | undefined;
 
 function readE2eRunSessionFromOutputDir(): string | undefined {
   try {
-    const p = join(monorepoRoot(), "test", "output", E2E_RUN_SESSION_FILENAME);
+    const p = join(monorepoRoot(), "test", "output", RUN_SESSION_FILE);
     const t = readFileSync(p, "utf8").trim();
     return t.length > 0 ? t : undefined;
   } catch {

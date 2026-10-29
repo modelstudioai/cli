@@ -1,70 +1,122 @@
-import { defineCommand, memoryListPath, type MemoryNodeListResponse } from "bailian-cli-core";
+import {
+  defineCommand,
+  memoryEndpoint,
+  memoryListPath,
+  type FlagsDef,
+  type MemoryNodeListResponse,
+} from "bailian-cli-core";
+import { buildQuery } from "../shared/params.ts";
+import {
+  MEMORY_LIBRARY_FLAG,
+  MEMORY_WORKSPACE_NOTE,
+  PROJECT_ID_FLAG,
+  WORKSPACE_FLAG,
+  checkMemoryScopeLengths,
+  resolveWorkspaceId,
+} from "./shared.ts";
+
+const LIST_FLAGS = {
+  userId: {
+    type: "string",
+    valueHint: "<id>",
+    description: {
+      "en-US": "Memory entity ID that owns the memory (required)",
+      "zh-CN": "记忆实体 ID，标识记忆归属对象（必填）",
+    },
+    required: true,
+  },
+  pageSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Results per page (default: 10)", "zh-CN": "每页结果数（默认：10）" },
+  },
+  page: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+  },
+  ...PROJECT_ID_FLAG,
+  ...MEMORY_LIBRARY_FLAG,
+  ...WORKSPACE_FLAG,
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: { "en-US": "List memory nodes for a user", "zh-CN": "列出用户的记忆节点" },
   auth: "apiKey",
   usageArgs: "--user-id <id> [flags]",
-  flags: {
-    userId: {
-      type: "string",
-      valueHint: "<id>",
-      description: { "en-US": "User ID (required)", "zh-CN": "用户 ID（必填）" },
-      required: true,
+  flags: LIST_FLAGS,
+  notes: [
+    MEMORY_WORKSPACE_NOTE,
+    {
+      "en-US":
+        "Without --project-id, only the default rule is listed; other observation and skill projects require their project ID.",
+      "zh-CN":
+        "不传 --project-id 只查询默认规则；其他 observation 和 skill 项目需指定对应项目 ID。",
     },
-    pageSize: {
-      type: "number",
-      valueHint: "<n>",
-      description: { "en-US": "Results per page (default: 10)", "zh-CN": "每页结果数（默认：10）" },
-    },
-    page: {
-      type: "number",
-      valueHint: "<n>",
-      description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
-    },
-    memoryLibraryId: {
-      type: "string",
-      valueHint: "<id>",
-      description: { "en-US": "Memory library ID", "zh-CN": "记忆库 ID" },
-    },
+  ],
+  exampleArgs: [
+    "--user-id user1 --workspace-id ws_xxx",
+    "--user-id user1 --page-size 20 --page 2",
+    "--user-id user1 --library-id lib_xxx --output json",
+  ],
+  validate: (flags) => {
+    const scopeError = checkMemoryScopeLengths(flags);
+    if (scopeError) return scopeError;
+    if (flags.page !== undefined && flags.page < 1) return "--page must be at least 1.";
+    if (flags.pageSize !== undefined && flags.pageSize < 1)
+      return "--page-size must be at least 1.";
+    return undefined;
   },
-  exampleArgs: ["--user-id user1", "--user-id user1 --page-size 20 --page 2"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const userId = flags.userId;
 
-    const params = new URLSearchParams();
-    params.set("user_id", userId);
-    if (flags.pageSize !== undefined) params.set("page_size", String(flags.pageSize));
-    if (flags.page !== undefined) params.set("page_num", String(flags.page));
-    if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
-
-    const path = `${memoryListPath()}?${params.toString()}`;
+    const format = settings.output;
+    const url =
+      memoryEndpoint(resolveWorkspaceId(ctx), memoryListPath()) +
+      buildQuery({
+        user_id: flags.userId,
+        page_size: flags.pageSize,
+        page_num: flags.page,
+        project_id: flags.projectId,
+        memory_library_id: flags.libraryId,
+      });
 
     if (settings.dryRun) {
-      ctx.output.result({ endpoint: ctx.client.url(path), method: "GET" });
+      ctx.output.result({ endpoint: url, method: "GET" });
       return;
     }
 
     const response = await ctx.client.requestJson<MemoryNodeListResponse>({
-      path,
+      path: url,
       method: "GET",
     });
 
-    let text: string | undefined;
-    if (settings.output === "text") {
-      const lines = response.memory_nodes?.length
-        ? response.memory_nodes.map((node) => `[${node.memory_node_id}] ${node.content}`)
-        : [ctx.localize({ "en-US": "No memory nodes found.", "zh-CN": "未找到记忆节点。" })];
-      if (response.memory_nodes?.length && response.total !== undefined) {
+    ctx.output.result(response, format === "text" ? { text: renderText0() } : undefined);
+    function renderText0(): string {
+      const lines: string[] = [];
+      if (!response.memory_nodes || response.memory_nodes.length === 0) {
         lines.push(
-          ctx.localize({
-            "en-US": `\nTotal: ${response.total}`,
-            "zh-CN": `\n总计：${response.total}`,
-          }),
+          ctx.localize({ "en-US": "No memory nodes found.", "zh-CN": "未找到记忆节点。" }),
         );
+      } else {
+        for (const node of response.memory_nodes) {
+          const typePrefix = node.memory_type ? `[${node.memory_type}] ` : "";
+          lines.push(`${typePrefix}[${node.memory_node_id}] ${node.content}`);
+          if (node.meta_data && Object.keys(node.meta_data).length > 0) {
+            lines.push(`  meta: ${JSON.stringify(node.meta_data)}`);
+          }
+        }
+        if (response.total !== undefined) {
+          lines.push(
+            ctx.localize({
+              "en-US": `\nTotal: ${response.total}`,
+              "zh-CN": `\n总计：${response.total}`,
+            }),
+          );
+        }
       }
-      text = lines.join("\n");
+
+      return lines.join("\n");
     }
-    ctx.output.result(response, { text });
   },
 });

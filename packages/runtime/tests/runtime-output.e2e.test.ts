@@ -11,7 +11,13 @@ const main = join(runtimeRoot, "tests/harness/output-main.ts");
 
 async function invoke(
   args: string[],
-  options: { output?: string; corrupt?: boolean; proxy?: string; verbose?: "0" | "1" } = {},
+  options: {
+    output?: string;
+    envOutput?: string;
+    corrupt?: boolean;
+    proxy?: string;
+    verbose?: "0" | "1";
+  } = {},
 ) {
   const configDir = mkdtempSync(join(tmpdir(), "bl-runtime-output-"));
   try {
@@ -29,7 +35,7 @@ async function invoke(
       cwd: runtimeRoot,
       env: {
         BAILIAN_CONFIG_DIR: configDir,
-        DASHSCOPE_OUTPUT: "",
+        DASHSCOPE_OUTPUT: options.envOutput ?? "",
         DASHSCOPE_QUIET: "0",
         DASHSCOPE_VERBOSE: options.verbose ?? "0",
         CI: "1",
@@ -262,3 +268,74 @@ test.each(["shared", "separate", "interrupt", "stdout-error"])(
     }
   },
 );
+
+test.each([
+  { flags: [], envOutput: "", expected: "json" },
+  { flags: ["--output=text"], envOutput: "", expected: "text" },
+  { flags: [], envOutput: "text", expected: "text" },
+  { flags: ["--output=json"], envOutput: "text", expected: "json" },
+])(
+  "command default output resolves before reporter creation: %j",
+  async ({ flags, envOutput, expected }) => {
+    const result = await invoke(["defaultProbe", "--quiet", ...flags], {
+      output: "text",
+      envOutput,
+    });
+    expect(result.exitCode, result.stderr).toBe(0);
+    if (expected === "json") {
+      expect(JSON.parse(result.stdout)).toEqual({ task_id: "task-demo" });
+      expect(diagnostics(result.stderr)).toEqual([
+        { warning: { code: "SKIPPED", message: "Skipped" } },
+      ]);
+    } else {
+      expect(result.stdout).toBe("task-demo\n");
+      expect(result.stderr).toContain("Warning: Skipped");
+    }
+  },
+);
+
+test("command default output also controls terminal error rendering", async () => {
+  const result = await invoke(["defaultFail", "--quiet"], { output: "text" });
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toBe("");
+  expect(diagnostics(result.stderr)).toEqual([
+    { error: expect.objectContaining({ code: 1, message: "Invalid local JSON" }) },
+  ]);
+});
+
+test("command default JSON applies to the single queued corrupt-config warning", async () => {
+  const result = await invoke(["defaultProbe", "--quiet"], { corrupt: true });
+  expect(result.exitCode, result.stderr).toBe(0);
+  expect(JSON.parse(result.stdout)).toEqual({ task_id: "task-demo" });
+  expect(diagnostics(result.stderr).map((record) => record.warning.code)).toEqual([
+    "CONFIG_CORRUPTED",
+    "SKIPPED",
+  ]);
+});
+
+test.each([
+  ["defaultValidate", "--quiet"],
+  ["defaultProbe", "--bad", "--quiet"],
+  ["defaultProbe", "--timeout=0", "--quiet"],
+])("identified command formats early errors and queued warnings together: %j", async (...args) => {
+  const result = await invoke(args, { corrupt: true });
+  expect(result.exitCode).toBe(2);
+  expect(result.stdout).toBe("");
+  const records = diagnostics(result.stderr);
+  expect(records).toHaveLength(2);
+  expect(records[0].warning.code).toBe("CONFIG_CORRUPTED");
+  expect(records[1].error.code).toBe(2);
+});
+
+test.each([
+  ["unknown", "--output=json"],
+  ["--bad", "--output=json"],
+])("unidentified command preserves fallback JSON and queued warning: %j", async (...args) => {
+  const result = await invoke(args, { corrupt: true });
+  expect(result.exitCode).toBe(2);
+  expect(result.stdout).toBe("");
+  const records = diagnostics(result.stderr);
+  expect(records).toHaveLength(2);
+  expect(records[0].warning.code).toBe("CONFIG_CORRUPTED");
+  expect(records[1].error.code).toBe(2);
+});

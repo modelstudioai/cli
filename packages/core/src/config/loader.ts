@@ -268,12 +268,19 @@ export function buildOutputSettings({
   file = {},
 }: Pick<ResolutionSources, "flags" | "env"> & { file?: ConfigFile }): Pick<
   Settings,
-  "output" | "outputExplicit" | "quiet" | "verbose"
+  "output" | "outputExplicit" | "outputSource" | "quiet" | "verbose"
 > {
   const output = flags.output || env.DASHSCOPE_OUTPUT || file.output;
   return {
     output: detectOutputFormat(output),
     outputExplicit: Boolean(output),
+    outputSource: flags.output
+      ? "flag"
+      : env.DASHSCOPE_OUTPUT
+        ? "env"
+        : file.output
+          ? "file"
+          : "default",
     quiet: flags.quiet || env.DASHSCOPE_QUIET === "1",
     verbose: flags.verbose || env.DASHSCOPE_VERBOSE === "1",
   };

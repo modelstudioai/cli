@@ -1,4 +1,4 @@
-import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import {
   buildGroupSwitchReqDTO,
   DISABLE_GROUP_API,
@@ -8,7 +8,7 @@ import {
 /** Delivery switch telemetryType for model monitoring. */
 const MONITOR_GROUP_TYPE = "Monitor";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Disable monitor delivery for all models in the workspace",
     "zh-CN": "关闭当前业务空间全部模型的监控数据投递",
@@ -32,7 +32,7 @@ export default defineCommand({
       ctx.output.result({
         api: DISABLE_GROUP_API,
         data: { reqDTO: buildGroupSwitchReqDTO(settings, MONITOR_GROUP_TYPE) },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }

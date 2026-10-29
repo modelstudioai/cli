@@ -1,15 +1,25 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
+import { createKnowledgeService } from "./operations/service.ts";
+import { parseConfigFile } from "./service-update.ts";
 import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
   detectOutputFormat,
   type FlagsDef,
-  type RagAgentMutationResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_CREATE_FLAGS = {
+  configFile: {
+    type: "string",
+    valueHint: "<path>",
+    description: {
+      "en-US": "Complete agent_config JSON file (excludes --index-id)",
+      "zh-CN": "完整 agent_config JSON 文件（与 --index-id 互斥）",
+    },
+  },
   name: {
     type: "string",
     valueHint: "<text>",
@@ -59,6 +69,12 @@ export default defineCommand({
   flags: SERVICE_CREATE_FLAGS,
   notes: [
     {
+      "en-US":
+        "Rerank options depend on each knowledge base: image/multimedia or visual_perception_qa/basic_multimedia_qa use multimodal models (currently qwen3-vl-rerank). Hybrid rerank uses multimodal options if any bound base requires them. Explicit configs are preserved; the server validates model compatibility.",
+      "zh-CN":
+        "排序模型按库选择：图片/音视频类型或 visual_perception_qa/basic_multimedia_qa 场景使用多模态模型（当前 qwen3-vl-rerank）；混排只要包含这类库也使用多模态候选。显式配置原样保留，模型兼容性由服务端校验。",
+    },
+    {
       "en-US": "Without an explicit configuration the server applies its default agent settings.",
       "zh-CN": "未显式提供配置时，服务端会应用默认 Agent 设置。",
     },
@@ -81,6 +97,14 @@ export default defineCommand({
     "--name my-search --scene search --index-id idx-xxx",
   ],
   validate(flags) {
+    const nonemptyError = validateNonemptyFlags({ name: flags.name });
+    if (nonemptyError) return nonemptyError;
+
+    if (flags.configFile !== undefined && flags.indexId !== undefined)
+      return {
+        "en-US": "Use either --config-file or --index-id.",
+        "zh-CN": "--config-file 与 --index-id 不能同时使用。",
+      };
     if (flags.name.length > 200) return "--name must be at most 200 characters";
     if (flags.scene !== "chat" && flags.scene !== "search") {
       return "--scene must be chat or search";
@@ -102,7 +126,11 @@ export default defineCommand({
       agent_name: flags.name,
       agent_scene: flags.scene,
       ...(flags.description ? { agent_desc: flags.description } : {}),
-      ...(flags.indexId ? { agent_config: { kb_search_configs: [{ id: flags.indexId }] } } : {}),
+      ...(flags.configFile !== undefined
+        ? { agent_config: parseConfigFile(flags.configFile) }
+        : flags.indexId
+          ? { agent_config: { kb_search_configs: [{ id: flags.indexId }] } }
+          : {}),
     };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentCreate);
 
@@ -111,11 +139,7 @@ export default defineCommand({
       return;
     }
 
-    const response = await ctx.client.requestJson<RagAgentMutationResponse>({
-      path: endpoint,
-      method: "POST",
-      body,
-    });
+    const response = await createKnowledgeService(ctx.client, workspaceId, body);
 
     const agentId = agentMutationField(response, "agent_id");
     if (settings.quiet) {

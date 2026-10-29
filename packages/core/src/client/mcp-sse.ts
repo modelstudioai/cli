@@ -1,4 +1,5 @@
 import { debugRequest, debugResponse } from "./diagnostics.ts";
+import { httpTransport } from "./transport.ts";
 /**
  * MCP classic HTTP+SSE client (protocol 2024-11-05 transport).
  *
@@ -136,7 +137,7 @@ export class McpSseClient {
 
     let response: Response;
     try {
-      response = await fetch(this.sseUrl, {
+      response = await httpTransport.fetch(this.sseUrl, {
         method: "GET",
         headers,
         signal: this.abortController.signal,
@@ -344,7 +345,7 @@ export class McpSseClient {
     let res: Response;
     try {
       try {
-        res = await fetch(this.messageUrl, {
+        res = await httpTransport.fetch(this.messageUrl, {
           method: "POST",
           headers,
           body: JSON.stringify(body),

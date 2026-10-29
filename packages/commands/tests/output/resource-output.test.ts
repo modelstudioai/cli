@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import {
   BailianError,
+  httpTransport,
   buildSettings,
   Client,
   ExitCode,
@@ -37,7 +38,13 @@ interface Scenario {
   want: unknown;
   text: string;
 }
-const node = { memory_node_id: "node-test", content: "Hello memory", score: 0.9 };
+const node = {
+  memory_node_id: "node-test",
+  content: "Hello memory",
+  score: 0.9,
+  memory_type: "skill",
+  meta_data: { city: "Shanghai" },
+};
 const limits = {
   model: "qwen-test",
   model_limit: {
@@ -76,18 +83,31 @@ const cases: Scenario[] = [
     command: memoryAdd,
     flags: {
       userId: "user-test",
+      workspaceId: "ws-test",
       content: "Hello",
-      memoryLibraryId: "lib-test",
+      libraryId: "lib-test",
       profileSchema: "schema-test",
+      projectId: ["project-test"],
+      metaData: '{"city":"Shanghai"}',
+      wait: 0,
     },
-    response: { memory_ids: ["node-test"], request_id: "request-test" },
-    want: { memory_ids: ["node-test"], request_id: "request-test" },
-    text: "Memory added. IDs: node-test\n",
+    response: {
+      event_id: "event-test",
+      events: [{ status: "RUNNING" }],
+      request_id: "request-test",
+    },
+    want: { event_id: "event-test", events: [{ status: "RUNNING" }], request_id: "request-test" },
+    text: "Submitted: event event-test (1 task(s) pending).\n",
   },
   {
     name: "memory delete",
     command: memoryDelete,
-    flags: { userId: "user-test", nodeId: "node-test", memoryLibraryId: "lib-test" },
+    flags: {
+      workspaceId: "ws-test",
+      userId: "user-test",
+      nodeId: "node-test",
+      libraryId: "lib-test",
+    },
     response: { request_id: "request-test" },
     want: { request_id: "request-test" },
     text: "Memory node node-test deleted.\n",
@@ -95,27 +115,41 @@ const cases: Scenario[] = [
   {
     name: "memory list",
     command: memoryList,
-    flags: { userId: "user-test", page: 2, pageSize: 3, memoryLibraryId: "lib-test" },
+    flags: {
+      workspaceId: "ws-test",
+      userId: "user-test",
+      page: 2,
+      pageSize: 3,
+      libraryId: "lib-test",
+    },
     response: { memory_nodes: [node], total: 9, request_id: "request-test" },
     want: { memory_nodes: [node], total: 9, request_id: "request-test" },
-    text: "[node-test] Hello memory\n\nTotal: 9\n",
+    text: '[skill] [node-test] Hello memory\n  meta: {"city":"Shanghai"}\n\nTotal: 9\n',
   },
   {
     name: "memory search",
     command: memorySearch,
-    flags: { userId: "user-test", query: "Hello", topK: 3, memoryLibraryId: "lib-test" },
+    flags: {
+      workspaceId: "ws-test",
+      userId: "user-test",
+      query: "Hello",
+      topK: 3,
+      projectIds: ["project-test"],
+      memoryTypes: ["skill"],
+      libraryId: "lib-test",
+    },
     response: { memory_nodes: [node], request_id: "request-test" },
     want: { memory_nodes: [node], request_id: "request-test" },
-    text: "[node-test] Hello memory\n",
+    text: "[skill] [node-test] Hello memory (score 0.9)\n",
   },
   {
     name: "memory update",
     command: memoryUpdate,
     flags: {
-      userId: "user-test",
+      workspaceId: "ws-test",
       nodeId: "node-test",
       content: "New",
-      memoryLibraryId: "lib-test",
+      libraryId: "lib-test",
     },
     response: { request_id: "request-test" },
     want: { request_id: "request-test" },
@@ -124,7 +158,12 @@ const cases: Scenario[] = [
   {
     name: "profile create",
     command: profileCreate,
-    flags: { name: "schema-test", description: "Demo", attributes: '[{"name":"hobby"}]' },
+    flags: {
+      workspaceId: "ws-test",
+      name: "schema-test",
+      description: "Demo",
+      attributes: '[{"name":"hobby"}]',
+    },
     response: { profile_schema_id: "schema-test", request_id: "request-test" },
     want: { profile_schema_id: "schema-test", request_id: "request-test" },
     text: "Profile schema created: schema-test\n",
@@ -132,11 +171,14 @@ const cases: Scenario[] = [
   {
     name: "profile get",
     command: profileGet,
-    flags: { userId: "user-test", schemaId: "schema-test" },
+    flags: { workspaceId: "ws-test", userId: "user-test", schemaId: "schema-test" },
     response: {
       profile: {
         attributes: [
-          { name: "hobby", value: "reading" },
+          {
+            name: "hobby",
+            value_items: [{ item_id: "item-test", value: "reading", status: "active" }],
+          },
           { name: "empty", value: null },
         ],
       },
@@ -145,13 +187,16 @@ const cases: Scenario[] = [
     want: {
       profile: {
         attributes: [
-          { name: "hobby", value: "reading" },
+          {
+            name: "hobby",
+            value_items: [{ item_id: "item-test", value: "reading", status: "active" }],
+          },
           { name: "empty", value: null },
         ],
       },
       request_id: "request-test",
     },
-    text: "hobby: reading\nempty: (empty)\n",
+    text: "hobby: reading (item item-test, active)\nempty: (empty)\n",
   },
   {
     name: "quota check",
@@ -360,6 +405,17 @@ async function invoke(
       total: consoleEmpty ? 0 : 1,
     };
   });
+  let restoreMemoryTransport: (() => void) | undefined;
+  if (scenario.name.startsWith("memory") || scenario.name.startsWith("profile")) {
+    const originalFetch = httpTransport.fetch;
+    const memoryTransport = vi.spyOn(httpTransport, "fetch").mockImplementation((input, init) => {
+      const url = new URL(input instanceof Request ? input.url : input);
+      expect(url.hostname).toBe("ws-test.cn-beijing.maas.aliyuncs.com");
+      expect(url.pathname).toMatch(/^\/api\/v2\/apps\/memory\//);
+      return originalFetch(new URL(url.pathname + url.search, origin), init);
+    });
+    restoreMemoryTransport = () => memoryTransport.mockRestore();
+  }
   let exitCode = 0;
   try {
     try {
@@ -377,6 +433,7 @@ async function invoke(
     return { stdout, stderr, stray, exitCode };
   } finally {
     stdoutSpy.mockRestore();
+    restoreMemoryTransport?.();
   }
 }
 const matrix = cases.flatMap((scenario) =>
@@ -484,6 +541,8 @@ test("memory and quota requests retain their parameters", async () => {
     user_id: "user-test",
     custom_content: "Hello",
     profile_schema: "schema-test",
+    project_id: "project-test",
+    meta_data: { city: "Shanghai" },
     memory_library_id: "lib-test",
   });
   const search = cases[3]!;
@@ -491,9 +550,10 @@ test("memory and quota requests retain their parameters", async () => {
   await invoke(search, { format: "json", quiet: true });
   expect(requests[1]!.body).toEqual({
     user_id: "user-test",
-    query: "Hello",
     messages: [{ role: "user", content: "Hello" }],
     top_k: 3,
+    project_ids: ["project-test"],
+    memory_types: ["skill"],
     memory_library_id: "lib-test",
   });
   const update = cases.find((scenario) => scenario.name === "quota update")!;
@@ -526,13 +586,22 @@ const cliCases = [
     name: "memory list",
     route: "memory list",
     exportName: "memoryList",
-    args: ["--user-id", "user-test"],
+    args: ["--user-id", "user-test", "--workspace-id", "ws-test"],
   },
   {
     name: "memory add",
     route: "memory add",
     exportName: "memoryAdd",
-    args: ["--user-id", "user-test", "--content", "Hello"],
+    args: [
+      "--user-id",
+      "user-test",
+      "--content",
+      "Hello",
+      "--workspace-id",
+      "ws-test",
+      "--wait",
+      "0",
+    ],
   },
   { name: "quota list", route: "quota list", exportName: "quotaList", args: [] },
   {
@@ -571,6 +640,12 @@ test.each(cliCases)("real CLI keeps JSON/env quiet/confirmation for $name", asyn
     [
       "--import",
       import.meta.resolve("tsx"),
+      ...(item.name.startsWith("memory")
+        ? [
+            "--import",
+            fileURLToPath(new URL("../fixtures/memory-loopback-fetch.mjs", import.meta.url)),
+          ]
+        : []),
       fileURLToPath(new URL("../e2e/harness/main.ts", import.meta.url)),
       ...item.route.split(" "),
       ...item.args,
@@ -583,6 +658,7 @@ test.each(cliCases)("real CLI keeps JSON/env quiet/confirmation for $name", asyn
         ...process.env,
         HOME: directory,
         BAILIAN_CONFIG_DIR: directory,
+        ...(item.name.startsWith("memory") ? { BAILIAN_MEMORY_TEST_ORIGIN: origin } : {}),
         BAILIAN_E2E_ROUTES: JSON.stringify([{ path: item.route, export: item.exportName }]),
         DASHSCOPE_API_KEY: "test-placeholder",
         DASHSCOPE_BASE_URL: origin,
@@ -633,4 +709,61 @@ test.each(cliCases)("real CLI keeps JSON/env quiet/confirmation for $name", asyn
     expect(records.every((record) => record.debug)).toBe(true);
     expect(requests).toHaveLength(1);
   }
+});
+
+const chineseMemoryCases = [
+  {
+    name: "memory add",
+    flags: { wait: 1 },
+    response: {
+      event_id: "event-test",
+      request_id: "request-test",
+      events: [{ status: "SUCCEEDED" }],
+    },
+    text: "memory: SUCCEEDED（记忆无变更）\n",
+  },
+  {
+    name: "profile get",
+    response: {
+      profile: {
+        attributes: [{ name: "hobby", value_items: [{ item_id: "empty-item", status: "active" }] }],
+      },
+    },
+    text: "hobby: （空） (item empty-item, active)\n",
+  },
+  { name: "memory delete", text: "记忆节点 node-test 已删除。\n" },
+  { name: "memory update", text: "记忆节点 node-test 已更新。\n" },
+  { name: "profile create", text: "画像 Schema 已创建：schema-test\n" },
+  {
+    name: "memory list",
+    text: '[skill] [node-test] Hello memory\n  meta: {"city":"Shanghai"}\n\n总计：9\n',
+  },
+  { name: "memory list", response: {}, text: "未找到记忆节点。\n" },
+  { name: "memory search", response: {}, text: "未找到记忆节点。\n" },
+  { name: "profile get", response: {}, text: "未找到画像数据。\n" },
+  { name: "profile get", text: "hobby: reading (item item-test, active)\nempty: （空）\n" },
+  { name: "memory add", text: "已提交：事件 event-test（1 个任务待完成）。\n" },
+  {
+    name: "memory add",
+    response: { request_id: "request-test" },
+    text: "已提交（未返回事件 ID）。\n",
+  },
+];
+
+test.each(chineseMemoryCases)("Chinese memory output: $name $text", async (item) => {
+  const base = cases.find((candidate) => candidate.name === item.name)!;
+  const scenario = {
+    ...base,
+    flags: { ...base.flags, ...item.flags },
+    response: item.response ?? base.response,
+  };
+  responseBody = scenario.response;
+  const textResult = await invoke(scenario, { format: "text", quiet: true, chinese: true });
+  expect(textResult.exitCode, textResult.stderr).toBe(0);
+  expect(textResult.stdout).toBe(item.text);
+  expect(textResult.stray).toBe("");
+  responseBody = scenario.response;
+  const jsonResult = await invoke(scenario, { format: "json", quiet: true, chinese: true });
+  expect(jsonResult.exitCode, jsonResult.stderr).toBe(0);
+  expect(JSON.parse(jsonResult.stdout)).toEqual(scenario.response);
 });

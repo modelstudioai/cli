@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import {
   BailianError,
   ExitCode,
@@ -143,7 +144,11 @@ async function run(
   settings: Partial<Settings> = {},
 ) {
   const validation = await command.validate?.(flags);
-  if (validation) throw new BailianError(validation, ExitCode.USAGE);
+  if (validation)
+    throw new BailianError(
+      typeof validation === "string" ? validation : validation["en-US"],
+      ExitCode.USAGE,
+    );
   // Only settings/flags/client are exercised. No auth/config store or runtime startup is invoked.
   await command.run({
     identity: {
@@ -238,12 +243,14 @@ beforeEach(() => {
     stderr += String(chunk);
     return true;
   });
-  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Real network is forbidden")));
+  vi.spyOn(httpTransport, "fetch").mockImplementation(
+    vi.fn().mockRejectedValue(new Error("Real network is forbidden")),
+  );
 });
 
 afterEach(() => {
   try {
-    expect(fetch).not.toHaveBeenCalled();
+    expect(httpTransport.fetch).not.toHaveBeenCalled();
     for (const mock of mocks) expect(mock.request).not.toHaveBeenCalled();
     expect(process.listeners("SIGINT")).toEqual(interruptListeners);
     expect(vi.getTimerCount()).toBe(0);

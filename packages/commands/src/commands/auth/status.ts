@@ -10,7 +10,7 @@ export default defineCommand({
   auth: "none",
   exampleArgs: ["", "--output json"],
   async run(ctx) {
-    const { identity, settings } = ctx;
+    const { identity, settings, localize } = ctx;
     const format = detectOutputFormat(settings.output);
     const auth = ctx.authStore.describe();
 
@@ -40,6 +40,12 @@ export default defineCommand({
     const authenticated = !!(apiKey || consoleCred || openapi);
     const configName = settings.configName ?? "default";
     const configFile = ctx.authStore.path;
+    const modelKeyHint = apiKey
+      ? undefined
+      : localize({
+          "en-US": `No model API key is configured. Model commands need: ${identity.binName} auth login --console, or ${identity.binName} auth login --api-key <key>`,
+          "zh-CN": `尚未配置模型 API Key。模型命令需要：${identity.binName} auth login --console，或 ${identity.binName} auth login --api-key <key>`,
+        });
 
     if (!authenticated) {
       emitResult(
@@ -69,6 +75,7 @@ export default defineCommand({
           api_key: apiKey,
           console: consoleCred,
           openapi,
+          ...(modelKeyHint ? { hint: modelKeyHint } : {}),
         },
         format,
       );
@@ -82,6 +89,7 @@ export default defineCommand({
       emitBare(`  API key (model):  ${apiKey.source}  ${apiKey.masked}`);
     } else {
       emitBare("  API key (model):  not configured");
+      if (modelKeyHint) emitBare(`  ${modelKeyHint}`);
     }
     if (consoleCred) {
       emitBare(

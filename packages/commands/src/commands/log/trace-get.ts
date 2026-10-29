@@ -1,9 +1,5 @@
-import {
-  defineCommand,
-  BailianError,
-  ExitCode,
-  effectiveConsoleGatewayConfig,
-} from "bailian-cli-core";
+import { BailianError, ExitCode } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
@@ -41,7 +37,7 @@ function renderSpan(span: TraceEntry, depth: number): string {
   return textChunks.join("").replace(/\n$/, "");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show a single call trace with its span tree",
     "zh-CN": "查看单条调用链详情（含 span 树）",
@@ -90,7 +86,7 @@ export default defineCommand({
       ctx.output.result({
         api: GET_TRACE_API,
         data: { reqDTO },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }

@@ -16,13 +16,13 @@ import { join } from "node:path";
 
 /** The two values this plugin can adopt from the bl CLI credential file. */
 export interface BlCliConfig {
-  /** DashScope api key (`api_key`, top-level default profile). */
+  /** DashScope api key (`api_key`, active profile). */
   apiKey?: string;
   /** Bailian workspace id (`workspace_id`), present when the console login callback carried one. */
   workspaceId?: string;
 }
 
-/** Default location of the bl CLI credential file (default profile at top level). */
+/** Default location of the bl CLI credential file (named profiles are root-level blocks). */
 export function blCliConfigPath(): string {
   return join(homedir(), ".bailian", "config.json");
 }
@@ -38,7 +38,15 @@ export function readBlCliConfig(configPath = blCliConfigPath()): BlCliConfig {
   try {
     const parsed = JSON.parse(readFileSync(configPath, "utf8")) as unknown;
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
-    const record = parsed as Record<string, unknown>;
+    const root = parsed as Record<string, unknown>;
+    const selected =
+      typeof root.active_config === "string" &&
+      root.active_config !== "" &&
+      root.active_config !== "default"
+        ? root[root.active_config]
+        : root;
+    if (typeof selected !== "object" || selected === null || Array.isArray(selected)) return {};
+    const record = selected as Record<string, unknown>;
     const apiKey =
       typeof record.api_key === "string" && record.api_key.trim() !== ""
         ? record.api_key.trim()

@@ -8,6 +8,7 @@ import {
 } from "bailian-cli-core";
 import { createOutputReporter } from "bailian-cli-runtime";
 import * as commands from "bailian-cli-commands";
+import { knowledgeBillingNotice } from "../../src/commands/knowledge/billing.ts";
 
 const now = Date.parse("2026-10-01T00:00:00Z");
 const row = {
@@ -23,6 +24,30 @@ const row = {
 const created = {
   request_id: "request-create",
   data: { pipelineId: "idx-test", ingestionId: "job-test" },
+};
+const createdResult = {
+  ...created,
+  resources: [
+    {
+      indexId: "idx-test",
+      workspaceId: "ws-test",
+      created: true,
+      cleanup: {
+        action: "delete-knowledge-base",
+        indexId: "idx-test",
+        workspaceId: "ws-test",
+        requiresConfirmation: true,
+      },
+    },
+  ],
+  notices: [
+    {
+      code: "KNOWLEDGE_BILLING",
+      remainingAllowance: "unknown",
+      url: knowledgeBillingNotice.url,
+      message: knowledgeBillingNotice.message["en-US"],
+    },
+  ],
 };
 const mutation = { request_id: "request-mutation", data: { success: true } };
 const categories = {
@@ -57,15 +82,15 @@ const cases: Scenario[] = [
     command: commands.knowledgeKbCreate,
     flags: { name: "Demo", description: "Team docs", docId: ["file-test"] },
     response: created,
-    want: created,
+    want: createdResult,
     text: "index_id: idx-test",
   },
   {
     name: "knowledge list",
     command: commands.knowledgeKbList,
     flags: { name: "Demo", pageNumber: 2, pageSize: 3 },
-    response: { request_id: "request-list", data: { rows: [row], total: 7 } },
-    want: { request_id: "request-list", data: { rows: [row], total: 7 } },
+    response: { request_id: "request-list", data: { rows: [row], total_count: 7 } },
+    want: { request_id: "request-list", data: { rows: [row], total_count: 7 } },
     text: "total: 7",
   },
   {
@@ -201,7 +226,11 @@ let requests: Array<{ path: string; method?: string; body?: unknown }> = [];
 let failed = false;
 let jobResponse: unknown = {
   request_id: "request-job",
-  data: { ingestion_status: "COMPLETED", rows: [{ doc_id: "file-test", code: "FINISH" }] },
+  data: {
+    ingestion_status: "COMPLETED",
+    total_count: 1,
+    rows: [{ doc_id: "file-test", code: "FINISH" }],
+  },
 };
 beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(now);
@@ -212,7 +241,11 @@ afterEach(() => {
   failed = false;
   jobResponse = {
     request_id: "request-job",
-    data: { ingestion_status: "COMPLETED", rows: [{ doc_id: "file-test", code: "FINISH" }] },
+    data: {
+      ingestion_status: "COMPLETED",
+      total_count: 1,
+      rows: [{ doc_id: "file-test", code: "FINISH" }],
+    },
   };
 });
 async function invoke(
@@ -311,7 +344,27 @@ test.each(matrix)(
     expect(requests).toHaveLength(1);
     if (display.format === "json") expect(JSON.parse(result.stdout)).toEqual(scenario.want);
     else expect(result.stdout).toContain(scenario.text);
-    expect(result.stderr).toBe("");
+    if (scenario.name === "knowledge create") {
+      if (display.format === "json") {
+        const diagnostics = result.stderr
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line));
+        expect(diagnostics).toHaveLength(2);
+        expect(diagnostics.map((record) => record.warning.code)).toEqual([
+          "KNOWLEDGE_BILLING",
+          "KNOWLEDGE_RESOURCE_CREATED",
+        ]);
+        expect(diagnostics[0].warning.details).toEqual({
+          remainingAllowance: "unknown",
+          url: knowledgeBillingNotice.url,
+        });
+        expect(diagnostics[1].warning.details.resource).toEqual(createdResult.resources[0]);
+      } else {
+        expect(result.stderr).toContain("720");
+        expect(result.stderr).toContain("idx-test");
+      }
+    } else expect(result.stderr).toBe("");
   },
 );
 test.each(cases)("$name dry-run is one JSON document and makes no requests", async (scenario) => {
@@ -326,7 +379,14 @@ test.each(cases)("$name preserves structured service errors", async (scenario) =
   const result = await invoke(scenario, { format: "json", quiet: true, verbose: true });
   expect(result.exitCode).toBe(1);
   expect(result.stdout + result.strayOut + result.strayErr).toBe("");
-  expect(JSON.parse(result.stderr).error).toMatchObject({
+  const errorRecords = result.stderr
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  expect(errorRecords).toHaveLength(scenario.name === "knowledge create" ? 2 : 1);
+  if (scenario.name === "knowledge create")
+    expect(errorRecords[0].warning.code).toBe("KNOWLEDGE_BILLING");
+  expect(errorRecords.at(-1).error).toMatchObject({
     message: "Original knowledge service error",
     request_id: "request-error",
     api_code: "Rejected",
@@ -340,8 +400,14 @@ test.each([false, true])(
       { format: "json", quiet },
     );
     expect(result.exitCode, result.stderr).toBe(0);
-    expect(result.strayOut + result.strayErr + result.stderr).toBe("");
-    expect(JSON.parse(result.stdout)).toEqual({ ...created, final_status: "COMPLETED" });
+    expect(result.strayOut + result.strayErr).toBe("");
+    expect(
+      result.stderr
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line).warning.code),
+    ).toEqual(["KNOWLEDGE_BILLING", "KNOWLEDGE_RESOURCE_CREATED"]);
+    expect(JSON.parse(result.stdout)).toEqual({ ...createdResult, final_status: "COMPLETED" });
     expect(requests).toHaveLength(2);
     expect(new URL(requests[1]!.path).searchParams.get("index_id")).toBe("idx-test");
     expect(new URL(requests[1]!.path).searchParams.get("job_id")).toBe("job-test");
@@ -352,6 +418,7 @@ test("create --wait document failure preserves the service detail and created-in
     request_id: "request-job",
     data: {
       ingestion_status: "COMPLETED",
+      total_count: 1,
       rows: [{ doc_id: "file-test", code: "PARSE_FAILED", message: "Original parse failure" }],
     },
   };
@@ -361,7 +428,13 @@ test("create --wait document failure preserves the service detail and created-in
   );
   expect(result.exitCode).toBe(1);
   expect(result.stdout + result.strayOut + result.strayErr).toBe("");
-  expect(JSON.parse(result.stderr).error).toMatchObject({
+  const diagnostics = result.stderr
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  expect(diagnostics).toHaveLength(3);
+  expect(diagnostics[1].warning.details.resource).toEqual(createdResult.resources[0]);
+  expect(diagnostics[2].error).toMatchObject({
     message: expect.stringContaining("Original parse failure"),
     hint: "Knowledge base created: idx-test",
     request_id: "request-job",
@@ -408,7 +481,7 @@ test.each([1, 6, 9])("empty list $0 keeps its response and pagination in JSON", 
   const scenario = cases[index]!;
   const response = {
     request_id: "request-empty",
-    data: { rows: [], categoryList: [], fileList: [], total: 0, nextToken: "next-empty" },
+    data: { rows: [], categoryList: [], fileList: [], total_count: 0, nextToken: "next-empty" },
   };
   const result = await invoke({ ...scenario, response }, { format: "json", quiet: true });
   expect(result.exitCode, result.stderr).toBe(0);
@@ -446,7 +519,9 @@ test.each([false, true])("waiting progress stays on stderr and follows quiet=%s"
   expect(result.strayOut + result.strayErr).toBe("");
   expect(result.stdout).toContain("status: COMPLETED");
   expect(result.stdout).not.toContain("Polling");
-  if (quiet) expect(result.stderr).toBe("");
+  expect(result.stderr).toContain("idx-test");
+  expect(result.stderr).toContain("720");
+  if (quiet) expect(result.stderr).not.toContain("Status: COMPLETED");
   else expect(result.stderr).toContain("Status: COMPLETED");
 });
 test.each([false, true])("JSON hides the clamped-end info under quiet=%s", async (quiet) => {

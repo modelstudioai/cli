@@ -6,6 +6,7 @@ import {
   DEFAULT_INSTALL_PS1_URL,
   DEFAULT_INSTALL_SCRIPT_URL,
   defineCommand,
+  ExitCode,
   getConfigDir,
   getUpdateInstallMethod,
   type InstallMethod,
@@ -121,8 +122,11 @@ export default defineCommand({
     const targetVersion = pinnedVersion ?? (await resolveLatest(method, npmPackage));
 
     if (!targetVersion) {
-      process.stderr.write(`${color.yellow("Could not determine the latest version.")}\n`);
-      return;
+      throw new BailianError(
+        "Could not determine the latest version.",
+        ExitCode.GENERAL,
+        "Check network access, or pass --to <version>.",
+      );
     }
 
     if (targetVersion === currentVersion) {
@@ -150,14 +154,16 @@ export default defineCommand({
         writeUpdateState(newVer);
         updateAgentSkill(color);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
         const reinstall =
           error instanceof BailianError && error.hint
             ? error.hint.replace(/^Re-run:\s*/i, "")
             : binaryReinstallHint().trim();
-        process.stderr.write(`\nAutomatic binary update failed: ${message}\n`);
-        process.stderr.write("Re-run the install script:\n");
-        process.stderr.write(`  ${reinstall}\n\n`);
+        throw new BailianError(
+          "Automatic binary update failed.",
+          ExitCode.GENERAL,
+          `Re-run the install script:\n  ${reinstall}`,
+          { cause: error },
+        );
       }
       return;
     }
@@ -179,9 +185,13 @@ export default defineCommand({
         process.stderr.write(`\n${color.green("\u2713 Update complete.")}\n`);
       }
       updateAgentSkill(color);
-    } catch {
-      process.stderr.write("\nAutomatic update failed. Please run manually:\n");
-      process.stderr.write(`  ${cmd}\n\n`);
+    } catch (error) {
+      throw new BailianError(
+        "Automatic update failed.",
+        ExitCode.GENERAL,
+        `Please run manually:\n  ${cmd}`,
+        { cause: error },
+      );
     }
   },
 });

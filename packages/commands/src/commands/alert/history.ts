@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { formatDateTime } from "../shared/format.ts";
 import { TELEMETRY_TIME_FLAGS, resolveTimeRange } from "../shared/telemetry.ts";
@@ -30,7 +31,7 @@ function instanceText(item: AlertHistoryItem): string {
   );
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "List model alert history (firing and recovered events)",
     "zh-CN": "查看模型告警历史（告警中与已恢复事件）",
@@ -104,7 +105,7 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
     const { startTime, endTime } = resolveTimeRange(flags);
 
     const reqDTO = {
@@ -126,7 +127,7 @@ export default defineCommand({
         {
           api: LIST_HISTORIES_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

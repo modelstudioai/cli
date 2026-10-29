@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "fs
 import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import { CONFIG_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -39,7 +39,7 @@ describe("e2e: config", () => {
   });
 
   test("config ui --dry-run 打印计划不起服务", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "ui",
       "--dry-run",
@@ -63,11 +63,13 @@ describe("e2e: config", () => {
     const data = parseStdoutJson<{
       config_file?: string;
       base_url?: string;
+      DASHSCOPE_BASE_URL?: string;
       timeout?: number;
       watermark?: boolean;
     }>(stdout);
     expect(data.config_file).toBeDefined();
-    expect(data.base_url).toBeDefined();
+    // 生效 base_url 可能来自文件/默认（base_url）或 env（DASHSCOPE_BASE_URL）
+    expect(data.base_url ?? data.DASHSCOPE_BASE_URL).toBeDefined();
     expect(data.timeout).toBeDefined();
     expect(data.watermark).toBe(true);
   });
@@ -147,6 +149,114 @@ describe("e2e: config", () => {
     }
   });
 
+  test("config show 脱敏 DASHSCOPE_*，JSON 用 active 标出生效层且值保持干净", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-show-env-"));
+    try {
+      writeFileSync(
+        join(configDir, "config.json"),
+        JSON.stringify(
+          {
+            api_key: "sk-file-secret-key",
+            base_url: "https://file.example.com",
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "show", "--output", "json"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "sk-env-secret-key",
+          DASHSCOPE_BASE_URL: "https://env.example.com",
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        api_key?: string;
+        base_url?: string;
+        DASHSCOPE_API_KEY?: string;
+        DASHSCOPE_BASE_URL?: string;
+        active?: { api_key?: string; base_url?: string };
+      }>(stdout);
+      expect(data.DASHSCOPE_API_KEY).toBeDefined();
+      expect(data.DASHSCOPE_API_KEY).not.toContain("sk-env-secret-key");
+      expect(data.DASHSCOPE_API_KEY).not.toMatch(/active/);
+      expect(data.DASHSCOPE_BASE_URL).toBe("https://env.example.com");
+      expect(data.api_key).toBeDefined();
+      expect(data.api_key).not.toMatch(/active/);
+      expect(data.api_key).not.toContain("sk-file-secret-key");
+      expect(data.base_url).toBe("https://file.example.com");
+      expect(data.active).toEqual({ api_key: "env", base_url: "env" });
+      expect(stdout).not.toContain("sk-env-secret-key");
+      expect(stdout).not.toContain("sk-file-secret-key");
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
+  test("config show 在仅有 DASHSCOPE_BASE_URL 时仍输出文件层默认 base_url", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-show-env-base-only-"));
+    try {
+      writeFileSync(
+        join(configDir, "config.json"),
+        JSON.stringify({ api_key: "sk-file" }, null, 2) + "\n",
+      );
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "show", "--output", "json"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "",
+          DASHSCOPE_BASE_URL: "https://env.example.com",
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        base_url?: string;
+        DASHSCOPE_BASE_URL?: string;
+        active?: { api_key?: string; base_url?: string };
+      }>(stdout);
+      expect(data.base_url).toBe("https://dashscope.aliyuncs.com");
+      expect(data.DASHSCOPE_BASE_URL).toBe("https://env.example.com");
+      expect(data.active).toEqual({ api_key: "config", base_url: "env" });
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
+  test("config show 对 DASHSCOPE_BASE_URL 只展示 origin，不泄露 userinfo/query", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-show-env-url-secret-"));
+    const rawEnvBaseUrl = "https://user:pass@example.com/path?token=super-secret#frag";
+    try {
+      writeFileSync(join(configDir, "config.json"), "{}\n");
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "show", "--output", "json"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_BASE_URL: rawEnvBaseUrl,
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        DASHSCOPE_BASE_URL?: string;
+        active?: { base_url?: string };
+      }>(stdout);
+      expect(data.DASHSCOPE_BASE_URL).toBe("https://example.com");
+      expect(data.active?.base_url).toBe("env");
+      expect(stdout).not.toContain("user:pass");
+      expect(stdout).not.toContain("super-secret");
+      expect(stdout).not.toContain(rawEnvBaseUrl);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
   test("config set 缺少 --key / --value 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
@@ -199,7 +309,7 @@ describe("e2e: config", () => {
     try {
       const configPath = join(configDir, "config.json");
       writeFileSync(configPath, JSON.stringify({ dev: { output: "json" } }, null, 2) + "\n");
-      const result = await runCommandE2e(
+      const result = await runCommandInProcess(
         CONFIG_ROUTES,
         ["config", "use", "--name", "dev", "--dry-run", "--output", "json"],
         { BAILIAN_CONFIG_DIR: configDir },
@@ -386,7 +496,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 不落盘（仅输出 would_set）", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -403,7 +513,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持连字符别名 key", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -422,7 +532,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持图生视频默认模型别名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -441,7 +551,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持参考生视频默认模型别名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -460,7 +570,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 展示归一化后的 Base URL", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -477,7 +587,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持 AccessKey 短字段别名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -547,7 +657,7 @@ describe("e2e: config", () => {
   });
 
   test("config agent --key 非法值时报用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(CONFIG_ROUTES, [
       "config",
       "agent",
       "--agent",
@@ -567,7 +677,7 @@ describe("e2e: config", () => {
   test("config agent --key 合法值 --dry-run 解码成功且输出脱敏", async () => {
     const home = mkdtempSync(join(tmpdir(), "bl-config-agent-key-"));
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
         CONFIG_ROUTES,
         [
           "config",
@@ -602,7 +712,7 @@ describe("e2e: config", () => {
   test("config agent --region 转为 base URL，--dry-run 成功", async () => {
     const home = mkdtempSync(join(tmpdir(), "bl-config-agent-region-"));
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
         CONFIG_ROUTES,
         [
           "config",
@@ -686,7 +796,7 @@ describe("e2e: config", () => {
   test("config agent --dry-run 输出脱敏信息且不写盘", async () => {
     const home = mkdtempSync(join(tmpdir(), "bl-config-agent-dry-"));
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
         CONFIG_ROUTES,
         [
           "config",

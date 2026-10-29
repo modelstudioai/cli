@@ -2,7 +2,7 @@
 
 知识库（Knowledge Base / pipeline / index）是 RAG 的核心载体，存储文档解析后的向量索引。本组命令覆盖知识库的创建、查看、更新、删除和监控。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
+> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](knowledge-cli-guide.md#通用约定)。
 
 ---
 
@@ -125,6 +125,8 @@ bl knowledge info --index-id idx-xxx --workspace-id ws-xxx
 
 创建知识库并导入数据中心文件或分类。
 
+**计费提示**：创建成功即开始按运行时长计费，即使不检索也一样。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效；模型调用另计，当前账户剩余额度未核实。见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。可用 `--dry-run` 预览；直接创建无需 `--yes`。创建命令的 `--help` 和创建结果均包含计费提示，JSON 结果通过 `notices` 提供结构化说明。
+
 **用法**
 
 ```bash
@@ -165,19 +167,31 @@ Next: check the import job status, then search against this knowledge base.
 
 quiet 模式：仅隐藏过程提示，保留完整最终结果；程序解析请使用 `--output json`。
 
-json 模式：返回 API 原始响应，包含 `pipelineId`（知识库 ID）和 `ingestionId`（导入任务 ID）。`--wait` 时追加 `final_status` 字段。
+json 模式：保留 API 原始响应，`data` 包含 `pipelineId`（知识库 ID）和 `ingestionId`（导入任务 ID），并追加：
+
+- `notices`：计费提示，包含 `code: "KNOWLEDGE_BILLING"`、本地化 `message`、计费规则 `url` 和 `remainingAllowance: "unknown"`。不代表已查询账户余额。
+- `resources`：本次创建的资源及清理指令。
+- `final_status`：仅在使用 `--wait` 并获得导入终态时返回。
+
+提示不会在 JSON stdout 后追加普通文本；stderr 单独输出诊断信息。text 模式的上述示例仅展示 stdout，计费提示同时显示在 stderr。
 
 **注意事项**
 
 - 结构/存储类型固定为默认文档知识库（非结构化，BUILT_IN 存储）。
 - 返回知识库 ID（`pipelineId`）和初始导入任务 ID（`ingestionId`）。
 - 使用 `doc status` 或 `--wait` 跟踪导入进度。
-- 如果 `--wait` 后部分文档解析失败，CLI 以非零退出码报错，知识库已创建成功的事实会在 hint 中提示。
+- 创建响应返回后立即向 stderr 报告知识库 ID、工作空间与持续计费提醒，quiet 模式也保留；JSON 结果保留 API 响应并追加资源和提醒信息。
+- 当前产品注册了删除命令时，资源中的 `cleanup.command` 给出真实 `bin`、`path` 和 `args`；text 模式显示可复制的指令。指令不自动添加 `--yes`，不存在唯一删除路径时不猜测路径。
+- 如果后续等待失败，命令返回非零退出码，知识库仍可能已创建并持续计费。根据已输出 ID 核对资源，不要盲目重复创建。确认不再需要后，使用 `bl knowledge delete --index-id <index-id> --workspace-id <workspace-id>`（kscli 对应 `kb delete`）清理；确认删除范围后才添加 `--yes`。仅删除文档或检索服务不能停止知识库规格计费。
 
 **示例**
 
 ```bash
-# 从指定文件创建知识库
+# 查看建库帮助中的计费提示
+bl knowledge create --help
+# kscli 对应：kscli kb create --help
+
+# 从指定文件创建知识库，无需 --yes
 bl knowledge create --name demo --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx
 
 # 从分类导入并等待导入完成
@@ -339,4 +353,18 @@ bl knowledge stats --index-id idx-xxx --start 2026-07-30 --end 2026-07-31
 
 ---
 
-← [返回总览](../knowledge-cli-guide.md)
+← [返回总览](knowledge-cli-guide.md)
+
+## 音视频知识库
+
+`create` 新增 `--knowledge-type document|multimedia`、`--knowledge-scene` 和 `--multimodal-embedding-model`。音视频类型固定使用 `basic_multimedia_qa`；未传 scene 时自动填充，显式冲突时本地拒绝。
+
+```sh
+bl knowledge create --name media-demo --description "音视频资料" --doc-id file-example --knowledge-type multimedia
+```
+
+音视频请求默认发送 `embeddingModelName=qwen3-vl-embedding`、`rerankModelName=qwen3-vl-rerank`、`rerankMode=similar`，与管控台切换逻辑及现有音视频库的只读配置一致。音视频场景的 `--multimodal-embedding-model` 是 `--embedding-model` 的别名，两者互斥，均映射到 `embeddingModelName`，不能误用图片建库的 `multimodalEmbeddingModelName`。视觉理解文档场景 `visual_perception_qa` 同样使用 VL embedding，但不默认加入 rerank。
+
+普通文档未使用新参数时仍为 `text-embedding-v4`。显式模型仍由服务端校验其允许列表；CLI 不把当前观察到的模型名称硬编码成永久白名单。只读核对不代表已新建媒体库进行解析验收。
+
+`list` 文本增加类型，`info` 文本展示 knowledgeType、knowledgeScene、multimodalEmbeddingModelName。JSON 保留服务端对象及未知字段。列表接口缺少这三个字段按后端 bug 处理；null/缺失不代表普通文档库，CLI 不发额外探测请求、不推断或写回，也不提供 multimediaVersion 参数。

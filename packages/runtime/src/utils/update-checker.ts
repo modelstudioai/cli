@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { join } from "path";
 import { readFileSync, writeFileSync } from "fs";
 import {
@@ -164,7 +165,7 @@ export async function fetchLatestVersion(
 ): Promise<string | null> {
   try {
     const encoded = npmPackage.replace("/", "%2f");
-    const res = await fetch(`${NPM_REGISTRY}/${encoded}/latest`, {
+    const res = await httpTransport.fetch(`${NPM_REGISTRY}/${encoded}/latest`, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(timeoutMs),
     });

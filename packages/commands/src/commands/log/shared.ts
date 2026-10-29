@@ -1,15 +1,17 @@
 import {
   BailianError,
   ExitCode,
-  effectiveConsoleGatewayConfig,
   type Client,
   type CommandOutput,
+  type CommandContext,
   type FlagsDef,
+  type LocalizedText,
 } from "bailian-cli-core";
 import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import { parseCommaList } from "../shared/params.ts";
 import {
+  telemetryGatewayPreview,
   buildGroupSwitchReqDTO,
   ensureTelemetryRegionSupported,
   ensureTelemetrySlrAuthorized,
@@ -18,7 +20,6 @@ import {
   getTelemetryGroupSwitch,
   getTelemetryServiceStatus,
   pollTelemetryData,
-  unwrapConsolePrimitive,
 } from "../shared/telemetry.ts";
 import type { Settings } from "bailian-cli-core";
 
@@ -27,15 +28,16 @@ import type { Settings } from "bailian-cli-core";
 // ---------------------------------------------------------------------------
 
 export interface ModelLogEntry {
-  modelRequestId: string;
-  model: string;
+  modelRequestId?: string;
+  model?: string;
+  workspaceId?: string;
   apiKey?: string;
   apikeyId?: string;
   request?: string;
   response?: string;
-  startTime: number;
-  callDuration: number;
-  httpStatusCode: number;
+  startTime?: number;
+  callDuration?: number;
+  httpStatusCode?: number;
   errorCode?: string;
   errorMessage?: string;
   firstTokenDuration?: number;
@@ -46,6 +48,59 @@ export interface ModelLogEntry {
   taskUuid?: string;
   /** Raw audit record attached to platform-model rows (audit detail view). */
   originLog?: Record<string, unknown>;
+}
+
+function auditNumber(value: unknown): number | undefined {
+  if (typeof value !== "number" && typeof value !== "string") return undefined;
+  if (typeof value === "string" && !value.trim()) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function auditString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+/** 审计接口把调用元数据放在 originLog；保留原始记录及已有的规范化字段。 */
+export function normalizeAuditLog(entry: ModelLogEntry): ModelLogEntry {
+  const origin = entry.originLog ?? {};
+  const usage = entry.usage ?? origin.usage;
+  return {
+    ...entry,
+    modelRequestId: entry.modelRequestId ?? auditString(origin.request_id),
+    model: entry.model ?? auditString(origin.model),
+    workspaceId: entry.workspaceId ?? auditString(origin.workspace_id),
+    apikeyId: entry.apikeyId ?? auditString(origin.apikey_id),
+    startTime: auditNumber(entry.startTime ?? origin.start_unix_timestamp),
+    callDuration: auditNumber(entry.callDuration ?? origin.duration),
+    httpStatusCode: auditNumber(entry.httpStatusCode ?? origin.status_code),
+    usage:
+      typeof usage === "string" || (usage && typeof usage === "object" && !Array.isArray(usage))
+        ? (usage as ModelLogEntry["usage"])
+        : undefined,
+  };
+}
+
+/** 空间与查询身份是独立维度；拒绝把其他空间的数据当作过滤结果输出。 */
+export function assertAuditWorkspace(
+  list: ModelLogEntry[],
+  ctx: Pick<CommandContext, "settings" | "localize">,
+): void {
+  const workspaceId = ctx.settings.workspaceId;
+  if (!workspaceId || !list.some((entry) => entry.workspaceId !== workspaceId)) return;
+  throw new BailianError(
+    ctx.localize({
+      "en-US": "Audit log results do not match the requested workspace.",
+      "zh-CN": "审计日志结果与请求的工作空间不一致。",
+    }),
+    ExitCode.GENERAL,
+    ctx.localize({
+      "en-US":
+        "The query identity was resolved from --workspace-id, but the returned records do not match. Check the workspace mapping and console response; no mismatched records were output.",
+      "zh-CN":
+        "已根据 --workspace-id 解析查询身份，但返回记录仍不匹配。请检查空间映射与控制台响应；未输出空间不一致的记录。",
+    }),
+  );
 }
 
 /** usage arrives as a JSON string on some paths, an object on others. */
@@ -90,10 +145,13 @@ export function validateRequestIdLength(requestId: string): string | undefined {
 }
 
 export function renderLogTable(list: ModelLogEntry[]): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
   if (list.length === 0) {
-    return "No logs found in this range.";
+    textChunks.push("No logs found in this range.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   const lines = renderBoxTable({
@@ -105,7 +163,9 @@ export function renderLogTable(list: ModelLogEntry[]): string {
           ? `${usage.input_tokens ?? "-"}/${usage.output_tokens ?? "-"}`
           : "-";
       return [
-        formatDateTime(entry.startTime),
+        entry.startTime != null && !Number.isNaN(new Date(entry.startTime).getTime())
+          ? formatDateTime(entry.startTime)
+          : "-",
         entry.modelRequestId ?? "-",
         entry.model ?? "-",
         entry.httpStatusCode != null ? String(entry.httpStatusCode) : "-",
@@ -123,7 +183,9 @@ export function renderLogTable(list: ModelLogEntry[]): string {
       return color.yellow(value);
     },
   });
-  return lines.join("\n");
+  for (const line of lines) textChunks.push(line + "\n");
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export function renderLogDetail(entry: ModelLogEntry): string {
@@ -133,9 +195,14 @@ export function renderLogDetail(entry: ModelLogEntry): string {
   const usage = parseLogUsage(entry.usage);
 
   const rows: [string, string][] = [
-    ["Request ID", entry.modelRequestId],
+    ["Request ID", entry.modelRequestId ?? "-"],
     ["Model", entry.model ?? "-"],
-    ["Time", entry.startTime ? formatDateTime(entry.startTime) : "-"],
+    [
+      "Time",
+      entry.startTime != null && !Number.isNaN(new Date(entry.startTime).getTime())
+        ? formatDateTime(entry.startTime)
+        : "-",
+    ],
     ["Status", entry.httpStatusCode != null ? String(entry.httpStatusCode) : "-"],
     ["Duration", entry.callDuration != null ? `${entry.callDuration} ms` : "-"],
     ["First Token", entry.firstTokenDuration != null ? `${entry.firstTokenDuration} ms` : "-"],
@@ -247,7 +314,7 @@ export async function enableLogDelivery(
     ctx.output.result({
       apis: [CREATE_SLR_API, INIT_STORE_API, ENABLE_GROUP_API],
       data: { reqDTO: groupReqDTO(settings, kind) },
-      ...effectiveConsoleGatewayConfig(settings),
+      ...telemetryGatewayPreview(settings),
     });
     return;
   }
@@ -324,7 +391,7 @@ export async function disableLogDelivery(
     ctx.output.result({
       api: DISABLE_GROUP_API,
       data: { reqDTO: groupReqDTO(settings, kind) },
-      ...effectiveConsoleGatewayConfig(settings),
+      ...telemetryGatewayPreview(settings),
     });
     return;
   }
@@ -375,7 +442,8 @@ export function validateHoursFlag(hours: number | undefined): string | undefined
 // Log count (shared by audit / inference)
 // ---------------------------------------------------------------------------
 
-export const COUNT_LOGS_API = "zeldaEasy.bailian-telemetry.model.countModelLogs";
+export const LIST_AUDIT_LOGS_API = "zeldaEasy.bailian-telemetry.platform-model.listModelLogs";
+export const LIST_INFERENCE_LOGS_API = "zeldaEasy.bailian-telemetry.model.listModelLogs";
 
 export interface LogCountFlags {
   hours?: number;
@@ -385,9 +453,26 @@ export interface LogCountFlags {
   apiKeyId?: string;
 }
 
-/** Count logs in a range for one log kind (the API takes a telemetryType). */
+export function validateInferenceCountFlags(flags: LogCountFlags): LocalizedText | undefined {
+  const hoursError = validateHoursFlag(flags.hours);
+  if (hoursError) return hoursError;
+  for (const [flagName, value] of [
+    ["--model", flags.model],
+    ["--api-key-id", flags.apiKeyId],
+  ] as const) {
+    if (value !== undefined && parseCommaList(value).length === 0) {
+      return {
+        "en-US": `${flagName} must contain at least one non-empty value.`,
+        "zh-CN": `${flagName} 必须包含至少一个非空值。`,
+      };
+    }
+  }
+  return undefined;
+}
+
+/** 两类日志各用自己的列表 totalCount，避免独立计数接口与列表的口径错配。 */
 export async function countLogs(
-  ctx: { client: Client; settings: Settings; output: CommandOutput },
+  ctx: Pick<CommandContext, "client" | "settings" | "localize" | "output">,
   kind: LogKind,
   flags: LogCountFlags,
   resolveRange: () => { startTime: number; endTime: number },
@@ -395,31 +480,76 @@ export async function countLogs(
   const { settings } = ctx;
   const format = settings.output;
   const { startTime, endTime } = resolveRange();
-
-  const reqDTO: Record<string, unknown> = {
+  const api = kind === "audit" ? LIST_AUDIT_LOGS_API : LIST_INFERENCE_LOGS_API;
+  const baseReqDTO: Record<string, unknown> = {
     ...(settings.workspaceId
       ? { workspaceId: settings.workspaceId, filterWorkspaceId: settings.workspaceId }
       : {}),
-    startTime,
-    endTime,
-    telemetryType: LOG_GROUP_TYPES[kind],
-    models: flags.model ? parseCommaList(flags.model) : undefined,
-    apikeyIds: flags.apiKeyId ? parseCommaList(flags.apiKeyId) : undefined,
+    startTime: kind === "audit" ? startTime : String(startTime),
+    endTime: kind === "audit" ? endTime : String(endTime),
+    maxResults: 1,
+    skip: 0,
+    needFullContent: false,
   };
+  let reqDTOs: Record<string, unknown>[];
+  if (kind === "audit") {
+    reqDTOs = [
+      {
+        ...baseReqDTO,
+        models: flags.model ? parseCommaList(flags.model) : undefined,
+        apikeyIds: flags.apiKeyId ? parseCommaList(flags.apiKeyId) : undefined,
+      },
+    ];
+  } else {
+    const validationError = validateInferenceCountFlags(flags);
+    if (validationError) throw new BailianError(ctx.localize(validationError), ExitCode.USAGE);
+    const models = flags.model !== undefined ? parseCommaList(flags.model) : [undefined];
+    const apiKeyIds = flags.apiKeyId !== undefined ? parseCommaList(flags.apiKeyId) : [undefined];
+    // 推理列表只接受单值；模型与 Key 去重后的组合互不重叠，逐组合取总数再汇总。
+    reqDTOs = models.flatMap((model) =>
+      apiKeyIds.map((apikeyId) => ({
+        ...baseReqDTO,
+        model,
+        apikeyId,
+      })),
+    );
+  }
 
   if (settings.dryRun) {
     ctx.output.result({
-      api: COUNT_LOGS_API,
-      data: { reqDTO },
-      ...effectiveConsoleGatewayConfig(settings),
+      api,
+      data: reqDTOs.length === 1 ? { reqDTO: reqDTOs[0] } : { reqDTOs },
+      ...telemetryGatewayPreview(settings),
     });
     return;
   }
 
   ensureTelemetryRegionSupported(settings);
 
-  const raw = await ctx.client.console(COUNT_LOGS_API, { reqDTO });
-  const count = unwrapConsolePrimitive<number>(raw);
+  let count = 0;
+  for (const reqDTO of reqDTOs) {
+    // 每个组合只取一条元数据；不统计页长度、不遍历分页，也不回捞完整日志。
+    const response = await pollTelemetryData(ctx.client, api, reqDTO);
+    const totalCount = response?.totalCount;
+    if (
+      typeof totalCount !== "number" ||
+      !Number.isSafeInteger(totalCount) ||
+      totalCount < 0 ||
+      !Number.isSafeInteger(count + totalCount)
+    ) {
+      throw new BailianError(
+        ctx.localize({
+          "en-US": "The log count response contains no valid count.",
+          "zh-CN": "日志计数响应未包含有效的记录数。",
+        }),
+        ExitCode.GENERAL,
+      );
+    }
+    if (kind === "audit" && Array.isArray(response?.list)) {
+      assertAuditWorkspace((response.list as ModelLogEntry[]).map(normalizeAuditLog), ctx);
+    }
+    count += totalCount;
+  }
 
   let text: string | undefined;
   if (format === "text") {

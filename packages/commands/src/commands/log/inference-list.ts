@@ -1,4 +1,4 @@
-import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { parseCommaList } from "../shared/params.ts";
 import {
   TELEMETRY_LOG_TIME_FLAGS,
@@ -8,16 +8,17 @@ import {
 } from "../shared/telemetry.ts";
 import {
   type ModelLogEntry,
+  LIST_INFERENCE_LOGS_API,
   renderLogTable,
   validateHoursFlag,
   validateStatusCodeTypes,
 } from "./shared.ts";
 
-export const LIST_INFERENCE_LOGS_API = "zeldaEasy.bailian-telemetry.model.listModelLogs";
+export { LIST_INFERENCE_LOGS_API } from "./shared.ts";
 
 const STATUS_CODE_TYPES = ["SUCCESS", "CLIENT_ERROR", "SERVER_ERROR", "CANCEL"] as const;
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US":
       "Query model inference logs (requires inference log delivery; use `log inference get` for request/response content)",
@@ -129,7 +130,7 @@ export default defineCommand({
       ctx.output.result({
         api: LIST_INFERENCE_LOGS_API,
         data: { reqDTO },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }
@@ -138,7 +139,14 @@ export default defineCommand({
     const resp = await pollTelemetryData(ctx.client, LIST_INFERENCE_LOGS_API, reqDTO);
     const list = (resp.list as ModelLogEntry[]) ?? [];
 
-    const text = format === "text" ? renderLogTable(list) : undefined;
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
+
+      textChunks.push(renderLogTable(list) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
     ctx.output.result(
       {
         totalCount: resp.totalCount ?? 0,

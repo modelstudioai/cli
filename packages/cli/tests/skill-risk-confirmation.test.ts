@@ -9,6 +9,7 @@ const scopedCreateCommands = new Set([
   "bl managed-agent agent create",
   "bl managed-agent deployment create",
   "bl managed-agent environment create",
+  "bl managed-agent memory-store create",
   "bl managed-agent skill create",
   "bl managed-agent vault create",
   "bl managed-agent vault credential create",

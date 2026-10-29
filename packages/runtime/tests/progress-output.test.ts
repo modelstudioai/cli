@@ -2,7 +2,7 @@ import { afterEach, expect, test, vi } from "vite-plus/test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Client, Settings } from "bailian-cli-core";
+import { httpTransport, type Client, type Settings } from "bailian-cli-core";
 import { createOutputReporter } from "../src/output/reporter.ts";
 import { poll } from "../src/utils/polling.ts";
 import { downloadFile } from "../src/utils/download.ts";
@@ -59,7 +59,7 @@ test.each(
     Object.defineProperty(process.stderr, "isTTY", { value: tty, configurable: true });
     try {
       const chunks = [new TextEncoder().encode("pay"), new TextEncoder().encode("load")];
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      vi.spyOn(httpTransport, "fetch").mockResolvedValue(
         new Response(
           new ReadableStream({
             start(controller) {
@@ -91,3 +91,29 @@ test.each(
     }
   },
 );
+
+test("poll uses the complete snapshot loader for completion and failure predicates", async () => {
+  const firstPage = { status: "SUCCEEDED" };
+  const completeSnapshot = { jobs: [firstPage, { status: "RUNNING" }] };
+  const finalSnapshot = { jobs: [firstPage, { status: "SUCCEEDED" }] };
+  const load = vi.fn().mockResolvedValueOnce(completeSnapshot).mockResolvedValueOnce(finalSnapshot);
+  const requestJson = vi.fn();
+  const isComplete = vi.fn((data: unknown) =>
+    (data as typeof completeSnapshot).jobs.every((job) => job.status === "SUCCEEDED"),
+  );
+  const result = await poll({ requestJson } as unknown as Client, {
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
+    url: "/tasks",
+    load,
+    intervalSec: 0,
+    timeoutSec: 1,
+    isComplete,
+    isFailed: () => false,
+  });
+  expect(result).toBe(finalSnapshot);
+  expect(load).toHaveBeenCalledTimes(2);
+  expect(requestJson).not.toHaveBeenCalled();
+  expect(isComplete).toHaveBeenNthCalledWith(1, completeSnapshot);
+  expect(isComplete).toHaveBeenNthCalledWith(2, finalSnapshot);
+});

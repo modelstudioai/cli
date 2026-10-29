@@ -3,6 +3,7 @@ import {
   Client,
   McpClient,
   createInstrumentedFetch,
+  httpTransport,
   requestJson,
   type HttpDeps,
   type OutputMessage,
@@ -42,7 +43,7 @@ test.each(["http", "instrumented", "console", "openapi"])(
     });
     const debug = (diagnostic: OutputMessage) => reporter.output.debug(diagnostic);
     const deps = { identity, settings, debug };
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    vi.spyOn(httpTransport, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ Success: true, Data: {} }), {
         headers: { "x-request-id": "request-demo" },
       }),
@@ -95,7 +96,7 @@ test.each(["http", "instrumented", "console", "openapi"])(
 );
 
 test("core transport is silent without a diagnostic callback", async () => {
-  vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+  vi.spyOn(httpTransport, "fetch").mockResolvedValue(new Response("{}"));
   const legacy = vi.spyOn(console, "error").mockImplementation(() => {});
   await requestJson({ identity, settings } satisfies HttpDeps, { url: "https://example.invalid" });
   expect(legacy).not.toHaveBeenCalled();
@@ -113,7 +114,7 @@ test("MCP session diagnostics also use the callback", async () => {
     },
   }).output;
   const legacy = vi.spyOn(console, "error").mockImplementation(() => {});
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+  vi.spyOn(httpTransport, "fetch").mockImplementation(async (_input, init) => {
     if (typeof init?.body !== "string") throw new Error("Expected RPC JSON body");
     const body = JSON.parse(init.body);
     return body.id === undefined

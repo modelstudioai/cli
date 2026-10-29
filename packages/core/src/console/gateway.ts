@@ -1,5 +1,6 @@
 import { debugRequest, debugResponse } from "../client/diagnostics.ts";
 import type { HttpDeps } from "../client/http.ts";
+import { httpTransport } from "../client/transport.ts";
 import type { Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
@@ -144,7 +145,7 @@ export async function callConsoleGateway(
   const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
   debugRequest(diagnostics, "POST", endpoint, { api });
 
-  const res = await fetch(endpoint, {
+  const res = await httpTransport.fetch(endpoint, {
     method: "POST",
     headers,
     body: body.toString(),

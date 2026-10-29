@@ -155,9 +155,10 @@ export default defineCommand({
     const securityToken = flags.securityToken || undefined;
 
     // Step 0: Exchange AK/SK for a temporary CLI access token used by console calls.
+    const gateway = effectiveConsoleGatewayConfig(settings);
     const tokenResp = await generateCLIAccessToken({
       identity: ctx.identity,
-      settings,
+      settings: { ...settings, consoleRegion: gateway.consoleRegion },
       baseUrl: ctx.client.baseUrl,
       accessKeyId,
       accessKeySecret,
@@ -168,7 +169,6 @@ export default defineCommand({
       throw new BailianError("Failed to generate CLI access token from AK/SK.", ExitCode.GENERAL);
     }
 
-    const gateway = effectiveConsoleGatewayConfig(settings);
     const target: ConsoleGatewayTarget = {
       region: gateway.consoleRegion,
       site: gateway.consoleSite,

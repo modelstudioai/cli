@@ -127,6 +127,7 @@ text 模式应看到准确诊断,JSON 模式应能解析出 cause.code(用于 ag
 
 ## 常见漏点
 
+- 分批写操作失败时应立即停止，保留原始错误和已有 hint，并补充已确认成功的批次编号与对象 ID；失败批次结果可能未确认，不得宣称完全未执行。网络/超时错误先复用 runtime 的 `normalizeError` 分类，避免附加进度时丢失退出码；用模拟请求验证中途失败，不做真实破坏性测试。
 - ✗ 在 core 的 hint 里"顺便"写了 `bl auth login` —— 违反第 3 条不变量
 - ✗ 给 `mapApiError` 加了"401 → AUTH"等白名单分支 —— 违反边界原则
 - ✗ 用 `try/catch` 包住服务调用,catch 里 throw 了一个新的 BailianError 替换原错误 —— 违反第 1 条不变量

@@ -7,6 +7,8 @@ Read this only when you need to install `bl`, change credentials/endpoint, or
 inspect config keys. Day-to-day command routing lives in the business skills
 (`bailian-cli` / `bailian-gen` / …).
 
+Examples stay bare `bl …`. Agents wrap them with [Call attribution](../SKILL.md#call-attribution-mandatory-for-every-agent-bl-command): `bailian-protocol` for install / `skill init` / `skill update` / `bl update`, `bailian-cli` for auth / config, `bailian-gen` for image / video smoke tests.
+
 ---
 
 ## Install
@@ -61,10 +63,10 @@ For the exact command-to-auth mapping, read the owning skill's `reference/index.
 | OpenAPI AK/SK | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`)   |
 
 ```bash
-bl auth status            # check current auth
-bl auth logout            # clear credentials and the model Base URL
-bl auth logout --console  # clear console token only
-bl auth logout --open-api # clear OpenAPI AK/SK only
+bl auth status
+bl auth logout
+bl auth logout --console
+bl auth logout --open-api
 ```
 
 - Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key
@@ -179,7 +181,6 @@ Use `bl auth login --console` for the China site. Add `--console-site internatio
 5. **Still unclear** — ask the user which console they use; do not assume domestic.
 
 ```bash
-# Domestic
 bl auth login --console
 
 # International

@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { expect, test } from "vite-plus/test";
 import type { Identity, Settings } from "../src/index.ts";
 import {
@@ -107,10 +108,10 @@ test("resolveSameOriginMessageUrl：同源通过、跨域拒绝", () => {
 });
 
 test("connectBailianMcpWithFallback：成功走 Streamable；405 降级 SSE", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
   // Streamable success path
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : {};
     if (requestUrl(input).includes("/sse")) {
       return new Response("should not hit sse", { status: 500 });
@@ -133,7 +134,7 @@ test("connectBailianMcpWithFallback：成功走 Streamable；405 降级 SSE", as
     });
     expect(connected.url).toContain("/mcp");
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 
   // Bare HTTP 405 (no streamableHttp body text) → SSE
@@ -141,7 +142,7 @@ test("connectBailianMcpWithFallback：成功走 Streamable；405 降级 SSE", as
   const encoder = new TextEncoder();
   const urls: string[] = [];
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     urls.push(`${init?.method ?? "GET"} ${url}`);
 
@@ -194,15 +195,15 @@ test("connectBailianMcpWithFallback：成功走 Streamable；405 降级 SSE", as
     expect(urls.some((entry) => entry.includes("GET ") && entry.includes("/sse"))).toBe(true);
     connected.client.close?.();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("connectBailianMcpWithFallback：WebSearch 不降级；urlOverride 同 URL 降级 SSE；404 不降级 Bailian 路径", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const urls: string[] = [];
 
-  globalThis.fetch = async (input) => {
+  httpTransport.fetch = async (input) => {
     urls.push(requestUrl(input));
     return new Response("current mcp not support streamableHttp", {
       status: 405,
@@ -222,7 +223,7 @@ test("connectBailianMcpWithFallback：WebSearch 不降级；urlOverride 同 URL 
     ).rejects.toBeInstanceOf(BailianError);
     expect(urls.some((url) => url.includes("/sse"))).toBe(false);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 
   // urlOverride: after POST 405, fall back with GET SSE on the same URL
@@ -231,7 +232,7 @@ test("connectBailianMcpWithFallback：WebSearch 不降级；urlOverride 同 URL 
   const encoder = new TextEncoder();
   const overrideUrl = "https://custom.example/mcp";
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     const method = init?.method ?? "GET";
     urls.push(`${method} ${url}`);
@@ -282,10 +283,10 @@ test("connectBailianMcpWithFallback：WebSearch 不降级；urlOverride 同 URL 
     expect(urls.some((entry) => entry.startsWith(`GET ${overrideUrl}`))).toBe(true);
     connected.client.close?.();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 
-  globalThis.fetch = async () =>
+  httpTransport.fetch = async () =>
     new Response("MCP不存在或未开通", { status: 404, statusText: "Not Found" });
 
   try {
@@ -299,15 +300,15 @@ test("connectBailianMcpWithFallback：WebSearch 不降级；urlOverride 同 URL 
       }),
     ).rejects.toMatchObject({ message: expect.stringContaining("404") });
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：流结束后立刻失败 pending（不干等到 timeout）", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const encoder = new TextEncoder();
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     if ((init?.method ?? "GET") === "GET" || url.endsWith("/sse")) {
       // Close the stream immediately after the endpoint event
@@ -338,16 +339,16 @@ test("McpSseClient：流结束后立刻失败 pending（不干等到 timeout）"
     expect(Date.now() - started).toBeLessThan(2000);
     client.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：string JSON-RPC id 可匹配；仅认 event:endpoint", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let sseController: ReadableStreamDefaultController<Uint8Array> | undefined;
   const encoder = new TextEncoder();
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     if ((init?.method ?? "GET") === "GET" || url.endsWith("/sse")) {
       const stream = new ReadableStream<Uint8Array>({
@@ -387,15 +388,15 @@ test("McpSseClient：string JSON-RPC id 可匹配；仅认 event:endpoint", asyn
     await client.initialize();
     client.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpClient：支持 text/event-stream 响应体", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const sentHeaders: Headers[] = [];
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     sentHeaders.push(new Headers(init?.headers));
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : {};
     if (body.method === "notifications/initialized") {
@@ -424,15 +425,15 @@ test("McpClient：支持 text/event-stream 响应体", async () => {
       expect(headers.get("X-Dashscope-Service")).toBe("bailian-cli");
     }
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient.close 可中止挂起 GET", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let aborted = false;
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     const signal = init?.signal;
     if (signal) {
       signal.addEventListener("abort", () => {
@@ -462,14 +463,14 @@ test("McpSseClient.close 可中止挂起 GET", async () => {
     await initPromise;
     expect(aborted).toBe(true);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：等待响应头受 --timeout 约束", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     const signal = init?.signal;
     return new Promise((_resolve, reject) => {
       if (!signal) {
@@ -499,19 +500,19 @@ test("McpSseClient：等待响应头受 --timeout 约束", async () => {
     expect(Date.now() - started).toBeLessThan(2500);
     client.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：非 2xx 不产生 unhandledRejection", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const unhandled: unknown[] = [];
   const onUnhandled = (reason: unknown) => {
     unhandled.push(reason);
   };
   process.on("unhandledRejection", onUnhandled);
 
-  globalThis.fetch = async () =>
+  httpTransport.fetch = async () =>
     new Response("boom", { status: 500, statusText: "Internal Server Error" });
 
   try {
@@ -522,14 +523,14 @@ test("McpSseClient：非 2xx 不产生 unhandledRejection", async () => {
     client.close();
   } finally {
     process.off("unhandledRejection", onUnhandled);
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：非 2xx 读 body 仍受 --timeout 约束", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     const signal = init?.signal;
     return {
       ok: false,
@@ -566,18 +567,18 @@ test("McpSseClient：非 2xx 读 body 仍受 --timeout 约束", async () => {
     expect(Date.now() - started).toBeLessThan(2500);
     client.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：fetch 失败抛出原始 TypeError（保留 ENOTFOUND）", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const root = Object.assign(new Error("getaddrinfo ENOTFOUND example.test"), {
     code: "ENOTFOUND",
   });
   const fetchFailed = new TypeError("fetch failed", { cause: root });
 
-  globalThis.fetch = async () => {
+  httpTransport.fetch = async () => {
     throw fetchFailed;
   };
 
@@ -588,17 +589,17 @@ test("McpSseClient：fetch 失败抛出原始 TypeError（保留 ENOTFOUND）", 
     expect((error as TypeError & { cause?: NodeJS.ErrnoException }).cause?.code).toBe("ENOTFOUND");
     client.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：fetch 失败后同实例可重新 openSse", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let attempt = 0;
   let sseController: ReadableStreamDefaultController<Uint8Array> | undefined;
   const encoder = new TextEncoder();
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     const method = init?.method ?? "GET";
     if (method === "GET" || url.endsWith("/sse")) {
@@ -632,16 +633,16 @@ test("McpSseClient：fetch 失败后同实例可重新 openSse", async () => {
     await client.initialize();
     client.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：close 可中止进行中的 POST", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let postAborted = false;
   const encoder = new TextEncoder();
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     const method = init?.method ?? "GET";
     if (method === "GET" || url.endsWith("/sse")) {
@@ -686,15 +687,15 @@ test("McpSseClient：close 可中止进行中的 POST", async () => {
     await expect(initPromise).rejects.toThrow(/session closed|aborted/i);
     expect(postAborted).toBe(true);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpSseClient：POST 非 2xx 读 body 仍受 --timeout 约束", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const encoder = new TextEncoder();
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     const method = init?.method ?? "GET";
     if (method === "GET" || url.endsWith("/sse")) {
@@ -738,6 +739,6 @@ test("McpSseClient：POST 非 2xx 读 body 仍受 --timeout 约束", async () =>
     expect(Date.now() - started).toBeLessThan(2500);
     client.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });

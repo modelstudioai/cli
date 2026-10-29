@@ -2,6 +2,7 @@ import { expect, test, vi } from "vite-plus/test";
 import type { Identity, Settings } from "../src/config/schema.ts";
 import { BailianError } from "../src/errors/base.ts";
 import { ExitCode } from "../src/errors/codes.ts";
+import type { CallerAttribution } from "../src/telemetry/caller.ts";
 import { buildRemoteAemOptions, type TrackingEvent } from "../src/telemetry/event.ts";
 
 const sinkMocks = vi.hoisted(() => ({
@@ -20,6 +21,14 @@ const identity: Identity = {
   npmPackage: "bailian-cli",
 };
 
+const unknownCaller: CallerAttribution = { callerType: "unknown" };
+const agentCaller: CallerAttribution = {
+  callerType: "agent",
+  callerName: "cursor",
+  skillName: "bailian-cli",
+  skillVersion: "2.5.0",
+};
+
 test("records BailianError exitCode in local events and AEM ext", async () => {
   sinkMocks.localSink.mockClear();
   sinkMocks.remoteSink.mockClear();
@@ -31,6 +40,7 @@ test("records BailianError exitCode in local events and AEM ext", async () => {
         identity,
         settings: { telemetry: true } as Settings,
         authMethod: "apiKey",
+        caller: unknownCaller,
       },
       ["knowledge", "doc", "delete"],
       {},
@@ -47,8 +57,104 @@ test("records BailianError exitCode in local events and AEM ext", async () => {
     success: false,
     exitCode: 7,
     errorMessage: "该操作会永久删除文档。",
+    callerType: "unknown",
   });
+  expect(event.callerName).toBeUndefined();
+  expect(event.skillName).toBeUndefined();
+  expect(event.skillVersion).toBeUndefined();
   expect(buildRemoteAemOptions(event)).toMatchObject({
-    ext: expect.objectContaining({ exitCode: 7 }),
+    ext: expect.objectContaining({ exitCode: 7, callerType: "unknown" }),
   });
+});
+
+test.each([
+  { label: "numeric page", page: 2, expectedParams: { page: 2, pageSize: 20 } },
+  { label: "opaque cursor", page: "opaque+/=&cursor", expectedParams: { pageSize: 20 } },
+  { label: "numeric-looking cursor", page: "2", expectedParams: { pageSize: 20 } },
+  { label: "NaN page", page: Number.NaN, expectedParams: { pageSize: 20 } },
+  { label: "positive infinity page", page: Infinity, expectedParams: { pageSize: 20 } },
+  { label: "negative infinity page", page: -Infinity, expectedParams: { pageSize: 20 } },
+])(
+  "filters $label consistently in local and remote telemetry",
+  async ({ page, expectedParams }) => {
+    sinkMocks.localSink.mockClear();
+    sinkMocks.remoteSink.mockClear();
+
+    await trackCommandExecution(
+      {
+        identity,
+        settings: { telemetry: true } as Settings,
+        authMethod: "apiKey",
+        caller: unknownCaller,
+      },
+      ["managed-agent", "webhook", "events"],
+      { page, pageSize: 20 },
+      async () => {},
+    );
+
+    expect(sinkMocks.localSink).toHaveBeenCalledOnce();
+    expect(sinkMocks.remoteSink).toHaveBeenCalledOnce();
+    const localEvent = sinkMocks.localSink.mock.calls[0]![0];
+    const remoteEvent = sinkMocks.remoteSink.mock.calls[0]![0];
+    expect(localEvent.params).toEqual(expectedParams);
+    expect(remoteEvent.params).toEqual(expectedParams);
+    expect(buildRemoteAemOptions(remoteEvent).c1).toEqual(expectedParams);
+  },
+);
+
+test("keeps agent attribution on success and in AEM ext", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true } as Settings,
+      authMethod: "apiKey",
+      caller: agentCaller,
+    },
+    ["config", "show"],
+    {},
+    async () => {},
+  );
+
+  const event = sinkMocks.localSink.mock.calls[0]![0];
+  expect(event).toMatchObject({
+    success: true,
+    callerType: "agent",
+    callerName: "cursor",
+    skillName: "bailian-cli",
+    skillVersion: "2.5.0",
+  });
+  expect(event.params).toBeUndefined();
+  expect(buildRemoteAemOptions(event)).toMatchObject({
+    ext: expect.objectContaining({
+      callerType: "agent",
+      callerName: "cursor",
+      skillName: "bailian-cli",
+      skillVersion: "2.5.0",
+    }),
+  });
+});
+
+test("does not call sinks when telemetry is disabled", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  const next = vi.fn(async () => {});
+
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: false } as Settings,
+      authMethod: "apiKey",
+      caller: agentCaller,
+    },
+    ["config", "show"],
+    {},
+    next,
+  );
+
+  expect(next).toHaveBeenCalledOnce();
+  expect(sinkMocks.localSink).not.toHaveBeenCalled();
+  expect(sinkMocks.remoteSink).not.toHaveBeenCalled();
 });

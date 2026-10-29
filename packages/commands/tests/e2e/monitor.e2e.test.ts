@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import { MONITOR_ROUTES } from "./topic-routes.ts";
 
 // 只覆盖 help / 参数校验 / dry-run；真实调用依赖 console 凭证与已开通的监控服务。
@@ -62,7 +62,7 @@ describe("e2e: monitor", () => {
   });
 
   test("monitor metrics --dry-run 输出 reqDTO 与自动 step", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MONITOR_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MONITOR_ROUTES, [
       "monitor",
       "metrics",
       "--metric",
@@ -106,7 +106,7 @@ describe("e2e: monitor", () => {
   });
 
   test("monitor overview --dry-run 输出统计 API", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MONITOR_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MONITOR_ROUTES, [
       "monitor",
       "overview",
       "--model",
@@ -125,7 +125,7 @@ describe("e2e: monitor", () => {
   });
 
   test("monitor errors --dry-run 输出错误码统计 API", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MONITOR_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MONITOR_ROUTES, [
       "monitor",
       "errors",
       "--dry-run",
@@ -140,7 +140,7 @@ describe("e2e: monitor", () => {
   });
 
   test("monitor delivery enable --dry-run 输出开通链路 API", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MONITOR_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MONITOR_ROUTES, [
       "monitor",
       "delivery",
       "enable",
@@ -159,7 +159,7 @@ describe("e2e: monitor", () => {
   });
 
   test("monitor delivery disable --dry-run 输出 Monitor 开关关闭请求", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MONITOR_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MONITOR_ROUTES, [
       "monitor",
       "delivery",
       "disable",
@@ -178,7 +178,7 @@ describe("e2e: monitor", () => {
   });
 
   test("--start-time 晚于 --end-time 报错", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MONITOR_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MONITOR_ROUTES, [
       "monitor",
       "overview",
       "--start-time",

@@ -1,4 +1,4 @@
-import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
@@ -56,7 +56,7 @@ function renderTable(rows: ErrorCodeRow[], startTime: number, endTime: number): 
   return textChunks.join("").replace(/\n$/, "");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show failure breakdown by HTTP status code and error code",
     "zh-CN": "查看失败明细（按 HTTP 状态码与错误码统计分布）",
@@ -94,7 +94,7 @@ export default defineCommand({
       ctx.output.result({
         api: ERROR_CODE_API,
         data: { reqDTO },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }
@@ -103,7 +103,14 @@ export default defineCommand({
     const resp = await pollTelemetryData(ctx.client, ERROR_CODE_API, reqDTO);
     const rows = toRows(resp);
 
-    const text = format === "text" ? renderTable(rows, startTime, endTime) : undefined;
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
+
+      textChunks.push(renderTable(rows, startTime, endTime) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
     ctx.output.result(
       {
         period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },

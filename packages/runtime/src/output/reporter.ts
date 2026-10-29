@@ -11,6 +11,7 @@ import {
 import { errorHint, normalizeError } from "../error-handler.ts";
 import { createTranslator } from "../i18n.ts";
 import { diagnosticPayload } from "./diagnostics.ts";
+import { ConfirmationRequiredError } from "../confirm.ts";
 
 export interface OutputWriter {
   write(chunk: string): unknown;
@@ -109,6 +110,14 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
         stderr.write(JSON.stringify(payload) + "\n");
       } else {
         const lines: string[] = [];
+        if (failure instanceof ConfirmationRequiredError) {
+          const details = failure.toJSON().error;
+          if (details.plan !== undefined) {
+            lines.push(
+              JSON.stringify({ plan: details.plan, notices: details.notices ?? [] }, null, 2),
+            );
+          }
+        }
         const field = (label: LocalizedText, value: string | number) =>
           lines.push(`${localize(label)}: ${value}`);
         field({ "en-US": "Error", "zh-CN": "错误" }, failure.message);

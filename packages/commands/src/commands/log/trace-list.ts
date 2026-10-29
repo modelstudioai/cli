@@ -1,4 +1,4 @@
-import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
@@ -41,10 +41,13 @@ interface TraceListPayload {
 }
 
 function renderTraceTable(list: TraceEntry[]): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
   if (list.length === 0) {
-    return "No traces found in this range.";
+    textChunks.push("No traces found in this range.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   const lines = renderBoxTable({
@@ -67,10 +70,12 @@ function renderTraceTable(list: TraceEntry[]): string {
       return undefined;
     },
   });
-  return lines.join("\n");
+  for (const line of lines) textChunks.push(line + "\n");
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "List call traces for a model or app",
     "zh-CN": "查询模型或应用的调用链列表",
@@ -139,7 +144,7 @@ export default defineCommand({
       ctx.output.result({
         api: LIST_TRACES_API,
         data: { reqDTO },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }
@@ -151,7 +156,14 @@ export default defineCommand({
     const list = Array.isArray(payload) ? payload : (payload?.list ?? []);
     const totalCount = Array.isArray(payload) ? undefined : payload?.totalCount;
 
-    const text = format === "text" ? renderTraceTable(list) : undefined;
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
+
+      textChunks.push(renderTraceTable(list) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
     ctx.output.result({ totalCount, list }, { text });
   },
 });

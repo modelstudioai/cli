@@ -1,4 +1,5 @@
 import { debugRequest, debugResponse } from "./diagnostics.ts";
+import { httpTransport } from "./transport.ts";
 import type { HttpDeps } from "./http.ts";
 import { trackingHeaders } from "./headers.ts";
 
@@ -57,7 +58,7 @@ export function createInstrumentedFetch(deps: HttpDeps): FetchImplementation {
 
     debugRequest(deps, init.method ?? (input instanceof Request ? input.method : "GET"), url);
 
-    const res = await fetch(input, { ...init, headers });
+    const res = await httpTransport.fetch(input, { ...init, headers });
 
     debugResponse(deps, res);
 

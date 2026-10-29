@@ -1,5 +1,6 @@
 import { CommandRegistry } from "./registry.ts";
 import { resolve } from "./resolve.ts";
+import { buildCommandSchema, serializeCommandSchema } from "./introspect.ts";
 import {
   compose,
   authStage,
@@ -16,6 +17,7 @@ import type {
   LocalizedText,
   ParsedFlags,
   SourceFlags,
+  Settings,
   ResolutionSources,
   OutputDiagnostic,
 } from "bailian-cli-core";
@@ -100,9 +102,22 @@ interface ProcessOutputContext {
 }
 
 const activeProcessOutputs = new Set<ProcessOutputContext>();
+const managedInterruptHandlers = new Set<() => void>();
+
+/** Let a command cancel asynchronous work and finish cleanup before the runtime exits. */
+export function registerInterruptHandler(handler: () => void): () => void {
+  const listener = () => handler();
+  managedInterruptHandlers.add(listener);
+  process.on("SIGINT", listener);
+  return () => {
+    managedInterruptHandlers.delete(listener);
+    process.removeListener("SIGINT", listener);
+  };
+}
 
 /** One process event produces one error, using the first still-active invocation. */
 function handleInterrupt(): void {
+  if (managedInterruptHandlers.size > 0) return;
   const active = activeProcessOutputs.values().next().value;
   if (!active) return;
   active
@@ -132,7 +147,7 @@ function installProcessHandlers(
   if (!process.stdout.listeners("error").includes(handleStdoutPipeError)) {
     process.stdout.on("error", handleStdoutPipeError);
   }
-  if (activeProcessOutputs.size === 0) process.once("SIGINT", handleInterrupt);
+  if (activeProcessOutputs.size === 0) process.on("SIGINT", handleInterrupt);
   const context = { getReporter, localize };
   activeProcessOutputs.add(context);
   return () => {
@@ -203,11 +218,29 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     argv: string[],
     localize: (text: LocalizedText) => string,
     initialSources: ResolutionSources,
-    reporter: OutputReporter,
+    configureOutput: (settings: Pick<Settings, "output" | "quiet" | "verbose">) => OutputReporter,
   ): Promise<void> {
     const res = resolve(argv, registry, localize);
+    const command = res.kind === "run" || res.kind === "usageError" ? res.command : undefined;
+    const outputSettings = buildOutputSettings({
+      ...initialSources,
+      flags: res.kind === "run" ? res.parsedFlags : initialSources.flags,
+    });
+    if (command?.defaultOutput !== undefined) {
+      if (outputSettings.outputSource !== "flag" && outputSettings.outputSource !== "env") {
+        outputSettings.output = command.defaultOutput;
+      }
+      outputSettings.outputExplicit = true;
+    }
+    // Parsing can fail after identifying a command; its output default still applies.
+    const reporter = configureOutput(outputSettings);
 
     switch (res.kind) {
+      case "introspect":
+        process.stdout.write(
+          serializeCommandSchema(buildCommandSchema(registry, identity, res.path)),
+        );
+        return;
       case "version":
         process.stdout.write(`${binName} ${version}\n`);
         return;
@@ -233,12 +266,13 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             Object.keys(res.command.flags ?? {}),
           ) as ParsedFlags<FlagsDef>;
           const invalid = await res.command.validate?.(ownFlags);
-          if (invalid) throw new UsageError(invalid);
+          if (invalid) throw new UsageError(localize(invalid));
 
           // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
           const sources = { ...initialSources, flags: globalFlags };
-          const settings = buildSettings(sources);
+          const settings = { ...buildSettings(sources), ...outputSettings };
           const ctx: RunContext = {
+            commandPath: (command) => registry.commandPath(command),
             identity,
             output: reporter.output,
             path: res.path,
@@ -291,10 +325,13 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           localize,
           binName,
         });
-        for (const warning of warnings.splice(0)) reporter.output.warning(warning);
         setupProxyFromEnv();
         const registry = await getRegistry(translator);
-        await dispatch(registry, argv, localize, sources, reporter);
+        await dispatch(registry, argv, localize, sources, (settings) => {
+          reporter = createOutputReporter({ settings, localize, binName });
+          for (const warning of warnings.splice(0)) reporter.output.warning(warning);
+          return reporter;
+        });
       } catch (error) {
         for (const warning of warnings.splice(0)) reporter.output.warning(warning);
         await flushTelemetry(1000);

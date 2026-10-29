@@ -4,7 +4,7 @@ import { join } from "path";
 import { afterAll, describe, expect, test } from "vite-plus/test";
 import { captureRegistryHelp, deriveGroupPaths } from "e2e/registry-smoke";
 import { CommandRegistry, resolve } from "bailian-cli-runtime";
-import { commands } from "../../src/commands.ts";
+import { commands, commandAliases } from "../../src/commands.ts";
 import { runCli } from "./helpers.ts";
 
 const commandPaths = Object.keys(commands).sort();
@@ -19,6 +19,44 @@ function runCliSmoke(args: string[]) {
 }
 
 describe("e2e: bl registry smoke", () => {
+  test("Batch 仅注册 convert，prepare 不保留别名或可执行路径", async () => {
+    expect(resolve(["batch", "convert", "--help"], registry)).toMatchObject({
+      kind: "help",
+      path: ["batch", "convert"],
+    });
+    expect(commands).not.toHaveProperty("batch prepare");
+    expect(commandAliases).not.toHaveProperty("batch prepare");
+    const removed = await runCliSmoke(["batch", "prepare", "--help"]);
+    expect(removed.exitCode).toBe(2);
+  });
+  test("knowledge init is registered with read-only preparation and billing risk", () => {
+    expect(commands["knowledge init"]).toMatchObject({
+      auth: "apiKey",
+      risk: { reason: "billing" },
+      prepare: expect.any(Function),
+    });
+    expect(captureRegistryHelp(registry, ["knowledge", "init"])).toContain("--state-file");
+  });
+  test("knowledge introspect bypasses required flags and emits only product-correct JSON", async () => {
+    const { stdout, stderr, exitCode } = await runCliSmoke([
+      "knowledge",
+      "create",
+      "--introspect",
+      "--quiet",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toBe("");
+    const schema = JSON.parse(stdout);
+    expect(schema).toMatchObject({ bin: "bl", scope: ["knowledge", "create"] });
+    expect(schema.commands).toHaveLength(1);
+    expect(schema.commands[0].usage).toMatch(/^bl knowledge create /);
+    expect(schema.commands[0].risk).toBeUndefined();
+    expect(schema.commands[0].notes).toContainEqual({
+      "en-US": expect.stringContaining("running-time charges"),
+      "zh-CN": expect.stringContaining("按运行时长计费"),
+    });
+  });
+
   test("根帮助展示 bl、逐命令鉴权域与全局 flag", async () => {
     const { stderr, exitCode } = await runCliSmoke(["--help"]);
     expect(exitCode, stderr).toBe(0);
@@ -85,4 +123,9 @@ describe("e2e: bl registry smoke", () => {
       `Usage: bl ${path} <command> [flags]`,
     );
   });
+});
+
+test("removed retrieve command is rejected", async () => {
+  const { exitCode } = await runCliSmoke(["knowledge", "retrieve", "--help"]);
+  expect(exitCode).toBe(2);
 });

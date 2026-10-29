@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
+<img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/banner.jpg" alt="Aliyun Model Studio CLI" />
 
 **阿里云百炼 (DashScope) AI 平台命令行工具**
 
@@ -27,6 +27,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **应用编排** — 调用百炼已发布的 Managed Agent、智能体和工作流，接入知识库、记忆库、联网搜索与 MCP 工具
 - **原生 MCP 接入** — 将百炼 MCP 服务注册到 Codex、Claude Code、Cursor、Qoder、Qoder Work、千问办公（QwenWork）、Qwen Code、Gemini CLI 或 Pi
 - **模型训推** — 数据集校验上传、模型精调、专属模型部署上线
+- **批量推理** — CSV/JSONL 构造、异步 Chat/Embedding 任务创建与跟踪、原始结果/错误下载及可选 CSV，或同步单请求 Batch Chat
 - **账号运维** — 授权登录、界面化配置、模型市场、用量与额度、限流提额、团队席位管理
 - **套餐接入** — 支持 Token Plan 等订阅计划一键接到 CLI 和常见 Coding Agent
 
@@ -36,7 +37,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
-    <img src="https://img.alicdn.com/imgextra/i1/O1CN01Q5052k232Hd36NodG_!!6000000007197-0-tps-2940-1656.jpg" alt="点击播放演示视频" width="720" />
+    <img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/showcase-short-film.jpg" alt="点击播放演示视频" width="720" />
   </a>
 </p>
 
@@ -56,7 +57,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/2v0GYLbJSQb2saj4iopTJDW3iRIHsintYlK-wTKbhqE.mp4">
-    <img src="https://img.alicdn.com/imgextra/i4/6000000001674/O1CN01xhzixhxltbH3LxWu_!!6000000001674-0-tbvideo.jpg" alt="点击播放演示视频" width="720" />
+    <img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/showcase-managed-agent.jpg" alt="点击播放演示视频" width="720" />
   </a>
 </p>
 
@@ -125,6 +126,49 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 > 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?spm=a2ty07.github)
 
+### 体验知识库
+
+准备有效的 API Key 和工作空间后，先预览初始化计划：
+
+```bash
+bl knowledge init --workspace-id <workspace-id> --dry-run
+```
+
+知识库创建成功即持续按时计费，即使没有检索也一样。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效；模型调用另计，当前账户剩余额度未知。查看计划与[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)，**确认本次操作后**，在同一命令中去掉 `--dry-run` 并添加 `--yes` 执行。
+
+保留返回的 ID 和恢复记录。退出 CLI 或后续步骤失败不会停止计费；按返回的清理动作删除不再需要的知识库。检索及清理示例见 [Knowledge Studio 快速开始](packages/kscli/README.zh.md#快速开始)。知识库 Skill `bailian-knowledge` 通过 `bl skill init` 安装。
+
+## ParseX
+
+通过业务空间专属 ParseX API 解析文档、音视频，并按 Schema 抽取结构化字段：
+
+```bash
+bl parsex parse submit --workspace-id <workspace-id> --file-url "https://example.com/document.pdf" --file-name document.pdf --output-file-format markdown --output json
+bl parsex parse result --workspace-id <workspace-id> --biz-id <parse-biz-id> --follow --output json
+bl parsex extract submit --workspace-id <workspace-id> --parsed-file-biz-id <parse-biz-id> --schema-file schema.json --output json
+bl parsex extract result --workspace-id <workspace-id> --biz-id <extract-biz-id> --follow --output json
+```
+
+需要普通 API Key 和已获 ParseX 访问权限的业务空间。提交立即返回 `data.biz_id`，`result --follow` 等待完成。`schema.json` 为 JSON Schema 对象，例如 `{"type":"object","properties":{"title":{"type":"string"}}}`。输入使用可访问的 HTTP(S) URL；抽取还可复用保留期内的文档解析任务。处理配置、结果分片、OSS 凭证、dry-run 和轮询约定见 [ParseX 命令指南](docs/parsex.md)。
+
+## 批量推理
+
+```bash
+bl batch convert --help
+bl batch convert --file input.csv --output-file input.jsonl --model qwen-plus
+bl batch create --file input.jsonl --dry-run
+bl batch create --file input.jsonl
+bl batch get --batch-id <id> --follow
+bl batch download --batch-id <id> --csv
+bl text chat --batch --model qwen-plus --message "你好" --timeout 3600
+```
+
+`--help` 提供 CSV、JSONL 和结果数据样例。`convert` 为本地转换，无需凭证；推理/任务命令使用模型 API Key。文件推理统一使用异步任务 `create → get → download`：`create` 上传/提交后返回任务 ID，不等待任务完成；通过 `get` 查询，完成后用 `download` 下载结果。转换/下载产物逐文件原子发布，不静默覆盖，部分下载失败可用 `--force` 重跑恢复。JSONL 是保真结果，CSV 为有损展示；导入 ID 请选择文本类型以保留前导零。Ctrl-C 仅停止本地轮询，不取消远端任务。
+
+`text chat --batch` 发送单次同步请求并等待响应，不创建异步任务 ID。使用 `--message` 或 `--messages-file`；后者表示同一请求的对话上下文，不表示文件中的独立请求。请求总超时默认为 300 秒（`--timeout`：60–3600 秒）。超时、Ctrl-C、断线不保证服务端已取消执行。
+
+同步 Batch Chat 强制非流式；拒绝显式实时/国际站/Token Plan 端点。显式实时 Profile 需指定 `--base-url https://batch.dashscope.aliyuncs.com`。Batch 可用范围和限制取决于服务与模型。dry-run 不调用业务 API、不写产物或目录，框架更新检查/遥测遵循其配置。
+
 ## 认证方式
 
 ### 控制台登录（OAuth，推荐）
@@ -136,6 +180,22 @@ bl auth login --console
 ```
 
 国际站请使用 `--console-site international`。
+
+CLI 始终打印登录地址。若要自行选择浏览器，请保持命令运行，并在**同一台机器**的浏览器中打开地址：
+
+```bash
+bl auth login --console --no-browser --console-site international
+```
+
+浏览器拦截本地回调时，请检查控制台站点的本地网络权限，或尝试 Firefox。PNA 兼容响应头不能绕过 Chrome 的本地网络权限或 Safari 的混合内容限制。15 分钟内未收到回调会登录失败（退出码 5），不会视为成功。
+
+如果已有有效的控制台 access token，可通过 stdin 导入，无需浏览器或本地回调服务。必须指定 token 实际所属的地域与站点；以下为 POSIX shell 示例：
+
+```bash
+bl auth login --console --token-stdin --console-site international --console-region ap-southeast-1 < /path/to/console-token.txt
+```
+
+输入只能是一个原始 token（不超过 64 KiB），不接受 JSON 或 `Bearer ...`；为避免凭证回显，不接受终端交互输入。请使用受保护的文件或可信管道，不要把 token 放进命令参数或 shell 历史，使用后清理临时凭证文件。CLI 校验通过才保存；失败时保留原凭证和激活的 Profile。加上 `--config <name>` 可在成功后写入并激活指定 Profile。此方式仅导入控制台会话，不创建模型 API Key。
 
 ### API Key
 
@@ -189,9 +249,11 @@ bl update
 
 欢迎扫码加入阿里云百炼 CLI 钉钉用户交流群，获取使用答疑、问题排查、Bug 反馈和使用经验交流支持。
 
-<img src="https://img.alicdn.com/imgextra/i3/O1CN015uuhYGb6j0L12xJZ_!!6000000006304-2-tps-516-485.png" alt="阿里云百炼 CLI 钉钉用户交流群" width="240" />
+<img src="https://raw.githubusercontent.com/modelstudioai/cli/main/assets/dingtalk-group.png" alt="阿里云百炼 CLI 钉钉用户交流群" width="240" />
 
 ## 相关链接
+
+Memory 用户文档：[能力矩阵](https://github.com/modelstudioai/cli/blob/main/docs/memory/cli-matrix.md) · [命令指南](https://github.com/modelstudioai/cli/blob/main/docs/memory/memory-cli-guide.md)。
 
 | 资源                    | 地址                                                                                                |
 | :---------------------- | :-------------------------------------------------------------------------------------------------- |
@@ -202,3 +264,7 @@ bl update
 | 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key                   |
 | 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview |
 | 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                            |
+
+### RAG 音视频接入
+
+`bl knowledge doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 仅输出最终回答。参阅 [命令指南](docs/knowledge/knowledge-cli-guide.md)。

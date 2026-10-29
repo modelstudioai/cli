@@ -22,6 +22,7 @@ import { createTranslator, type Translator } from "./i18n.ts";
  */
 export type Resolution =
   | { kind: "version" }
+  | { kind: "introspect"; path: string[] }
   | { kind: "help"; path: string[]; parsedFlags: Record<string, unknown> }
   | {
       kind: "run";
@@ -30,7 +31,7 @@ export type Resolution =
       rest: string[];
       parsedFlags: Record<string, unknown>;
     }
-  | { kind: "usageError"; error: UsageError };
+  | { kind: "usageError"; error: UsageError; command?: AnyCommand };
 
 /**
  * Classify argv into a {@link Resolution}. Pure over (argv, registry).
@@ -42,9 +43,14 @@ export function resolve(
   registry: CommandRegistry,
   localize: Translator["localize"] = (text) => createTranslator(DEFAULT_LANGUAGE).localize(text),
 ): Resolution {
+  let matchedCommand: AnyCommand | undefined;
   try {
-    const { path, rest, hasHelpFlag, hasVersionFlag } = parsePath(argv, localize);
+    const { path, rest, hasHelpFlag, hasVersionFlag, hasIntrospectFlag } = parsePath(
+      argv,
+      localize,
+    );
     const target = registry.locate(path);
+    if (target.kind === "leaf") matchedCommand = target.command;
 
     if (target.kind === "unknown" && !hasVersionFlag && !hasHelpFlag) {
       return { kind: "usageError", error: target.error };
@@ -62,7 +68,8 @@ export function resolve(
     let parsedFlags: Record<string, unknown>;
     try {
       parsedFlags = parseFlags(rest, definitions, localize, {
-        enforceRequired: target.kind === "leaf" && !hasHelpFlag && !hasVersionFlag,
+        enforceRequired:
+          target.kind === "leaf" && !hasHelpFlag && !hasVersionFlag && !hasIntrospectFlag,
       });
     } catch (error) {
       // A bare leaf with missing required flags remains an incomplete invocation.
@@ -78,6 +85,9 @@ export function resolve(
     }
 
     if (hasVersionFlag) return { kind: "version" };
+    if (hasIntrospectFlag && target.kind !== "unknown") {
+      return { kind: "introspect", path: target.matched };
+    }
 
     switch (target.kind) {
       case "leaf":
@@ -90,7 +100,13 @@ export function resolve(
         return { kind: "usageError", error: target.error };
     }
   } catch (error) {
-    if (error instanceof UsageError) return { kind: "usageError", error };
+    if (error instanceof UsageError) {
+      return {
+        kind: "usageError",
+        error,
+        ...(matchedCommand ? { command: matchedCommand } : {}),
+      };
+    }
     throw error;
   }
 }

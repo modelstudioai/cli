@@ -1,11 +1,8 @@
-import {
-  defineCommand,
-  BailianError,
-  ExitCode,
-  effectiveConsoleGatewayConfig,
-} from "bailian-cli-core";
+import { BailianError, ExitCode } from "bailian-cli-core";
 import { ansi } from "bailian-cli-runtime";
 import {
+  defineTelemetryCommand,
+  telemetryGatewayPreview,
   TELEMETRY_LOG_TIME_FLAGS,
   ensureTelemetryRegionSupported,
   pollTelemetryData,
@@ -21,7 +18,7 @@ import { LIST_INFERENCE_LOGS_API } from "./inference-list.ts";
 
 const ORIGIN_LOG_API = "zeldaEasy.bailian-telemetry.model.getModelOriginLog";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show a single inference log entry with full request/response content",
     "zh-CN": "查看单条推理日志详情（含完整请求/响应内容）",
@@ -82,7 +79,7 @@ export default defineCommand({
         data: {
           reqDTO: { ...baseReqDTO, startTime: String(startTime), endTime: String(endTime) },
         },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }

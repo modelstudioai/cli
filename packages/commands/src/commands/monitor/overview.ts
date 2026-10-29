@@ -1,4 +1,4 @@
-import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
@@ -75,7 +75,7 @@ function renderStatistic(stat: ModelStatistic, startTime: number, endTime: numbe
   return textChunks.join("").replace(/\n$/, "");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show aggregated model call statistics (calls, failures, latency, token usage)",
     "zh-CN": "查看模型调用汇总统计（调用量、失败率、耗时、Token 用量）",
@@ -114,7 +114,7 @@ export default defineCommand({
       ctx.output.result({
         api: STATISTIC_API,
         data: { reqDTO },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }
@@ -122,7 +122,14 @@ export default defineCommand({
     ensureTelemetryRegionSupported(settings);
     const stat = (await pollTelemetryData(ctx.client, STATISTIC_API, reqDTO)) as ModelStatistic;
 
-    const text = format === "text" ? renderStatistic(stat, startTime, endTime) : undefined;
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
+
+      textChunks.push(renderStatistic(stat, startTime, endTime) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
     ctx.output.result(
       {
         period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },

@@ -100,8 +100,11 @@ export default defineCommand({
       lines.push(formatField("name", row.name));
       lines.push(formatField("description", row.description));
       lines.push(formatField("dataType", row.dataType));
+      lines.push(formatField("knowledgeType", row.knowledgeType));
+      lines.push(formatField("knowledgeScene", row.knowledgeScene));
       lines.push("Indexing:   [immutable — recreate required to change]");
       lines.push(formatField("embeddingModelName", row.embeddingModelName));
+      lines.push(formatField("multimodalEmbeddingModelName", row.multimodalEmbeddingModelName));
       lines.push(formatField("embeddingDimension", row.embeddingDimension));
       lines.push(formatField("chunkSize", row.chunkSize));
       lines.push(formatField("overlapSize", row.overlapSize));

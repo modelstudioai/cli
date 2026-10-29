@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { createOutputReporter } from "../src/output/reporter.ts";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
@@ -351,7 +352,7 @@ test("cached newer versions notify without another network check and clear after
     }),
   );
   const network = vi
-    .spyOn(globalThis, "fetch")
+    .spyOn(httpTransport, "fetch")
     .mockRejectedValue(new Error("Network must not be used"));
   try {
     await checkForUpdate("2.3.0");

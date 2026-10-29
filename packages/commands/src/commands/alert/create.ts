@@ -1,9 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  effectiveConsoleGatewayConfig,
-  unwrapResponse,
-} from "bailian-cli-core";
+import { detectOutputFormat, unwrapResponse } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult } from "bailian-cli-runtime";
 import {
   ALERT_RULE_WRITE_FLAGS,
@@ -14,7 +10,7 @@ import {
 
 const CREATE_RULE_API = "zeldaEasy.bailian-telemetry.alertRule.createAlertRule";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Create a model alert rule from an alert template",
     "zh-CN": "基于告警模板创建模型告警规则",
@@ -39,7 +35,7 @@ export default defineCommand({
   validate: (flags) => validateAlertRuleFlags(flags),
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const reqDTO = {
       ...(settings.workspaceId ? { workspaceId: settings.workspaceId } : {}),
@@ -51,7 +47,7 @@ export default defineCommand({
         {
           api: CREATE_RULE_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { expect, test } from "vite-plus/test";
 import type { Client } from "bailian-cli-core";
 import { PipelineError } from "../src/pipeline/errors.ts";
@@ -205,9 +206,9 @@ test("pipeline speechRecognize rejects multiple urls for sync flash", async () =
 });
 
 test("pipeline speechRecognize downloads qwen3 singular result.transcription_url", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const transcriptionUrl = "https://example.com/transcription.json";
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  httpTransport.fetch = (async (input: RequestInfo | URL) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     expect(url).toBe(transcriptionUrl);
     return new Response(
@@ -254,6 +255,6 @@ test("pipeline speechRecognize downloads qwen3 singular result.transcription_url
     expect(result.transcription_url).toBe(transcriptionUrl);
     expect(result.result?.transcription_url).toBe(transcriptionUrl);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });

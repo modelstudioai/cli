@@ -27,6 +27,7 @@ test.each([false, true])("quiet=%s does not change auto-update execution", async
     settings,
     output,
     path: ["probe"],
+    command: { auth: "none", description: "fixture", async run() {} },
     identity: {
       version: "1.0.0",
       npmPackage: "test-cli",
@@ -76,6 +77,7 @@ test.each(notificationCases)(
       settings,
       output,
       path: ["probe"],
+      command: { auth: "none", description: "fixture", async run() {} },
       identity: {
         version: "2.3.0",
         npmPackage: "knowledge-studio-cli",

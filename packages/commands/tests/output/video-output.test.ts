@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { parse as parseYaml } from "yaml";
-import { buildSettings, type AnyCommand, type LocalizedText } from "bailian-cli-core";
+import {
+  buildSettings,
+  httpTransport,
+  type AnyCommand,
+  type LocalizedText,
+} from "bailian-cli-core";
 import { createOutputReporter } from "bailian-cli-runtime";
 import generate from "../../src/commands/video/generate.ts";
 import reference from "../../src/commands/video/ref.ts";
@@ -98,7 +103,7 @@ async function invoke(
       };
     },
   );
-  const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
+  const fetchMock = vi.spyOn(httpTransport, "fetch").mockImplementation(
     async () =>
       new Response(
         new ReadableStream({

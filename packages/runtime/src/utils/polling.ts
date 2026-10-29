@@ -4,6 +4,8 @@ export interface PollOptions {
   output: Pick<CommandOutput, "progress" | "debug">;
   /** Absolute task URL (Client passes absolute URLs through as-is). */
   url: string;
+  /** Optional complete snapshot loader (for paginated task APIs). */
+  load?: () => Promise<unknown>;
   intervalSec: number;
   timeoutSec: number;
   isComplete: (data: unknown) => boolean;
@@ -18,7 +20,9 @@ export async function poll<T>(client: Client, opts: PollOptions): Promise<T> {
   output.progress({ "en-US": "Polling...", "zh-CN": "正在查询任务状态……" });
 
   while (Date.now() < deadline) {
-    const data = await client.requestJson<T>({ path: opts.url });
+    const data = opts.load
+      ? ((await opts.load()) as T)
+      : await client.requestJson<T>({ path: opts.url });
 
     if (opts.getStatus) {
       const status = opts.getStatus(data);

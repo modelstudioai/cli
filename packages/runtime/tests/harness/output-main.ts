@@ -1,4 +1,4 @@
-import { BailianError, ExitCode, defineCommand } from "bailian-cli-core";
+import { BailianError, ExitCode, defineCommand, httpTransport } from "bailian-cli-core";
 import { createCli } from "../../src/create-cli.ts";
 
 const probe = defineCommand({
@@ -38,8 +38,8 @@ const transport = defineCommand({
   description: "HTTP output probe",
   auth: "apiKey",
   async run(context) {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () =>
+    const originalFetch = httpTransport.fetch;
+    httpTransport.fetch = async () =>
       new Response(
         JSON.stringify({
           code: "ServiceUnavailable",
@@ -51,13 +51,24 @@ const transport = defineCommand({
     try {
       await context.client.requestJson({ path: "/task?token=fake-query-secret" });
     } finally {
-      globalThis.fetch = originalFetch;
+      httpTransport.fetch = originalFetch;
     }
   },
 });
 
 await createCli(
-  { probe, fail, transport },
+  {
+    probe,
+    fail,
+    transport,
+    defaultProbe: { ...probe, defaultOutput: "json" },
+    defaultFail: { ...fail, defaultOutput: "json" },
+    defaultValidate: {
+      ...probe,
+      defaultOutput: "json",
+      validate: () => ({ "en-US": "Rejected fixture input", "zh-CN": "测试输入被拒绝" }),
+    },
+  },
   {
     binName: "test-cli",
     version: "0.0.0",

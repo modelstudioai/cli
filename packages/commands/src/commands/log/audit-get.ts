@@ -1,11 +1,8 @@
-import {
-  defineCommand,
-  BailianError,
-  ExitCode,
-  effectiveConsoleGatewayConfig,
-} from "bailian-cli-core";
+import { BailianError, ExitCode } from "bailian-cli-core";
 import { ansi } from "bailian-cli-runtime";
 import {
+  defineTelemetryCommand,
+  telemetryGatewayPreview,
   TELEMETRY_LOG_TIME_FLAGS,
   ensureTelemetryRegionSupported,
   pollTelemetryData,
@@ -13,13 +10,15 @@ import {
 } from "../shared/telemetry.ts";
 import {
   type ModelLogEntry,
+  normalizeAuditLog,
+  assertAuditWorkspace,
   renderLogDetail,
   validateHoursFlag,
   validateRequestIdLength,
 } from "./shared.ts";
 import { LIST_AUDIT_LOGS_API } from "./audit-list.ts";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show a single audit log entry with its raw origin record",
     "zh-CN": "查看单条审计日志详情（含原始审计记录）",
@@ -49,6 +48,7 @@ export default defineCommand({
   exampleArgs: [
     "--request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     "--request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx --hours 24",
+    "--request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx --workspace-id ws-example",
     "--request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx --output json",
   ],
   notes: [
@@ -85,14 +85,16 @@ export default defineCommand({
       ctx.output.result({
         api: LIST_AUDIT_LOGS_API,
         data: { reqDTO },
-        ...effectiveConsoleGatewayConfig(settings),
+        ...telemetryGatewayPreview(settings),
       });
       return;
     }
 
     ensureTelemetryRegionSupported(settings);
     const resp = await pollTelemetryData(ctx.client, LIST_AUDIT_LOGS_API, reqDTO);
-    const entry = ((resp.list as ModelLogEntry[]) ?? [])[0];
+    const list = ((resp.list as ModelLogEntry[]) ?? []).map(normalizeAuditLog);
+    assertAuditWorkspace(list, ctx);
+    const entry = list[0];
     if (!entry) {
       throw new BailianError(
         `No audit log found for request ${flags.requestId} in the selected range.`,

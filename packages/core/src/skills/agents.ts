@@ -4,11 +4,12 @@ import {
   lstatSync,
   mkdirSync,
   readlinkSync,
+  realpathSync,
   rmSync,
   symlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { getSkillsDir } from "./lock.ts";
 import { getHermesHome } from "../utils/agent-home.ts";
 
@@ -26,9 +27,36 @@ export interface AgentTarget {
   displayName: string;
   /** Global directory where this agent reads skills from */
   skillsDir: string;
-  /** 任一存在即判定"本机装了该 agent" */
+  /** Any existing path means this agent is installed on the host */
   detectDirs: string[];
 }
+
+/**
+ * Test-only switch: when set to `"1"`, `detectInstalledAgents` skips absolute
+ * detectDirs outside HOME / `XDG_CONFIG_HOME` (e.g. `/etc/codex`, `/Applications/…`,
+ * and project dirs under cwd). Not for end users.
+ */
+export const SKIP_HOST_AGENTS_ENV = "BL_SKIP_HOST_AGENTS";
+
+/**
+ * Official Agent config-path override env vars. Clear these in isolated tests
+ * so detection does not point at the developer machine.
+ */
+export const AGENT_ENV_KEYS = [
+  "CLAUDE_CONFIG_DIR",
+  "CODEX_HOME",
+  "VIBE_HOME",
+  "HERMES_HOME",
+  "AUTOHAND_HOME",
+  "GROK_HOME",
+  "DSH_HOME",
+  "OPENCLAW_CONFIG_PATH",
+  "ZCODE_HOME",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "FLATPAK_XDG_CONFIG_HOME",
+  "PI_CODING_AGENT_DIR",
+] as const;
 
 /**
  * Computed on each call (depends on homedir / XDG_CONFIG_HOME / cwd; easy to override in tests).
@@ -246,8 +274,60 @@ export function getAgentTargets(): AgentTarget[] {
   ];
 }
 
+/**
+ * Resolve to a real absolute path. If the path does not exist yet, realpath
+ * ancestors and rejoin the suffix so macOS cwd=`/private/var/...` vs
+ * HOME=`/var/...` is not misclassified as a host system dir.
+ */
+function canonicalPath(path: string): string {
+  const absolute = resolve(path);
+  try {
+    return realpathSync(absolute);
+  } catch {
+    const parts: string[] = [];
+    let current = absolute;
+    while (current !== dirname(current)) {
+      if (existsSync(current)) {
+        try {
+          return join(realpathSync(current), ...parts.reverse());
+        } catch {
+          break;
+        }
+      }
+      parts.push(basename(current));
+      current = dirname(current);
+    }
+    return absolute;
+  }
+}
+
+function isPathInside(candidate: string, root: string): boolean {
+  const resolvedCandidate = canonicalPath(candidate);
+  const resolvedRoot = canonicalPath(root);
+  return resolvedCandidate === resolvedRoot || resolvedCandidate.startsWith(resolvedRoot + sep);
+}
+
+/**
+ * Host-level detect path: absolute and not under the current HOME /
+ * `XDG_CONFIG_HOME` (e.g. `/etc/codex`, `/Applications/…`).
+ */
+export function isHostSystemDetectDir(dir: string): boolean {
+  if (!isAbsolute(dir)) return false;
+  if (isPathInside(dir, homedir())) return false;
+  const xdgConfig = process.env.XDG_CONFIG_HOME?.trim();
+  if (xdgConfig && isPathInside(dir, xdgConfig)) return false;
+  return true;
+}
+
+function shouldProbeDetectDir(dir: string): boolean {
+  if (process.env[SKIP_HOST_AGENTS_ENV] !== "1") return true;
+  return !isHostSystemDetectDir(dir);
+}
+
 export function detectInstalledAgents(): AgentTarget[] {
-  return getAgentTargets().filter((agent) => agent.detectDirs.some((dir) => existsSync(dir)));
+  return getAgentTargets().filter((agent) =>
+    agent.detectDirs.some((dir) => shouldProbeDetectDir(dir) && existsSync(dir)),
+  );
 }
 
 /** Path equality that respects the host filesystem's case rules (Windows is case-insensitive) */

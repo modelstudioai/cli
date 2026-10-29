@@ -1,9 +1,83 @@
+import { UsageError } from "../errors/base.ts";
+
 // API path builders — return the path only; the Client prepends the
 // credential's baseUrl. Commands never see baseUrl.
+//
+// Exception: workspace-scoped APIs (RAG admin plane, knowledge search/chat,
+// memory) live on a per-workspace host, so their builders return an absolute
+// URL — see `workspaceEndpoint`.
+
+/**
+ * Workspace-scoped API host. Everything reached through the workspace gateway
+ * (RAG admin plane, knowledge search/chat, memory) shares this host shape, so
+ * it is spelled out exactly once here.
+ */
+function workspaceEndpoint(workspaceId: string, path: string): string {
+  if (!/^[a-zA-Z0-9_-]+$/.test(workspaceId)) {
+    throw new UsageError(
+      "Workspace ID must contain only letters, digits, hyphens or underscores. / Workspace ID 只能包含字母、数字、连字符或下划线。",
+    );
+  }
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
+}
+
+// ---- ParseX (workspace-scoped document/media parsing and extraction) ----
+export function parsexBaseUrl(workspaceId: string): string {
+  return workspaceEndpoint(workspaceId, "");
+}
+
+/** The shared credential resolver normalizes --base-url to an origin. */
+export function parsexEndpoint(
+  baseUrl: string,
+  operation: "parse" | "extract",
+  action: "submit" | "result",
+): string {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    throw new UsageError("Invalid ParseX base URL. / ParseX Base URL 无效。");
+  }
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  const servicePath = url.pathname.replace(/\/+$/, "");
+  if (
+    (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    servicePath
+  ) {
+    throw new UsageError(
+      "ParseX base URL must be an HTTPS origin (HTTP is allowed only on loopback). / ParseX Base URL 必须为 HTTPS 源站（仅本机回环地址允许 HTTP）。",
+    );
+  }
+  const defaultPath = url.hostname.endsWith(".cn-beijing.pre-maas.aliyuncs.com")
+    ? "/api/v2/apps/pre-parse-x"
+    : "/api/v2/apps/parse-x";
+  return `${url.origin}${defaultPath}/${operation}/${action}`;
+}
 
 // ---- Chat (OpenAI Compatible) ----
 export function chatPath(): string {
   return "/compatible-mode/v1/chat/completions";
+}
+
+// ---- Batch (OpenAI Compatible) ----
+export function batchesPath(): string {
+  return "/compatible-mode/v1/batches";
+}
+export function batchPath(batchId: string): string {
+  return `${batchesPath()}/${encodeURIComponent(batchId)}`;
+}
+export function batchCancelPath(batchId: string): string {
+  return `${batchPath(batchId)}/cancel`;
+}
+export function batchFileContentPath(fileId: string): string {
+  return `/compatible-mode/v1/files/${encodeURIComponent(fileId)}/content`;
+}
+export function batchChatBaseUrl(): string {
+  return "https://batch.dashscope.aliyuncs.com";
 }
 
 // ---- Responses (OpenAI Compatible) ----
@@ -67,9 +141,21 @@ export function appCompletionPath(appId: string): string {
   return `/api/v1/apps/${encodeURIComponent(appId)}/completion`;
 }
 
-// ---- Memory (DashScope v2) ----
-export function memoryAddPath(): string {
-  return "/api/v2/apps/memory/add";
+// ---- Memory (long-term memory v2, workspace-based host) ----
+// The path builders below return the path portion only; wrap them in
+// `memoryEndpoint` to get the URL the memory API is actually served on.
+
+export function memoryEndpoint(workspaceId: string, path: string): string {
+  return workspaceEndpoint(workspaceId, path);
+}
+
+export function memoryAddAsyncPath(): string {
+  return "/api/v2/apps/memory/add-async";
+}
+
+/** GET /api/v2/apps/memory/events/{event_id} — async add task status (internal polling). */
+export function memoryEventPath(eventId: string): string {
+  return `/api/v2/apps/memory/events/${encodeURIComponent(eventId)}`;
 }
 
 export function memorySearchPath(): string {
@@ -82,6 +168,11 @@ export function memoryListPath(): string {
 
 export function memoryNodePath(nodeId: string): string {
   return `/api/v2/apps/memory/memory_nodes/${encodeURIComponent(nodeId)}`;
+}
+
+/** GET /api/v2/apps/memory/skill/export/{memory_node_id} — skill memory export. */
+export function memorySkillExportPath(nodeId: string): string {
+  return `/api/v2/apps/memory/skill/export/${encodeURIComponent(nodeId)}`;
 }
 
 // ---- Speech Synthesis (TTS) ----
@@ -99,18 +190,22 @@ export function speechVocabularyPath(): string {
   return "/api/v1/services/audio/asr/customization";
 }
 
-// ---- Memory Profile (DashScope v2) ----
+// ---- Memory Profile (long-term memory v2, workspace-based host) ----
 export function profileSchemaPath(): string {
   return "/api/v2/apps/memory/profile_schemas";
 }
 
-export function userProfilePath(schemaId: string): string {
-  return `/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}/profiles`;
+export function profileSchemaItemPath(schemaId: string): string {
+  return `/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}`;
 }
 
-// ---- Knowledge Base Retrieve (DashScope) ----
-export function knowledgeRetrievePath(): string {
-  return "/api/v1/indices/rag/index/retrieve";
+export function userProfilePath(schemaId: string): string {
+  return `${profileSchemaItemPath(schemaId)}/user_profile`;
+}
+
+/** PATCH /api/v2/apps/memory/profile_schemas/{id}/profile_values — value item add/update/delete. */
+export function userProfileValuesPath(schemaId: string): string {
+  return `${profileSchemaItemPath(schemaId)}/profile_values`;
 }
 
 // ---- Workspace-scoped MaaS endpoints (cn-beijing by default) ----
@@ -122,13 +217,13 @@ export function workspaceMaaSBaseUrl(workspaceId: string, region = "cn-beijing")
 // ---- Knowledge Search (新版 RAG 检索, workspace-based host) ----
 
 export function knowledgeSearchEndpoint(workspaceId: string): string {
-  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1/indices/knowledge/search`;
+  return workspaceEndpoint(workspaceId, "/api/v1/indices/knowledge/search");
 }
 
 // ---- Knowledge Chat (新版 RAG 问答, workspace-based host) ----
 
 export function knowledgeChatEndpoint(workspaceId: string): string {
-  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat`;
+  return workspaceEndpoint(workspaceId, "/api/v2/apps/knowledge/chat");
 }
 
 // ---- Agent Security Center (AgentStudio, workspace-based host) ----
@@ -323,7 +418,7 @@ export function deploymentsModelsPath(): string {
 // RAG_PATHS to avoid per-endpoint boilerplate.
 
 export function ragEndpoint(workspaceId: string, path: string): string {
-  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
+  return workspaceEndpoint(workspaceId, path);
 }
 
 // ---- Sandbox control plane (workspace-based host, cn-beijing only) ----
@@ -383,9 +478,10 @@ export const RAG_PATHS = {
   indexUpdate: "/api/v1/indices/rag/index/update", // POST, index id parameter is named `id`
   indexDelete: "/api/v1/indices/rag/index/delete", // POST, body { index_id }
   indexMonitor: "/api/v1/indices/rag/index/monitor", // POST, second-precision string timestamps
+  indexFileDetails: "/api/v1/indices/rag/list/index/file/details", // POST, camelCase pagination; max 10
   indexFiles: "/api/v1/indices/rag/index/files", // GET, page parameter is page_num
   indexDeleteFile: "/api/v1/indices/rag/index/delete_file", // POST, body { index_id, doc_ids }
-  indexJobCreate: "/api/v1/indices/rag/index/job/create", // POST, body requires nested dataSource { sourceType, fileIds } (flat documentIds from the docs is rejected)
+  indexJobCreate: "/api/v1/indices/rag/index/job/create", // POST, body uses explicit sourceType and flat docIds/categoryIds; omitting sourceType can import the entire data center
   indexJobStatus: "/api/v1/indices/rag/index_job/status", // GET, both index_id and job_id required
   chunkList: "/api/v1/indices/rag/index/chunklist", // POST, body pageNum/pageSize
   chunkCreate: "/api/v1/indices/rag/index/chunk/create", // POST, parameter is pipelineId; rate limit 10 req/s, no chunk_id in response
