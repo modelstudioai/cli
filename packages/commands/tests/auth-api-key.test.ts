@@ -257,11 +257,15 @@ test("显式 Base URL 返回 404 时保留状态和 request ID", async () => {
 test.each([
   { name: "5xx", status: 503, message: "temporary outage" },
   { name: "429", status: 429, message: "too many requests" },
-])("存在 $name 时校验结论不确定，不误报 Key 无效", async ({ status, message }) => {
+])("后续候选出现 $name 时优先透传该错误", async ({ status, message }) => {
   const originalFetch = httpTransport.fetch;
   httpTransport.fetch = async (input) => {
-    if (requestUrl(input).startsWith("https://dashscope.aliyuncs.com/")) {
-      return jsonResponse({ code: "TemporaryFailure", message }, status);
+    const url = requestUrl(input);
+    if (url.startsWith("https://dashscope-intl.aliyuncs.com/")) {
+      return jsonResponse(
+        { code: "TemporaryFailure", message, request_id: `req-${status}` },
+        status,
+      );
     }
     return jsonResponse({ code: "InvalidApiKey", message: "invalid key" }, 401);
   };
@@ -270,6 +274,62 @@ test.each([
     const error = await captureValidationError("sk-placeholder");
     expect(error.exitCode).toBe(ExitCode.GENERAL);
     expect(error.message).toBe(message);
+    expect(error.api).toEqual({
+      httpStatus: status,
+      apiCode: "TemporaryFailure",
+      requestId: `req-${status}`,
+    });
+  } finally {
+    httpTransport.fetch = originalFetch;
+  }
+});
+
+test("后续候选出现网络错误时优先透传该错误", async () => {
+  const originalFetch = httpTransport.fetch;
+  const networkError = new TypeError("fetch failed", {
+    cause: Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
+  });
+  httpTransport.fetch = async (input) => {
+    if (requestUrl(input).startsWith("https://dashscope-intl.aliyuncs.com/")) {
+      throw networkError;
+    }
+    return jsonResponse({ code: "InvalidApiKey", message: "invalid key" }, 401);
+  };
+
+  try {
+    const error = await validateApiKey({ identity, settings }, "sk-placeholder", {}).catch(
+      (caught) => caught,
+    );
+    expect(error).toBe(networkError);
+  } finally {
+    httpTransport.fetch = originalFetch;
+  }
+});
+
+test("同一优先级的 HTTP 错误保持候选顺序", async () => {
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async (input) => {
+    const url = requestUrl(input);
+    if (url.startsWith("https://dashscope.aliyuncs.com/")) {
+      return jsonResponse(
+        { code: "FirstRejected", message: "first candidate rejected", request_id: "req-first" },
+        401,
+      );
+    }
+    return jsonResponse(
+      { code: "LaterRejected", message: "later candidate rejected", request_id: "req-later" },
+      404,
+    );
+  };
+
+  try {
+    const error = await captureValidationError("sk-placeholder");
+    expect(error.message).toBe("first candidate rejected");
+    expect(error.api).toEqual({
+      httpStatus: 401,
+      apiCode: "FirstRejected",
+      requestId: "req-first",
+    });
   } finally {
     httpTransport.fetch = originalFetch;
   }

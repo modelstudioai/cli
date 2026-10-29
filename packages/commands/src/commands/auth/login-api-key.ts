@@ -1,4 +1,5 @@
 import {
+  BailianError,
   getApiKeyLoginKind,
   normalizeModelBaseUrl,
   requestJson,
@@ -162,6 +163,27 @@ export function apiKeyValidationCandidates(
   return candidates;
 }
 
+function validationFailurePriority(error: unknown): number {
+  if (!(error instanceof BailianError) || error.api?.httpStatus === undefined) return 0;
+  const status = error.api.httpStatus;
+  if (status === 429 || status >= 500) return 1;
+  return 2;
+}
+
+function selectValidationFailure(results: readonly { error?: unknown }[]): unknown {
+  let selectedError: unknown;
+  let selectedPriority = Number.POSITIVE_INFINITY;
+  for (const result of results) {
+    if (result.error === undefined) continue;
+    const priority = validationFailurePriority(result.error);
+    if (priority < selectedPriority) {
+      selectedError = result.error;
+      selectedPriority = priority;
+    }
+  }
+  return selectedError;
+}
+
 /** Validate a key without consuming model quota and return the first matching endpoint. */
 export async function validateApiKey(
   deps: ApiKeyValidationDeps,
@@ -187,8 +209,8 @@ export async function validateApiKey(
   const success = results.find((result) => result.error === undefined);
   if (success) return { baseUrl: success.candidate.baseUrl, kind: success.candidate.kind };
 
-  const failure = results.find((result) => result.error !== undefined);
-  if (failure?.error !== undefined) throw failure.error;
+  const failure = selectValidationFailure(results);
+  if (failure !== undefined) throw failure;
 
   throw new TypeError("API key validation completed without a success or failure result.");
 }
