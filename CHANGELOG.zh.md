@@ -6,6 +6,19 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.7.0] - 2026-10-29
+
+### 新增
+
+- **ParseX 解析**：新增 `bl parsex parse submit/result`，支持文档及音视频解析、结果查询和 Markdown 输出。
+- **ParseX 字段抽取**：新增 `bl parsex extract submit/result`，支持按 JSON Schema 从文档或已有解析结果中抽取字段，并返回原文引用。
+- **配置来源诊断**：`bl config show` 展示 API Key 与 Base URL 的生效来源，请求使用的两者来自不同配置源时给出提示。
+
+### 修复
+
+- **工作空间 API Key 登录**：修复 `bl auth login` 在 MaaS Endpoint 上拒绝有效工作空间 API Key 的问题。
+- **登录校验错误**：API Key 校验保留服务端及网络错误，避免将所有失败统一报告为 Key 无效。
+
 ## [2.6.2] - 2026-10-28
 
 ### 变更

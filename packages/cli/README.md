@@ -139,6 +139,23 @@ Knowledge bases accrue running-time charges from creation, even without queries.
 
 Keep the returned IDs and recovery record. Closing the CLI or a later failure does not stop billing; follow the reported cleanup actions to delete unused knowledge bases. See the [Knowledge Studio quick start](packages/kscli/README.md#quick-start) for retrieval and cleanup. The `bailian-knowledge` Skill is available through `bl skill init`.
 
+### RAG audio and video
+
+`bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode emits only the final answer. See the [command guide](docs/knowledge/knowledge-cli-guide.md).
+
+## ParseX
+
+Parse documents or audio/video and extract structured fields through the workspace-scoped ParseX API:
+
+```bash
+bl parsex parse submit --workspace-id <workspace-id> --file-url "https://example.com/document.pdf" --file-name document.pdf --output-file-format markdown --output json
+bl parsex parse result --workspace-id <workspace-id> --biz-id <parse-biz-id> --follow --output json
+bl parsex extract submit --workspace-id <workspace-id> --parsed-file-biz-id <parse-biz-id> --schema-file schema.json --output json
+bl parsex extract result --workspace-id <workspace-id> --biz-id <extract-biz-id> --follow --output json
+```
+
+Use an ordinary API key and a workspace with ParseX access. Submission returns `data.biz_id` immediately; `result --follow` waits for completion. `schema.json` contains a JSON Schema object, for example `{"type":"object","properties":{"title":{"type":"string"}}}`. Inputs are accessible HTTP(S) URLs; extraction also accepts a retained document parsing task. See the [ParseX command guide](docs/parsex.md) for processing options, result slices, OSS credentials, dry-run and polling behavior.
+
 ## Batch Inference
 
 ```bash
@@ -252,7 +269,3 @@ Memory documentation (Chinese): [capability matrix](https://github.com/modelstud
 | Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key                   |
 | Get Token Plan API Key       | https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                                                            |
-
-### RAG audio and video
-
-`bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode emits only the final answer. See the [command guide](docs/knowledge/knowledge-cli-guide.md).
