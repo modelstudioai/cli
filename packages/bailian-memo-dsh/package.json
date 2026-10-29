@@ -1,6 +1,6 @@
 {
   "name": "bailian-memo-dsh",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "description": "Bailian personal memory for DeepSeek Harness: automatic recall, silent curation, and user-controlled remember/forget.",
   "keywords": [
     "alibaba-cloud",
