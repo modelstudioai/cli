@@ -27,13 +27,23 @@ let modelsOrigin: string;
 
 beforeAll(async () => {
   modelsServer = createServer((request, response) => {
-    if (request.method !== "GET" || !request.url?.includes("/models")) {
+    const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
+    const isNativeModels =
+      requestUrl.pathname === "/api/v1/models" &&
+      requestUrl.searchParams.get("page_no") === "1" &&
+      requestUrl.searchParams.get("page_size") === "1";
+    const isCompatibleModels =
+      requestUrl.pathname === "/compatible-mode/v1/models" && requestUrl.search === "";
+    if (request.method !== "GET" || (!isNativeModels && !isCompatibleModels)) {
       response.writeHead(404, { "content-type": "application/json" });
       response.end(JSON.stringify({ code: "NotFound", message: "models route required" }));
       return;
     }
     if (request.headers.authorization === "Bearer sk-rejected-placeholder") {
-      response.writeHead(401, { "content-type": "application/json" });
+      response.writeHead(401, {
+        "content-type": "application/json",
+        "x-request-id": "req-auth-rejected",
+      });
       response.end(JSON.stringify({ code: "InvalidApiKey", message: "invalid key" }));
       return;
     }
@@ -504,6 +514,112 @@ describe("e2e: auth", () => {
     expect(config.base_url).toBe(modelsOrigin);
   });
 
+  test("auth login sk-ws Key 使用显式 Workspace MaaS Compatible /models", async () => {
+    await withIsolatedHome(async (home, configDir) => {
+      const workspaceOrigin = "https://ws-explicit.ap-southeast-1.maas.aliyuncs.com";
+      const originalFetch = httpTransport.fetch;
+      const requests: string[] = [];
+      httpTransport.fetch = async (input) => {
+        const endpoint = new URL(input instanceof Request ? input.url : input);
+        requests.push(endpoint.toString());
+        if (endpoint.toString() === `${workspaceOrigin}/compatible-mode/v1/models`) {
+          return new Response(JSON.stringify({ object: "list", data: [] }), {
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ code: "NotFound", message: "route not found" }), {
+          status: 404,
+          headers: { "content-type": "application/json" },
+        });
+      };
+
+      try {
+        const login = await runCommandInProcess(
+          AUTH_ROUTES,
+          [
+            "auth",
+            "login",
+            "--api-key",
+            "sk-ws-explicit-placeholder",
+            "--base-url",
+            workspaceOrigin,
+          ],
+          {
+            HOME: home,
+            BAILIAN_CONFIG_DIR: configDir,
+            DASHSCOPE_API_KEY: "",
+            DASHSCOPE_BASE_URL: "",
+            NODE_OPTIONS: "",
+            HTTP_PROXY: "",
+            HTTPS_PROXY: "",
+            http_proxy: "",
+            https_proxy: "",
+          },
+        );
+        expect(login.exitCode, login.stderr).toBe(0);
+        expect(requests).toEqual([`${workspaceOrigin}/compatible-mode/v1/models`]);
+        expect(readConfigFile()).toMatchObject({
+          api_key: "sk-ws-explicit-placeholder",
+          base_url: workspaceOrigin,
+        });
+      } finally {
+        httpTransport.fetch = originalFetch;
+      }
+    });
+  });
+
+  test("auth login sk-ws Key 重用已保存的 Workspace MaaS Compatible /models", async () => {
+    await withIsolatedHome(async (home, configDir) => {
+      const workspaceOrigin = "https://ws-stored.ap-southeast-1.maas.aliyuncs.com";
+      await writeConfigFile({ base_url: workspaceOrigin });
+      const originalFetch = httpTransport.fetch;
+      const requests: string[] = [];
+      httpTransport.fetch = async (input) => {
+        const endpoint = new URL(input instanceof Request ? input.url : input);
+        requests.push(endpoint.toString());
+        if (endpoint.toString() === `${workspaceOrigin}/compatible-mode/v1/models`) {
+          return new Response(JSON.stringify({ object: "list", data: [] }), {
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return new Response(
+          JSON.stringify({ code: "InvalidApiKey", message: "invalid key for this endpoint" }),
+          {
+            status: 401,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      };
+
+      try {
+        const login = await runCommandInProcess(
+          AUTH_ROUTES,
+          ["auth", "login", "--api-key", "sk-ws-stored-placeholder"],
+          {
+            HOME: home,
+            BAILIAN_CONFIG_DIR: configDir,
+            DASHSCOPE_API_KEY: "",
+            DASHSCOPE_BASE_URL: "",
+            NODE_OPTIONS: "",
+            HTTP_PROXY: "",
+            HTTPS_PROXY: "",
+            http_proxy: "",
+            https_proxy: "",
+          },
+        );
+        expect(login.exitCode, login.stderr).toBe(0);
+        expect(requests).toContain(`${workspaceOrigin}/compatible-mode/v1/models`);
+        expect(requests).not.toContain(`${workspaceOrigin}/api/v1/models?page_no=1&page_size=1`);
+        expect(readConfigFile()).toMatchObject({
+          api_key: "sk-ws-stored-placeholder",
+          base_url: workspaceOrigin,
+        });
+      } finally {
+        httpTransport.fetch = originalFetch;
+      }
+    });
+  });
+
   test("auth login --config token-plan 接受 Anthropic SDK Base URL", async () => {
     const configDir = makeE2eOutputDir("auth-token-plan-anthropic-base-url");
     const login = await runCommandE2e(
@@ -878,8 +994,10 @@ describe("e2e: auth", () => {
         DASHSCOPE_BASE_URL: "",
       },
     );
-    expect(login.exitCode).toBe(3);
-    expect(login.stderr).toMatch(/API key validation failed/);
+    expect(login.exitCode).toBe(1);
+    expect(login.stderr).toMatch(/invalid key/);
+    expect(login.stderr).toMatch(/Status:\s+HTTP 401 \(InvalidApiKey\)/);
+    expect(login.stderr).toMatch(/Request ID:\s+req-auth-rejected/);
     expect(existsSync(join(configDir, "config.json"))).toBe(false);
   });
 
