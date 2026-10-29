@@ -8,7 +8,7 @@
 
 ## 当前迁移阶段
 
-公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit、语音热词表 create / update / delete / get / list、speech synthesize / recognize、memory 全部 7 个命令、quota 全部 5 个命令和 agents security overview / alerts 已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
+公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit、语音热词表 create / update / delete / get / list、speech synthesize / recognize、memory 全部 7 个命令、quota 全部 5 个命令、agents security overview / alerts、monitor 全部 7 个命令和 log 全部 14 个命令已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
 
 ## 必查清单
 

@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
-import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
   TELEMETRY_LOG_TIME_FLAGS,
@@ -40,12 +40,11 @@ interface TraceListPayload {
   list?: TraceEntry[];
 }
 
-function printTraceTable(list: TraceEntry[]): void {
+function renderTraceTable(list: TraceEntry[]): string {
   const color = ansi(process.stdout);
 
   if (list.length === 0) {
-    process.stdout.write("No traces found in this range.\n");
-    return;
+    return "No traces found in this range.";
   }
 
   const lines = renderBoxTable({
@@ -68,7 +67,7 @@ function printTraceTable(list: TraceEntry[]): void {
       return undefined;
     },
   });
-  for (const line of lines) process.stdout.write(line + "\n");
+  return lines.join("\n");
 }
 
 export default defineCommand({
@@ -122,7 +121,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags, 1 / 24);
 
     const reqDTO = {
@@ -137,14 +136,11 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_TRACES_API,
-          data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_TRACES_API,
+        data: { reqDTO },
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -155,11 +151,7 @@ export default defineCommand({
     const list = Array.isArray(payload) ? payload : (payload?.list ?? []);
     const totalCount = Array.isArray(payload) ? undefined : payload?.totalCount;
 
-    if (format === "json") {
-      emitResult({ totalCount, list }, format);
-      return;
-    }
-
-    printTraceTable(list);
+    const text = format === "text" ? renderTraceTable(list) : undefined;
+    ctx.output.result({ totalCount, list }, { text });
   },
 });

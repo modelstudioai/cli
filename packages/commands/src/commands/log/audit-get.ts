@@ -2,10 +2,9 @@ import {
   defineCommand,
   BailianError,
   ExitCode,
-  detectOutputFormat,
   effectiveConsoleGatewayConfig,
 } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
+import { ansi } from "bailian-cli-runtime";
 import {
   TELEMETRY_LOG_TIME_FLAGS,
   ensureTelemetryRegionSupported,
@@ -14,7 +13,7 @@ import {
 } from "../shared/telemetry.ts";
 import {
   type ModelLogEntry,
-  printLogDetail,
+  renderLogDetail,
   validateHoursFlag,
   validateRequestIdLength,
 } from "./shared.ts";
@@ -65,7 +64,7 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     // A single request may sit far back; default window is 24h here.
     const { startTime, endTime } = resolveTimeRange(flags, 1);
 
@@ -83,14 +82,11 @@ export default defineCommand({
     if (flags.model) reqDTO.models = [flags.model];
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_AUDIT_LOGS_API,
-          data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_AUDIT_LOGS_API,
+        data: { reqDTO },
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -105,16 +101,19 @@ export default defineCommand({
       );
     }
 
-    if (format === "json") {
-      emitResult(entry, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printLogDetail(entry);
-    if (entry.originLog) {
-      process.stdout.write(
-        `\n${ansi(process.stdout).bold("Origin record:")}\n${JSON.stringify(entry.originLog, null, 2)}\n`,
-      );
+      textChunks.push(renderLogDetail(entry) + "\n");
+      if (entry.originLog) {
+        textChunks.push(
+          `\n${ansi(process.stdout).bold("Origin record:")}\n${JSON.stringify(entry.originLog, null, 2)}\n`,
+        );
+      }
+
+      text = textChunks.join("").replace(/\n$/, "");
     }
+    ctx.output.result(entry, { text });
   },
 });

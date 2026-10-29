@@ -1,4 +1,4 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { LOG_NO_WAIT_FLAG, enableLogDelivery, requireAuditLogEnabled } from "./shared.ts";
 import { LOG_SERVICE_TYPES } from "./status.ts";
 
@@ -25,12 +25,11 @@ export default defineCommand({
   ],
   exampleArgs: ["", "--no-wait", "--output json"],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const enableContext = {
       client: ctx.client,
+      output: ctx.output,
       settings: ctx.settings,
       binName: ctx.identity.binName,
-      format,
       noWait: ctx.flags.noWait,
     };
 

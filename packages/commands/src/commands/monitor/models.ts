@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
-import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
   TELEMETRY_TIME_FLAGS,
@@ -45,16 +45,18 @@ interface ModelStatisticItem {
   usages?: UsageItemWithUnit[];
 }
 
-function printTable(items: ModelStatisticItem[], startTime: number, endTime: number): void {
+function renderTable(items: ModelStatisticItem[], startTime: number, endTime: number): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
-  process.stdout.write(
+  textChunks.push(
     `${color.dim("Time Range:")} ${formatDateTime(startTime)} ~ ${formatDateTime(endTime)}\n\n`,
   );
 
   if (items.length === 0) {
-    process.stdout.write("No monitor data found.\n");
-    return;
+    textChunks.push("No monitor data found.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   const headers = [
@@ -90,9 +92,11 @@ function printTable(items: ModelStatisticItem[], startTime: number, endTime: num
       return color.green(value);
     },
   });
-  for (const line of lines) process.stdout.write(line + "\n");
+  for (const line of lines) textChunks.push(line + "\n");
 
-  process.stdout.write(color.dim(`\nTotal: ${items.length} rows`) + "\n");
+  textChunks.push(color.dim(`\nTotal: ${items.length} rows`) + "\n");
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export default defineCommand({
@@ -168,7 +172,7 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags);
 
     const reqDTO = {
@@ -183,14 +187,11 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_API,
-          data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_API,
+        data: { reqDTO },
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -199,22 +200,25 @@ export default defineCommand({
     const list = ((resp.list as ModelStatisticItem[]) ?? []).filter(Boolean);
     const nextToken = resp.nextToken as string | undefined;
 
-    if (format === "json") {
-      emitResult(
-        {
-          period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
-          totalCount: resp.totalCount ?? 0,
-          nextToken,
-          list,
-        },
-        format,
-      );
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printTable(list, startTime, endTime);
-    if (nextToken) {
-      process.stdout.write(`Next page: --next-token ${nextToken}\n`);
+      textChunks.push(renderTable(list, startTime, endTime) + "\n");
+      if (nextToken) {
+        textChunks.push(`Next page: --next-token ${nextToken}\n`);
+      }
+
+      text = textChunks.join("").replace(/\n$/, "");
     }
+    ctx.output.result(
+      {
+        period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
+        totalCount: resp.totalCount ?? 0,
+        nextToken,
+        list,
+      },
+      { text },
+    );
   },
 });

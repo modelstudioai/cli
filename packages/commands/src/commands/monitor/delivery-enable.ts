@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
+import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
 import {
   buildGroupSwitchReqDTO,
   ENABLE_GROUP_API,
@@ -66,32 +65,28 @@ export default defineCommand({
   exampleArgs: ["", "--no-wait", "--output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
-    const color = ansi(process.stderr);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          apis: [
-            SLR_STATUS_API,
-            CREATE_SLR_API,
-            TELEMETRY_SERVICE_STATUS_API,
-            INIT_CMS_API,
-            INIT_STORE_API,
-            ENABLE_GROUP_API,
-          ],
-          data: {
-            reqDTO: {
-              ...(settings.workspaceId ? { workspaceId: settings.workspaceId } : {}),
-              slrType: "Cms",
-              serviceType: SERVICE_TYPE,
-              telemetryType: MONITOR_GROUP_TYPE,
-            },
+      ctx.output.result({
+        apis: [
+          SLR_STATUS_API,
+          CREATE_SLR_API,
+          TELEMETRY_SERVICE_STATUS_API,
+          INIT_CMS_API,
+          INIT_STORE_API,
+          ENABLE_GROUP_API,
+        ],
+        data: {
+          reqDTO: {
+            ...(settings.workspaceId ? { workspaceId: settings.workspaceId } : {}),
+            slrType: "Cms",
+            serviceType: SERVICE_TYPE,
+            telemetryType: MONITOR_GROUP_TYPE,
           },
-          ...effectiveConsoleGatewayConfig(settings),
         },
-        format,
-      );
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -103,22 +98,27 @@ export default defineCommand({
       getTelemetryGroupSwitch(ctx.client, MONITOR_GROUP_TYPE, settings.workspaceId),
     ]);
     if (status.openStatus && status.instanceStatus === "Ready" && monitorSwitch === true) {
-      if (format === "json") {
-        emitResult({ activated: true, alreadyActive: true, ...status }, format);
-      } else {
-        process.stdout.write("Monitoring delivery is already active.\n");
-      }
+      ctx.output.result(
+        { activated: true, alreadyActive: true, ...status },
+        {
+          text: ctx.localize({
+            "en-US": "Monitoring delivery is already active.",
+            "zh-CN": "监控数据投递已开启。",
+          }),
+        },
+      );
       return;
     }
 
     // Step 1: CMS service-linked role.
     await ensureTelemetrySlrAuthorized(ctx.client, "Cms", settings.workspaceId, {
-      onProgress: (message) => process.stderr.write(color.dim(message + "\n")),
+      onProgress: (message) =>
+        ctx.output.progress({ "en-US": message, "zh-CN": "正在授权服务关联角色……" }),
     });
 
     // Step 2: open the CMS service (only submits when still closed; poll openStatus).
     if (!status.openStatus) {
-      process.stderr.write(color.dim("Opening the CMS service...\n"));
+      ctx.output.info({ "en-US": "Opening the CMS service...", "zh-CN": "正在开通 CMS 服务……" });
       await ctx.client.console(INIT_CMS_API, {
         reqDTO: {
           ...(settings.workspaceId ? { workspaceId: settings.workspaceId } : {}),
@@ -136,7 +136,10 @@ export default defineCommand({
 
     // Step 3: dedicated Prometheus instance (async creation, poll until Ready).
     if (status.instanceStatus === "NotExist") {
-      process.stderr.write(color.dim("Creating the dedicated Prometheus instance...\n"));
+      ctx.output.info({
+        "en-US": "Creating the dedicated Prometheus instance...",
+        "zh-CN": "正在创建专属 Prometheus 实例……",
+      });
       await pollTelemetryData(ctx.client, INIT_STORE_API, {
         ...(settings.workspaceId ? { workspaceId: settings.workspaceId } : {}),
         serviceType: SERVICE_TYPE,
@@ -145,17 +148,19 @@ export default defineCommand({
 
     if (flags.noWait) {
       const result = { activated: false, submitted: true };
-      if (format === "json") {
-        emitResult(result, format);
-      } else {
-        process.stdout.write(
-          `Activation submitted. Run \`${ctx.identity.binName} monitor delivery status\` to check progress.\n`,
-        );
-      }
+      ctx.output.result(result, {
+        text: ctx.localize({
+          "en-US": `Activation submitted. Run \`${ctx.identity.binName} monitor delivery status\` to check progress.`,
+          "zh-CN": `开通请求已提交。运行 \`${ctx.identity.binName} monitor delivery status\` 查看进度。`,
+        }),
+      });
       return;
     }
 
-    process.stderr.write(color.dim("Waiting for the Prometheus instance to become ready...\n"));
+    ctx.output.info({
+      "en-US": "Waiting for the Prometheus instance to become ready...",
+      "zh-CN": "正在等待 Prometheus 实例就绪……",
+    });
     const after = await waitFor(
       ctx.client,
       settings.workspaceId,
@@ -164,27 +169,28 @@ export default defineCommand({
 
     // Step 4: flip the monitor delivery switch for every model in the workspace.
     if (after.openStatus && after.instanceStatus === "Ready" && monitorSwitch !== true) {
-      process.stderr.write(color.dim("Turning on the monitor delivery switch...\n"));
+      ctx.output.info({
+        "en-US": "Turning on the monitor delivery switch...",
+        "zh-CN": "正在开启监控数据投递开关……",
+      });
       await ctx.client.console(ENABLE_GROUP_API, {
         reqDTO: buildGroupSwitchReqDTO(settings, MONITOR_GROUP_TYPE),
       });
     }
 
     const ready = after.openStatus && after.instanceStatus === "Ready";
-    if (format === "json") {
-      emitResult({ activated: ready, ...after }, format);
-      return;
+    let text: string | undefined;
+    if (format === "text") {
+      text = ready
+        ? ctx.localize({
+            "en-US": `Monitoring delivery is active.${after.instanceInfo ? `\nInstance: ${after.instanceInfo.instanceId}\nURL: ${after.instanceInfo.instanceUrl}` : ""}`,
+            "zh-CN": `监控数据投递已开启。${after.instanceInfo ? `\n实例：${after.instanceInfo.instanceId}\nURL：${after.instanceInfo.instanceUrl}` : ""}`,
+          })
+        : ctx.localize({
+            "en-US": `Activation is still in progress. Run \`${ctx.identity.binName} monitor delivery status\` to check later.`,
+            "zh-CN": `服务仍在开通中。稍后运行 \`${ctx.identity.binName} monitor delivery status\` 查看状态。`,
+          });
     }
-    if (ready) {
-      process.stdout.write("Monitoring delivery is active.\n");
-      if (after.instanceInfo) {
-        process.stdout.write(`Instance: ${after.instanceInfo.instanceId}\n`);
-        process.stdout.write(`URL: ${after.instanceInfo.instanceUrl}\n`);
-      }
-    } else {
-      process.stdout.write(
-        `Activation is still in progress. Run \`${ctx.identity.binName} monitor delivery status\` to check later.\n`,
-      );
-    }
+    ctx.output.result({ activated: ready, ...after }, { text });
   },
 });

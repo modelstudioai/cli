@@ -2,10 +2,9 @@ import {
   defineCommand,
   BailianError,
   ExitCode,
-  detectOutputFormat,
   effectiveConsoleGatewayConfig,
 } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
+import { ansi } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
   TELEMETRY_LOG_TIME_FLAGS,
@@ -18,7 +17,9 @@ import { TRACE_STATUS_LABELS, type TraceEntry } from "./trace-list.ts";
 
 const GET_TRACE_API = "zeldaEasy.bailian-telemetry.trace.getTraceWithOss";
 
-function printSpan(span: TraceEntry, depth: number): void {
+function renderSpan(span: TraceEntry, depth: number): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
   const indent = "  ".repeat(depth);
   const status = TRACE_STATUS_LABELS[span.statusCode ?? "0"] ?? "-";
@@ -27,15 +28,17 @@ function printSpan(span: TraceEntry, depth: number): void {
   const tokens = span.totalTokens != null ? `, ${formatNumber(span.totalTokens)} tokens` : "";
   const statusText = status === "Error" ? color.red(status) : status;
 
-  process.stdout.write(
+  textChunks.push(
     `${indent}${span.spanName ?? "-"}  ${color.dim(`[${statusText}, ${duration}${tokens}]`)}\n`,
   );
   if (span.statusCode === "2" && span.statusMessage) {
-    process.stdout.write(`${indent}  ${color.red(span.statusMessage)}\n`);
+    textChunks.push(`${indent}  ${color.red(span.statusMessage)}\n`);
   }
   for (const child of span.children ?? []) {
-    printSpan(child, depth + 1);
+    textChunks.push(renderSpan(child, depth + 1) + "\n");
   }
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export default defineCommand({
@@ -72,7 +75,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags, 1);
 
     const reqDTO = {
@@ -84,14 +87,11 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: GET_TRACE_API,
-          data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: GET_TRACE_API,
+        data: { reqDTO },
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -106,15 +106,18 @@ export default defineCommand({
       );
     }
 
-    if (format === "json") {
-      emitResult(trace, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    const color = ansi(process.stdout);
-    process.stdout.write(
-      `${color.bold("Trace")} ${trace.traceId}  ${color.dim(formatDateTime(trace.startTime))}\n\n`,
-    );
-    printSpan(trace, 0);
+      const color = ansi(process.stdout);
+      textChunks.push(
+        `${color.bold("Trace")} ${trace.traceId}  ${color.dim(formatDateTime(trace.startTime))}\n\n`,
+      );
+      textChunks.push(renderSpan(trace, 0) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
+    ctx.output.result(trace, { text });
   },
 });

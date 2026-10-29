@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { ansi, emitResult, displayWidth, padEnd } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
+import { ansi, displayWidth, padEnd } from "bailian-cli-runtime";
 import {
   ensureTelemetryRegionSupported,
   getTelemetryServiceStatus,
@@ -71,42 +71,45 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, identity } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     ensureTelemetryRegionSupported(settings);
     const status = await fetchLogServiceStatus(ctx.client, settings.workspaceId);
 
-    if (format === "json") {
-      emitResult(status, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    const color = ansi(process.stdout);
-    const rows: [string, string][] = [
-      ["SLS Authorization (SLR)", status.slrAuthorized ? "Authorized" : "Not authorized"],
-      ["Audit Log (service)", statusText(status.audit)],
-      ["Audit Log (switch)", switchText(status.auditSwitch)],
-      ["Inference Log (service)", statusText(status.inference)],
-      ["Inference Log (switch)", switchText(status.inferenceSwitch)],
-    ];
-    const instanceUrl = status.inference.instanceInfo?.instanceUrl;
-    if (instanceUrl) rows.push(["SLS Instance URL", instanceUrl]);
+      const color = ansi(process.stdout);
+      const rows: [string, string][] = [
+        ["SLS Authorization (SLR)", status.slrAuthorized ? "Authorized" : "Not authorized"],
+        ["Audit Log (service)", statusText(status.audit)],
+        ["Audit Log (switch)", switchText(status.auditSwitch)],
+        ["Inference Log (service)", statusText(status.inference)],
+        ["Inference Log (switch)", switchText(status.inferenceSwitch)],
+      ];
+      const instanceUrl = status.inference.instanceInfo?.instanceUrl;
+      if (instanceUrl) rows.push(["SLS Instance URL", instanceUrl]);
 
-    const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
-    for (const [label, value] of rows) {
-      process.stdout.write(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
-    }
+      const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
+      for (const [label, value] of rows) {
+        textChunks.push(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
+      }
 
-    if (status.auditSwitch !== true) {
-      process.stdout.write(
-        color.dim(`\nRun \`${identity.binName} log audit enable\` to enable audit log delivery.\n`),
-      );
-    } else if (status.inferenceSwitch !== true) {
-      process.stdout.write(
-        color.dim(
-          `\nRun \`${identity.binName} log inference enable\` to enable inference log delivery.\n`,
-        ),
-      );
+      if (status.auditSwitch !== true) {
+        textChunks.push(
+          color.dim(`\nRun \`${identity.binName} log audit enable\` to enable audit log delivery.`),
+        );
+      } else if (status.inferenceSwitch !== true) {
+        textChunks.push(
+          color.dim(
+            `\nRun \`${identity.binName} log inference enable\` to enable inference log delivery.`,
+          ),
+        );
+      }
+
+      text = textChunks.join("").replace(/\n$/, "");
     }
+    ctx.output.result(status, { text });
   },
 });

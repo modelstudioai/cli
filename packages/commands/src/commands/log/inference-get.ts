@@ -2,10 +2,9 @@ import {
   defineCommand,
   BailianError,
   ExitCode,
-  detectOutputFormat,
   effectiveConsoleGatewayConfig,
 } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
+import { ansi } from "bailian-cli-runtime";
 import {
   TELEMETRY_LOG_TIME_FLAGS,
   ensureTelemetryRegionSupported,
@@ -14,7 +13,7 @@ import {
 } from "../shared/telemetry.ts";
 import {
   type ModelLogEntry,
-  printLogDetail,
+  renderLogDetail,
   validateHoursFlag,
   validateRequestIdLength,
 } from "./shared.ts";
@@ -66,7 +65,7 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     // A single request may sit far back; default window is 24h here.
     const { startTime, endTime } = resolveTimeRange(flags, 1);
 
@@ -78,16 +77,13 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          apis: [LIST_INFERENCE_LOGS_API, ORIGIN_LOG_API],
-          data: {
-            reqDTO: { ...baseReqDTO, startTime: String(startTime), endTime: String(endTime) },
-          },
-          ...effectiveConsoleGatewayConfig(settings),
+      ctx.output.result({
+        apis: [LIST_INFERENCE_LOGS_API, ORIGIN_LOG_API],
+        data: {
+          reqDTO: { ...baseReqDTO, startTime: String(startTime), endTime: String(endTime) },
         },
-        format,
-      );
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -121,18 +117,21 @@ export default defineCommand({
     entry.request = entry.request ?? origin?.request;
     entry.response = entry.response ?? origin?.response;
 
-    if (format === "json") {
-      emitResult(entry, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printLogDetail(entry);
-    if (!entry.request && !entry.response) {
-      process.stdout.write(
-        ansi(process.stdout).dim(
-          "\nRequest/response content is only available when inference log delivery was enabled at call time.\n",
-        ),
-      );
+      textChunks.push(renderLogDetail(entry) + "\n");
+      if (!entry.request && !entry.response) {
+        textChunks.push(
+          ansi(process.stdout).dim(
+            "\nRequest/response content is only available when inference log delivery was enabled at call time.",
+          ),
+        );
+      }
+
+      text = textChunks.join("").replace(/\n$/, "");
     }
+    ctx.output.result(entry, { text });
   },
 });

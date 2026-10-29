@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
-import { ansi, emitResult, displayWidth, padEnd } from "bailian-cli-runtime";
+import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { ansi, displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
   TELEMETRY_TIME_FLAGS,
@@ -31,10 +31,12 @@ interface ModelStatistic {
   usages?: UsageItemWithUnit[];
 }
 
-function printStatistic(stat: ModelStatistic, startTime: number, endTime: number): void {
+function renderStatistic(stat: ModelStatistic, startTime: number, endTime: number): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
-  process.stdout.write(
+  textChunks.push(
     `${color.dim("Time Range:")} ${formatDateTime(startTime)} ~ ${formatDateTime(endTime)}\n\n`,
   );
 
@@ -67,8 +69,10 @@ function printStatistic(stat: ModelStatistic, startTime: number, endTime: number
 
   const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
   for (const [label, value] of rows) {
-    process.stdout.write(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
+    textChunks.push(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
   }
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export default defineCommand({
@@ -97,7 +101,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags);
 
     const reqDTO = {
@@ -107,31 +111,24 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: STATISTIC_API,
-          data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: STATISTIC_API,
+        data: { reqDTO },
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
     ensureTelemetryRegionSupported(settings);
     const stat = (await pollTelemetryData(ctx.client, STATISTIC_API, reqDTO)) as ModelStatistic;
 
-    if (format === "json") {
-      emitResult(
-        {
-          period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
-          ...stat,
-        },
-        format,
-      );
-      return;
-    }
-
-    printStatistic(stat, startTime, endTime);
+    const text = format === "text" ? renderStatistic(stat, startTime, endTime) : undefined;
+    ctx.output.result(
+      {
+        period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
+        ...stat,
+      },
+      { text },
+    );
   },
 });

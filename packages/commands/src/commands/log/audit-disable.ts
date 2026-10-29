@@ -1,4 +1,4 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { disableLogDelivery } from "./shared.ts";
 
 export default defineCommand({
@@ -17,13 +17,12 @@ export default defineCommand({
   ],
   exampleArgs: ["", "--dry-run", "--output json"],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     await disableLogDelivery(
       {
         client: ctx.client,
+        output: ctx.output,
         settings: ctx.settings,
         binName: ctx.identity.binName,
-        format,
       },
       "audit",
       true,

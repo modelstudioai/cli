@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
 import {
   buildGroupSwitchReqDTO,
   DISABLE_GROUP_API,
@@ -27,17 +26,14 @@ export default defineCommand({
   exampleArgs: ["", "--dry-run", "--output json"],
   async run(ctx) {
     const { settings } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: DISABLE_GROUP_API,
-          data: { reqDTO: buildGroupSwitchReqDTO(settings, MONITOR_GROUP_TYPE) },
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: DISABLE_GROUP_API,
+        data: { reqDTO: buildGroupSwitchReqDTO(settings, MONITOR_GROUP_TYPE) },
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -47,11 +43,14 @@ export default defineCommand({
       reqDTO: buildGroupSwitchReqDTO(settings, MONITOR_GROUP_TYPE),
     });
 
-    if (format === "json") {
-      emitResult({ disabled: true }, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    process.stdout.write("Monitor delivery disabled.\n");
+      textChunks.push("Monitor delivery disabled.\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
+    ctx.output.result({ disabled: true }, { text });
   },
 });

@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, effectiveConsoleGatewayConfig } from "bailian-cli-core";
 import { parseCommaList } from "../shared/params.ts";
 import {
   TELEMETRY_LOG_TIME_FLAGS,
@@ -9,7 +8,7 @@ import {
 } from "../shared/telemetry.ts";
 import {
   type ModelLogEntry,
-  printLogTable,
+  renderLogTable,
   validateHoursFlag,
   validateStatusCodeTypes,
 } from "./shared.ts";
@@ -106,7 +105,7 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags, 1 / 24);
 
     // The inference log API takes single model/apikey values and string timestamps.
@@ -127,14 +126,11 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_INFERENCE_LOGS_API,
-          data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_INFERENCE_LOGS_API,
+        data: { reqDTO },
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -142,17 +138,13 @@ export default defineCommand({
     const resp = await pollTelemetryData(ctx.client, LIST_INFERENCE_LOGS_API, reqDTO);
     const list = (resp.list as ModelLogEntry[]) ?? [];
 
-    if (format === "json") {
-      emitResult(
-        {
-          totalCount: resp.totalCount ?? 0,
-          list,
-        },
-        format,
-      );
-      return;
-    }
-
-    printLogTable(list);
+    const text = format === "text" ? renderLogTable(list) : undefined;
+    ctx.output.result(
+      {
+        totalCount: resp.totalCount ?? 0,
+        list,
+      },
+      { text },
+    );
   },
 });
