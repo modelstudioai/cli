@@ -1,12 +1,10 @@
 import {
   defineCommand,
-  detectOutputFormat,
   securityAgentLogsEndpoint,
   securityGet,
   type FlagsDef,
   type SecurityAlertList,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   SECURITY_UI,
   WORKSPACE_FLAG,
@@ -146,7 +144,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags, localize } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const host = resolveSecurityHost(ctx);
 
     const params = new URLSearchParams();
@@ -168,29 +166,22 @@ export default defineCommand({
     const endpoint = query ? `${base}?${query}` : base;
 
     if (settings.dryRun) {
-      emitResult({ endpoint, method: "GET" }, format);
+      ctx.output.result({ endpoint, method: "GET" });
       return;
     }
 
     const data = await securityGet<SecurityAlertList>(ctx.client, endpoint);
     const alerts = data?.data ?? [];
 
-    // --quiet wins over the output format: emit a bare, pipe-friendly list of
-    // alert IDs even when output=json is configured, so ID-driven pipelines
-    // (`bl agents security alerts --quiet | xargs …`) keep working.
-    if (settings.quiet) {
-      for (const alert of alerts) emitBare(alert.alert_id);
-      return;
-    }
-
     if (format === "json") {
-      emitResult(data ?? { stats: null, data: [], next_page: null }, format);
+      ctx.output.result(data ?? { stats: null, data: [], next_page: null });
       return;
     }
 
+    const lines: string[] = [];
     const stats = data?.stats;
     if (stats) {
-      emitBare(
+      lines.push(
         `${localize(SECURITY_UI.total)}: ${stats.total ?? "-"}    ` +
           `${localize(SECURITY_UI.high)}: ${stats.high ?? "-"}    ` +
           `${localize(SECURITY_UI.medium)}: ${stats.medium ?? "-"}    ` +
@@ -199,14 +190,18 @@ export default defineCommand({
     }
 
     if (alerts.length === 0) {
-      emitBare(localize(SECURITY_UI.noAlerts));
+      lines.push(localize(SECURITY_UI.noAlerts));
+      ctx.output.result(data ?? { stats: null, data: [], next_page: null }, {
+        text: lines.join("\n"),
+      });
       return;
     }
 
-    for (const alert of alerts) renderAlert(localize, alert);
+    for (const alert of alerts) lines.push(...renderAlert(localize, alert));
 
     if (data?.next_page) {
-      emitBare(`${localize(SECURITY_UI.nextPageCursor)}: ${data.next_page}`);
+      lines.push(`${localize(SECURITY_UI.nextPageCursor)}: ${data.next_page}`);
     }
+    ctx.output.result(data, { text: lines.join("\n") });
   },
 });

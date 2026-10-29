@@ -3,7 +3,6 @@ import {
   BailianError,
   defineCommand,
   ExitCode,
-  detectOutputFormat,
   type CommandOutput,
   type Client,
   type Settings,
@@ -22,13 +21,11 @@ import {
   parseInstantVocabulary,
   type AsrApiRoute,
   type AsrFlashFamily,
-  type OutputFormat,
   type FlagsDef,
   type ParsedFlags,
   ASYNC_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const RECOGNIZE_FLAGS = {
   url: {
@@ -247,8 +244,6 @@ export default defineCommand({
       );
     }
 
-    const format = detectOutputFormat(settings.output);
-
     const vocabulary =
       flags.vocabulary !== undefined ? parseInstantVocabulary(flags.vocabulary) : undefined;
 
@@ -258,9 +253,9 @@ export default defineCommand({
     if (route.kind === "sync-flash") {
       await handleSyncFlashMode(
         ctx.client,
+        ctx.output,
         settings,
         flags,
-        format,
         model,
         route,
         resolvedUrls[0]!,
@@ -298,31 +293,24 @@ export default defineCommand({
     stripUndefined(body.parameters as Record<string, unknown>);
 
     if (settings.dryRun) {
-      emitResult({ request: body, mode: "async", path: speechRecognizePath() }, format);
+      ctx.output.result({ request: body, mode: "async", path: speechRecognizePath() });
       return;
     }
 
-    if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}] [Mode: async] [Files: ${resolvedUrls.length}]\n`);
-    }
+    ctx.output.info({
+      "en-US": `[Model: ${model}] [Mode: async] [Files: ${resolvedUrls.length}]`,
+      "zh-CN": `[模型：${model}] [模式：异步] [文件数：${resolvedUrls.length}]`,
+    });
 
-    await handleAsyncMode(
-      ctx.client,
-      ctx.output,
-      settings,
-      body,
-      flags,
-      format,
-      resolvedUrls.length,
-    );
+    await handleAsyncMode(ctx.client, ctx.output, settings, body, flags, resolvedUrls.length);
   },
 });
 
 async function handleSyncFlashMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   flags: RecognizeFlags,
-  format: OutputFormat,
   model: string,
   route: AsrApiRoute,
   audioUrl: string,
@@ -340,13 +328,14 @@ async function handleSyncFlashMode(
   });
 
   if (settings.dryRun) {
-    emitResult({ request: body, mode: "sync", path: route.path }, format);
+    commandOutput.result({ request: body, mode: "sync", path: route.path });
     return;
   }
 
-  if (!settings.quiet) {
-    process.stderr.write(`[Model: ${model}] [Mode: sync] [Files: 1]\n`);
-  }
+  commandOutput.info({
+    "en-US": `[Model: ${model}] [Mode: sync] [Files: 1]`,
+    "zh-CN": `[模型：${model}] [模式：同步] [文件数：1]`,
+  });
 
   const response = await client.requestJson<Record<string, unknown>>({
     path: route.path,
@@ -355,18 +344,22 @@ async function handleSyncFlashMode(
     body,
   });
 
-  const text = extractAsrFlashText(response, flashFamily);
-  if (text) {
-    process.stdout.write(text.endsWith("\n") ? text : `${text}\n`);
-  } else {
-    emitBare(JSON.stringify(response));
-  }
-
   if (flags.out) {
     writeFileSync(flags.out, JSON.stringify(response, null, 2) + "\n");
-    if (!settings.quiet) {
-      process.stderr.write(`Full result saved to: ${flags.out}\n`);
-    }
+  }
+
+  const text = settings.output === "text" ? extractAsrFlashText(response, flashFamily) : "";
+  commandOutput.result(
+    response,
+    settings.output === "text"
+      ? { text: text ? text.replace(/\n$/, "") : JSON.stringify(response) }
+      : undefined,
+  );
+  if (flags.out) {
+    commandOutput.info({
+      "en-US": `Full result saved to: ${flags.out}`,
+      "zh-CN": `完整结果已保存至：${flags.out}`,
+    });
   }
 }
 
@@ -376,7 +369,6 @@ async function handleAsyncMode(
   settings: Settings,
   body: DashScopeASRRequest,
   flags: RecognizeFlags,
-  format: OutputFormat,
   fileCount: number,
 ): Promise<void> {
   // Submit async task (always required for fun-asr)
@@ -391,7 +383,7 @@ async function handleAsyncMode(
 
   // --async: return task ID immediately
   if (flags.async) {
-    emitResult({ task_id: taskId }, format);
+    commandOutput.result({ task_id: taskId });
     return;
   }
 
@@ -416,32 +408,33 @@ async function handleAsyncMode(
   const results = collectAsrTranscriptionItems(result.output);
 
   if (results.length === 0) {
-    emitResult({ task_id: taskId, status: result.output.task_status }, format);
+    commandOutput.result({ task_id: taskId, status: result.output.task_status });
     return;
   }
 
   // Collect all transcription data for --out
   const allTransData: Record<string, unknown>[] = [];
+  const textParts: string[] = [];
 
   for (let index = 0; index < results.length; index++) {
     const subResult = results[index]!;
     const isMulti = fileCount > 1;
 
-    if (isMulti) {
-      process.stdout.write(
-        `=== [${index + 1}/${results.length}] ${subResult.file_url ?? ""} ===\n`,
-      );
+    if (settings.output === "text" && isMulti) {
+      textParts.push(`=== [${index + 1}/${results.length}] ${subResult.file_url ?? ""} ===\n`);
     }
 
     if (subResult.subtask_status === "FAILED") {
       const errMsg = subResult.message ?? subResult.code ?? "unknown error";
-      process.stdout.write(`[FAILED] ${subResult.file_url ?? ""} — ${errMsg}\n`);
-      if (isMulti) process.stdout.write("\n");
+      if (settings.output === "text") {
+        textParts.push(`[FAILED] ${subResult.file_url ?? ""} — ${errMsg}\n`);
+        if (isMulti) textParts.push("\n");
+      }
       continue;
     }
 
     if (!subResult.transcription_url) {
-      if (isMulti) process.stdout.write("\n");
+      if (settings.output === "text" && isMulti) textParts.push("\n");
       continue;
     }
 
@@ -456,31 +449,33 @@ async function handleAsyncMode(
     const transData = (await transRes.json()) as Record<string, unknown>;
     allTransData.push(transData);
 
-    // Extract and output text from transcripts[]
-    const transcripts = transData.transcripts as
-      | Array<{
-          text?: string;
-          sentences?: Array<{ text: string; speaker_id?: number }>;
-        }>
-      | undefined;
+    if (settings.output === "text") {
+      // Extract and output text from transcripts[]
+      const transcripts = transData.transcripts as
+        | Array<{
+            text?: string;
+            sentences?: Array<{ text: string; speaker_id?: number }>;
+          }>
+        | undefined;
 
-    if (transcripts && transcripts.length > 0) {
-      for (const transcript of transcripts) {
-        if (transcript.sentences && transcript.sentences.length > 0) {
-          for (const sentence of transcript.sentences) {
-            const speakerTag =
-              sentence.speaker_id !== undefined ? ` [Speaker ${sentence.speaker_id}]` : "";
-            process.stdout.write(`${sentence.text}${speakerTag}\n`);
+      if (transcripts && transcripts.length > 0) {
+        for (const transcript of transcripts) {
+          if (transcript.sentences && transcript.sentences.length > 0) {
+            for (const sentence of transcript.sentences) {
+              const speakerTag =
+                sentence.speaker_id !== undefined ? ` [Speaker ${sentence.speaker_id}]` : "";
+              textParts.push(`${sentence.text}${speakerTag}\n`);
+            }
+          } else if (transcript.text) {
+            textParts.push(transcript.text + "\n");
           }
-        } else if (transcript.text) {
-          process.stdout.write(transcript.text + "\n");
         }
+      } else {
+        textParts.push(JSON.stringify(transData) + "\n");
       }
-    } else {
-      emitBare(JSON.stringify(transData));
-    }
 
-    if (isMulti) process.stdout.write("\n");
+      if (isMulti) textParts.push("\n");
+    }
   }
 
   // Save to --out file
@@ -488,8 +483,18 @@ async function handleAsyncMode(
     const outPath = flags.out;
     const outData = allTransData.length === 1 ? allTransData[0] : allTransData;
     writeFileSync(outPath, JSON.stringify(outData, null, 2) + "\n");
-    if (!settings.quiet) {
-      process.stderr.write(`Full result saved to: ${outPath}\n`);
-    }
+  }
+
+  if (settings.output === "json" || textParts.length > 0) {
+    commandOutput.result(
+      { ...result, transcriptions: allTransData },
+      { text: textParts.join("").replace(/\n$/, "") },
+    );
+  }
+  if (flags.out) {
+    commandOutput.info({
+      "en-US": `Full result saved to: ${flags.out}`,
+      "zh-CN": `完整结果已保存至：${flags.out}`,
+    });
   }
 }

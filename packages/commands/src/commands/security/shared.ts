@@ -12,7 +12,6 @@ import {
   type SecurityOverview,
   type SecurityToggle,
 } from "bailian-cli-core";
-import { emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "../knowledge/shared.ts";
 
 export { resolveWorkspaceId, WORKSPACE_FLAG };
@@ -117,18 +116,20 @@ export function renderToggles(
   title: LocalizedText,
   toggles: SecurityToggle[] | null | undefined,
   labels: Record<string, LocalizedText>,
-): void {
-  emitBare(`\n${localize(title)}`);
+): string[] {
+  const lines: string[] = [];
+  lines.push(`\n${localize(title)}`);
   if (!toggles || toggles.length === 0) {
-    emitBare(`  ${localize(SECURITY_UI.unavailable)}`);
-    return;
+    lines.push(`  ${localize(SECURITY_UI.unavailable)}`);
+    return lines;
   }
   for (const toggle of toggles) {
     const count = typeof toggle.count === "number" ? `  (${toggle.count})` : "";
     const state = localize(toggle.enabled ? SECURITY_UI.on : SECURITY_UI.off);
     const label = labels[toggle.key] ? localize(labels[toggle.key]) : toggle.key;
-    emitBare(`  ${state}  ${label}${count}`);
+    lines.push(`  ${state}  ${label}${count}`);
   }
+  return lines;
 }
 
 /** check_time / handle_time are millisecond timestamp strings, sometimes ISO 8601. */
@@ -140,15 +141,17 @@ export function formatSecurityTime(value: string | null | undefined): string {
 }
 
 /** Render one alert row in text mode; field labels are localized. */
-export function renderAlert(localize: Localize, alert: SecurityAlert): void {
+export function renderAlert(localize: Localize, alert: SecurityAlert): string[] {
+  const lines: string[] = [];
   const level = (alert.risk_level ?? "unknown").toUpperCase();
-  emitBare(`[${level}] ${alert.risk_name ?? "-"}  (${alert.alert_id})`);
-  emitBare(
+  lines.push(`[${level}] ${alert.risk_name ?? "-"}  (${alert.alert_id})`);
+  lines.push(
     `  ${localize(SECURITY_UI.app)}: ${alert.app_name ?? "-"}    ${localize(SECURITY_UI.asset)}: ${alert.asset_name ?? "-"} (${alert.asset_type ?? "-"})`,
   );
-  emitBare(
+  lines.push(
     `  ${localize(SECURITY_UI.status)}: ${alert.status ?? "-"}    ${localize(SECURITY_UI.source)}: ${alert.source ?? "-"}    ${localize(SECURITY_UI.checked)}: ${formatSecurityTime(alert.check_time)}`,
   );
-  if (alert.risk_desc) emitBare(`  ${alert.risk_desc}`);
-  emitBare("");
+  if (alert.risk_desc) lines.push(`  ${alert.risk_desc}`);
+  lines.push("");
+  return lines;
 }

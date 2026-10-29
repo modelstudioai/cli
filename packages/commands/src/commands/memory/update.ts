@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  memoryNodePath,
-  detectOutputFormat,
-  type MemoryNodeUpdateRequest,
-} from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand, memoryNodePath, type MemoryNodeUpdateRequest } from "bailian-cli-core";
 
 export default defineCommand({
   description: { "en-US": "Update a memory node content", "zh-CN": "更新记忆节点内容" },
@@ -59,13 +53,12 @@ export default defineCommand({
     };
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult(
-        { endpoint: ctx.client.url(memoryNodePath(nodeId)), method: "PATCH", request: body },
-        format,
-      );
+      ctx.output.result({
+        endpoint: ctx.client.url(memoryNodePath(nodeId)),
+        method: "PATCH",
+        request: body,
+      });
       return;
     }
 
@@ -75,10 +68,11 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Memory node ${nodeId} updated.`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(response, {
+      text: ctx.localize({
+        "en-US": `Memory node ${nodeId} updated.`,
+        "zh-CN": `记忆节点 ${nodeId} 已更新。`,
+      }),
+    });
   },
 });

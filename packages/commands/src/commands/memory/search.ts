@@ -2,13 +2,11 @@ import {
   defineCommand,
   UsageError,
   memorySearchPath,
-  detectOutputFormat,
   type FlagsDef,
   type ParsedFlags,
   type MemorySearchRequest,
   type MemorySearchResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const SEARCH_FLAGS = {
   userId: {
@@ -91,10 +89,8 @@ export default defineCommand({
     if (flags.topK !== undefined) body.top_k = flags.topK;
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult({ endpoint: ctx.client.url(memorySearchPath()), request: body }, format);
+      ctx.output.result({ endpoint: ctx.client.url(memorySearchPath()), request: body });
       return;
     }
 
@@ -104,16 +100,12 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format === "text") {
-      if (!response.memory_nodes || response.memory_nodes.length === 0) {
-        emitBare("No memory nodes found.");
-      } else {
-        for (const node of response.memory_nodes) {
-          emitBare(`[${node.memory_node_id}] ${node.content}`);
-        }
-      }
-    } else {
-      emitResult(response, format);
+    let text: string | undefined;
+    if (settings.output === "text") {
+      text = response.memory_nodes?.length
+        ? response.memory_nodes.map((node) => `[${node.memory_node_id}] ${node.content}`).join("\n")
+        : ctx.localize({ "en-US": "No memory nodes found.", "zh-CN": "未找到记忆节点。" });
     }
+    ctx.output.result(response, { text });
   },
 });

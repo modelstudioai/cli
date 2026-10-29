@@ -2,11 +2,9 @@ import {
   defineCommand,
   UsageError,
   profileSchemaPath,
-  detectOutputFormat,
   type ProfileSchemaCreateRequest,
   type ProfileSchemaCreateResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: {
@@ -60,10 +58,8 @@ export default defineCommand({
     const body: ProfileSchemaCreateRequest = { name, attributes };
     if (flags.description) body.description = flags.description;
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult({ endpoint: ctx.client.url(profileSchemaPath()), request: body }, format);
+      ctx.output.result({ endpoint: ctx.client.url(profileSchemaPath()), request: body });
       return;
     }
 
@@ -73,10 +69,16 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Profile schema created: ${response.profile_schema_id}`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      settings.output === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Profile schema created: ${response.profile_schema_id}`,
+              "zh-CN": `画像 Schema 已创建：${response.profile_schema_id}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

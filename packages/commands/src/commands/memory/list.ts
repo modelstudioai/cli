@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  memoryListPath,
-  detectOutputFormat,
-  type MemoryNodeListResponse,
-} from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand, memoryListPath, type MemoryNodeListResponse } from "bailian-cli-core";
 
 export default defineCommand({
   description: { "en-US": "List memory nodes for a user", "zh-CN": "列出用户的记忆节点" },
@@ -38,7 +32,6 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const userId = flags.userId;
 
-    const format = detectOutputFormat(settings.output);
     const params = new URLSearchParams();
     params.set("user_id", userId);
     if (flags.pageSize !== undefined) params.set("page_size", String(flags.pageSize));
@@ -48,7 +41,7 @@ export default defineCommand({
     const path = `${memoryListPath()}?${params.toString()}`;
 
     if (settings.dryRun) {
-      emitResult({ endpoint: ctx.client.url(path), method: "GET" }, format);
+      ctx.output.result({ endpoint: ctx.client.url(path), method: "GET" });
       return;
     }
 
@@ -57,19 +50,21 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (settings.quiet || format === "text") {
-      if (!response.memory_nodes || response.memory_nodes.length === 0) {
-        emitBare("No memory nodes found.");
-      } else {
-        for (const node of response.memory_nodes) {
-          emitBare(`[${node.memory_node_id}] ${node.content}`);
-        }
-        if (response.total !== undefined) {
-          emitBare(`\nTotal: ${response.total}`);
-        }
+    let text: string | undefined;
+    if (settings.output === "text") {
+      const lines = response.memory_nodes?.length
+        ? response.memory_nodes.map((node) => `[${node.memory_node_id}] ${node.content}`)
+        : [ctx.localize({ "en-US": "No memory nodes found.", "zh-CN": "未找到记忆节点。" })];
+      if (response.memory_nodes?.length && response.total !== undefined) {
+        lines.push(
+          ctx.localize({
+            "en-US": `\nTotal: ${response.total}`,
+            "zh-CN": `\n总计：${response.total}`,
+          }),
+        );
       }
-    } else {
-      emitResult(response, format);
+      text = lines.join("\n");
     }
+    ctx.output.result(response, { text });
   },
 });

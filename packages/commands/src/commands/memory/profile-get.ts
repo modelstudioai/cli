@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  userProfilePath,
-  detectOutputFormat,
-  type UserProfileResponse,
-} from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand, userProfilePath, type UserProfileResponse } from "bailian-cli-core";
 
 export default defineCommand({
   description: {
@@ -36,12 +30,11 @@ export default defineCommand({
     const schemaId = flags.schemaId;
     const userId = flags.userId;
 
-    const format = detectOutputFormat(settings.output);
     const params = new URLSearchParams({ user_id: userId });
     const path = `${userProfilePath(schemaId)}?${params.toString()}`;
 
     if (settings.dryRun) {
-      emitResult({ endpoint: ctx.client.url(path), method: "GET" }, format);
+      ctx.output.result({ endpoint: ctx.client.url(path), method: "GET" });
       return;
     }
 
@@ -50,16 +43,19 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (settings.quiet || format === "text") {
-      if (response.profile?.attributes) {
-        for (const attr of response.profile.attributes) {
-          emitBare(`${attr.name}: ${attr.value ?? "(empty)"}`);
-        }
-      } else {
-        emitBare("No profile data found.");
-      }
-    } else {
-      emitResult(response, format);
+    let text: string | undefined;
+    if (settings.output === "text") {
+      const attributes = response.profile?.attributes;
+      if (attributes?.length === 0) return;
+      text = attributes
+        ? attributes
+            .map(
+              (attribute) =>
+                `${attribute.name}: ${attribute.value ?? ctx.localize({ "en-US": "(empty)", "zh-CN": "（空）" })}`,
+            )
+            .join("\n")
+        : ctx.localize({ "en-US": "No profile data found.", "zh-CN": "未找到画像数据。" });
     }
+    ctx.output.result(response, { text });
   },
 });

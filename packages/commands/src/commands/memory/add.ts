@@ -2,13 +2,11 @@ import {
   defineCommand,
   UsageError,
   memoryAddPath,
-  detectOutputFormat,
   type FlagsDef,
   type ParsedFlags,
   type MemoryAddRequest,
   type MemoryAddResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const ADD_FLAGS = {
   userId: {
@@ -94,10 +92,8 @@ export default defineCommand({
     if (flags.profileSchema) body.profile_schema = flags.profileSchema;
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult({ endpoint: ctx.client.url(memoryAddPath()), request: body }, format);
+      ctx.output.result({ endpoint: ctx.client.url(memoryAddPath()), request: body });
       return;
     }
 
@@ -107,11 +103,16 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format === "text") {
-      const ids = response.memory_ids?.join(", ") || "none";
-      emitBare(`Memory added. IDs: ${ids}`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      settings.output === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Memory added. IDs: ${response.memory_ids?.join(", ") || "none"}`,
+              "zh-CN": `记忆已添加。ID：${response.memory_ids?.join(", ") || "无"}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

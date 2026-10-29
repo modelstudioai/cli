@@ -3,12 +3,11 @@ import {
   BailianError,
   ExitCode,
   effectiveConsoleGatewayConfig,
-  detectOutputFormat,
   unwrapResponse,
   MODEL_LIST_API,
   type Client,
 } from "bailian-cli-core";
-import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { ansi, renderBoxTable } from "bailian-cli-runtime";
 
 const MONITOR_API = "zeldaEasy.bailian-telemetry.monitor.getMonitorData";
 
@@ -141,7 +140,7 @@ interface CheckRow {
   tpmQuotaLabel: string | null;
 }
 
-function printTable(rows: CheckRow[]): void {
+function renderTable(rows: CheckRow[]): string {
   const color = ansi(process.stdout);
   const headers = ["Model", "RPM Used/Limit", "TPM Used/Limit", "Status", "RPM Left", "TPM Left"];
 
@@ -187,7 +186,7 @@ function printTable(rows: CheckRow[]): void {
     },
   });
 
-  for (const line of lines) process.stdout.write(line + "\n");
+  return lines.join("\n");
 }
 
 export default defineCommand({
@@ -228,16 +227,13 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const windowMinutes = Number(flags.period) || 2;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          apis: [MODEL_LIST_API, MONITOR_API],
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        apis: [MODEL_LIST_API, MONITOR_API],
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
@@ -256,7 +252,9 @@ export default defineCommand({
     models = models.filter((m) => m.qpmInfo);
 
     if (models.length === 0) {
-      process.stdout.write("No models found.\n");
+      ctx.output.result([], {
+        text: ctx.localize({ "en-US": "No models found.", "zh-CN": "未找到模型。" }),
+      });
       return;
     }
 
@@ -306,11 +304,6 @@ export default defineCommand({
       };
     });
 
-    if (format === "json") {
-      emitResult(checkRows, format);
-      return;
-    }
-
-    printTable(checkRows);
+    ctx.output.result(checkRows, format === "text" ? { text: renderTable(checkRows) } : undefined);
   },
 });

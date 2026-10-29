@@ -1,5 +1,4 @@
-import { defineCommand, memoryNodePath, detectOutputFormat } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand, memoryNodePath } from "bailian-cli-core";
 
 export default defineCommand({
   description: { "en-US": "Delete a memory node", "zh-CN": "删除记忆节点" },
@@ -33,13 +32,12 @@ export default defineCommand({
     const nodeId = flags.nodeId;
     const userId = flags.userId;
 
-    const format = detectOutputFormat(settings.output);
     const params = new URLSearchParams({ user_id: userId });
     if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
     const path = `${memoryNodePath(nodeId)}?${params.toString()}`;
 
     if (settings.dryRun) {
-      emitResult({ endpoint: ctx.client.url(path), method: "DELETE" }, format);
+      ctx.output.result({ endpoint: ctx.client.url(path), method: "DELETE" });
       return;
     }
 
@@ -48,10 +46,11 @@ export default defineCommand({
       method: "DELETE",
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Memory node ${nodeId} deleted.`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(response, {
+      text: ctx.localize({
+        "en-US": `Memory node ${nodeId} deleted.`,
+        "zh-CN": `记忆节点 ${nodeId} 已删除。`,
+      }),
+    });
   },
 });
