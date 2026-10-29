@@ -21,6 +21,43 @@ function workspaceEndpoint(workspaceId: string, path: string): string {
   return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
 }
 
+// ---- ParseX (workspace-scoped document/media parsing and extraction) ----
+export function parsexBaseUrl(workspaceId: string): string {
+  return workspaceEndpoint(workspaceId, "");
+}
+
+/** The shared credential resolver normalizes --base-url to an origin. */
+export function parsexEndpoint(
+  baseUrl: string,
+  operation: "parse" | "extract",
+  action: "submit" | "result",
+): string {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    throw new UsageError("Invalid ParseX base URL. / ParseX Base URL 无效。");
+  }
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  const servicePath = url.pathname.replace(/\/+$/, "");
+  if (
+    (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    servicePath
+  ) {
+    throw new UsageError(
+      "ParseX base URL must be an HTTPS origin (HTTP is allowed only on loopback). / ParseX Base URL 必须为 HTTPS 源站（仅本机回环地址允许 HTTP）。",
+    );
+  }
+  const defaultPath = url.hostname.endsWith(".cn-beijing.pre-maas.aliyuncs.com")
+    ? "/api/v2/apps/pre-parse-x"
+    : "/api/v2/apps/parse-x";
+  return `${url.origin}${defaultPath}/${operation}/${action}`;
+}
+
 // ---- Chat (OpenAI Compatible) ----
 export function chatPath(): string {
   return "/compatible-mode/v1/chat/completions";

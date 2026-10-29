@@ -13,6 +13,7 @@ export * from "./files/index.ts";
 export * from "./dataset/index.ts";
 export * from "./batch/index.ts";
 export * from "./decision/index.ts";
+export * from "./parsex/index.ts";
 export * from "./finetune/index.ts";
 export * from "./deploy/index.ts";
 export * from "./speech/index.ts";
