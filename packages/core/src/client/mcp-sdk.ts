@@ -13,6 +13,9 @@
  * - `MCP request failed: <status> <statusText> - <body>` message contract for
  *   HTTP transport failures, which `isStreamableHttpUnsupported`,
  *   `isUrlOverrideSseFallbackCandidate` and the MCP-not-activated hint rely on.
+ *   Classic SSE stream GET failures carry the same contract: `eventsource`
+ *   drops non-200 GET bodies, so the interceptor captures status/body and
+ *   `mapSdkError` rebuilds the message from the SDK's `SseError`.
  * - `MCP error (<code>): <message>` for JSON-RPC business errors (passthrough).
  * - Raw `TypeError` (e.g. ENOTFOUND) propagation so runtime can surface errno.
  */
@@ -22,7 +25,7 @@ import {
   StreamableHTTPClientTransport,
   StreamableHTTPError,
 } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { SSEClientTransport, SseError } from "@modelcontextprotocol/sdk/client/sse.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import type { FetchLike, Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
@@ -90,10 +93,16 @@ export interface SdkMcpAdapterOptions {
  *   (message passed through verbatim per AGENTS.md §3).
  * - `StreamableHTTPError` (HTTP status in `.code`) → GENERAL with the
  *   `MCP request failed: <status>` shape so the fallback detectors still match.
+ * - `SseError` (classic SSE): when the fetch interceptor captured the failing
+ *   stream GET (`sseGetFailure` with a matching status), rebuild the
+ *   `MCP request failed: <status> <statusText> - <body>` contract — the SDK's
+ *   own message only carries `Non-200 status code (<status>)` and would lose
+ *   the server body the MCP-not-activated hint matches on. Without a captured
+ *   failure (e.g. a mid-stream drop) the error passes through unchanged.
  * - Anything else (e.g. a `TypeError` from `fetch`) is returned unchanged so the
  *   runtime keeps its errno-specific handling.
  */
-export function mapSdkError(error: unknown): unknown {
+export function mapSdkError(error: unknown, sseGetFailure?: SseGetFailure): unknown {
   if (error instanceof BailianError) return error;
 
   if (error instanceof McpError) {
@@ -115,6 +124,15 @@ export function mapSdkError(error: unknown): unknown {
     });
   }
 
+  if (error instanceof SseError && sseGetFailure && sseGetFailure.status === error.code) {
+    let message = `MCP request failed: ${sseGetFailure.status} ${sseGetFailure.statusText}`;
+    if (sseGetFailure.body) message += ` - ${sseGetFailure.body.slice(0, 500)}`;
+    return new BailianError(message, ExitCode.GENERAL, undefined, {
+      api: { httpStatus: sseGetFailure.status },
+      cause: error,
+    });
+  }
+
   return error;
 }
 
@@ -132,16 +150,34 @@ function rawMcpMessage(error: McpError): string {
 }
 
 /**
+ * Server-side failure of a classic SSE stream GET, captured by the fetch
+ * interceptor before `eventsource` discards the body (it only reports
+ * `Non-200 status code (<status>)` and never reads the payload).
+ * `mapSdkError` rebuilds the HTTP-failure contract from it.
+ */
+export interface SseGetFailure {
+  status: number;
+  statusText: string;
+  body: string;
+}
+
+/**
  * Build the transport-level fetch. It reproduces the old client's error contract
  * for message POSTs and mirrors its `--verbose` wire logging. GET responses are
  * passed through untouched so the SDK's own SSE-stream handling (including the
- * tolerated 405 on a standalone Streamable GET) stays intact. Redirect responses
- * are likewise passed through: the SDK wraps this fetch with its same-origin
- * redirect policy (`fetchWithinOrigin`) and must see the 3xx to follow or
- * reject it itself — intercepting it here would break same-origin redirects
- * the old client's default `redirect: "follow"` used to honor.
+ * tolerated 405 on a standalone Streamable GET) stays intact — except that a
+ * failing classic SSE stream GET has its status/body captured first, since
+ * `eventsource` would drop them. Redirect responses are likewise passed through:
+ * the SDK wraps this fetch with its same-origin redirect policy
+ * (`fetchWithinOrigin`) and must see the 3xx to follow or reject it itself —
+ * intercepting it here would break same-origin redirects the old client's
+ * default `redirect: "follow"` used to honor.
  */
-function createMcpFetch(deps: HttpDeps): FetchLike {
+function createMcpFetch(
+  deps: HttpDeps,
+  kind: SdkMcpTransportKind,
+  onSseGetFailure?: (failure: SseGetFailure) => void,
+): FetchLike {
   return async (url, init) => {
     const method = init?.method ?? "GET";
     const target = typeof url === "string" ? url : url.href;
@@ -175,6 +211,28 @@ function createMcpFetch(deps: HttpDeps): FetchLike {
       throw new BailianError(message, ExitCode.GENERAL);
     }
 
+    if (
+      kind === "sse" &&
+      onSseGetFailure &&
+      !response.ok &&
+      method === "GET" &&
+      !isRedirectStatus(response.status)
+    ) {
+      // Classic SSE: this GET *is* the connection stream. `eventsource` fails
+      // non-200 responses with `Non-200 status code (<status>)` without ever
+      // reading the body, and the SDK rewraps that as `SseError` — losing the
+      // server payload (e.g. MCP_IS_INVALID) the not-activated hint matches on.
+      // Drain it here and hand it to the adapter; returning the drained
+      // response is safe because neither transport reads a non-2xx GET body.
+      let body = "";
+      try {
+        body = await response.text();
+      } catch {
+        /* body already consumed or unreadable */
+      }
+      onSseGetFailure({ status: response.status, statusText: response.statusText, body });
+    }
+
     return response;
   };
 }
@@ -198,6 +256,8 @@ export class SdkMcpAdapter implements McpConnectedClient {
   private client: Client | undefined;
   private transport: Transport | undefined;
   private connecting: Promise<void> | undefined;
+  /** Last failed classic SSE stream GET, for `SseError` contract reconstruction. */
+  private sseGetFailure: SseGetFailure | undefined;
 
   constructor(options: SdkMcpAdapterOptions) {
     this.deps = options.deps;
@@ -216,7 +276,7 @@ export class SdkMcpAdapter implements McpConnectedClient {
       this.connecting = this.connect().catch((error) => {
         // Allow a later initialize() to retry on the same instance.
         this.connecting = undefined;
-        throw mapSdkError(error);
+        throw this.mapTransportError(error);
       });
     }
     return this.connecting;
@@ -234,7 +294,7 @@ export class SdkMcpAdapter implements McpConnectedClient {
           : {}),
       }));
     } catch (error) {
-      throw mapSdkError(error);
+      throw this.mapTransportError(error);
     }
   }
 
@@ -257,7 +317,7 @@ export class SdkMcpAdapter implements McpConnectedClient {
       // lives in the business adapter (`aigc-mcp.ts`), not here.
       return result;
     } catch (error) {
-      throw mapSdkError(error);
+      throw this.mapTransportError(error);
     }
   }
 
@@ -270,12 +330,18 @@ export class SdkMcpAdapter implements McpConnectedClient {
     this.client = undefined;
     this.transport = undefined;
     this.connecting = undefined;
+    this.sseGetFailure = undefined;
     if (transport) {
       void transport.close().catch(() => undefined);
     }
   }
 
   // ---- Internal ----
+
+  /** `mapSdkError` with this adapter's captured classic SSE GET failure. */
+  private mapTransportError(error: unknown): unknown {
+    return mapSdkError(error, this.sseGetFailure);
+  }
 
   private async connect(): Promise<void> {
     const headers: Record<string, string> = {
@@ -284,7 +350,9 @@ export class SdkMcpAdapter implements McpConnectedClient {
       Authorization: `Bearer ${this.authToken}`,
     };
 
-    const mcpFetch = createMcpFetch(this.deps);
+    const mcpFetch = createMcpFetch(this.deps, this.kind, (failure) => {
+      this.sseGetFailure = failure;
+    });
     const endpoint = new URL(this.url);
     const transport =
       this.kind === "sse"

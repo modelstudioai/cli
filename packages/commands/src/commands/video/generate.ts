@@ -227,7 +227,7 @@ export default defineCommand({
       const duration = flags.duration || undefined;
       const resolution = flags.resolution || undefined;
       const firstFrameUrl =
-        imageInput !== undefined ? resolveAutoImageInput(imageInput, ctx.localize) : undefined;
+        imageInput !== undefined ? resolveAutoImageInput(imageInput) : undefined;
       const submitTool =
         imageInput !== undefined
           ? AIGC_MCP_TOOL.imageToVideoSubmit

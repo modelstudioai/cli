@@ -268,47 +268,30 @@ export function assertMcpTtsVoice(voice: string, localize: Localize): void {
 
 // ---- Local file input (auto mode inlines files as base64 data URIs) ----
 
-/**
- * Conservative cap on the inline base64 data-URI size sent through MCP. The
- * AIGC MCP servers accept a public http(s) URL or a base64 data URI but reject
- * `oss://` and private upload URLs, so `auto` mode inlines local files; an
- * oversized payload would bloat the JSON-RPC body and fail obscurely, so it is
- * rejected up front with an actionable message.
- */
-const MAX_MCP_DATA_URI_BYTES = 10 * 1024 * 1024;
-
 /** True for inputs already carrying a URL / inline scheme (not a local path). */
 function isUrlScheme(source: string): boolean {
   return /^(https?|oss|data):/i.test(source);
 }
 
-function guardDataUriSize(dataUri: string, kind: "image" | "audio", localize: Localize): string {
-  if (dataUri.length <= MAX_MCP_DATA_URI_BYTES) return dataUri;
-  const message = localize({
-    "en-US": `The local ${kind} file is too large to inline through MCP in auto mode (limit ~10 MB after base64 encoding). Host it at a public http(s) URL, or switch to a specific --model.`,
-    "zh-CN": `本地${kind === "image" ? "图片" : "音频"}文件过大，无法在 auto 模式下通过 MCP 内联发送（base64 编码后上限约 10 MB）。请将其托管为公网 http(s) URL，或切换为具体的 --model。`,
-  });
-  const hint = localize({
-    "en-US":
-      "Pass a public http(s) URL instead of a local path, or use --model <id> to switch to the REST path.",
-    "zh-CN": "请传入公网 http(s) URL 而非本地路径，或使用 --model <id> 切换回 REST。",
-  });
-  throw new BailianError(message, ExitCode.USAGE, hint);
-}
-
 /**
  * Resolve an `auto`-mode image input: local paths are inlined as base64 data
  * URIs; http(s) URLs and data URIs pass through verbatim.
+ *
+ * Files are inlined rather than uploaded because the AIGC MCP servers reject
+ * `oss://` and cannot fetch private upload URLs. The inline payload is
+ * deliberately not capped on this side: how large a data URI is acceptable is
+ * the server's own contract, so an oversized one surfaces as a server error
+ * passed through verbatim (AGENTS.md §3) instead of a client-side guess.
  */
-export function resolveAutoImageInput(source: string, localize: Localize): string {
+export function resolveAutoImageInput(source: string): string {
   if (isUrlScheme(source)) return source;
-  return guardDataUriSize(imageFileToDataUri(source), "image", localize);
+  return imageFileToDataUri(source);
 }
 
 /** Resolve an `auto`-mode audio input the same way (ASR `file_urls`). */
-export function resolveAutoAudioInput(source: string, localize: Localize): string {
+export function resolveAutoAudioInput(source: string): string {
   if (isUrlScheme(source)) return source;
-  return guardDataUriSize(audioFileToDataUri(source), "audio", localize);
+  return audioFileToDataUri(source);
 }
 
 // ---- Shared-session MCP call wrapper ----
@@ -333,9 +316,9 @@ function withAutoModelHint(error: unknown, localize: Localize): never {
   ) {
     const hint = localize({
       "en-US":
-        'MCP generation failed. To use the REST path instead, run with a specific --model <id> (or set a concrete default model instead of "auto").',
+        "The current model (auto) failed to generate. Retry with a specific --model <id> (or set a concrete default model).",
       "zh-CN":
-        'MCP 生成失败。如需改走 REST，请使用具体的 --model <id>（或将默认模型设为具体值而非 "auto"）。',
+        "当前模型（auto）生成失败，请使用具体的 --model <id>（或将默认模型设为具体值）进行重试。",
     });
     throw new BailianError(error.message, error.exitCode, hint, {
       cause: error,

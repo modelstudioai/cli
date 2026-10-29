@@ -385,7 +385,7 @@ async function handleAutoMcpMode(
     throw new BailianError("Provide one --image to edit.", ExitCode.USAGE);
   }
 
-  const imageUrl = resolveAutoImageInput(source, localize);
+  const imageUrl = resolveAutoImageInput(source);
   const concurrent = getConcurrency(flags);
   const args = buildImageEditArgs({
     imageUrl,

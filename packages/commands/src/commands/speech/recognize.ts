@@ -361,7 +361,7 @@ async function handleAutoMcpMode(
 
   // Public http(s)/oss URLs pass through; local files become inline base64 data
   // URIs (the MCP server rejects oss:// and cannot fetch private uploads).
-  const fileUrls = rawUrls.map((source) => resolveAutoAudioInput(source, localize));
+  const fileUrls = rawUrls.map((source) => resolveAutoAudioInput(source));
   const args = buildSpeechToTextArgs(fileUrls);
 
   if (settings.dryRun) {

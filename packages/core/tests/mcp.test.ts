@@ -1,6 +1,7 @@
 import { expect, test } from "vite-plus/test";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { SseError } from "@modelcontextprotocol/sdk/client/sse.js";
 import type { Identity, Settings } from "../src/index.ts";
 import {
   BailianError,
@@ -11,7 +12,12 @@ import {
   isStreamableHttpUnsupported,
   isUrlOverrideSseFallbackCandidate,
 } from "../src/index.ts";
-import { McpClient, SdkMcpAdapter, mapSdkError } from "../src/client/mcp-sdk.ts";
+import {
+  McpClient,
+  SdkMcpAdapter,
+  mapSdkError,
+  type SseGetFailure,
+} from "../src/client/mcp-sdk.ts";
 
 function testDeps(overrides?: Partial<Settings>): { identity: Identity; settings: Settings } {
   return {
@@ -140,6 +146,27 @@ test("mapSdkError：超时/连接关闭映射 ExitCode；服务端 JSON-RPC 错�
   expect(mapSdkError(original)).toBe(original);
   const typeError = new TypeError("fetch failed");
   expect(mapSdkError(typeError)).toBe(typeError);
+});
+
+test("mapSdkError：SseError 结合捕获的 SSE GET 失败重建文案契约；无捕获时原样返回", () => {
+  const sseError = new SseError(404, "Non-200 status code (404)", {} as never);
+  const failure: SseGetFailure = {
+    status: 404,
+    statusText: "Not Found",
+    body: "MCP不存在或未开通",
+  };
+  const mapped = mapSdkError(sseError, failure);
+  expect(mapped).toBeInstanceOf(BailianError);
+  expect((mapped as BailianError).message).toBe(
+    "MCP request failed: 404 Not Found - MCP不存在或未开通",
+  );
+  expect((mapped as BailianError).exitCode).toBe(ExitCode.GENERAL);
+  expect((mapped as BailianError).api?.httpStatus).toBe(404);
+
+  // Status mismatch (stale capture) and missing capture pass through untouched.
+  const stale = mapSdkError(sseError, { status: 500, statusText: "", body: "x" });
+  expect(stale).toBe(sseError);
+  expect(mapSdkError(sseError)).toBe(sseError);
 });
 
 // ---- SdkMcpAdapter (streamable) ----
@@ -542,6 +569,29 @@ test("SdkMcpAdapter：HTTP 4xx POST 复刻 `MCP request failed: <status> - <body
   }
 });
 
+test("SdkMcpAdapter：经典 SSE GET 4xx 保留状态码与服务端正文（开通判定契约）", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response("MCP_IS_INVALID", { status: 404, statusText: "Not Found" });
+
+  try {
+    const adapter = new SdkMcpAdapter({
+      deps: testDeps(),
+      url: "https://example.test/sse",
+      authToken: "sk-test",
+      transport: "sse",
+    });
+    const error = await adapter.initialize().catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(BailianError);
+    expect((error as BailianError).message).toMatch(/^MCP request failed:\s*404\b/);
+    expect((error as BailianError).message).toContain("MCP_IS_INVALID");
+    expect((error as BailianError).api?.httpStatus).toBe(404);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 // ---- connectBailianMcpWithFallback orchestration ----
 
 test("connectBailianMcpWithFallback：成功走 Streamable", async () => {
@@ -684,6 +734,37 @@ test("connectBailianMcpWithFallback：405 降级到经典 SSE 并连接成功", 
     expect(connected.url).toContain("/sse");
     expect(urls.some((entry) => entry.startsWith("GET ") && entry.includes("/sse"))).toBe(true);
     connected.client.close?.();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("connectBailianMcpWithFallback：405 降级后经典 SSE GET 4xx 仍保留正文（开通提示契约）", async () => {
+  const originalFetch = globalThis.fetch;
+  const urls: string[] = [];
+
+  globalThis.fetch = async (input, init) => {
+    const url = requestUrl(input);
+    const method = init?.method ?? "GET";
+    urls.push(`${method} ${url}`);
+    if (url.endsWith("/mcp")) {
+      return new Response("Method Not Allowed", { status: 405, statusText: "Method Not Allowed" });
+    }
+    return new Response("MCP不存在或未开通", { status: 404, statusText: "Not Found" });
+  };
+
+  try {
+    const error = await connectBailianMcpWithFallback({
+      deps: testDeps(),
+      authToken: "sk-test",
+      httpUrl: "https://example.test/api/v1/mcps/WebParser/mcp",
+      sseUrl: "https://example.test/api/v1/mcps/WebParser/sse",
+      serverCode: "WebParser",
+    }).catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(BailianError);
+    expect((error as BailianError).message).toMatch(/^MCP request failed:\s*404\b/);
+    expect((error as BailianError).message).toContain("MCP不存在或未开通");
+    expect(urls.some((entry) => entry.startsWith("GET ") && entry.includes("/sse"))).toBe(true);
   } finally {
     globalThis.fetch = originalFetch;
   }
