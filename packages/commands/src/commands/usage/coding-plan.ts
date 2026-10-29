@@ -1,6 +1,5 @@
-import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
-import { printQuotaBox, readNumber, type QuotaSection } from "./quota-box.ts";
+import { defineCommand, unwrapResponse } from "bailian-cli-core";
+import { renderQuotaBox, readNumber, type QuotaSection } from "./quota-box.ts";
 import { formatNumber } from "../shared/format.ts";
 
 const CODING_PLAN_USAGE_API =
@@ -81,9 +80,9 @@ function toSection(label: string, window: CodingPlanWindow): QuotaSection {
   return section;
 }
 
-function printView(usage: CodingPlanUsage, generatedAt: number): void {
+function renderView(usage: CodingPlanUsage, generatedAt: number): string {
   const planSuffix = usage.instanceType ? ` (${usage.instanceType})` : "";
-  printQuotaBox(
+  return renderQuotaBox(
     `Coding Plan Usage${planSuffix}`,
     [
       toSection("5-hour quota", usage.per5Hour),
@@ -104,7 +103,7 @@ export default defineCommand({
   exampleArgs: ["", "--output json"],
   async run(ctx) {
     const { settings } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const requestData = {
       queryCodingPlanInstanceInfoRequest: {
         commodityCode: COMMODITY_CODES[settings.consoleSite ?? "domestic"],
@@ -113,23 +112,25 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult({ api: CODING_PLAN_USAGE_API, data: requestData }, format);
+      ctx.output.result({ api: CODING_PLAN_USAGE_API, data: requestData });
       return;
     }
 
     const result = await ctx.client.console(CODING_PLAN_USAGE_API, requestData);
     const usage = readUsage(result);
 
-    if (format === "json") {
-      emitResult(usage ?? {}, format);
-      return;
-    }
-
-    if (!usage) {
-      process.stdout.write("No active Coding Plan subscription found.\n");
-      return;
-    }
-
-    printView(usage, Date.now());
+    ctx.output.result(
+      usage ?? {},
+      format === "text"
+        ? {
+            text: usage
+              ? renderView(usage, Date.now())
+              : ctx.localize({
+                  "en-US": "No active Coding Plan subscription found.",
+                  "zh-CN": "未找到有效的 Coding Plan 订阅。",
+                }),
+          }
+        : undefined,
+    );
   },
 });

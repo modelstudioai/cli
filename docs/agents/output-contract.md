@@ -8,7 +8,7 @@
 
 ## 当前迁移阶段
 
-公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit、语音热词表 create / update / delete / get / list、speech synthesize / recognize、memory 全部 7 个命令、quota 全部 5 个命令、agents security overview / alerts、monitor 全部 7 个命令和 log 全部 14 个命令已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
+公共 runtime 已接入 reporter：正常及早期错误、中间件提示、Client 传输诊断和轮询遵循统一策略；下载保留原有 TTY 原地刷新进度条，调用方在 quiet 或 JSON 模式下关闭进度。视频 generate / ref / edit / download / task get、图片 generate / edit、语音热词表 create / update / delete / get / list、speech synthesize / recognize、memory 全部 7 个命令、quota 全部 5 个命令、agents security overview / alerts、monitor 全部 7 个命令、log 全部 14 个命令、usage 全部 6 个命令和 token-plan 全部 5 个命令已迁移最终结果与过程提示，quiet 不再返回裸路径或只返回状态；其他存量业务 emitResult/emitBare、命令专属输出、SDK 全局适配器及 Command Pack API 1 尚需逐项迁移；不能宣称任意命令的完整输出已经遵循新协议。
 
 ## 必查清单
 
@@ -35,6 +35,8 @@
 - [ ] JSON 诊断每条一行；stdout 为单个业务 JSON 文档，stderr 单独解析
 - [ ] speech synthesize 的原始音频仅在 text 流式模式下直接写 stdout；JSON 流式需 --out 文件并返回元数据，未指定文件时在请求和文件操作前报用法错误；dry-run 仍允许 JSON 预览。--list-voices 的 JSON 返回音色条目与已有文档链接，内置列表未知时 voices/total 为 null
 - [ ] speech recognize 的同步 JSON 返回完整服务响应；异步完成后返回原始任务响应并附加 transcriptions 数组，保留失败子任务和 request_id。text 保留转写、说话人和批量分隔；--out 仍保存原有转写文件结构，下载及写盘失败不提前输出最终结果；部分子任务失败不改变原有退出码
+- [ ] usage freetier 的启用 JSON 保留原始响应数组；停用 JSON 返回 `{ processed: [{ model, result }], skipped: [model] }`，跳过项仍不发起停用请求。失败与超时用 warning 提示，保留原有退出策略，不把部分失败丢出结果。
+- [ ] Token Plan 创建密钥的完整响应和一次性明文仍属于业务结果，quiet 不裁剪；不得通过 warning/debug 泄露明文。
 - [ ] 其他原始字节流、既有事件流和 Command Pack API 1 仍走现有专用入口；不得绕过新接口承诺后混入 stdout
 - [ ] 每个调用使用独立 reporter，不共享结果状态、不替换全局 stdout/stderr
 - [ ] 进程共用 SIGINT / stdout error 监听器，调用结束清理输出上下文；并发不触发 MaxListenersExceededWarning，单次中断只输出一条终止错误，EPIPE 保护覆盖 run 返回后的异步写入

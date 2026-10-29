@@ -1,6 +1,5 @@
-import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
-import { printQuotaBox, readNumber } from "./quota-box.ts";
+import { defineCommand, unwrapResponse } from "bailian-cli-core";
+import { renderQuotaBox, readNumber } from "./quota-box.ts";
 
 const TOKEN_PLAN_USAGE_API = "zeldaHttp.apikeyMgr./tokenplan/personal/api/v2/usage";
 
@@ -21,8 +20,8 @@ function readUsage(result: unknown): TokenPlanUsage {
   return usage;
 }
 
-function printView(usage: TokenPlanUsage, generatedAt: number): void {
-  printQuotaBox(
+function renderView(usage: TokenPlanUsage, generatedAt: number): string {
+  return renderQuotaBox(
     "Token Plan Usage",
     [
       {
@@ -47,21 +46,19 @@ export default defineCommand({
   exampleArgs: ["", "--output json"],
   async run(ctx) {
     const { settings } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult({ api: TOKEN_PLAN_USAGE_API, data: {} }, format);
+      ctx.output.result({ api: TOKEN_PLAN_USAGE_API, data: {} });
       return;
     }
 
     const result = await ctx.client.console(TOKEN_PLAN_USAGE_API, {});
     const usage = readUsage(result);
 
-    if (format === "json") {
-      emitResult(usage, format);
-      return;
-    }
-
-    printView(usage, Date.now());
+    ctx.output.result(
+      usage,
+      format === "text" ? { text: renderView(usage, Date.now()) } : undefined,
+    );
   },
 });
