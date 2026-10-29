@@ -153,6 +153,9 @@ describe("e2e: named config", () => {
           });
         } else {
           expect(leadingData.base_url).toBe("https://work.example.test");
+          expect(leadingData.api_key).toBeDefined();
+          expect(String(leadingData.api_key)).not.toMatch(/active/);
+          expect(leadingData.active).toEqual({ api_key: "config", base_url: "config" });
           expect(leadingData.workspace_id).toBe("work-space-review");
         }
         expect(JSON.parse(readFileSync(join(configDir, "config.json"), "utf8"))).toEqual(
@@ -227,13 +230,20 @@ describe("e2e: named config", () => {
       });
       const { stdout, stderr, exitCode } = await runCli(
         ["config", "show", "--config", "default", "--output", "json"],
-        { BAILIAN_CONFIG_DIR: dir },
+        {
+          BAILIAN_CONFIG_DIR: dir,
+          DASHSCOPE_API_KEY: "",
+          DASHSCOPE_BASE_URL: "",
+        },
       );
       expect(exitCode, stderr).toBe(0);
       const data = parseStdoutJson<Record<string, unknown>>(stdout);
       expect(data.config).toBe("default");
-      expect(data.active).toBeUndefined();
+      // `active` is credential-source provenance, not profile activation metadata.
+      expect(data.active).toEqual({ api_key: "config" });
+      expect(data).not.toHaveProperty("active_config");
       expect(data.api_key).toBeDefined();
+      expect(String(data.api_key)).not.toMatch(/active/);
       const raw = JSON.parse(readFileSync(join(dir, "config.json"), "utf8")) as Record<
         string,
         unknown
