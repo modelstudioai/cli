@@ -1,10 +1,14 @@
 export {
   resolveApiKey,
+  resolveApiKeySource,
   resolveConsole,
   resolveOpenApi,
   describeAuthState,
   resolveModelBaseUrl,
+  resolveModelBaseUrlSource,
   resolveModelBaseUrlState,
+  resolveModelConnectionProvenance,
+  isModelConnectionSourceMismatch,
 } from "./resolver.ts";
 export { makeAuthStore, type AuthStore, type AuthPersistPatch } from "./store.ts";
 export type {
@@ -13,6 +17,7 @@ export type {
   OpenApiCredential,
   AuthState,
   CredentialSource,
+  ModelConnectionProvenance,
 } from "./types.ts";
 export {
   generateCLIAccessToken,

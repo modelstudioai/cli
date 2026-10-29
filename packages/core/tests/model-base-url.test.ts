@@ -21,6 +21,12 @@ test("normalizeModelBaseUrl keeps only the URL origin", () => {
   ).toBe("https://example.com");
 });
 
+test("normalizeModelBaseUrl strips userinfo, query, and fragment", () => {
+  expect(normalizeModelBaseUrl("https://user:pass@example.com/path?token=super-secret#frag")).toBe(
+    "https://example.com",
+  );
+});
+
 test("normalizeModelBaseUrl preserves explicit ports while removing paths", () => {
   expect(normalizeModelBaseUrl("http://localhost:8080/bailian/")).toBe("http://localhost:8080");
 });

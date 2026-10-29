@@ -1,6 +1,15 @@
 /** Where a resolved credential came from (shown by `bl auth status`). */
 export type CredentialSource = "flag" | "env" | "config";
 
+/**
+ * Winning sources for the model-domain connection pair.
+ * Missing `baseUrlSource` means the built-in REGIONS.cn default.
+ */
+export interface ModelConnectionProvenance {
+  apiKeySource?: CredentialSource;
+  baseUrlSource?: CredentialSource;
+}
+
 /** Credential for the **model domain** (DashScope data plane). Always an API key. */
 export interface ApiKeyCredential {
   token: string;

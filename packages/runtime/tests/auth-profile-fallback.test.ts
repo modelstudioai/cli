@@ -200,7 +200,10 @@ test("authStage 在 --api-key 覆盖 Profile API Key 时跳过 capability fallba
   const captured = await captureStderr(() => runAuth(context));
 
   expect(captured.error).toBeUndefined();
-  expect(captured.output).toBe("");
+  // Cross-source warning expected; capability fallback must still be skipped.
+  expect(captured.output).toContain("api_key and base_url are resolved from different sources");
+  expect(captured.output).not.toContain("PROFILE_API_KEY_FALLBACK");
+  expect(captured.output).not.toContain("does not support command");
   expect(context.client.exportApiCredential()).toMatchObject({
     token: "sk-flag",
     baseUrl: "https://plan.example.com",
@@ -266,7 +269,7 @@ test("authStage 在 JSON 模式输出多行结构化 fallback warning", async ()
   });
 });
 
-test("authStage 在 DASHSCOPE_API_KEY 覆盖 Profile API Key 时不降级也不提示", async () => {
+test("authStage 在 DASHSCOPE_API_KEY 覆盖 Profile API Key 时不降级，但跨源会告警", async () => {
   useTempConfigDir();
   await writeConfigFile({ api_key: "sk-default", base_url: "https://default.example.com" });
   await writeConfigFile(
@@ -287,7 +290,9 @@ test("authStage 在 DASHSCOPE_API_KEY 覆盖 Profile API Key 时不降级也不�
   const captured = await captureStderr(() => runAuth(context));
 
   expect(captured.error).toBeUndefined();
-  expect(captured.output).toBe("");
+  expect(captured.output).toContain("api_key and base_url are resolved from different sources");
+  expect(captured.output).not.toContain("PROFILE_API_KEY_FALLBACK");
+  expect(captured.output).not.toContain("does not support command");
   expect(context.client.exportApiCredential()).toMatchObject({
     token: "sk-env",
     source: "env",
@@ -308,7 +313,7 @@ test.each([
     env: { DASHSCOPE_BASE_URL: "https://env.example.com" },
     expectedBaseUrl: "https://env.example.com",
   },
-])("authStage 在只有 $name 时不降级也不提示", async ({ flags, env, expectedBaseUrl }) => {
+])("authStage 在只有 $name 时不降级，但跨源会告警", async ({ flags, env, expectedBaseUrl }) => {
   useTempConfigDir();
   await writeConfigFile({ api_key: "sk-default", base_url: "https://default.example.com" });
   await writeConfigFile(
@@ -325,12 +330,87 @@ test.each([
   const captured = await captureStderr(() => runAuth(context));
 
   expect(captured.error).toBeUndefined();
-  expect(captured.output).toBe("");
+  expect(captured.output).toContain("api_key and base_url are resolved from different sources");
+  expect(captured.output).not.toContain("PROFILE_API_KEY_FALLBACK");
+  expect(captured.output).not.toContain("does not support command");
   expect(context.client.exportApiCredential()).toMatchObject({
     token: "sk-plan",
     source: "config",
     baseUrl: expectedBaseUrl,
   });
+});
+
+test("authStage 在 api_key 与 base_url 跨源时输出告警，quiet 可抑制", async () => {
+  useTempConfigDir();
+  await writeConfigFile({
+    language: "zh-CN",
+    api_key: "sk-file",
+    base_url: "https://file.example.com",
+  });
+  const visibleContext = makeContext([], {}, { DASHSCOPE_API_KEY: "sk-env-key" });
+  visibleContext.settings.quiet = false;
+  const visible = await captureStderr(() => runAuth(visibleContext));
+  expect(visible.error).toBeUndefined();
+  expect(visible.output).toContain("┌ 警告 ");
+  expect(visible.output).toContain("api_key 和 base_url 来自不同配置源。");
+  expect(visible.output).toContain("└");
+  expect(visible.output).toContain("api_key ← 环境变量 (DASHSCOPE_API_KEY)");
+  expect(visible.output).toContain("base_url ← 配置文件 (");
+  expect(visible.output).toContain("bl config show");
+
+  const quietContext = makeContext([], {}, { DASHSCOPE_API_KEY: "sk-env-key" });
+  const quiet = await captureStderr(() => runAuth(quietContext));
+  expect(quiet.error).toBeUndefined();
+  expect(quiet.output).toBe("");
+});
+
+test("authStage 在 JSON 模式输出跨源结构化 warning", async () => {
+  useTempConfigDir();
+  await writeConfigFile({
+    language: "en-US",
+    api_key: "sk-file",
+    base_url: "https://file.example.com",
+  });
+  const context = makeContext([], {}, { DASHSCOPE_API_KEY: "sk-env-key" });
+  context.settings.output = "json";
+  context.settings.quiet = false;
+
+  const captured = await captureStderr(() => runAuth(context));
+
+  expect(captured.error).toBeUndefined();
+  expect(captured.output).toMatch(/^\{\n {2}"warning": \{\n/);
+  const parsed = JSON.parse(captured.output.trim()) as {
+    warning: {
+      code: string;
+      api_key_source: string;
+      base_url_source: string;
+      message: string;
+    };
+  };
+  expect(parsed.warning.code).toBe("API_KEY_BASE_URL_SOURCE_MISMATCH");
+  expect(parsed.warning.api_key_source).toBe("env");
+  expect(parsed.warning.base_url_source).toBe("config");
+  expect(parsed.warning.message).toContain("different sources");
+  expect(parsed.warning.message).toContain("bl config show");
+});
+
+test("authStage 同源或仅 key 时不发出跨源告警", async () => {
+  useTempConfigDir();
+  await writeConfigFile({ api_key: "sk-file", base_url: "https://file.example.com" });
+
+  const sameSource = makeContext([], {});
+  sameSource.settings.quiet = false;
+  const same = await captureStderr(() => runAuth(sameSource));
+  expect(same.error).toBeUndefined();
+  expect(same.output).toBe("");
+
+  await writeConfigFile({ api_key: "sk-file" });
+  const keyOnlyFresh = makeContext([], {}, { DASHSCOPE_API_KEY: "sk-env-only" });
+  keyOnlyFresh.settings.quiet = false;
+  const onlyKey = await captureStderr(() => runAuth(keyOnlyFresh));
+  expect(onlyKey.error).toBeUndefined();
+  expect(onlyKey.output).not.toContain("different sources");
+  expect(onlyKey.output).not.toContain("不同配置源");
 });
 
 test("authStage fallback 展示空格分隔的叶子命令路径", async () => {
