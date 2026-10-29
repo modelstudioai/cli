@@ -6,6 +6,13 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.7.0] - 2026-10-29
+
+### 新增
+
+- **ParseX 解析**：新增 `bl parsex parse submit/result`，支持文档及音视频解析、结果查询和 Markdown 输出。
+- **ParseX 字段抽取**：新增 `bl parsex extract submit/result`，支持按 JSON Schema 从文档或已有解析结果中抽取字段，并返回原文引用。
+
 ## [2.6.2] - 2026-10-28
 
 ### 变更

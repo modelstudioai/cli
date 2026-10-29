@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.7.0] - 2026-10-29
+
+### Added
+
+- **ParseX parsing**: Add `bl parsex parse submit/result` for document and audio/video parsing, result queries, and Markdown output.
+- **ParseX field extraction**: Add `bl parsex extract submit/result` to extract fields with a JSON Schema from documents or existing parsing results, including source citations.
+
 ## [2.6.2] - 2026-10-28
 
 ### Changed
