@@ -16,7 +16,8 @@
 
 ### 修复
 
-- **工作空间 API Key 登录**：修复 `bl auth login` 在 MaaS Endpoint 上拒绝有效工作空间 API Key 的问题。
+- **Token Plan 配额窗口**：`bl usage token-plan` 改为读取接口返回的全部配额窗口（小时/天/周/月），不再只展示月度窗口；JSON 输出新增 `hasQuotaData`，用于区分无配额数据与正常结果。
+- **工作空间 API Key 登录**：修复 `bl auth login` 在 MaaS Endpoint 上拒绝有效工 作空间 API Key 的问题。
 - **登录校验错误**：API Key 校验保留服务端及网络错误，避免将所有失败统一报告为 Key 无效。
 
 ## [2.6.2] - 2026-10-28
