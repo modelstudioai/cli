@@ -210,12 +210,14 @@ describe("e2e: aigc auto → mcp", () => {
     expect(data.arguments?.file_urls).toEqual(["https://example.com/a.mp3"]);
   });
 
-  test("speech recognize auto 本地音频内联为脱敏 data URI", async () => {
+  test("speech recognize auto 拒绝本地音频（服务端仅转写公网 URL）", async () => {
+    // The live MCP ASR server silently returns an empty transcript for data
+    // URIs, so local inputs must fail up front with a USAGE error.
     const configDir = makeE2eOutputDir("aigc-auto-speech-recognize-local");
     const audioPath = join(configDir, "input.wav");
     writeFileSync(audioPath, Buffer.from([1, 2, 3]));
 
-    const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
+    const { stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
       "speech",
       "recognize",
       "--model",
@@ -226,9 +228,25 @@ describe("e2e: aigc auto → mcp", () => {
       "--output",
       "json",
     ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--model/);
+  });
+
+  test("speech recognize auto dry-run 预览公网 URL 透传", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTO_ROUTES, [
+      "speech",
+      "recognize",
+      "--model",
+      "auto",
+      "--url",
+      "https://example.com/audio.wav",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<McpPreview>(stdout);
-    expect(data.arguments?.file_urls).toEqual(["data:audio/wav;base64,<omitted>"]);
+    expect(data.arguments?.file_urls).toEqual(["https://example.com/audio.wav"]);
   });
 
   test("image generate auto dry-run 预览把 --size 比例映射为 MCP 宽*高", async () => {

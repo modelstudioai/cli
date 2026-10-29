@@ -39,7 +39,7 @@ import {
   assertAutoMcpAvailable,
   assertMcpCompatible,
   withAigcMcpSession,
-  resolveAutoAudioInput,
+  resolveAutoAsrInput,
   type Localize,
 } from "../shared/aigc-mcp.ts";
 
@@ -359,9 +359,9 @@ async function handleAutoMcpMode(
     throw new BailianError("Provide at least one --url to recognize.", ExitCode.USAGE);
   }
 
-  // Public http(s)/oss URLs pass through; local files become inline base64 data
-  // URIs (the MCP server rejects oss:// and cannot fetch private uploads).
-  const fileUrls = rawUrls.map((source) => resolveAutoAudioInput(source));
+  // The live MCP ASR server only transcribes public http(s) URLs; local files
+  // and data URIs are rejected up front instead of silently empty results.
+  const fileUrls = rawUrls.map((source) => resolveAutoAsrInput(source, localize));
   const args = buildSpeechToTextArgs(fileUrls);
 
   if (settings.dryRun) {

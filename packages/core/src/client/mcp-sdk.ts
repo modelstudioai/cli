@@ -87,15 +87,14 @@ export interface SdkMcpAdapterOptions {
 /**
  * Translate an SDK/transport error into the CLI error contract.
  *
- * - `BailianError` (already ours, produced by the fetch interceptor) passes through.
- * - `McpError`: SDK-local failures only — the protocol timer (`Request timed
- *   out` / `Maximum total timeout exceeded`, carrying its payload in `data`) →
- *   TIMEOUT, and the transport-close rejection (`Connection closed`) → NETWORK.
- *   A server-side JSON-RPC error reusing those codes (-32000 / -32001) carries
- *   the server's own message, so it falls through to GENERAL with the
- *   `MCP error (code): message` shape (message passed through verbatim per
- *   AGENTS.md §3) — the exit code must not mislead callers into retrying a
- *   business error as a network/timeout failure.
+ * - `BailianError` (already ours, produced by local timeout or the fetch
+ *   interceptor) passes through.
+ * - `McpError`: treated as a server-side JSON-RPC error by default and mapped to
+ *   `GENERAL` with the `MCP error (<code>): <message>` shape (message passed
+ *   through verbatim per AGENTS.md §3). Callers that can distinguish local
+ *   transport-close events pass `localCloseFired: true` so that
+ *   `ConnectionClosed` errors arising after the transport has closed are mapped
+ *   to `NETWORK` instead.
  * - `StreamableHTTPError` (HTTP status in `.code`) → GENERAL with the
  *   `MCP request failed: <status>` shape so the fallback detectors still match.
  * - `SseError` (classic SSE): when the fetch interceptor captured the failing
@@ -107,15 +106,16 @@ export interface SdkMcpAdapterOptions {
  * - Anything else (e.g. a `TypeError` from `fetch`) is returned unchanged so the
  *   runtime keeps its errno-specific handling.
  */
-export function mapSdkError(error: unknown, sseGetFailure?: SseGetFailure): unknown {
+export function mapSdkError(
+  error: unknown,
+  sseGetFailure?: SseGetFailure,
+  options?: { localCloseFired?: boolean },
+): unknown {
   if (error instanceof BailianError) return error;
 
   if (error instanceof McpError) {
     const raw = rawMcpMessage(error);
-    if (error.code === ErrorCode.RequestTimeout && isLocalTimeoutSignature(error, raw)) {
-      return new BailianError(raw || "MCP request timed out.", ExitCode.TIMEOUT);
-    }
-    if (error.code === ErrorCode.ConnectionClosed && raw === LOCAL_CLOSE_MESSAGE) {
+    if (error.code === ErrorCode.ConnectionClosed && options?.localCloseFired) {
       return new BailianError(raw || "MCP connection closed.", ExitCode.NETWORK);
     }
     return new BailianError(`MCP error (${error.code}): ${raw}`, ExitCode.GENERAL);
@@ -152,24 +152,6 @@ export function mapSdkError(error: unknown, sseGetFailure?: SseGetFailure): unkn
 function rawMcpMessage(error: McpError): string {
   const prefix = `MCP error ${error.code}: `;
   return error.message.startsWith(prefix) ? error.message.slice(prefix.length) : error.message;
-}
-
-/** Fixed message of the SDK's transport-close rejection of pending requests. */
-const LOCAL_CLOSE_MESSAGE = "Connection closed";
-
-/**
- * True when a `RequestTimeout` McpError came from the SDK's own request timer,
- * not from a server JSON-RPC error response reusing code -32001. The protocol
- * timer attaches its payload as `data` (`{ timeout }` / `{ maxTotalTimeout, … }`);
- * the fixed timer messages are matched as a fallback so the contract survives
- * SDK builds that drop the payload.
- */
-function isLocalTimeoutSignature(error: McpError, raw: string): boolean {
-  const data = error.data as Record<string, unknown> | undefined;
-  if (data && (typeof data.timeout === "number" || typeof data.maxTotalTimeout === "number")) {
-    return true;
-  }
-  return raw === "Request timed out" || raw === "Maximum total timeout exceeded";
 }
 
 /**
@@ -281,6 +263,12 @@ export class SdkMcpAdapter implements McpConnectedClient {
   private connecting: Promise<void> | undefined;
   /** Last failed classic SSE stream GET, for `SseError` contract reconstruction. */
   private sseGetFailure: SseGetFailure | undefined;
+  /**
+   * Set when the transport's `onclose` callback fires. Used to distinguish
+   * SDK-generated `ConnectionClosed` errors (local network events) from
+   * server-authored JSON-RPC errors that reuse code -32000.
+   */
+  private transportClosed = false;
 
   constructor(options: SdkMcpAdapterOptions) {
     this.deps = options.deps;
@@ -308,7 +296,9 @@ export class SdkMcpAdapter implements McpConnectedClient {
   async listTools(): Promise<McpTool[]> {
     const client = await this.requireClient();
     try {
-      const result = await client.listTools(undefined, this.requestOptions());
+      const result = await this.withLocalTimeout(
+        client.listTools(undefined, this.requestOptions()),
+      );
       // Returned verbatim (the SDK-validated Tool objects): callers such as
       // `bl mcp tools --output json` keep every standard field the server
       // declares (outputSchema / annotations / title / `_meta`, …), matching
@@ -322,10 +312,8 @@ export class SdkMcpAdapter implements McpConnectedClient {
   async callTool(name: string, args: Record<string, unknown>): Promise<McpToolResult> {
     const client = await this.requireClient();
     try {
-      const result = (await client.callTool(
-        { name, arguments: args },
-        undefined,
-        this.requestOptions(),
+      const result = (await this.withLocalTimeout(
+        client.callTool({ name, arguments: args }, undefined, this.requestOptions()),
       )) as McpToolResult;
       // The SDK already validates the envelope against CallToolResultSchema;
       // only a missing content array is an unexpected shape for our callers.
@@ -359,9 +347,9 @@ export class SdkMcpAdapter implements McpConnectedClient {
 
   // ---- Internal ----
 
-  /** `mapSdkError` with this adapter's captured classic SSE GET failure. */
+  /** `mapSdkError` with this adapter's local transport-close state. */
   private mapTransportError(error: unknown): unknown {
-    return mapSdkError(error, this.sseGetFailure);
+    return mapSdkError(error, this.sseGetFailure, { localCloseFired: this.transportClosed });
   }
 
   private async connect(): Promise<void> {
@@ -375,6 +363,8 @@ export class SdkMcpAdapter implements McpConnectedClient {
       this.sseGetFailure = failure;
     });
     const endpoint = new URL(this.url);
+    this.transportClosed = false;
+
     const transport =
       this.kind === "sse"
         ? new SSEClientTransport(endpoint, { requestInit: { headers }, fetch: mcpFetch })
@@ -382,6 +372,14 @@ export class SdkMcpAdapter implements McpConnectedClient {
             requestInit: { headers },
             fetch: mcpFetch,
           });
+
+    // Track local transport close so SDK-generated `ConnectionClosed` errors
+    // can be reliably distinguished from server-authored -32000 JSON-RPC errors.
+    // Protocol.connect wraps any pre-existing onclose, so this fires before the
+    // SDK rejects in-flight requests.
+    transport.onclose = () => {
+      this.transportClosed = true;
+    };
 
     const client = new Client(
       { name: this.deps.identity.clientName, version: this.deps.identity.version },
@@ -452,6 +450,28 @@ export class SdkMcpAdapter implements McpConnectedClient {
   }
 
   private requestOptions(): { timeout: number } {
-    return { timeout: this.deps.settings.timeout * 1000 };
+    // Disable the SDK's own request timer; the adapter enforces the timeout
+    // locally via `withLocalTimeout` so that timeout failures carry an
+    // unambiguous local source and are not confused with server JSON-RPC
+    // errors that may reuse code -32001 or carry `data.timeout`.
+    // Use Node's maximum setTimeout delay so the SDK timer never wins the race.
+    return { timeout: 2_147_483_647 };
+  }
+
+  private async withLocalTimeout<T>(promise: Promise<T>): Promise<T> {
+    const timeoutSeconds = this.deps.settings.timeout;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(
+          new BailianError(`MCP request timed out after ${timeoutSeconds}s.`, ExitCode.TIMEOUT),
+        );
+      }, timeoutSeconds * 1000);
+    });
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 }

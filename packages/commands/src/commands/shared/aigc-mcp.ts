@@ -19,7 +19,6 @@ import {
   ExitCode,
   parseAigcToolResult,
   imageFileToDataUri,
-  audioFileToDataUri,
   isMcpTtsVoice,
   MCP_TTS_VOICES,
   MCP_CALL_SERVICE,
@@ -288,10 +287,25 @@ export function resolveAutoImageInput(source: string): string {
   return imageFileToDataUri(source);
 }
 
-/** Resolve an `auto`-mode audio input the same way (ASR `file_urls`). */
-export function resolveAutoAudioInput(source: string): string {
-  if (isUrlScheme(source)) return source;
-  return audioFileToDataUri(source);
+/**
+ * Resolve an `auto`-mode ASR input: the live `bailian_speech_to_text` server
+ * only transcribes public http(s) URLs — data-URI input (including inlined
+ * local files) comes back as an empty transcript with no error at all — so
+ * anything else is rejected up front with an actionable USAGE error instead of
+ * a silent empty result.
+ */
+export function resolveAutoAsrInput(source: string, localize: Localize): string {
+  if (/^https?:/i.test(source)) return source;
+  const message = localize({
+    "en-US": `The current model (auto) recognizes audio via Bailian MCP, which only transcribes public http(s) URLs; cannot use "${source}".`,
+    "zh-CN": `当前模型（auto）经百炼 MCP 识别音频，仅支持公网 http(s) URL，无法使用 "${source}"。`,
+  });
+  const hint = localize({
+    "en-US":
+      "Host the audio at a public http(s) URL, or pass --model <id> to recognize local files with a specific model.",
+    "zh-CN": "请将音频托管为公网 http(s) URL，或传入 --model <id> 使用指定模型识别本地文件。",
+  });
+  throw new BailianError(message, ExitCode.USAGE, hint);
 }
 
 // ---- Shared-session MCP call wrapper ----

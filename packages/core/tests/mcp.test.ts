@@ -120,14 +120,27 @@ test("bailianMcp 路径与 isStreamableHttpUnsupported", () => {
 
 // ---- mapSdkError ----
 
-test("mapSdkError：超时/连接关闭映射 ExitCode；服务端 JSON-RPC 错透传；BailianError 与原生错原样返回", () => {
+test("mapSdkError：McpError 默认按 GENERAL 透传；localCloseFired 才将 ConnectionClosed 映射为 NETWORK", () => {
+  // SDK-local RequestTimeout is now handled by the adapter's own timer and
+  // reaches mapSdkError as a BailianError; a bare McpError is server-authored.
   const timeout = mapSdkError(new McpError(ErrorCode.RequestTimeout, "Request timed out"));
   expect(timeout).toBeInstanceOf(BailianError);
-  expect((timeout as BailianError).exitCode).toBe(ExitCode.TIMEOUT);
+  expect((timeout as BailianError).exitCode).toBe(ExitCode.GENERAL);
 
+  // ConnectionClosed without the local-close signal is treated as a server
+  // JSON-RPC error (e.g. the server returned -32000).
   const closed = mapSdkError(new McpError(ErrorCode.ConnectionClosed, "Connection closed"));
   expect(closed).toBeInstanceOf(BailianError);
-  expect((closed as BailianError).exitCode).toBe(ExitCode.NETWORK);
+  expect((closed as BailianError).exitCode).toBe(ExitCode.GENERAL);
+
+  // ConnectionClosed after the local transport closed is a network event.
+  const localClosed = mapSdkError(
+    new McpError(ErrorCode.ConnectionClosed, "Connection closed"),
+    undefined,
+    { localCloseFired: true },
+  );
+  expect(localClosed).toBeInstanceOf(BailianError);
+  expect((localClosed as BailianError).exitCode).toBe(ExitCode.NETWORK);
 
   // Server-side JSON-RPC error: passthrough message with the MCP error shape.
   const business = mapSdkError(new McpError(-32601, "Method not found"));
@@ -148,7 +161,7 @@ test("mapSdkError：超时/连接关闭映射 ExitCode；服务端 JSON-RPC 错�
   expect(mapSdkError(typeError)).toBe(typeError);
 });
 
-test("mapSdkError：服务端 JSON-RPC 错复用 -32000/-32001 仍按 GENERAL 透传，本地计时器错才判 TIMEOUT/NETWORK", () => {
+test("mapSdkError：服务端 JSON-RPC 错复用 -32000/-32001 按 GENERAL 透传，不再推断本地签名", () => {
   // Server-authored messages on the locally-interpreted codes must stay GENERAL
   // (exit 1) so callers do not retry business errors as network/timeout.
   const serverClosed = mapSdkError(new McpError(-32000, "session expired"));
@@ -156,25 +169,15 @@ test("mapSdkError：服务端 JSON-RPC 错复用 -32000/-32001 仍按 GENERAL �
   expect((serverClosed as BailianError).exitCode).toBe(ExitCode.GENERAL);
   expect((serverClosed as BailianError).message).toBe("MCP error (-32000): session expired");
 
-  const serverTimeout = mapSdkError(new McpError(-32001, "tool execution timed out"));
+  // The server can also return -32001 with data.timeout — this must not be
+  // mistaken for the SDK's local request timer.
+  const serverTimeout = mapSdkError(
+    new McpError(-32001, "backend execution expired", { timeout: 5000 }),
+  );
   expect((serverTimeout as BailianError).exitCode).toBe(ExitCode.GENERAL);
   expect((serverTimeout as BailianError).message).toBe(
-    "MCP error (-32001): tool execution timed out",
+    "MCP error (-32001): backend execution expired",
   );
-
-  // The SDK protocol timer attaches its payload as `data` — local signature.
-  const timer = mapSdkError(
-    McpError.fromError(ErrorCode.RequestTimeout, "Request timed out", { timeout: 5000 }),
-  );
-  expect((timer as BailianError).exitCode).toBe(ExitCode.TIMEOUT);
-
-  const maxTotal = mapSdkError(
-    McpError.fromError(ErrorCode.RequestTimeout, "Maximum total timeout exceeded", {
-      maxTotalTimeout: 1000,
-      totalElapsed: 1200,
-    }),
-  );
-  expect((maxTotal as BailianError).exitCode).toBe(ExitCode.TIMEOUT);
 });
 
 test("mapSdkError：SseError 结合捕获的 SSE GET 失败重建文案契约；无捕获时原样返回", () => {

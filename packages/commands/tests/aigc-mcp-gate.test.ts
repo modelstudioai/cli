@@ -8,6 +8,7 @@ import {
   isAutoModel,
   mcpSingleImageOnlyError,
   mcpUnsupportedError,
+  resolveAutoAsrInput,
   resolveAutoImageSize,
   type AigcMcpOperation,
   type Localize,
@@ -199,5 +200,21 @@ describe("assertMcpTtsVoice rejects REST voice IDs", () => {
     expect(error.message).toContain("longxiaochun_v3");
     expect(error.message).toContain("温柔女声");
     expect(error.hint).toContain("--model");
+  });
+});
+
+describe("resolveAutoAsrInput only accepts public http(s) URLs", () => {
+  test("http(s) URLs pass through verbatim", () => {
+    expect(resolveAutoAsrInput("https://x/a.wav", enUS)).toBe("https://x/a.wav");
+    expect(resolveAutoAsrInput("http://x/a.wav", zhCN)).toBe("http://x/a.wav");
+  });
+
+  test("local paths and data URIs throw USAGE with a switch-model hint", () => {
+    const local = captureUsage(() => resolveAutoAsrInput("./a.wav", enUS));
+    expect(local.message).toContain("./a.wav");
+    expect(local.hint).toContain("--model");
+    const dataUri = captureUsage(() => resolveAutoAsrInput("data:audio/wav;base64,AA==", zhCN));
+    expect(dataUri.message).toContain("data:audio/wav");
+    expect(dataUri.hint).toContain("--model");
   });
 });
