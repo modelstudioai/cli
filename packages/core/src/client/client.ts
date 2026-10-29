@@ -1,3 +1,4 @@
+import { httpTransport } from "./transport.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential } from "../auth/types.ts";
 import { BailianError } from "../errors/base.ts";
@@ -148,11 +149,17 @@ export class Client {
     return requestJson<T>(this.http, this.toOpts(opts));
   }
 
-  /** Resolve a file arg: upload a local path to OSS (returns oss:// URL), or pass a URL through. */
-  uploadFile(source: string, model: string, opts: { signal?: AbortSignal } = {}): Promise<string> {
+  /** Resolve a file arg, honoring a lazy service default origin just like {@link url}. */
+  uploadFile(
+    source: string,
+    model: string,
+    opts: { signal?: AbortSignal; defaultBaseUrl?: () => string } = {},
+  ): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
-    return resolveFileUrl(source, this.requireApi().token, model, {
-      ...opts,
+    const credential = this.requireApi();
+    return resolveFileUrl(source, credential.token, model, {
+      signal: opts.signal,
+      baseUrl: this.url("", opts.defaultBaseUrl),
       identity: this.deps.identity,
       timeout: this.deps.settings.timeout,
     });
@@ -166,13 +173,13 @@ export class Client {
   resolveImageInput(
     source: string,
     model: string,
-    opts: { signal?: AbortSignal } = {},
+    opts: { signal?: AbortSignal; defaultBaseUrl?: () => string } = {},
   ): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
     if (this.usesTokenPlanEndpoint()) {
       return Promise.resolve(imageFileToDataUri(source));
     }
-    return this.uploadFile(source, model, { signal: opts.signal });
+    return this.uploadFile(source, model, opts);
   }
 
   usesTokenPlanEndpoint(): boolean {
@@ -205,6 +212,15 @@ export class Client {
       sseUrl: this.url(bailianMcpSsePath(serverCode)),
       serverCode,
       urlOverride,
+    });
+  }
+
+  /** 创建仅本次调用链使用的 Console 身份；不修改原 Client、Settings 或持久化配置。 */
+  withConsoleSwitchAgent(switchAgent: number): Client {
+    return new Client({
+      ...this.deps,
+      settings: { ...this.deps.settings, consoleSwitchAgent: switchAgent },
+      consoleCred: this.deps.consoleCred ? { ...this.deps.consoleCred, switchAgent } : undefined,
     });
   }
 
@@ -289,7 +305,7 @@ export class Client {
     }
 
     const timeoutMs = this.deps.settings.timeout * 1000;
-    const res = await fetch(endpoint, {
+    const res = await httpTransport.fetch(endpoint, {
       method: opts.method,
       headers: { ...headers, ...trackingHeaders(this.deps.identity) },
       body: bodyStr || undefined,

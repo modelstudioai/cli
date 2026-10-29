@@ -21,9 +21,63 @@ function workspaceEndpoint(workspaceId: string, path: string): string {
   return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
 }
 
+// ---- ParseX (workspace-scoped document/media parsing and extraction) ----
+export function parsexBaseUrl(workspaceId: string): string {
+  return workspaceEndpoint(workspaceId, "");
+}
+
+/** The shared credential resolver normalizes --base-url to an origin. */
+export function parsexEndpoint(
+  baseUrl: string,
+  operation: "parse" | "extract",
+  action: "submit" | "result",
+): string {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    throw new UsageError("Invalid ParseX base URL. / ParseX Base URL 无效。");
+  }
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  const servicePath = url.pathname.replace(/\/+$/, "");
+  if (
+    (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    servicePath
+  ) {
+    throw new UsageError(
+      "ParseX base URL must be an HTTPS origin (HTTP is allowed only on loopback). / ParseX Base URL 必须为 HTTPS 源站（仅本机回环地址允许 HTTP）。",
+    );
+  }
+  const defaultPath = url.hostname.endsWith(".cn-beijing.pre-maas.aliyuncs.com")
+    ? "/api/v2/apps/pre-parse-x"
+    : "/api/v2/apps/parse-x";
+  return `${url.origin}${defaultPath}/${operation}/${action}`;
+}
+
 // ---- Chat (OpenAI Compatible) ----
 export function chatPath(): string {
   return "/compatible-mode/v1/chat/completions";
+}
+
+// ---- Batch (OpenAI Compatible) ----
+export function batchesPath(): string {
+  return "/compatible-mode/v1/batches";
+}
+export function batchPath(batchId: string): string {
+  return `${batchesPath()}/${encodeURIComponent(batchId)}`;
+}
+export function batchCancelPath(batchId: string): string {
+  return `${batchPath(batchId)}/cancel`;
+}
+export function batchFileContentPath(fileId: string): string {
+  return `/compatible-mode/v1/files/${encodeURIComponent(fileId)}/content`;
+}
+export function batchChatBaseUrl(): string {
+  return "https://batch.dashscope.aliyuncs.com";
 }
 
 // ---- Responses (OpenAI Compatible) ----
@@ -424,9 +478,10 @@ export const RAG_PATHS = {
   indexUpdate: "/api/v1/indices/rag/index/update", // POST, index id parameter is named `id`
   indexDelete: "/api/v1/indices/rag/index/delete", // POST, body { index_id }
   indexMonitor: "/api/v1/indices/rag/index/monitor", // POST, second-precision string timestamps
+  indexFileDetails: "/api/v1/indices/rag/list/index/file/details", // POST, camelCase pagination; max 10
   indexFiles: "/api/v1/indices/rag/index/files", // GET, page parameter is page_num
   indexDeleteFile: "/api/v1/indices/rag/index/delete_file", // POST, body { index_id, doc_ids }
-  indexJobCreate: "/api/v1/indices/rag/index/job/create", // POST, body requires nested dataSource { sourceType, fileIds } (flat documentIds from the docs is rejected)
+  indexJobCreate: "/api/v1/indices/rag/index/job/create", // POST, body uses explicit sourceType and flat docIds/categoryIds; omitting sourceType can import the entire data center
   indexJobStatus: "/api/v1/indices/rag/index_job/status", // GET, both index_id and job_id required
   chunkList: "/api/v1/indices/rag/index/chunklist", // POST, body pageNum/pageSize
   chunkCreate: "/api/v1/indices/rag/index/chunk/create", // POST, parameter is pipelineId; rate limit 10 req/s, no chunk_id in response

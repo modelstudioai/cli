@@ -1,12 +1,6 @@
-import {
-  defineCommand,
-  BailianError,
-  ExitCode,
-  detectOutputFormat,
-  effectiveConsoleGatewayConfig,
-  unwrapResponse,
-} from "bailian-cli-core";
+import { BailianError, ExitCode, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import {
   ensureAlertReady,
   extractAlertPage,
@@ -52,7 +46,7 @@ async function resolveConditions(
   }));
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Create a custom alert template (or copy an official one with --from)",
     "zh-CN": "创建自定义告警模板（或用 --from 复制官方模板）",
@@ -107,7 +101,7 @@ export default defineCommand({
   validate: (flags) => validateTemplateConditions(flags.condition, Boolean(flags.from)),
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const conditions = flags.condition?.length ? flags.condition.map(parseCondition) : undefined;
 
@@ -124,7 +118,7 @@ export default defineCommand({
               conditions: conditions ?? "(copied from --from template)",
             },
           },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

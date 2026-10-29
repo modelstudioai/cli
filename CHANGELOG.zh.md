@@ -6,6 +6,86 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.7.0] - 2026-10-29
+
+### 新增
+
+- **ParseX 解析**：新增 `bl parsex parse submit/result`，支持文档及音视频解析、结果查询和 Markdown 输出。
+- **ParseX 字段抽取**：新增 `bl parsex extract submit/result`，支持按 JSON Schema 从文档或已有解析结果中抽取字段，并返回原文引用。
+- **配置来源诊断**：`bl config show` 展示 API Key 与 Base URL 的生效来源，请求使用的两者来自不同配置源时给出提示。
+
+### 修复
+
+- **工作空间 API Key 登录**：修复 `bl auth login` 在 MaaS Endpoint 上拒绝有效工作空间 API Key 的问题。
+- **登录校验错误**：API Key 校验保留服务端及网络错误，避免将所有失败统一报告为 Key 无效。
+
+## [2.6.2] - 2026-10-28
+
+### 变更
+
+- **遥测默认输出（BREAKING）**：`bl alert`、`bl monitor` 和 `bl log` 的业务结果统一默认 JSON，即使 Profile 配置为 text。依赖文本输出的脚本需显式传入 `--output text` 或设置 `DASHSCOPE_OUTPUT=text`。
+
+### 修复
+
+- **工作空间身份**：遥测命令根据选定空间自动解析 Console 身份，预检、业务请求、异步轮询及后续请求使用同一身份，修复 `--workspace-id` 过滤失效及跨空间结果异常；不修改已保存配置。
+- **审计日志解析**：规范化时间、模型、请求 ID、工作空间及用量字段，修复缺失字段、NaN 时间及异常计数展示；拒绝空间不匹配的审计结果。
+- **日志计数**：`log audit count` 和 `log inference count` 分别采用对应列表接口的 `totalCount`，修复列表非空而计数为 0 的问题，不遍历分页或获取完整日志内容。
+- **推理计数过滤与完成判定**：保留多模型、多 API Key 过滤，去重后按单值组合查询并汇总；支持异步轮询，仅全部成功后输出，空过滤、无效计数及累计溢出明确报错。
+- **Dry-run 预览**：展示工作空间身份解析计划和实际计数请求组合，不发送业务请求。
+
+## [2.6.1] - 2026-10-28
+
+### 新增
+
+- **异步批量推理**：新增 `bl batch convert/create/list/get/cancel/download`，支持 CSV 转 JSONL、创建 Chat/Embedding 批量任务、跟踪进度、取消任务及下载结果和错误文件，可选导出 CSV。
+- **同步 Batch Chat**：`bl text chat --batch` 支持单次非流式请求，与异步文件批量任务分开使用；支持 60–3600 秒请求超时。
+- **模型推荐参数**：`bl advisor recommend` 新增 `--top`、`--model`、`--no-agent`、`--trace`、`--think` 和 `--no-thinking`。
+
+### 变更
+
+- **模型推荐**：升级意图分析、路由、候选召回、评分及排序流程；交互终端支持 Agent 澄清与多步骤推荐，推荐结果保留原有 JSON 主结构。
+
+### 已移除
+
+- **Advisor 库接口（BREAKING）**：移除旧推荐流程导出，包括 `getModels`、`recallCandidates`、`recallSemantic` 和 `rankModels`。库调用方需适配新的推荐引擎接口；旧类型通过 `LegacyIntentProfile`、`LegacyModelProfile` 和 `LegacyRecommendResult` 导出。
+
+### 修复
+
+- **临时文件上传**：根据当前模型 Endpoint 选择上传服务，修复新加坡地域及 Prime 视频上传误用北京地址的问题；官方临时上传仅支持北京和新加坡，不支持的地域及 Token Plan 明确报错，显式自定义上传代理不再因 Key 类型被提前拒绝。
+- **Node 26 兼容**：修复 fetch 与 dispatcher 不兼容及代理初始化问题，覆盖模型请求、控制台请求、文件上传和下载。
+- **API 错误透传**：正确识别嵌套业务错误，保留非 JSON 错误正文及请求 ID，避免将错误响应作为成功结果。
+
+## [2.6.0] - 2026-10-27
+
+### 新增
+
+- **知识库初始化**：新增 `knowledge init`，串联样例上传、建库、检索服务创建及首次检索验证，支持恢复和资源复用。
+- **目录同步与文件导入**：新增 `knowledge doc sync` 和 `knowledge doc import`，支持同步本地目录及导入已有文件。
+- **多媒体知识库**：支持音视频知识库、解析配置、流式上传、纯图片检索及在线检索过滤配置。
+- **Agent 能力发现**：新增 `--introspect` 结构化命令说明和 `bailian-knowledge` Skill；Knowledge Studio CLI 同步提供对应能力。
+
+### 变更
+
+- **知识库问答输出**：结构化输出区分最终答案、阶段、工具、来源和用量；quiet 模式仅输出最终答案。
+- **建库提示**：补充计费说明、资源记录与清理指引。
+
+### 修复
+
+- 拒绝知识库命令中的空白必填参数。
+- 切片批量删除失败时，明确报告已完成批次、结果未确认批次及未执行部分。
+
+## [2.5.1] - 2026-10-23
+
+### 新增
+
+- **控制台登录**：支持 `--no-browser` 手动打开登录地址，以及 `--token-stdin` 从标准输入导入并校验控制台凭证。
+- **Agent 调用标识**：支持声明 Agent 来源、Skill 名称和版本；未声明来源记为未知。
+
+### 修复
+
+- **登录完成判定**：修复浏览器快速回调时的登录状态处理，未收到凭证时明确报告超时。
+- **凭证刷新**：修复控制台凭证刷新的地域选择，刷新后验证请求成功再保存凭证。
+
 ## [2.5.0] - 2026-10-20
 
 ### 新增

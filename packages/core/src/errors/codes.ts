@@ -8,6 +8,7 @@ export const ExitCode = {
   NETWORK: 6,
   CONFIRMATION_REQUIRED: 7,
   CONTENT_FILTER: 10,
+  INTERRUPTED: 130,
 } as const;
 
 export type ExitCode = (typeof ExitCode)[keyof typeof ExitCode];

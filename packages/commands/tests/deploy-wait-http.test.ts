@@ -15,8 +15,11 @@ const CONFIG_DIRECTORY = fileURLToPath(
 // Keep real loopback fetch, but block background npm/telemetry requests before
 // they reach the network. Disallow redirects so local responses cannot escape.
 const LOCAL_FETCH_ONLY = `
-const realFetch = globalThis.fetch;
-globalThis.fetch = async (input, init) => {
+import { createRequire } from "node:module";
+const require = createRequire(${JSON.stringify(fileURLToPath(new URL("../../core/package.json", import.meta.url)))});
+const undici = require("undici");
+const realFetch = undici.fetch;
+undici.fetch = globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
   if (url.protocol !== "http:" || url.hostname !== "127.0.0.1") {
     throw new Error("Remote fetch blocked for deploy HTTP regression");

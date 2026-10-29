@@ -1,10 +1,11 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult } from "bailian-cli-runtime";
 import { ensureAlertReady } from "./shared.ts";
 
 const DISABLE_RULE_API = "zeldaEasy.bailian-telemetry.alertRule.disableAlertRule";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Disable a model alert rule (keeps the rule, stops notifications)",
     "zh-CN": "停用模型告警规则（保留规则，停止通知）",
@@ -25,7 +26,7 @@ export default defineCommand({
   exampleArgs: ["--rule-id 789", "--rule-id 789 --dry-run"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const reqDTO = {
       workspaceId: settings.workspaceId,
@@ -38,7 +39,7 @@ export default defineCommand({
         {
           api: DISABLE_RULE_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

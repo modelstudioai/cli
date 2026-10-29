@@ -9,7 +9,7 @@ import {
 } from "fs";
 import { join } from "path";
 import { withIsolatedHome } from "./helpers/isolation.ts";
-import { expect, test } from "vite-plus/test";
+import { expect, test, vi } from "vite-plus/test";
 import {
   detectInstalledAgents,
   fanOutSkillToAgents,
@@ -19,6 +19,47 @@ import {
   unlinkSkillFromAgents,
 } from "../src/skills/agents.ts";
 import { getSkillsDir } from "../src/skills/lock.ts";
+
+// HOME isolation cannot hide machine-wide installation markers. Model them explicitly
+// while keeping all ordinary filesystem operations real in the temporary home.
+const systemMarkers = vi.hoisted(
+  () =>
+    new Map<string, boolean>([
+      ["/etc/codex", false],
+      ["/Applications/ZCode.app", false],
+    ]),
+);
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  return {
+    ...actual,
+    existsSync: (path: Parameters<typeof actual.existsSync>[0]) =>
+      typeof path === "string" && systemMarkers.has(path)
+        ? systemMarkers.get(path)!
+        : actual.existsSync(path),
+  };
+});
+
+test.each([
+  ["/etc/codex", "codex", ".codex"],
+  ["/Applications/ZCode.app", "zcode", ".zcode"],
+])(
+  "agents: system marker %s detects %s without a user config directory",
+  async (marker, agentId, configName) => {
+    await withIsolatedHome(async (home) => {
+      delete process.env.BL_SKIP_HOST_AGENTS;
+      systemMarkers.set(marker, true);
+      try {
+        const detected = detectInstalledAgents();
+        expect(detected.map((agent) => agent.id)).toEqual([agentId]);
+        expect(detected[0].skillsDir).toBe(join(home, configName, "skills"));
+        expect(existsSync(join(home, configName))).toBe(false);
+      } finally {
+        systemMarkers.set(marker, false);
+      }
+    });
+  },
+);
 
 /** Create an installed skill in canonical */
 function seedCanonicalSkill(name: string): string {

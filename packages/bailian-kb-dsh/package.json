@@ -1,6 +1,6 @@
 {
   "name": "bailian-kb-dsh",
-  "version": "2.5.1",
+  "version": "2.7.0",
   "description": "Bailian knowledge-base tools for DeepSeek Harness: kb_search and kb_chat over the DashScope RAG API, plus the bl CLI management skill.",
   "keywords": [
     "alibaba-cloud",

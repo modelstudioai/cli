@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { ensureAlertReady, extractAlertPage } from "./shared.ts";
 
@@ -28,7 +29,7 @@ function formatCondition(condition: AlertCondition): string {
   return `${agg}${metric} ${condition.compareType} ${condition.compareValue} (${condition.period}s)`;
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "List alert templates (official and custom); pass --template-id for details",
     "zh-CN": "查看告警模板（官方与自定义）；传 --template-id 查看单个模板详情",
@@ -81,7 +82,7 @@ export default defineCommand({
   exampleArgs: ["", "--source Official", "--name 失败率", "--template-id 123 --output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const reqDTO = {
       resourceType: "model",
@@ -97,7 +98,7 @@ export default defineCommand({
         {
           api: LIST_TEMPLATES_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

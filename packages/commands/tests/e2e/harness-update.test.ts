@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { expect, test } from "vite-plus/test";
@@ -6,7 +7,7 @@ import { E2E_HARNESS_IDENTITY } from "./harness/identity.ts";
 import { withHarnessUpdateFixture } from "./harness/update-fixture.ts";
 
 test("the harness receives a local 404 for its unpublished package and delegates business fetches", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const server = http.createServer((_request, response) => {
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify({ business: "unchanged" }));
@@ -22,7 +23,7 @@ test("the harness receives a local 404 for its unpublished package and delegates
         business: "unchanged",
       });
     });
-    expect(globalThis.fetch).toBe(originalFetch);
+    expect(httpTransport.fetch).toBe(originalFetch);
   } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -30,11 +31,11 @@ test("the harness receives a local 404 for its unpublished package and delegates
 });
 
 test("restores fetch after an unexpected command failure", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   await expect(
     withHarnessUpdateFixture(async () => {
       throw new Error("fixture failure");
     }),
   ).rejects.toThrow("fixture failure");
-  expect(globalThis.fetch).toBe(originalFetch);
+  expect(httpTransport.fetch).toBe(originalFetch);
 });

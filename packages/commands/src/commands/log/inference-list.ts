@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult } from "bailian-cli-runtime";
 import { parseCommaList } from "../shared/params.ts";
 import {
@@ -9,16 +10,17 @@ import {
 } from "../shared/telemetry.ts";
 import {
   type ModelLogEntry,
+  LIST_INFERENCE_LOGS_API,
   printLogTable,
   validateHoursFlag,
   validateStatusCodeTypes,
 } from "./shared.ts";
 
-export const LIST_INFERENCE_LOGS_API = "zeldaEasy.bailian-telemetry.model.listModelLogs";
+export { LIST_INFERENCE_LOGS_API } from "./shared.ts";
 
 const STATUS_CODE_TYPES = ["SUCCESS", "CLIENT_ERROR", "SERVER_ERROR", "CANCEL"] as const;
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US":
       "Query model inference logs (requires inference log delivery; use `log inference get` for request/response content)",
@@ -131,7 +133,7 @@ export default defineCommand({
         {
           api: LIST_INFERENCE_LOGS_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

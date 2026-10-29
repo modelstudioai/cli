@@ -110,8 +110,11 @@ export default defineCommand({
     emitBare(formatField("name", row.name));
     emitBare(formatField("description", row.description));
     emitBare(formatField("dataType", row.dataType));
+    emitBare(formatField("knowledgeType", row.knowledgeType));
+    emitBare(formatField("knowledgeScene", row.knowledgeScene));
     emitBare("Indexing:   [immutable — recreate required to change]");
     emitBare(formatField("embeddingModelName", row.embeddingModelName));
+    emitBare(formatField("multimodalEmbeddingModelName", row.multimodalEmbeddingModelName));
     emitBare(formatField("embeddingDimension", row.embeddingDimension));
     emitBare(formatField("chunkSize", row.chunkSize));
     emitBare(formatField("overlapSize", row.overlapSize));

@@ -16,7 +16,23 @@ export const UPDATE_ROUTES: E2eRouteExports = {
 
 export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 
+export const BATCH_ROUTES: E2eRouteExports = {
+  "batch convert": "batchConvert",
+  "batch create": "batchCreate",
+  "batch list": "batchList",
+  "batch get": "batchGet",
+  "batch cancel": "batchCancel",
+  "batch download": "batchDownload",
+};
+
 export const DECISION_ROUTES: E2eRouteExports = { decision: "decisionPredict" };
+
+export const PARSEX_ROUTES: E2eRouteExports = {
+  "parsex parse submit": "parsexParseSubmit",
+  "parsex parse result": "parsexParseResult",
+  "parsex extract submit": "parsexExtractSubmit",
+  "parsex extract result": "parsexExtractResult",
+};
 
 export const CONFIG_ROUTES: E2eRouteExports = {
   "config show": "configShow",
@@ -418,6 +434,27 @@ export const KNOWLEDGE_KB_LIST_ROUTES: E2eRouteExports = {
   "knowledge list": "knowledgeKbList",
 };
 
+export const KNOWLEDGE_INIT_ROUTES: E2eRouteExports = {
+  "knowledge init": "knowledgeInit",
+  "knowledge delete": "knowledgeKbDelete",
+  "knowledge service delete": "knowledgeServiceDelete",
+  "knowledge file delete": "knowledgeFileDelete",
+  "knowledge search": "knowledgeSearch",
+};
+
+export const KNOWLEDGE_SYNC_CONTRACT_ROUTES: E2eRouteExports = {
+  "knowledge create": "knowledgeKbCreate",
+  "knowledge delete": "knowledgeKbDelete",
+  "knowledge doc upload": "knowledgeDocUpload",
+  "knowledge doc import": "knowledgeDocImport",
+  "knowledge doc status": "knowledgeDocStatus",
+  "knowledge doc list": "knowledgeDocList",
+  "knowledge doc delete": "knowledgeDocDelete",
+  "knowledge file get": "knowledgeFileGet",
+  "knowledge file list": "knowledgeFileList",
+  "knowledge file delete": "knowledgeFileDelete",
+};
+
 export const KNOWLEDGE_KB_INFO_ROUTES: E2eRouteExports = {
   "knowledge info": "knowledgeKbInfo",
   "knowledge list": "knowledgeKbList", // live cases list first to grab a real id
@@ -569,6 +606,10 @@ export const JOURNEY_J5_ROUTES: E2eRouteExports = {
   "knowledge file get": "knowledgeFileGet",
   "knowledge file delete": "knowledgeFileDelete",
   "knowledge doc upload": "knowledgeDocUpload",
+};
+
+export const KNOWLEDGE_DOC_IMPORT_ROUTES: E2eRouteExports = {
+  "knowledge doc import": "knowledgeDocImport",
 };
 
 export const MANAGED_AGENT_MEMORY_ROUTES: E2eRouteExports = {

@@ -1,8 +1,9 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand } from "../shared/telemetry.ts";
 import { LOG_NO_WAIT_FLAG, enableLogDelivery } from "./shared.ts";
 import { LOG_SERVICE_TYPES } from "./status.ts";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Enable audit log delivery to SLS (SLR authorization → SLS instance → log switch)",
     "zh-CN": "开启审计日志投递到 SLS（SLR 授权 → SLS 实例初始化 → 打开日志开关）",

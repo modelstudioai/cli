@@ -1,3 +1,4 @@
+import { httpTransport } from "../client/transport.ts";
 /**
  * Upload local files to DashScope temporary OSS storage.
  *
@@ -10,10 +11,55 @@ import { basename, extname } from "path";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { trackingHeaders, type TrackingIdentity } from "../client/headers.ts";
+import { getApiKeyLoginKind } from "../config/profile-presets.ts";
 import { REGIONS } from "../config/schema.ts";
+import { normalizeModelBaseUrl } from "../config/model-base-url.ts";
 
-// Pinned to cn region; thread baseUrl through if overseas upload becomes a requirement.
-const UPLOAD_API = `${REGIONS.cn}/api/v1/uploads`;
+const SUPPORTED_UPLOAD_REGIONS = ["cn-beijing", "ap-southeast-1"] as const;
+
+function unsupportedTemporaryUpload(target: string): BailianError {
+  return new BailianError(
+    `Local-file temporary upload is supported only in ${SUPPORTED_UPLOAD_REGIONS.join(", ")}; "${target}" is not supported.`,
+    ExitCode.USAGE,
+    "Use a reachable HTTPS media URL instead.",
+  );
+}
+
+/** Reject Token Plan keys only after the endpoint is recognized as official. */
+function rejectOfficialTokenPlanKey(apiKey: string): void {
+  if (getApiKeyLoginKind(apiKey) === "token-plan") {
+    throw unsupportedTemporaryUpload("Token Plan");
+  }
+}
+
+/** Keep supported official origins; reject known unsupported official regions. Custom proxies skip key-prefix checks. */
+function resolveUploadBaseUrl(baseUrl: string, apiKey: string): string {
+  const normalizedBaseUrl = normalizeModelBaseUrl(baseUrl);
+  const hostname = new URL(normalizedBaseUrl).hostname.toLowerCase();
+
+  if (/^token-plan\.[a-z0-9-]+\.maas\.aliyuncs\.com$/.test(hostname)) {
+    throw unsupportedTemporaryUpload("Token Plan");
+  }
+
+  if (hostname === new URL(REGIONS.cn).hostname || hostname === new URL(REGIONS.intl).hostname) {
+    rejectOfficialTokenPlanKey(apiKey);
+    return normalizedBaseUrl;
+  }
+  if (hostname === new URL(REGIONS.us).hostname) {
+    throw unsupportedTemporaryUpload(hostname);
+  }
+
+  const maasMatch = /^[^.]+\.([a-z0-9-]+)\.maas\.aliyuncs\.com$/.exec(hostname);
+  const cloudRegion = maasMatch?.[1];
+  if (cloudRegion === "cn-beijing" || cloudRegion === "ap-southeast-1") {
+    rejectOfficialTokenPlanKey(apiKey);
+    return normalizedBaseUrl;
+  }
+  if (cloudRegion) throw unsupportedTemporaryUpload(cloudRegion);
+
+  // Explicit custom proxies decide temporary-upload support themselves; do not gate on key prefix.
+  return normalizedBaseUrl;
+}
 
 interface UploadPolicy {
   upload_host: string;
@@ -30,6 +76,12 @@ interface UploadPolicyResponse {
   request_id?: string;
 }
 
+interface UploadPolicyErrorResponse {
+  code?: unknown;
+  message?: unknown;
+  request_id?: unknown;
+}
+
 /**
  * Step 1: Fetch the upload policy (presigned credentials) from DashScope.
  */
@@ -37,25 +89,54 @@ async function getUploadPolicy(
   apiKey: string,
   model: string,
   identity: TrackingIdentity,
+  baseUrl: string,
   signal?: AbortSignal,
 ): Promise<UploadPolicy> {
-  const url = `${UPLOAD_API}?action=getPolicy&model=${encodeURIComponent(model)}`;
+  const uploadApi = `${resolveUploadBaseUrl(baseUrl, apiKey)}/api/v1/uploads`;
+  const url = `${uploadApi}?action=getPolicy&model=${encodeURIComponent(model)}`;
   const policySignal = combineWithTimeout(15_000, signal);
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      ...trackingHeaders(identity),
-    },
-    signal: policySignal.signal,
-  }).finally(policySignal.cleanup);
+  const res = await httpTransport
+    .fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        ...trackingHeaders(identity),
+      },
+      signal: policySignal.signal,
+    })
+    .finally(policySignal.cleanup);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new BailianError(
-      `Failed to get upload policy (HTTP ${res.status}): ${text}`,
-      ExitCode.GENERAL,
-    );
+    let serviceError: UploadPolicyErrorResponse | undefined;
+    try {
+      serviceError = JSON.parse(text) as UploadPolicyErrorResponse;
+    } catch {
+      // Non-JSON service responses pass through below.
+    }
+    const serviceMessage =
+      typeof serviceError?.message === "string" && serviceError.message
+        ? serviceError.message
+        : text || `${res.status} ${res.statusText}`;
+    const apiCode = typeof serviceError?.code === "string" ? serviceError.code : undefined;
+    const requestId =
+      typeof serviceError?.request_id === "string" ? serviceError.request_id : undefined;
+    const responseContext = [
+      `HTTP ${res.status}`,
+      apiCode ? `code=${apiCode}` : undefined,
+      requestId ? `request_id=${requestId}` : undefined,
+      `upload_endpoint=${uploadApi}`,
+    ]
+      .filter((item): item is string => item !== undefined)
+      .join("; ");
+    throw new BailianError(`${responseContext} - ${serviceMessage}`, ExitCode.GENERAL, undefined, {
+      api: {
+        httpStatus: res.status,
+        apiCode,
+        requestId,
+      },
+      rawResponse: text.slice(0, 500),
+    });
   }
 
   const body = (await res.json()) as UploadPolicyResponse;
@@ -89,11 +170,13 @@ async function uploadToOSS(
   form.append("file", new Blob([fileData]), fileName);
 
   const uploadSignal = combineWithTimeout(timeoutSeconds * 1000, signal);
-  const res = await fetch(policy.upload_host, {
-    method: "POST",
-    body: form,
-    signal: uploadSignal.signal,
-  }).finally(uploadSignal.cleanup);
+  const res = await httpTransport
+    .fetch(policy.upload_host, {
+      method: "POST",
+      body: form,
+      signal: uploadSignal.signal,
+    })
+    .finally(uploadSignal.cleanup);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -108,6 +191,8 @@ async function uploadToOSS(
 
 export interface UploadOptions {
   apiKey: string;
+  /** Model origin used only to resolve the supported regional upload service. Defaults to CN. */
+  baseUrl?: string;
   model: string;
   filePath: string;
   identity: TrackingIdentity;
@@ -163,7 +248,7 @@ export function redactDataUri(input: string): string {
  * The URL is valid for 48 hours.
  */
 export async function uploadFile(opts: UploadOptions): Promise<string> {
-  const { apiKey, model, filePath, identity, signal, timeout } = opts;
+  const { apiKey, baseUrl = REGIONS.cn, model, filePath, identity, signal, timeout } = opts;
 
   if (!existsSync(filePath)) {
     throw new BailianError(`File not found: ${filePath}`, ExitCode.USAGE);
@@ -174,7 +259,7 @@ export async function uploadFile(opts: UploadOptions): Promise<string> {
     throw new BailianError(`Not a file: ${filePath}`, ExitCode.USAGE);
   }
 
-  const policy = await getUploadPolicy(apiKey, model, identity, signal);
+  const policy = await getUploadPolicy(apiKey, model, identity, baseUrl, signal);
   return uploadToOSS(policy, filePath, signal, timeout);
 }
 
@@ -196,11 +281,12 @@ export async function resolveFileUrl(
   input: string,
   apiKey: string,
   model: string,
-  opts: { identity: TrackingIdentity; signal?: AbortSignal; timeout?: number },
+  opts: { identity: TrackingIdentity; baseUrl?: string; signal?: AbortSignal; timeout?: number },
 ): Promise<string> {
   if (!isLocalFile(input)) return input;
   return uploadFile({
     apiKey,
+    baseUrl: opts.baseUrl,
     model,
     filePath: input,
     identity: opts.identity,

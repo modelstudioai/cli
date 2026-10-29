@@ -115,3 +115,44 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc list (live)", () => {
     expect(pagedData.code).toBe("Success");
   });
 });
+
+test("details uses POST body with camelCase second-page parameters", async () => {
+  const result = await runCommandE2e(KNOWLEDGE_DOC_LIST_ROUTES, [
+    "knowledge",
+    "doc",
+    "list",
+    "--index-id",
+    "idx_test",
+    "--details",
+    "--page-number",
+    "2",
+    "--page-size",
+    "10",
+    "--workspace-id",
+    "ws_test",
+    "--dry-run",
+    "--output",
+    "json",
+  ]);
+  expect(result.exitCode, result.stderr).toBe(0);
+  const output = parseStdoutJson<{ endpoint: string; request: unknown }>(result.stdout);
+  expect(output.endpoint).toContain("/api/v1/indices/rag/list/index/file/details");
+  expect(output.request).toEqual({ indexId: "idx_test", pageNumber: 2, pageSize: 10 });
+});
+
+test("details rejects page sizes above its documented maximum of 10", async () => {
+  const result = await runCommandE2e(KNOWLEDGE_DOC_LIST_ROUTES, [
+    "knowledge",
+    "doc",
+    "list",
+    "--index-id",
+    "idx_test",
+    "--details",
+    "--page-size",
+    "11",
+    "--workspace-id",
+    "ws_test",
+    "--dry-run",
+  ]);
+  expect(result.exitCode).toBe(2);
+});

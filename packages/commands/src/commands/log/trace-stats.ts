@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import { parseCommaList } from "../shared/params.ts";
@@ -23,7 +24,7 @@ interface TraceStatistic {
   avgUserFirstTokenDuration?: string;
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show per-resource trace statistics (calls, tokens, latency)",
     "zh-CN": "查看调用链维度统计（调用量、Token、延迟）",
@@ -71,7 +72,7 @@ export default defineCommand({
         {
           api: TRACE_STATISTIC_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

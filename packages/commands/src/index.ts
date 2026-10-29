@@ -8,6 +8,12 @@ export { default as authStatus } from "./commands/auth/status.ts";
 export { default as authLogout } from "./commands/auth/logout.ts";
 export { default as authGenerateAccessToken } from "./commands/auth/generate-access-token.ts";
 export { default as textChat } from "./commands/text/chat.ts";
+export { default as batchConvert } from "./commands/batch/convert.ts";
+export { default as batchCreate } from "./commands/batch/create.ts";
+export { default as batchList } from "./commands/batch/list.ts";
+export { default as batchGet } from "./commands/batch/get.ts";
+export { default as batchCancel } from "./commands/batch/cancel.ts";
+export { default as batchDownload } from "./commands/batch/download.ts";
 export { default as textOmni } from "./commands/omni/chat.ts";
 export { default as imageGenerate } from "./commands/image/generate.ts";
 export { default as imageEdit } from "./commands/image/edit.ts";
@@ -18,6 +24,10 @@ export { default as videoTaskGet } from "./commands/video/task-get.ts";
 export { default as videoDownload } from "./commands/video/download.ts";
 export { default as visionDescribe } from "./commands/vision/describe.ts";
 export { default as decisionPredict } from "./commands/decision/predict.ts";
+export { default as parsexParseSubmit } from "./commands/parsex/parse-submit.ts";
+export { default as parsexParseResult } from "./commands/parsex/parse-result.ts";
+export { default as parsexExtractSubmit } from "./commands/parsex/extract-submit.ts";
+export { default as parsexExtractResult } from "./commands/parsex/extract-result.ts";
 export { default as configShow } from "./commands/config/show.ts";
 export { default as configSet } from "./commands/config/set.ts";
 export { default as configList } from "./commands/config/list.ts";
@@ -47,6 +57,7 @@ export { default as knowledgeKbInfo } from "./commands/knowledge/kb-info.ts";
 export { default as knowledgeDocList } from "./commands/knowledge/doc-list.ts";
 export { default as knowledgeDocStatus } from "./commands/knowledge/doc-status.ts";
 export { default as knowledgeDocUpload } from "./commands/knowledge/doc-upload.ts";
+export { default as knowledgeInit } from "./commands/knowledge/init.ts";
 export { default as knowledgeKbCreate } from "./commands/knowledge/kb-create.ts";
 export { default as knowledgeKbUpdate } from "./commands/knowledge/kb-update.ts";
 export { default as knowledgeKbDelete } from "./commands/knowledge/kb-delete.ts";
@@ -325,6 +336,10 @@ export {
   sandboxTemplateList,
   sandboxTemplateUpdate,
 } from "./commands/sandbox/template.ts";
+
+export { default as knowledgeDocImport } from "./commands/knowledge/doc-import.ts";
+
+export { default as knowledgeDocSync } from "./commands/knowledge/doc-sync.ts";
 
 export { default as managedAgentMemoryStoreCreate } from "./commands/managed-agent/memory-store/create.ts";
 export {

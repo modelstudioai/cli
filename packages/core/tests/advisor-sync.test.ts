@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { withIsolatedHome } from "./helpers/isolation.ts";
@@ -5,21 +6,30 @@ import { afterEach, expect, test, vi } from "vite-plus/test";
 import { maybeSyncWikiData } from "../src/advisor/sync.ts";
 import { readSkillLock } from "../src/skills/lock.ts";
 
+// A real system-wide Codex/ZCode installation must not change this fixture's
+// one-agent fan-out expectation. Ordinary temporary-home files remain real.
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  return {
+    ...actual,
+    existsSync: (path: Parameters<typeof actual.existsSync>[0]) =>
+      path === "/etc/codex" || path === "/Applications/ZCode.app" ? false : actual.existsSync(path),
+  };
+});
+
 const WIKI_SKILL_NAME = "bailian-docs-llm-wiki";
 const CONTENT_HASH = `sha256:${"a".repeat(64)}`;
 
 /** Stub the registry fetch to serve a wiki entry with the given fingerprint */
 function stubRegistryIndex() {
-  const fetchMock = vi.fn(async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({
+  const fetchMock = vi.fn(async () =>
+    Response.json({
       skills: {
         [WIKI_SKILL_NAME]: { contentHash: CONTENT_HASH, publishedAt: "2026-08-01 10:00:00" },
       },
     }),
-  }));
-  vi.stubGlobal("fetch", fetchMock);
+  );
+  vi.spyOn(httpTransport, "fetch").mockImplementation(fetchMock);
   return fetchMock;
 }
 
@@ -51,6 +61,7 @@ function seedPostinstallState(configDir: string): void {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 test("advisor sync: hash-hit backfills fan-out links missing from postinstall lock entry", async () => {

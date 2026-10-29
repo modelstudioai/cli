@@ -1,5 +1,6 @@
 import { CommandRegistry } from "./registry.ts";
 import { resolve } from "./resolve.ts";
+import { buildCommandSchema, serializeCommandSchema } from "./introspect.ts";
 import {
   compose,
   authStage,
@@ -80,6 +81,19 @@ function pickConfigFlag(argv: string[]): Partial<SourceFlags> {
   return {};
 }
 
+const managedInterruptHandlers = new Set<() => void>();
+
+/** 临时接管 Ctrl-C，由命令中断异步工作并完成清理；必须在 finally 中调用返回的释放函数。 */
+export function registerInterruptHandler(handler: () => void): () => void {
+  const listener = () => handler();
+  managedInterruptHandlers.add(listener);
+  process.on("SIGINT", listener);
+  return () => {
+    managedInterruptHandlers.delete(listener);
+    process.removeListener("SIGINT", listener);
+  };
+}
+
 /**
  * 进程级一次性设置：代理初始化、Ctrl+C、stdout EPIPE。
  * 属进程生命周期行为，装一次即可，不进 per-command 中间件。
@@ -93,6 +107,8 @@ function installProcessHandlers(binName: string): void {
 
   // 处理 Ctrl+C
   process.on("SIGINT", () => {
+    // 有命令主动管理中断时，让它走统一错误出口，避免抢先退出跳过 finally。
+    if (managedInterruptHandlers.size > 0) return;
     process.stderr.write("\nInterrupted. Exiting.\n");
     void flushTelemetry(500).finally(() => process.exit(130));
   });
@@ -177,6 +193,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     const res = resolve(argv, registry, localize);
 
     switch (res.kind) {
+      case "introspect":
+        process.stdout.write(
+          serializeCommandSchema(buildCommandSchema(registry, identity, res.path)),
+        );
+        return;
       case "version":
         process.stdout.write(`${binName} ${version}\n`);
         return;
@@ -203,12 +224,13 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             Object.keys(res.command.flags ?? {}),
           ) as ParsedFlags<FlagsDef>;
           const invalid = await res.command.validate?.(ownFlags);
-          if (invalid) throw new UsageError(invalid);
+          if (invalid) throw new UsageError(localize(invalid));
 
           // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
           const sources = buildSources(globalFlags);
           const settings = buildSettings(sources);
           const ctx: RunContext = {
+            commandPath: (command) => registry.commandPath(command),
             identity,
             path: res.path,
             command: res.command,

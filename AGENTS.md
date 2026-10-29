@@ -76,6 +76,7 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 | 安装文档          | 改安装、鉴权、验证流程或线上 install 页面                             | [docs/agents/install-doc-change.md](docs/agents/install-doc-change.md)       |
 | 发布              | channel / stable 发布到 npm（CI 驱动）                                | [docs/agents/publish.md](docs/agents/publish.md)                             |
 | Change Log        | 发版说明 / 历史版本说明                                               | [docs/agents/changelog-write.md](docs/agents/changelog-write.md)             |
+| 公开内容检查      | 公开前检查凭证、真实资源、内部文档及 Git 历史                         | [docs/agents/public-content-review.md](docs/agents/public-content-review.md) |
 | 工具链调整        | lint 规则 / 构建配置 / 依赖升级                                       | [docs/agents/lint-toolchain.md](docs/agents/lint-toolchain.md)               |
 | Command Pack      | 扩展包 / 白名单 / plugin 管理命令                                     | [docs/agents/command-pack.md](docs/agents/command-pack.md)                   |
 | dsh 插件          | 改 `packages/bailian-kb-dsh` / `bailian-memo-dsh`、dsh 依赖、插件发布 | [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)                       |

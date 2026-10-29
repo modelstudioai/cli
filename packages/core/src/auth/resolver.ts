@@ -1,12 +1,56 @@
 import { REGIONS } from "../config/schema.ts";
 import { normalizeModelBaseUrl } from "../config/model-base-url.ts";
 import type { ResolutionSources } from "../config/loader.ts";
-import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential, AuthState } from "./types.ts";
+import type {
+  ApiKeyCredential,
+  ConsoleCredential,
+  CredentialSource,
+  ModelConnectionProvenance,
+  OpenApiCredential,
+  AuthState,
+} from "./types.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 
 // Resolve the credential for a command's declared domain (model = api-key,
 // console = access-token), by priority, or throw. Read only from sources.
+
+/** Winning api_key source (flag > env > file), or undefined if none. */
+export function resolveApiKeySource(sources: ResolutionSources): CredentialSource | undefined {
+  if (sources.flags.apiKey) return "flag";
+  if (sources.env.DASHSCOPE_API_KEY?.trim()) return "env";
+  if (sources.file.api_key) return "config";
+  return undefined;
+}
+
+/**
+ * Winning explicit base_url source (flag > env > file).
+ * Undefined means the built-in REGIONS.cn default will be used.
+ */
+export function resolveModelBaseUrlSource(
+  sources: ResolutionSources,
+): CredentialSource | undefined {
+  if (sources.flags.baseUrl) return "flag";
+  if (sources.env.DASHSCOPE_BASE_URL?.trim()) return "env";
+  if (sources.file.base_url) return "config";
+  return undefined;
+}
+
+/** Provenance for the model connection pair (no secrets). */
+export function resolveModelConnectionProvenance(
+  sources: ResolutionSources,
+): ModelConnectionProvenance {
+  return {
+    apiKeySource: resolveApiKeySource(sources),
+    baseUrlSource: resolveModelBaseUrlSource(sources),
+  };
+}
+
+/** True only when both sides are explicit and disagree. */
+export function isModelConnectionSourceMismatch(provenance: ModelConnectionProvenance): boolean {
+  const { apiKeySource, baseUrlSource } = provenance;
+  return Boolean(apiKeySource && baseUrlSource && apiKeySource !== baseUrlSource);
+}
 
 /** Preserve whether the shared base URL chain selected a configured origin or its default. */
 export function resolveModelBaseUrlState(

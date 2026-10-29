@@ -19,6 +19,8 @@ git add \
   skills/bailian-sandbox/reference \
   skills/bailian-memory/SKILL.md \
   skills/bailian-memory/reference \
+  skills/bailian-knowledge/SKILL.md \
+  skills/bailian-knowledge/reference \
   skills/bailian-web-search/SKILL.md
 
 vp staged

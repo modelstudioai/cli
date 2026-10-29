@@ -1,34 +1,68 @@
-export type { GetModelsOptions } from "./cache.ts";
-export { getModels } from "./cache.ts";
-export { SEMANTIC_TOP_K } from "./constants/scoring.ts";
-export { analyzeIntent } from "./intent.ts";
-export type { ScoredCandidate } from "./recall.ts";
-export { recallCandidates } from "./recall.ts";
-export { recallSemantic, isSemanticAvailable } from "./recall-semantic.ts";
-export type { RecommendOptions } from "./recommend.ts";
-export { buildDocLink, rankModels } from "./recommend.ts";
+export {
+  agentLoop,
+  analyzeIntent as analyzeEngineIntent,
+  buildEngineInput,
+  createLLMClient,
+  createNonInteractive,
+  createReadlineInteraction,
+  createSession,
+  DEFAULT_LLM_MODEL,
+  dispatchTool,
+  formatDegradation,
+  LLMError,
+  loadCatalog,
+  loadFamilies,
+  recommend as recommendEngine,
+  RECOMMEND_TOOLS,
+  resetCatalogCache,
+  route as routeEngine,
+  type AgentResult,
+  type Clarification,
+  type Degradation,
+  type ExecutionPlan,
+  type FamilyProfile,
+  type Interaction,
+  type LLMClient,
+  type LLMClientOptions,
+  type LLMErrorKind,
+  type LLMStage,
+  type RecommendDeps,
+  type RecommendSuccess,
+  type RecommendSession,
+  type ToolDeps,
+  type TrajectoryEvent,
+} from "./engine/index.ts";
+export type {
+  Recommendation as EngineRecommendation,
+  RecommendResult as EngineRecommendResult,
+  IntentProfile as EngineIntentProfile,
+  RecommendSuccess as EngineRecommendSuccess,
+  StepRecommendation as EngineStepRecommendation,
+} from "./engine/types.ts";
 export { maybeSyncWikiData } from "./sync.ts";
-export type { ModelSource } from "./sources/types.ts";
+// Legacy output contract & modality vocabulary still consumed by `model`
+// commands (MODALITY_CHOICES) and the advisor JSON adapter. The legacy
+// pipeline itself (intent/recall/rank/embedding) was replaced by ./engine/.
 export type {
   Budget,
   Capability,
   Complexity,
   ContextNeed,
   Feature,
-  IntentProfile,
+  IntentProfile as LegacyIntentProfile,
   IntentSegment,
   Modality,
   ModelCategory,
   ModelPreference,
   ModelPrice,
-  ModelProfile,
+  ModelProfile as LegacyModelProfile,
   PipelineResult,
   PipelineStep,
   PreferenceMode,
   QpmLimit,
   QualityPreference,
   RecommendedModel,
-  RecommendResult,
+  RecommendResult as LegacyRecommendResult,
   SingleResult,
 } from "./types.ts";
 export {

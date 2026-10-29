@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -237,8 +238,8 @@ test("Console access token 自动刷新写回当前选中 Config", async () => {
     );
     await activateConfigProfile("dev");
 
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (input, init) => {
+    const originalFetch = httpTransport.fetch;
+    httpTransport.fetch = async (input, init) => {
       const isGeneration =
         new URL(input instanceof Request ? input.url : input).pathname ===
         "/modelstudio/cli/generateAccessToken";
@@ -273,7 +274,7 @@ test("Console access token 自动刷新写回当前选中 Config", async () => {
       expect(readConfigFile("dev").access_token).toBe("refreshed-dev");
       expect(readConfigFile().access_token).toBe("tok-default");
     } finally {
-      globalThis.fetch = originalFetch;
+      httpTransport.fetch = originalFetch;
     }
   });
 });
@@ -304,9 +305,9 @@ test.each([
 ])(
   "CLI token 地域解析：$baseUrl / $consoleRegion",
   async ({ baseUrl, consoleRegion, expected }) => {
-    const originalFetch = globalThis.fetch;
+    const originalFetch = httpTransport.fetch;
     const hosts: string[] = [];
-    globalThis.fetch = async (input) => {
+    httpTransport.fetch = async (input) => {
       hosts.push(new URL(input instanceof Request ? input.url : input).hostname);
       return new Response(JSON.stringify({ cliAccessToken: "candidate" }));
     };
@@ -320,7 +321,7 @@ test.each([
       });
       expect(hosts).toEqual([`modelstudio.${expected}.aliyuncs.com`]);
     } finally {
-      globalThis.fetch = originalFetch;
+      httpTransport.fetch = originalFetch;
     }
   },
 );
@@ -331,9 +332,9 @@ test.each([
   { baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com.evil.test" },
   { baseUrl: "https://dashscope.aliyuncs.com", consoleRegion: "unsupported-region" },
 ])("CLI token 无法解析地域时不请求北京：$baseUrl", async ({ baseUrl, consoleRegion }) => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let requests = 0;
-  globalThis.fetch = async () => {
+  httpTransport.fetch = async () => {
     requests++;
     return new Response(JSON.stringify({ cliAccessToken: "candidate" }));
   };
@@ -349,93 +350,104 @@ test.each([
     ).rejects.toMatchObject({ exitCode: 2 });
     expect(requests).toBe(0);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
-test.each(["success", "NotLogined", "network"])(
-  "Console 刷新后重试 %s：成功才落盘",
-  async (outcome) => {
-    await withIsolatedHome(async () => {
-      await writeConfigFile({ access_token: "default-token" });
-      await writeConfigFile(
-        {
-          access_token: "old-token",
-          access_key_id: "mock-ak",
-          access_key_secret: "mock-secret",
-          console_region: "ap-southeast-1",
-          console_site: "international",
-        },
-        "token-plan",
-      );
-      const settings = buildSettings({ flags: {}, file: {}, env: {}, configName: "token-plan" });
-      const client = new Client({
-        identity: tokenTestIdentity,
-        settings,
-        baseUrl: "https://proxy.example.com",
-        consoleCred: {
-          token: "old-token",
-          region: "ap-southeast-1",
-          site: "international",
-          switchAgent: 123,
-          source: "config",
-        },
-      });
-      const originalFetch = globalThis.fetch;
-      const authorizations: string[] = [];
-      let generations = 0;
-      globalThis.fetch = async (input, init) => {
-        const endpoint = new URL(input instanceof Request ? input.url : input);
-        if (endpoint.pathname === "/modelstudio/cli/generateAccessToken") {
-          generations++;
-          expect(endpoint.hostname).toBe("modelstudio.ap-southeast-1.aliyuncs.com");
-          return new Response(JSON.stringify({ cliAccessToken: "new-token" }));
-        }
-        expect(endpoint.hostname).toBe("bailian-singapore-cs.alibabacloud.com");
-        const authorization = new Headers(init?.headers).get("authorization")!;
-        authorizations.push(authorization);
-        const payload = JSON.parse(new URLSearchParams(init?.body as string).get("params")!);
-        expect(payload.Data.cornerstoneParam.switchAgent).toBe(123);
-        if (authorizations.length <= 2) {
-          expect(readConfigFile("token-plan").access_token).toBe("old-token");
-        }
-        if (authorization === "Bearer old-token" || outcome === "NotLogined") {
-          return new Response(
-            JSON.stringify({
-              data: { success: false, errorCode: "BailianGateway.Login.NotLogined" },
-            }),
-          );
-        }
-        if (outcome === "network") throw new TypeError("fetch failed");
-        return new Response(JSON.stringify({ data: { success: true, value: "ok" } }));
-      };
-      try {
-        if (outcome === "success") {
-          await expect(client.console("test.api", {})).resolves.toMatchObject({
-            data: { value: "ok" },
-          });
-          expect(readConfigFile("token-plan").access_token).toBe("new-token");
-          await client.console("test.api", {});
-          expect(authorizations).toEqual([
-            "Bearer old-token",
-            "Bearer new-token",
-            "Bearer new-token",
-          ]);
-        } else {
-          await expect(client.console("test.api", {})).rejects.toThrow(
-            outcome === "network" ? "fetch failed" : "not logged in",
-          );
-          expect(readConfigFile("token-plan").access_token).toBe("old-token");
-          expect(authorizations).toEqual(["Bearer old-token", "Bearer new-token"]);
-        }
-        expect(generations).toBe(1);
-        expect(readConfigFile().access_token).toBe("default-token");
-      } finally {
-        globalThis.fetch = originalFetch;
-      }
+test.each([
+  ["success", undefined],
+  ["NotLogined", undefined],
+  ["network", undefined],
+  ["success", 987],
+  ["NotLogined", 987],
+  ["network", 987],
+] as const)("Console 刷新后重试 %s (临时 agent %s)：成功才落盘", async (outcome, switchAgent) => {
+  await withIsolatedHome(async () => {
+    await writeConfigFile({ access_token: "default-token" });
+    await writeConfigFile(
+      {
+        access_token: "old-token",
+        access_key_id: "mock-ak",
+        access_key_secret: "mock-secret",
+        console_region: "ap-southeast-1",
+        console_site: "international",
+        console_switch_agent: 123,
+      },
+      "token-plan",
+    );
+    const settings = buildSettings({ flags: {}, file: {}, env: {}, configName: "token-plan" });
+    const originalClient = new Client({
+      identity: tokenTestIdentity,
+      settings,
+      baseUrl: "https://proxy.example.com",
+      consoleCred: {
+        token: "old-token",
+        region: "ap-southeast-1",
+        site: "international",
+        switchAgent: 123,
+        source: "config",
+      },
     });
-  },
-);
+    const client =
+      switchAgent === undefined
+        ? originalClient
+        : originalClient.withConsoleSwitchAgent(switchAgent);
+    const originalFetch = httpTransport.fetch;
+    const authorizations: string[] = [];
+    let generations = 0;
+    httpTransport.fetch = async (input, init) => {
+      const endpoint = new URL(input instanceof Request ? input.url : input);
+      if (endpoint.pathname === "/modelstudio/cli/generateAccessToken") {
+        generations++;
+        expect(endpoint.hostname).toBe("modelstudio.ap-southeast-1.aliyuncs.com");
+        return new Response(JSON.stringify({ cliAccessToken: "new-token" }));
+      }
+      expect(endpoint.hostname).toBe("bailian-singapore-cs.alibabacloud.com");
+      const authorization = new Headers(init?.headers).get("authorization")!;
+      authorizations.push(authorization);
+      const payload = JSON.parse(new URLSearchParams(init?.body as string).get("params")!);
+      expect(payload.Data.cornerstoneParam.switchAgent).toBe(switchAgent ?? 123);
+      if (authorizations.length <= 2) {
+        expect(readConfigFile("token-plan").access_token).toBe("old-token");
+      }
+      if (authorization === "Bearer old-token" || outcome === "NotLogined") {
+        return new Response(
+          JSON.stringify({
+            data: { success: false, errorCode: "BailianGateway.Login.NotLogined" },
+          }),
+        );
+      }
+      if (outcome === "network") throw new TypeError("fetch failed");
+      return new Response(JSON.stringify({ data: { success: true, value: "ok" } }));
+    };
+    try {
+      if (outcome === "success") {
+        await expect(client.console("test.api", {})).resolves.toMatchObject({
+          data: { value: "ok" },
+        });
+        expect(readConfigFile("token-plan").access_token).toBe("new-token");
+        await client.console("test.api", {});
+        expect(authorizations).toEqual([
+          "Bearer old-token",
+          "Bearer new-token",
+          "Bearer new-token",
+        ]);
+      } else {
+        await expect(client.console("test.api", {})).rejects.toThrow(
+          outcome === "network" ? "fetch failed" : "not logged in",
+        );
+        expect(readConfigFile("token-plan").access_token).toBe("old-token");
+        expect(authorizations).toEqual(["Bearer old-token", "Bearer new-token"]);
+      }
+      expect(generations).toBe(1);
+      expect(readConfigFile("token-plan").console_switch_agent).toBe(123);
+      expect(settings.consoleSwitchAgent).toBeUndefined();
+      expect(readConfigFile().access_token).toBe("default-token");
+    } finally {
+      httpTransport.fetch = originalFetch;
+    }
+  });
+});
 
 test("ConfigStore:命名 config 与默认配置隔离且写入保留其它 block", async () => {
   await inTempConfigDir(async () => {

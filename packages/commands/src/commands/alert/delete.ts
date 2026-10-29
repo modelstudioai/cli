@@ -1,11 +1,12 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult } from "bailian-cli-runtime";
 import { parseCommaList } from "../shared/params.ts";
 import { ensureAlertReady } from "./shared.ts";
 
 const DELETE_RULES_API = "zeldaEasy.bailian-telemetry.alertRule.deleteAlertRules";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Delete model alert rules",
     "zh-CN": "删除模型告警规则",
@@ -39,7 +40,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const reqDTO = { ruleIds: parseCommaList(flags.ruleId) };
 
@@ -48,7 +49,7 @@ export default defineCommand({
         {
           api: DELETE_RULES_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

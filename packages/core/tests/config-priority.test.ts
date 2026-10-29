@@ -2,10 +2,13 @@ import { expect, test } from "vite-plus/test";
 import { parseConfigFile, type ConfigFile, type Settings } from "../src/config/schema.ts";
 import { buildSettings, type ResolutionSources } from "../src/config/loader.ts";
 import {
+  isModelConnectionSourceMismatch,
   resolveApiKey,
   resolveConsole,
   resolveModelBaseUrl,
+  resolveModelBaseUrlSource,
   resolveModelBaseUrlState,
+  resolveModelConnectionProvenance,
   resolveOpenApi,
 } from "../src/auth/resolver.ts";
 import { getModelProfilePreset } from "../src/config/profile-presets.ts";
@@ -98,6 +101,68 @@ test("baseUrl:flag > env > file > 默认，所有来源统一归一化", () => {
   expect(resolveModelBaseUrl(src({}))).toBe("https://dashscope.aliyuncs.com");
 });
 
+test("base_url 来源:flag > env > file；均无则为 undefined（内置默认）", () => {
+  const flags = { baseUrl: "https://flag.example.com" };
+  const env = { DASHSCOPE_BASE_URL: "https://env.example.com" };
+  const file: ConfigFile = { base_url: "https://file.example.com" };
+  expect(resolveModelBaseUrlSource(src({ flags, env, file }))).toBe("flag");
+  expect(resolveModelBaseUrlSource(src({ env, file }))).toBe("env");
+  expect(resolveModelBaseUrlSource(src({ file }))).toBe("config");
+  expect(resolveModelBaseUrlSource(src({}))).toBeUndefined();
+});
+
+test("跨源判定:两端都有显式来源且不同才 mismatch", () => {
+  expect(
+    isModelConnectionSourceMismatch(
+      resolveModelConnectionProvenance(
+        src({
+          env: { DASHSCOPE_API_KEY: "sk-env" },
+          file: { base_url: "https://file.example.com" },
+        }),
+      ),
+    ),
+  ).toBe(true);
+  expect(
+    isModelConnectionSourceMismatch(
+      resolveModelConnectionProvenance(
+        src({
+          flags: { apiKey: "sk-flag", baseUrl: "https://flag.example.com" },
+        }),
+      ),
+    ),
+  ).toBe(false);
+  expect(
+    isModelConnectionSourceMismatch(
+      resolveModelConnectionProvenance(
+        src({
+          env: { DASHSCOPE_API_KEY: "sk-env", DASHSCOPE_BASE_URL: "https://env.example.com" },
+        }),
+      ),
+    ),
+  ).toBe(false);
+  expect(
+    isModelConnectionSourceMismatch(
+      resolveModelConnectionProvenance(
+        src({
+          file: { api_key: "sk-file", base_url: "https://file.example.com" },
+        }),
+      ),
+    ),
+  ).toBe(false);
+  // Key only (default base_url) — not a mismatch.
+  expect(
+    isModelConnectionSourceMismatch(
+      resolveModelConnectionProvenance(src({ env: { DASHSCOPE_API_KEY: "sk-env" } })),
+    ),
+  ).toBe(false);
+  // Explicit base_url only — not a mismatch (missing key is AUTH elsewhere).
+  expect(
+    isModelConnectionSourceMismatch(
+      resolveModelConnectionProvenance(src({ file: { base_url: "https://file.example.com" } })),
+    ),
+  ).toBe(false);
+});
+
 test("baseUrl:非法 flag/env 在 resolver 边界报 usage error", () => {
   expect(() => resolveModelBaseUrl(src({ flags: { baseUrl: "not-a-url" } }))).toThrow(
     /Invalid model base URL/,
@@ -169,10 +234,26 @@ test("命名 config 仍保持 flag > env > selected file", () => {
 test("output:flag > env > file > text", () => {
   const env = { DASHSCOPE_OUTPUT: "json" };
   const file: ConfigFile = { output: "json" };
-  expect(resolve({ flags: { output: "text" }, env, file }).output).toBe("text");
-  expect(resolve({ env, file: { output: "text" } }).output).toBe("json");
-  expect(resolve({ file }).output).toBe("json");
-  expect(resolve({}).output).toBe("text");
+  expect(resolve({ flags: { output: "text" }, env, file })).toMatchObject({
+    output: "text",
+    outputSource: "flag",
+    outputExplicit: true,
+  });
+  expect(resolve({ env, file: { output: "text" } })).toMatchObject({
+    output: "json",
+    outputSource: "env",
+    outputExplicit: true,
+  });
+  expect(resolve({ file })).toMatchObject({
+    output: "json",
+    outputSource: "file",
+    outputExplicit: true,
+  });
+  expect(resolve({})).toMatchObject({
+    output: "text",
+    outputSource: "default",
+    outputExplicit: false,
+  });
 });
 
 test("timeout:flag > 合法 env > file > 300;非法 env 被跳过;非法 flag 抛错", () => {

@@ -1,16 +1,12 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  effectiveConsoleGatewayConfig,
-  unwrapResponse,
-} from "bailian-cli-core";
+import { detectOutputFormat, unwrapResponse } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { parseCommaList } from "../shared/params.ts";
 import { ensureAlertReady } from "./shared.ts";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 
 const DELETE_TEMPLATES_API = "zeldaEasy.bailian-telemetry.alertTemplate.deleteAlertTemplates";
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Delete custom alert templates (official templates cannot be deleted)",
     "zh-CN": "删除自定义告警模板（官方模板不可删除）",
@@ -44,7 +40,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const reqDTO = { templateIds: parseCommaList(flags.templateId) };
 
@@ -53,7 +49,7 @@ export default defineCommand({
         {
           api: DELETE_TEMPLATES_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

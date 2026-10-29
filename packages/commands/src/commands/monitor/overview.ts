@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult, displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
@@ -71,7 +72,7 @@ function printStatistic(stat: ModelStatistic, startTime: number, endTime: number
   }
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show aggregated model call statistics (calls, failures, latency, token usage)",
     "zh-CN": "查看模型调用汇总统计（调用量、失败率、耗时、Token 用量）",
@@ -111,7 +112,7 @@ export default defineCommand({
         {
           api: STATISTIC_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { NPM_REGISTRY } from "bailian-cli-runtime";
 import { E2E_HARNESS_IDENTITY } from "./identity.ts";
 
@@ -5,9 +6,9 @@ import { E2E_HARNESS_IDENTITY } from "./identity.ts";
 export async function withHarnessUpdateFixture<Result>(
   run: () => Promise<Result>,
 ): Promise<Result> {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const updateUrl = `${NPM_REGISTRY}/${E2E_HARNESS_IDENTITY.npmPackage}/latest`;
-  globalThis.fetch = (input, init) => {
+  httpTransport.fetch = (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (url === updateUrl) return Promise.resolve(new Response(null, { status: 404 }));
     return originalFetch(input, init);
@@ -15,6 +16,6 @@ export async function withHarnessUpdateFixture<Result>(
   try {
     return await run();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 }

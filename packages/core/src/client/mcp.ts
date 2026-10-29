@@ -1,3 +1,4 @@
+import { httpTransport } from "./transport.ts";
 /**
  * MCP (Model Context Protocol) streamable HTTP client.
  *
@@ -300,7 +301,7 @@ export class McpClient {
     }
 
     const timeoutMs = this.deps.settings.timeout * 1000;
-    const res = await fetch(this.url, {
+    const res = await httpTransport.fetch(this.url, {
       method: "POST",
       headers,
       body: JSON.stringify(body),

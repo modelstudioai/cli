@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -7,7 +8,7 @@ import {
   type FlagsDef,
   type RagMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, normalizeError } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CHUNK_DELETE_FLAGS = {
@@ -63,6 +64,14 @@ export default defineCommand({
     "--index-id idx-xxx --chunk-id chunk-a --chunk-id chunk-b --workspace-id ws-xxx",
     "--index-id idx-xxx --chunk-id chunk-a --yes",
   ],
+  validate(flags) {
+    const nonemptyError = validateNonemptyFlags({
+      "index-id": flags.indexId,
+      "chunk-id": flags.chunkId,
+    });
+    if (nonemptyError) return nonemptyError;
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
@@ -86,6 +95,7 @@ export default defineCommand({
 
     // Sequential batches; any batch failure aborts, listing already-deleted batches in the error
     let deletedCount = 0;
+    const completedBatches: string[][] = [];
     for (const batchIds of batches) {
       try {
         await ctx.client.requestJson<RagMutationResponse>({
@@ -94,16 +104,32 @@ export default defineCommand({
           body: { pipelineId: flags.indexId, chunkIds: batchIds },
         });
         deletedCount += batchIds.length;
+        completedBatches.push(batchIds);
       } catch (error) {
-        if (deletedCount > 0 && error instanceof BailianError && !error.hint) {
-          throw new BailianError(
-            error.message,
-            error.exitCode,
-            `${deletedCount} chunk(s) in earlier batches were already deleted.`,
-            { cause: error, api: error.api, rawResponse: error.rawResponse },
-          );
-        }
-        throw error;
+        const original = normalizeError(error, ctx.identity.binName);
+        const failedBatch = completedBatches.length + 1;
+        const progress = [
+          ctx.localize({
+            "en-US": `Confirmed deleted: ${deletedCount} chunk(s) in ${completedBatches.length} completed batch(es).`,
+            "zh-CN": `已确认删除：${completedBatches.length} 个成功批次，共 ${deletedCount} 个切片。`,
+          }),
+          ...completedBatches.map((completedIds, batchIndex) =>
+            ctx.localize({
+              "en-US": `Batch ${batchIndex + 1}: ${JSON.stringify(completedIds)}`,
+              "zh-CN": `第 ${batchIndex + 1} 批：${JSON.stringify(completedIds)}`,
+            }),
+          ),
+          ctx.localize({
+            "en-US": `Batch ${failedBatch} failed; its deletion outcome is unconfirmed. Later batches were not executed.`,
+            "zh-CN": `第 ${failedBatch} 批失败，删除结果未确认。后续批次未执行。`,
+          }),
+        ].join("\n");
+        throw new BailianError(
+          original.message,
+          original.exitCode,
+          [original.hint, progress].filter(Boolean).join("\n"),
+          { cause: original, api: original.api, rawResponse: original.rawResponse },
+        );
       }
     }
 

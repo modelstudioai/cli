@@ -107,6 +107,7 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
       const createRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
         "knowledge",
         "create",
+        "--yes",
         "--name",
         kbName,
         "--description",

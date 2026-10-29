@@ -1,0 +1,13 @@
+{
+  "data": {
+    "rows": [
+      {
+        "id": "index-fixture",
+        "name": "media-fixture",
+        "knowledgeType": "multimedia",
+        "knowledgeScene": "basic_multimedia_qa",
+        "multimodalEmbeddingModelName": "fixture-vl-embedding"
+      }
+    ]
+  }
+}

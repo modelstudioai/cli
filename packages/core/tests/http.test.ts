@@ -1,3 +1,5 @@
+import { httpTransport } from "../src/client/transport.ts";
+import { Response as UndiciResponse } from "undici";
 import { getEventListeners } from "node:events";
 import { createServer, type RequestListener } from "node:http";
 import type { Socket } from "node:net";
@@ -79,7 +81,7 @@ describe("real HTTP response bodies", () => {
     { caller: "Client.requestJson", status: 200 },
     { caller: "request", status: 503 },
   ])("$caller times out while reading a partial $status JSON body", async ({ caller, status }) => {
-    const readBody = vi.spyOn(Response.prototype, "json");
+    const readBody = vi.spyOn(UndiciResponse.prototype, "json");
     await withServer(
       (_incoming, response) => {
         response.writeHead(status, { "content-type": "application/json" });
@@ -95,7 +97,7 @@ describe("real HTTP response bodies", () => {
               ? request(testDeps(), { url, timeout: 0.15 })
               : requestJson(testDeps(), { url, timeout: 0.15 });
         await expect(pending).rejects.toMatchObject({ name: "AbortError" });
-        expect(readBody).toHaveBeenCalledOnce();
+        expect(readBody).toHaveBeenCalledTimes(status === 200 ? 1 : 0);
         expect(performance.now() - startedAt).toBeLessThan(2_000);
       },
     );
@@ -106,14 +108,17 @@ describe("real HTTP response bodies", () => {
     async (status) => {
       const parent = new AbortController();
       const reason = new BailianError("Caller wait budget exhausted", ExitCode.TIMEOUT);
-      const originalJson = Response.prototype.json;
+      const bodyMethod = status === 200 ? "json" : "text";
+      const originalRead = UndiciResponse.prototype[bodyMethod];
       let bodyStarted!: () => void;
       const readingBody = new Promise<void>((resolve) => {
         bodyStarted = resolve;
       });
-      vi.spyOn(Response.prototype, "json").mockImplementationOnce(function (this: Response) {
+      vi.spyOn(UndiciResponse.prototype, bodyMethod).mockImplementationOnce(function (
+        this: UndiciResponse,
+      ) {
         bodyStarted();
-        return originalJson.call(this);
+        return originalRead.call(this);
       });
       await withServer(
         (_incoming, response) => {
@@ -152,9 +157,9 @@ describe("real HTTP response bodies", () => {
       label: "top-level service code",
       status: 200,
       contentType: "application/json",
-      body: '{"code":"ServiceBusy","message":"服务端原文 / original service message"}',
+      body: '{"code":"ServiceBusy","message":"服务端原文 / original service message","request_id":"business-request"}',
       message: "服务端原文 / original service message",
-      api: { httpStatus: 200, apiCode: "ServiceBusy" },
+      api: { httpStatus: 200, apiCode: "ServiceBusy", requestId: "business-request" },
     },
     {
       label: "HTTP service error",
@@ -177,7 +182,7 @@ describe("real HTTP response bodies", () => {
       status: 503,
       contentType: "text/html",
       body: "<html>unavailable</html>",
-      message: "HTTP 503",
+      message: "<html>unavailable</html>",
       api: { httpStatus: 503 },
     },
   ])("keeps $label behavior", async ({ status, contentType, body, message, api }) => {
@@ -211,19 +216,20 @@ describe("request signal cleanup", () => {
       const parent = new AbortController();
       let finishBody!: () => void;
       const response = new Response(body, { status });
-      const originalJson = response.json.bind(response);
+      const bodyMethod = status === 200 ? "json" : "text";
+      const originalRead = response[bodyMethod].bind(response);
       let bodyStarted!: () => void;
       const readingBody = new Promise<void>((resolve) => {
         bodyStarted = resolve;
       });
-      vi.spyOn(response, "json").mockImplementation(async () => {
+      vi.spyOn(response, bodyMethod).mockImplementation(async () => {
         bodyStarted();
         await new Promise<void>((resolve) => {
           finishBody = resolve;
         });
-        return originalJson();
+        return originalRead();
       });
-      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+      const fetchMock = vi.spyOn(httpTransport, "fetch").mockResolvedValue(response);
       const pending = requestJson(testDeps(), {
         url: "http://127.0.0.1/unused",
         signal: parent.signal,
@@ -250,7 +256,7 @@ describe("request signal cleanup", () => {
     const reason = { budget: "exhausted" };
     if (aborted) parent.abort(reason);
     const failure = new TypeError("fetch failed");
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(failure);
+    const fetchMock = vi.spyOn(httpTransport, "fetch").mockRejectedValue(failure);
     await expect(
       requestJson(testDeps(), { url: "http://127.0.0.1/unused", signal: parent.signal }),
     ).rejects.toBe(aborted ? reason : failure);
@@ -266,7 +272,7 @@ describe("request signal cleanup", () => {
       vi.useFakeTimers();
       const parent = new AbortController();
       const reason = new Error("Parent budget exhausted");
-      const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const fetchMock = vi.spyOn(httpTransport, "fetch").mockImplementation(async (_url, init) => {
         const signal = init!.signal!;
         const response = new Response("{}");
         vi.spyOn(response, "json").mockImplementation(
@@ -305,7 +311,7 @@ describe("request signal cleanup", () => {
     vi.useFakeTimers();
     const parent = new AbortController();
     const response = new Response('{"stream":"still readable"}');
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const fetchMock = vi.spyOn(httpTransport, "fetch").mockResolvedValue(response);
     const result = await request(testDeps(), {
       url: "http://127.0.0.1/unused",
       signal: parent.signal,
@@ -452,7 +458,7 @@ describe("raw response explicit cancellation", () => {
     async (reason) => {
       const parent = new AbortController();
       const source = new ReadableStream<Uint8Array>();
-      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(source));
+      const fetchMock = vi.spyOn(httpTransport, "fetch").mockResolvedValue(new Response(source));
       const response = await request(testDeps(), {
         url: "http://127.0.0.1/unused",
         signal: parent.signal,

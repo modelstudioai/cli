@@ -29,7 +29,7 @@ const CATEGORY_ADD_FLAGS = {
     valueHint: "<id>",
     description: {
       "en-US": "Create under this collection (defaults to the platform collection)",
-      "zh-CN": "在该数据集合下创建（默认为平台数据集合）",
+      "zh-CN": "在该数据集下创建（默认为平台数据集）",
     },
   },
   ...WORKSPACE_FLAG,

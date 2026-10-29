@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { getEventListeners } from "node:events";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -675,7 +676,7 @@ describe("Sandbox unused response cleanup", () => {
           if (complete) controller.close();
         },
       });
-      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(body));
+      const fetchMock = vi.spyOn(httpTransport, "fetch").mockResolvedValue(new Response(body));
       await command.run({
         identity: { binName: "bl" },
         settings: SETTINGS,

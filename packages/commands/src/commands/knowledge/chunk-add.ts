@@ -1,3 +1,4 @@
+import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -96,6 +97,10 @@ export default defineCommand({
   flags: CHUNK_ADD_FLAGS,
   notes: [
     {
+      "en-US": "Adding chunks to multimedia knowledge bases is not supported by the service.",
+      "zh-CN": "服务端不支持向音视频知识库新增切片。",
+    },
+    {
       "en-US": "Document / table / image knowledge bases are supported; audio-video ones are not.",
       "zh-CN": "支持文档、表格和图片知识库；不支持音视频知识库。",
     },
@@ -136,6 +141,16 @@ export default defineCommand({
     },
   ],
   validate(flags) {
+    const nonemptyError = validateNonemptyFlags({
+      "index-id": flags.indexId,
+      ...(flags.docId !== undefined ? { "doc-id": flags.docId } : {}),
+    });
+    if (nonemptyError) return nonemptyError;
+
+    if (flags.content !== undefined && !flags.imageUrl?.length && !flags.field?.length) {
+      const contentError = validateNonemptyFlags({ content: flags.content });
+      if (contentError) return contentError;
+    }
     const hasConvenience =
       flags.content !== undefined ||
       flags.contentFile !== undefined ||
