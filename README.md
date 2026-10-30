@@ -23,6 +23,12 @@ _Built for AI Agents. Every command works as a structured tool call._
 
 ## Features
 
+When a host sets `ALIBABA_CLOUD_BL_COMPAT_MODE=aliyun bl`, CLI help, examples,
+version output, and operation hints use `aliyun bl` as the invocation prefix.
+Unset, empty, or unrecognized values retain `bl`. Product identity, API channel
+headers, and credential resolution are unchanged. This display contract does not
+by itself indicate that the Aliyun CLI extension has been released.
+
 - **Model generation** — Full-modality generation across text, image, video, and speech, with editing and reference-based generation
 - **Asset understanding** — Parse and ask questions about images, documents, audio, and long videos
 - **App orchestration** — Call Managed Agents, agents, and workflows published on Aliyun Model Studio, wired to knowledge bases, memory, web search, and MCP tools

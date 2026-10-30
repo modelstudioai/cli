@@ -185,6 +185,18 @@ test("binary auto-update refreshes installed skills and does not run skill init"
   expectSkillUpdateNotInit();
 });
 
+test("auto-update verification instructions use the display prefix", async () => {
+  const output = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+  try {
+    await performAutoUpdate("1.14.3", "2.0.0", "bailian-cli", "bailian-cli", "aliyun bl");
+    expect(output.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
+      "aliyun bl --version",
+    );
+  } finally {
+    output.mockRestore();
+  }
+});
+
 test("npm auto-update refreshes installed skills and does not run skill init", async () => {
   process.env.BAILIAN_INSTALL_METHOD = "npm";
   childProcessMocks.execSync.mockReturnValue("");

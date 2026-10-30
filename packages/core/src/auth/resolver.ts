@@ -83,7 +83,8 @@ export function resolveApiKey(s: ResolutionSources): ApiKeyCredential {
   throw new BailianError(
     "No API key found.",
     ExitCode.AUTH,
-    "Set DASHSCOPE_API_KEY, pass --api-key, or run `bl auth login`.",
+    "Set DASHSCOPE_API_KEY or pass --api-key.",
+    { authDomain: "apiKey" },
   );
 }
 
@@ -91,11 +92,9 @@ export function resolveApiKey(s: ResolutionSources): ApiKeyCredential {
 export function resolveConsole(s: ResolutionSources): ConsoleCredential {
   const token = s.file.access_token?.trim();
   if (!token) {
-    throw new BailianError(
-      "No console access token found.",
-      ExitCode.AUTH,
-      "Run `bl auth login --console`.",
-    );
+    throw new BailianError("No console access token found.", ExitCode.AUTH, undefined, {
+      authDomain: "console",
+    });
   }
   return {
     token,
@@ -141,7 +140,8 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
   throw new BailianError(
     "No OpenAPI AK/SK credentials found.",
     ExitCode.AUTH,
-    "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, pass --access-key-id and --access-key-secret, or run `bl auth login --open-api`.",
+    "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or pass --access-key-id and --access-key-secret.",
+    { authDomain: "openapi" },
   );
 }
 
@@ -162,6 +162,7 @@ function resolveOpenApiPair(
       "Incomplete OpenAPI AK/SK credentials found.",
       ExitCode.AUTH,
       openApiPairHint(source),
+      { authDomain: "openapi" },
     );
   }
 
@@ -181,7 +182,7 @@ function openApiPairHint(source: OpenApiCredential["source"]): string {
   if (source === "env") {
     return "Set both ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or unset the partial env vars to use config credentials.";
   }
-  return "Run `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` again to save a complete pair.";
+  return "Save a complete AccessKey ID and secret pair in the selected configuration.";
 }
 
 /** Full auth snapshot from sources — what would resolve per domain (or undefined). */

@@ -142,3 +142,21 @@ test("human cleanup instructions quote IDs safely and do not guess a missing rou
   context.commandPath = () => undefined;
   expect(reportCreatedKnowledgeBase(context, "ws", "idx").cleanup.command).toBeUndefined();
 });
+
+test("host cleanup text preserves argument quoting and structured executable identity", () => {
+  const { context, stderr } = fixture();
+  context.settings.output = "text";
+  context.identity = {
+    binName: "bl",
+    commandPrefix: "aliyun bl",
+    version: "test",
+    npmPackage: "test",
+    clientName: "test",
+  };
+  context.commandPath = () => ["knowledge", "delete"];
+  const resource = reportCreatedKnowledgeBase(context, "ws space", "idx'quoted");
+  expect(resource.cleanup.command?.bin).toBe("bl");
+  expect(stderr.join("")).toContain(
+    "aliyun bl knowledge delete --index-id 'idx'\\''quoted' --workspace-id 'ws space'",
+  );
+});

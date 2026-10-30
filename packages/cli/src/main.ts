@@ -15,6 +15,8 @@ void createCli(
   { ...commands, ...commandAliases },
   {
     binName: "bl",
+    commandPrefix:
+      process.env.ALIBABA_CLOUD_BL_COMPAT_MODE?.trim() === "aliyun bl" ? "aliyun bl" : undefined,
     version: pkg.version,
     clientName: "bailian-cli",
     npmPackage: "bailian-cli",

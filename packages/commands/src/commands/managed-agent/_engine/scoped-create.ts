@@ -142,7 +142,7 @@ export async function loadScopedCreateProject(
       throw new BailianError(
         `Config file not found: ${file}`,
         ExitCode.USAGE,
-        "Run `bl managed-agent init` first.",
+        "Run the `managed-agent init` subcommand first. / 请先执行 managed-agent init 子命令。",
       );
     }
     throw error;

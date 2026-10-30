@@ -1,4 +1,5 @@
 import {
+  getCommandPrefix,
   defineCommand,
   detectOutputFormat,
   type FlagsDef,
@@ -65,7 +66,7 @@ export default defineCommand({
     const { identity, settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
 
-    const workspaceId = requireWorkspaceId(settings, flags, identity.binName);
+    const workspaceId = requireWorkspaceId(settings, flags, getCommandPrefix(identity));
     const queryParams = buildQueryParams(flags, workspaceId);
 
     if (settings.dryRun) {

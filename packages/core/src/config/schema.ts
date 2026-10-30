@@ -203,11 +203,18 @@ export function parseConfigFile(raw: unknown): ConfigFile {
 export interface Identity {
   /** Product binary name, e.g. "bl", "rag". */
   binName: string;
+  /** Human-facing invocation prefix; never used as product identity or an executable path. */
+  commandPrefix?: string;
   version: string;
   /** npm package name for self-update, e.g. "bailian-cli". */
   npmPackage: string;
   /** User-Agent / telemetry client name. */
   clientName: string;
+}
+
+/** Resolve the display invocation independently of the stable product binary name. */
+export function getCommandPrefix(identity: Pick<Identity, "binName" | "commandPrefix">): string {
+  return identity.commandPrefix || identity.binName;
 }
 
 /**

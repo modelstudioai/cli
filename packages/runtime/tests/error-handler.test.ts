@@ -1,7 +1,62 @@
-import { ExitCode } from "bailian-cli-core";
-import { expect, test } from "vite-plus/test";
+import { BailianError, ExitCode } from "bailian-cli-core";
+import { expect, test, vi } from "vite-plus/test";
 import { handleError } from "../src/error-handler.ts";
 import { ConfirmationRequiredError } from "../src/confirm.ts";
+
+test.each(["text", "json"])(
+  "expired Console login instructions use the host prefix (%s)",
+  (format) => {
+    let diagnostic = "";
+    const output = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      diagnostic += String(chunk);
+      return true;
+    });
+    const exiting = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("exit");
+    });
+    vi.stubEnv("DASHSCOPE_OUTPUT", format);
+    try {
+      const error = new BailianError(
+        "Console session is not logged in or has expired.",
+        ExitCode.AUTH,
+        undefined,
+        { authDomain: "console" },
+      );
+      expect(() => handleError(error, "aliyun bl")).toThrow("exit");
+      const hint = format === "json" ? JSON.parse(diagnostic).error.hint : diagnostic;
+      expect(hint).toContain("aliyun bl auth login --console");
+      expect(hint).not.toContain("--api-key");
+    } finally {
+      output.mockRestore();
+      exiting.mockRestore();
+      vi.unstubAllEnvs();
+    }
+  },
+);
+
+test("host error display preserves service text and hints containing bare commands", () => {
+  let diagnostic = "";
+  const output = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    diagnostic += String(chunk);
+    return true;
+  });
+  const exiting = vi.spyOn(process, "exit").mockImplementation(() => {
+    throw new Error("exit");
+  });
+  vi.stubEnv("DASHSCOPE_OUTPUT", "json");
+  const message = "Server returned: bl auth login is part of user data";
+  const hint = "Original server hint: bl config show";
+  try {
+    expect(() =>
+      handleError(new BailianError(message, ExitCode.GENERAL, hint), "aliyun bl"),
+    ).toThrow("exit");
+    expect(JSON.parse(diagnostic).error).toMatchObject({ message, hint, code: 1 });
+  } finally {
+    output.mockRestore();
+    exiting.mockRestore();
+    vi.unstubAllEnvs();
+  }
+});
 
 test("handleError: fetch failed JSON includes cause.code from errno", () => {
   const previousOutput = process.env.DASHSCOPE_OUTPUT;

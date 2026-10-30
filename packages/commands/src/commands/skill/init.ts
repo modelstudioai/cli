@@ -1,6 +1,7 @@
 import {
   BailianError,
   ExitCode,
+  getCommandPrefix,
   defineCommand,
   detectInstalledAgents,
   fetchSkillsIndex,
@@ -49,8 +50,8 @@ export default defineCommand({
       "zh-CN": "获取 Registry 索引并安装名称以 `bailian-` 开头的所有 Skill。",
     },
     {
-      "en-US": "Equivalent to: `bl skill add --all` (filtered to `bailian-*` skills).",
-      "zh-CN": "等价于：`bl skill add --all`（筛选为 `bailian-*` Skill）。",
+      "en-US": "Equivalent to the `skill add --all` subcommand (filtered to `bailian-*` skills).",
+      "zh-CN": "等价于执行 `skill add --all` 子命令（筛选为 `bailian-*` Skill）。",
     },
   ],
   async run(ctx) {
@@ -144,7 +145,7 @@ export default defineCommand({
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to install`,
         ExitCode.GENERAL,
-        "Check the reason for failed skills in the output; network failures can be retried with bl skill init",
+        `Check the failed skills in the output; retry network failures with ${getCommandPrefix(ctx.identity)} skill init. / 查看输出中的失败原因，网络失败可运行 ${getCommandPrefix(ctx.identity)} skill init 重试。`,
       );
     }
   },

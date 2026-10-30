@@ -80,7 +80,7 @@ export default defineCommand({
       throw new BailianError(
         `Skill '${inspected.name}' is already tracked.`,
         ExitCode.USAGE,
-        "Modify its existing YAML declaration and run full `bl managed-agent apply` to create a new version.",
+        "Modify its YAML declaration and run the full `managed-agent apply` subcommand to create a new version. / 修改 YAML 声明后运行完整的 managed-agent apply 子命令以创建新版本。",
       );
     }
     const rawDeclaration: Record<string, unknown> = {

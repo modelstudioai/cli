@@ -2,6 +2,7 @@ import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  getCommandPrefix,
   BailianError,
   COMMAND_PACK_API_VERSION,
   ExitCode,
@@ -225,6 +226,6 @@ export async function loadAndValidateCommandPack(
 
   const adapted = adaptCommandPack(name, exported as CommandPack, definition);
   // Reuse the runtime's reserved-flag guard without duplicating its policy here.
-  new CommandRegistry(adapted, identity.binName);
+  new CommandRegistry(adapted, getCommandPrefix(identity));
   return adapted;
 }

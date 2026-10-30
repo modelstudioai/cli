@@ -1,4 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
+import { getCommandPrefix, detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult } from "bailian-cli-runtime";
 import { parseCommaList } from "../shared/params.ts";
@@ -56,7 +56,12 @@ export default defineTelemetryCommand({
       return;
     }
 
-    await ensureAlertReady(ctx.client, settings.workspaceId, ctx.identity.binName, settings);
+    await ensureAlertReady(
+      ctx.client,
+      settings.workspaceId,
+      getCommandPrefix(ctx.identity),
+      settings,
+    );
 
     await ctx.client.console(DELETE_RULES_API, { reqDTO });
 

@@ -1,4 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
+import { getCommandPrefix, detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand } from "../shared/telemetry.ts";
 import { LOG_NO_WAIT_FLAG, enableLogDelivery, requireAuditLogEnabled } from "./shared.ts";
 import { LOG_SERVICE_TYPES } from "./status.ts";
@@ -30,13 +30,17 @@ export default defineTelemetryCommand({
     const enableContext = {
       client: ctx.client,
       settings: ctx.settings,
-      binName: ctx.identity.binName,
+      binName: getCommandPrefix(ctx.identity),
       format,
       noWait: ctx.flags.noWait,
     };
 
     if (!ctx.settings.dryRun) {
-      await requireAuditLogEnabled(ctx.client, ctx.settings.workspaceId, ctx.identity.binName);
+      await requireAuditLogEnabled(
+        ctx.client,
+        ctx.settings.workspaceId,
+        getCommandPrefix(ctx.identity),
+      );
     }
 
     await enableLogDelivery(enableContext, "inference", LOG_SERVICE_TYPES.inference);

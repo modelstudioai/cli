@@ -3,6 +3,7 @@ import { mkdir, open, stat, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import {
+  getCommandPrefix,
   BailianError,
   ExitCode,
   isCompiledBinary,
@@ -74,7 +75,7 @@ function supportedPackageHint(identity: Identity, policy: CommandPackPolicy): st
   const names = Object.keys(policy.supported);
   return names.length > 0
     ? `Allowed packages: ${names.join(", ")}`
-    : `${identity.binName} does not currently support any Command Packs.`;
+    : `${getCommandPrefix(identity)} does not currently support any Command Packs.`;
 }
 
 function buildNpmEnv(base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
@@ -196,7 +197,7 @@ export function parseCommandPackSpec(
   const name = match[1]!;
   if (!policy.supported[name]) {
     throw new BailianError(
-      `Command Pack "${name}" is not allowlisted for ${identity.binName}.`,
+      `Command Pack "${name}" is not allowlisted for ${getCommandPrefix(identity)}.`,
       ExitCode.USAGE,
       supportedPackageHint(identity, policy),
     );
@@ -296,7 +297,7 @@ export async function linkCommandPack(
   const name = pjson.name;
   if (!name || !policy.supported[name]) {
     throw new BailianError(
-      `Local package "${name ?? "(unnamed)"}" is not an allowlisted Command Pack for ${identity.binName}.`,
+      `Local package "${name ?? "(unnamed)"}" is not an allowlisted Command Pack for ${getCommandPrefix(identity)}.`,
       ExitCode.USAGE,
       supportedPackageHint(identity, policy),
     );
@@ -328,7 +329,7 @@ export async function removeCommandPack(
 ): Promise<void> {
   if (!policy.supported[name]) {
     throw new BailianError(
-      `Command Pack "${name}" is not allowlisted for ${identity.binName}.`,
+      `Command Pack "${name}" is not allowlisted for ${getCommandPrefix(identity)}.`,
       ExitCode.USAGE,
       supportedPackageHint(identity, policy),
     );

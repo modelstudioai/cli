@@ -294,7 +294,7 @@ export function selectLocalSkillKey(options: {
     throw new BailianError(
       `Skill '${options.displayName}' is already tracked with a different declaration.`,
       ExitCode.USAGE,
-      "Modify its existing YAML declaration and run full `bl managed-agent apply`, or bind its remote ID with --skill.",
+      "Modify its YAML declaration and run the full `managed-agent apply` subcommand, or bind its remote ID with --skill. / 修改 YAML 声明后运行完整的 managed-agent apply 子命令，或用 --skill 绑定远端 ID。",
     );
   }
   const selected = selectResourceKey({

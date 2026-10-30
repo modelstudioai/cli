@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import http from "node:http";
 
 import {
+  getCommandPrefix,
   BailianError,
   ExitCode,
   validateConsoleAccessToken,
@@ -666,7 +667,7 @@ export async function runConsoleLogin(
   }
 
   if (opts?.needApiKey && savedSessionWithoutApiKey) {
-    const binName = deps.identity.binName;
+    const binName = getCommandPrefix(deps.identity);
     process.stderr.write(
       `${localizeLogin(deps, {
         "en-US": `Saved the console session only. Model commands still need an API key: ${binName} auth login --console, or ${binName} auth login --api-key <key>`,

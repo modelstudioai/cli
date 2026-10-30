@@ -1,4 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
+import { getCommandPrefix, detectOutputFormat } from "bailian-cli-core";
 import { ansi, emitResult, displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatDateTime } from "../shared/format.ts";
 import {
@@ -102,6 +102,6 @@ export default defineTelemetryCommand({
       return;
     }
 
-    printStatus(cmsSlrAuthorized, status, deliverySwitch, identity.binName);
+    printStatus(cmsSlrAuthorized, status, deliverySwitch, getCommandPrefix(identity));
   },
 });

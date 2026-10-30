@@ -1,4 +1,9 @@
-import { defineCommand, detectOutputFormat, modelsPermissionsPath } from "bailian-cli-core";
+import {
+  getCommandPrefix,
+  defineCommand,
+  detectOutputFormat,
+  modelsPermissionsPath,
+} from "bailian-cli-core";
 import { emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
 
@@ -169,7 +174,7 @@ export default defineCommand({
 
     // The default authorized view is empty until something is granted — point
     // at the authorizable catalog instead of ending with a bare "nothing".
-    const binName = ctx.identity.binName;
+    const binName = getCommandPrefix(ctx.identity);
     const emptyHint =
       scope === "authorized"
         ? `Nothing granted yet in this workspace. Browse grantable models with \`${binName} permission list --scope authorizable\`, then grant with \`${binName} permission grant --model <model>\`.`

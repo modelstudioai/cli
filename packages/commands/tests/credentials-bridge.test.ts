@@ -205,16 +205,17 @@ test("assert:claude key 为空抛 AUTH 且 hint 指向 ANTHROPIC_API_KEY", () =>
   expect(err.message).toContain("claude");
 });
 
-test("assert:bailian key 为空(dry-run/未登录)抛 AUTH 且 hint 指向 bl auth login", () => {
+test("assert:bailian key 为空(dry-run/未登录)抛 AUTH 并交由 runtime 渲染登录命令", () => {
   let thrown: unknown;
   try {
     assertProviderCredentials({ bailian: { api_key: "" } });
   } catch (error) {
     thrown = error;
   }
-  const err = thrown as { exitCode?: number; hint?: string };
+  const err = thrown as { exitCode?: number; hint?: string; authDomain?: string };
   expect(err.exitCode).toBe(ExitCode.AUTH);
-  expect(err.hint).toContain("bl auth login");
+  expect(err.authDomain).toBe("apiKey");
+  expect(err.hint).toContain("DASHSCOPE_API_KEY");
 });
 
 test("scrub:所有凭证 env 变量被删除", () => {

@@ -108,13 +108,13 @@ export function assertBailianOnlyProviders(providers: Record<string, unknown>): 
   if (unsupportedProviders.length > 0) {
     const names = unsupportedProviders.join(", ");
     throw new BailianError(
-      `bl managed-agent only supports provider '${BAILIAN_PROVIDER}'; remove unsupported providers: ${names}. / bl managed-agent 仅支持 Provider '${BAILIAN_PROVIDER}'；请移除不支持的 Provider：${names}。`,
+      `Managed Agent only supports provider '${BAILIAN_PROVIDER}'; remove unsupported providers: ${names}. / 托管 Agent 仅支持 Provider '${BAILIAN_PROVIDER}'；请移除不支持的 Provider：${names}。`,
       ExitCode.USAGE,
     );
   }
   if (!(BAILIAN_PROVIDER in providers)) {
     throw new BailianError(
-      `bl managed-agent requires a '${BAILIAN_PROVIDER}' provider configuration. / bl managed-agent 需要配置 Provider '${BAILIAN_PROVIDER}'。`,
+      `Managed Agent requires a '${BAILIAN_PROVIDER}' provider configuration. / 托管 Agent 需要配置 Provider '${BAILIAN_PROVIDER}'。`,
       ExitCode.USAGE,
     );
   }

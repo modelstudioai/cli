@@ -28,7 +28,7 @@ const CREDENTIAL_ENV_KEYS = [
 
 /** How to obtain each provider's key, surfaced in the CLI's own AUTH error when it is missing. */
 const CREDENTIAL_HINTS: Record<string, string> = {
-  bailian: "Run `bl auth login --api-key <key>`, pass --api-key, or set DASHSCOPE_API_KEY.",
+  bailian: "Pass --api-key or set DASHSCOPE_API_KEY. / 传入 --api-key 或设置 DASHSCOPE_API_KEY。",
   claude: "Set ANTHROPIC_API_KEY (or CLAUDE_API_KEY) in your shell or .env.",
   ark: "Set ARK_API_KEY in your shell or .env.",
   qoder: "Set QODER_PAT (or QODER_API_KEY) in your shell or .env.",
@@ -36,8 +36,8 @@ const CREDENTIAL_HINTS: Record<string, string> = {
 
 const BAILIAN_ONLY_NOTE = {
   "en-US":
-    "bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.",
-  "zh-CN": "bl managed-agent 仅支持百炼 Provider；包含其他 Provider 的配置会被拒绝。",
+    "Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.",
+  "zh-CN": "托管 Agent 命令仅支持百炼 Provider；包含其他 Provider 的配置会被拒绝。",
 } as const;
 
 /** The slice of CommandContext the credential pipeline needs: authStage-resolved client + settings. */
@@ -51,15 +51,15 @@ export interface CredentialHost {
  * credentials. Bailian goes through bl's own auth chain (commands declare
  * `auth: "apiKey"`). The resolved credential is injected into the SDK in-memory
  * and scrubbed from the environment. Attach to every command that loads
- * agents.yaml. `bl` prefix is safe: agent commands ship on `bl` only.
+ * agents.yaml. Keep shared notes independent of the host invocation prefix.
  */
 export const CREDENTIALS_NOTE = [
   BAILIAN_ONLY_NOTE,
   {
     "en-US":
-      "Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).",
+      "Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.",
     "zh-CN":
-      "百炼凭证来自 bl 鉴权链：--api-key > DASHSCOPE_API_KEY > `bl auth login`（当前激活的配置 Profile）。",
+      "百炼凭证来自 CLI 鉴权链：--api-key > DASHSCOPE_API_KEY > 当前激活配置 Profile 中保存的凭证。",
   },
   {
     "en-US":
@@ -188,6 +188,7 @@ export function assertProviderCredentials(
       `Provider '${name}' is configured but its API key is empty.`,
       ExitCode.AUTH,
       CREDENTIAL_HINTS[name] ?? `Provide credentials for provider '${name}'.`,
+      { authDomain: name === "bailian" ? "apiKey" : undefined },
     );
   }
 }

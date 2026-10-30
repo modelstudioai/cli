@@ -1,3 +1,4 @@
+import { getCommandPrefix } from "bailian-cli-core";
 import type { CommandContext, CommandNotice, CommandRisk } from "bailian-cli-core";
 import { KNOWLEDGE_BILLING_PAGE } from "bailian-cli-runtime";
 import deleteIndex from "./kb-delete.ts";
@@ -76,7 +77,11 @@ export function reportCreatedKnowledgeBase(
       : `${message}\n`,
   );
   if (command && context.settings.output !== "json") {
-    const instruction = [command.bin, ...command.path, ...command.args]
+    const instruction = [
+      ...getCommandPrefix(context.identity!).split(" "),
+      ...command.path,
+      ...command.args,
+    ]
       .map((word) =>
         /^[a-zA-Z0-9_./:@=-]+$/.test(word) ? word : `'${word.replaceAll("'", "'\\''")}'`,
       )

@@ -309,6 +309,26 @@ test("callConsoleGateway keeps readable message and raw gateway response separat
   }
 });
 
+test("expired Console sessions carry a product-neutral login domain", async () => {
+  const originalFetch = httpTransport.fetch;
+  const response = { data: { success: false, errorCode: "BailianGateway.Login.NotLogined" } };
+  httpTransport.fetch = async () => new Response(JSON.stringify(response));
+  try {
+    await expect(
+      callConsoleGateway({ region: "cn-beijing", site: "domestic", token: "expired" }, 30, {
+        api: "test.api",
+        data: {},
+      }),
+    ).rejects.toMatchObject({
+      exitCode: ExitCode.AUTH,
+      authDomain: "console",
+      rawResponse: JSON.stringify(response),
+    });
+  } finally {
+    httpTransport.fetch = originalFetch;
+  }
+});
+
 test("request uses injected client identity for User-Agent", async () => {
   const originalFetch = httpTransport.fetch;
   let userAgent: string | undefined;

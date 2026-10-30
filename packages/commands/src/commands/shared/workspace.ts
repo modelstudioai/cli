@@ -3,6 +3,7 @@
 // credential scope does not apply to these, so the workspace is a per-command
 // flag instead.
 import {
+  getCommandPrefix,
   BailianError,
   ExitCode,
   unwrapResponse,
@@ -34,7 +35,7 @@ export function resolveWorkspaceId(ctx: {
     throw new BailianError(
       "Workspace ID is required.",
       ExitCode.USAGE,
-      `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${ctx.identity.binName} config set workspace_id <id>`,
+      `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${getCommandPrefix(ctx.identity)} config set workspace_id <id>`,
     );
   }
   return workspaceId;

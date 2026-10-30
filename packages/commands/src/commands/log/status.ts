@@ -1,4 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
+import { getCommandPrefix, detectOutputFormat } from "bailian-cli-core";
 import { ansi, emitResult, displayWidth, padEnd } from "bailian-cli-runtime";
 import {
   defineTelemetryCommand,
@@ -125,12 +125,14 @@ export default defineTelemetryCommand({
 
     if (status.auditSwitch !== true) {
       process.stdout.write(
-        color.dim(`\nRun \`${identity.binName} log audit enable\` to enable audit log delivery.\n`),
+        color.dim(
+          `\nRun \`${getCommandPrefix(identity)} log audit enable\` to enable audit log delivery.\n`,
+        ),
       );
     } else if (status.inferenceSwitch !== true) {
       process.stdout.write(
         color.dim(
-          `\nRun \`${identity.binName} log inference enable\` to enable inference log delivery.\n`,
+          `\nRun \`${getCommandPrefix(identity)} log inference enable\` to enable inference log delivery.\n`,
         ),
       );
     }

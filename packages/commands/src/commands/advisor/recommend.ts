@@ -7,6 +7,7 @@ import {
   defineCommand,
   detectOutputFormat,
   ExitCode,
+  getCommandPrefix,
   type EngineRecommendResult,
   type Degradation,
   LLMError,
@@ -45,7 +46,7 @@ function emitDegradations(degradations: Degradation[]): void {
 }
 
 /** Map a classified engine LLM failure onto a CLI-native BailianError with an actionable hint. */
-function toBailianError(err: LLMError): { message: string; hint?: string } {
+function toBailianError(err: LLMError, commandPrefix: string): { message: string; hint?: string } {
   const stage = STAGE_LABEL[err.stage ?? ""] ?? "LLM call";
   const requestId = err.requestId ? ` (request_id: ${err.requestId})` : "";
   const message = `Recommendation aborted: ${stage} failed — ${err.message}${requestId}`;
@@ -64,7 +65,7 @@ function toBailianError(err: LLMError): { message: string; hint?: string } {
     case "auth":
       return {
         message,
-        hint: "The API key is invalid or lacks access to the model. Check DASHSCOPE_API_KEY / --api-key, or run `bl auth login`. / API Key 无效或无该模型访问权限，请检查 DASHSCOPE_API_KEY / --api-key 或执行 `bl auth login`。",
+        hint: `The API key is invalid or lacks access to the model. Check DASHSCOPE_API_KEY / --api-key, or run \`${commandPrefix} auth login\`. / API Key 无效或无该模型访问权限，请检查 DASHSCOPE_API_KEY / --api-key 或执行 \`${commandPrefix} auth login\`。`,
       };
     case "timeout":
       return {
@@ -245,7 +246,7 @@ export default defineCommand({
       }
     } catch (err) {
       if (err instanceof LLMError) {
-        const { message: errMessage, hint } = toBailianError(err);
+        const { message: errMessage, hint } = toBailianError(err, getCommandPrefix(ctx.identity));
         throw new BailianError(errMessage, ExitCode.GENERAL, hint);
       }
       throw err;

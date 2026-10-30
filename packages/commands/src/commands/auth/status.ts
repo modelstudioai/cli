@@ -1,4 +1,4 @@
-import { defineCommand, detectOutputFormat, maskToken } from "bailian-cli-core";
+import { getCommandPrefix, defineCommand, detectOutputFormat, maskToken } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { API_KEY_PAGE } from "bailian-cli-runtime";
 
@@ -43,8 +43,8 @@ export default defineCommand({
     const modelKeyHint = apiKey
       ? undefined
       : localize({
-          "en-US": `No model API key is configured. Model commands need: ${identity.binName} auth login --console, or ${identity.binName} auth login --api-key <key>`,
-          "zh-CN": `尚未配置模型 API Key。模型命令需要：${identity.binName} auth login --console，或 ${identity.binName} auth login --api-key <key>`,
+          "en-US": `No model API key is configured. Model commands need: ${getCommandPrefix(identity)} auth login --console, or ${getCommandPrefix(identity)} auth login --api-key <key>`,
+          "zh-CN": `尚未配置模型 API Key。模型命令需要：${getCommandPrefix(identity)} auth login --console，或 ${getCommandPrefix(identity)} auth login --api-key <key>`,
         });
 
     if (!authenticated) {
@@ -55,9 +55,9 @@ export default defineCommand({
           config_file: configFile,
           message: "Not authenticated.",
           hint: [
-            `API key (model):   ${identity.binName} auth login --api-key <key> or DASHSCOPE_API_KEY`,
-            `Console gateway:   ${identity.binName} auth login --console`,
-            `OpenAPI (AK/SK):   ${identity.binName} auth login --open-api --access-key-id <id> --access-key-secret <secret>`,
+            `API key (model):   ${getCommandPrefix(identity)} auth login --api-key <key> or DASHSCOPE_API_KEY`,
+            `Console gateway:   ${getCommandPrefix(identity)} auth login --console`,
+            `OpenAPI (AK/SK):   ${getCommandPrefix(identity)} auth login --open-api --access-key-id <id> --access-key-secret <secret>`,
             `Get API Key: ${API_KEY_PAGE}`,
           ].join("\n"),
         },
@@ -96,13 +96,15 @@ export default defineCommand({
         `  Console gateway:  ${consoleCred.source}  ${consoleCred.masked}  (${consoleCred.region}, ${consoleCred.site})`,
       );
     } else {
-      emitBare(`  Console gateway:  not configured (run ${identity.binName} auth login --console)`);
+      emitBare(
+        `  Console gateway:  not configured (run ${getCommandPrefix(identity)} auth login --console)`,
+      );
     }
     if (openapi) {
       emitBare(`  OpenAPI (AK/SK):  ${openapi.source}  ${openapi.access_key_id}`);
     } else {
       emitBare(
-        `  OpenAPI (AK/SK):  not configured (run ${identity.binName} auth login --open-api)`,
+        `  OpenAPI (AK/SK):  not configured (run ${getCommandPrefix(identity)} auth login --open-api)`,
       );
     }
   },

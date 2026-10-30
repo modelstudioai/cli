@@ -1,4 +1,5 @@
 import {
+  getCommandPrefix,
   defineCommand,
   createFineTune,
   getDataset,
@@ -632,7 +633,7 @@ async function runCreate<F extends FlagsDef>(
 
   const training = await analyzeDatasetTokens(
     settings,
-    identity.binName,
+    getCommandPrefix(identity),
     datasetsRaw,
     "datasets",
     profile,
@@ -645,7 +646,7 @@ async function runCreate<F extends FlagsDef>(
   const validation = flags.validations
     ? await analyzeDatasetTokens(
         settings,
-        identity.binName,
+        getCommandPrefix(identity),
         flags.validations as string,
         "validations",
         profile,

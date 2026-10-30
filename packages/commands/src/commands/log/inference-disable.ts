@@ -1,4 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
+import { getCommandPrefix, detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand } from "../shared/telemetry.ts";
 import { disableLogDelivery } from "./shared.ts";
 
@@ -23,7 +23,7 @@ export default defineTelemetryCommand({
       {
         client: ctx.client,
         settings: ctx.settings,
-        binName: ctx.identity.binName,
+        binName: getCommandPrefix(ctx.identity),
         format,
       },
       "inference",

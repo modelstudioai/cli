@@ -15,6 +15,7 @@ import type {
   LocalizedText,
 } from "bailian-cli-core";
 import {
+  getCommandPrefix,
   Client,
   DEFAULT_LANGUAGE,
   isModelConnectionSourceMismatch,
@@ -152,14 +153,14 @@ function formatModelConnectionMismatchNotice(
         `api_key ← ${apiKeyLabel}`,
         `base_url ← ${baseUrlLabel}`,
         "These may not match. The request will continue.",
-        `Set both from the same source, or run ${ctx.identity.binName} config show to view effective configuration.`,
+        `Set both from the same source, or run ${getCommandPrefix(ctx.identity)} config show to view effective configuration.`,
       ].join("\n"),
       "zh-CN": [
         "api_key 和 base_url 来自不同配置源。",
         `api_key ← ${apiKeyLabel}`,
         `base_url ← ${baseUrlLabel}`,
         "两者可能不匹配，请求仍会继续。",
-        `建议设为同一来源，或运行 ${ctx.identity.binName} config show 查看生效配置。`,
+        `建议设为同一来源，或运行 ${getCommandPrefix(ctx.identity)} config show 查看生效配置。`,
       ].join("\n"),
     })
     .split("\n");
@@ -309,13 +310,16 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
         newVersion,
         ctx.identity.npmPackage,
         ctx.identity.clientName,
+        getCommandPrefix(ctx.identity),
       );
     } else {
       const color = ansi(process.stderr);
       process.stderr.write(
         `\n  ${color.yellow(`Update available: ${ctx.identity.version} → ${newVersion}`)}\n`,
       );
-      process.stderr.write(`  Run ${color.cyan(`${ctx.identity.binName} update`)} to upgrade\n\n`);
+      process.stderr.write(
+        `  Run ${color.cyan(`${getCommandPrefix(ctx.identity)} update`)} to upgrade\n\n`,
+      );
     }
   }
 };
