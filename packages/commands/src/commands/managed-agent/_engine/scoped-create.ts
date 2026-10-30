@@ -12,7 +12,7 @@ import {
   resolveProjectConfigFromObject,
   syncProjectResourcesWithStateBackend,
 } from "@openagentpack/sdk";
-import { BailianError, type CommandContext, detectOutputFormat, ExitCode } from "bailian-cli-core";
+import { BailianError, type CommandContext, ExitCode } from "bailian-cli-core";
 import { parseDocument } from "yaml";
 import { formatResourceLabel } from "./address-utils.ts";
 import { resolveAgentProjectConfig } from "./config-loader.ts";
@@ -202,7 +202,6 @@ export async function resolveCandidateDeclaration(options: {
 
 export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput): Promise<void> {
   const { project, host } = input;
-  const format = detectOutputFormat(host.settings.output);
   const keySelection = await project.stateBackend.read(project.stateScope, (state) =>
     selectResourceKey({
       displayName: input.displayName,
@@ -252,7 +251,7 @@ export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput):
           scope: { roots: [root] },
           mode: "create-only",
           refresh: !host.settings.dryRun,
-          quiet: format === "json",
+          quiet: false,
           onFeedback: (event) => renderAgentFeedback(host.output, event),
         }),
       ),
@@ -307,7 +306,7 @@ export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput):
           scope: { roots: [root] },
           mode: "create-only",
           refresh: true,
-          quiet: format === "json",
+          quiet: false,
           onFeedback: (event) => renderAgentFeedback(host.output, event),
           policy: "block",
         }),

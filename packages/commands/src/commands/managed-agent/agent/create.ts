@@ -13,18 +13,13 @@ import {
   type SkillDecl,
   syncProjectResourcesWithStateBackend,
 } from "@openagentpack/sdk";
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { parseDocument } from "yaml";
 import { formatResourceLabel } from "../_engine/address-utils.ts";
 import { CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
 import { retainAgentError, withAgentErrors } from "../_engine/errors.ts";
+import { renderAgentFeedback } from "../_engine/feedback.ts";
 import {
   type LoadedScopedCreateProject,
   loadScopedCreateProject,
@@ -454,7 +449,6 @@ export default defineCommand({
   },
   async run(ctx) {
     const { flags, settings } = ctx;
-    const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
     const project = await loadScopedCreateProject(ctx, file);
     const provider = project.provider;
@@ -551,7 +545,8 @@ export default defineCommand({
             provider,
             scope: { roots },
             refresh: !settings.dryRun,
-            quiet: format === "json",
+            quiet: false,
+            onFeedback: (event) => renderAgentFeedback(ctx.output, event),
             mode: "create-only",
           }),
         ),
@@ -626,7 +621,8 @@ export default defineCommand({
             provider,
             scope: { roots },
             refresh: true,
-            quiet: format === "json",
+            quiet: false,
+            onFeedback: (event) => renderAgentFeedback(ctx.output, event),
             mode: "create-only",
             policy: "block",
           }),

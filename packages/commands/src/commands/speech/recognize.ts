@@ -4,6 +4,7 @@ import {
   BailianError,
   defineCommand,
   ExitCode,
+  formatOutput,
   type CommandOutput,
   type Client,
   type Settings,
@@ -492,7 +493,10 @@ async function handleAsyncMode(
   const results = collectAsrTranscriptionItems(result.output);
 
   if (results.length === 0) {
-    commandOutput.result({ task_id: taskId, status: result.output.task_status });
+    commandOutput.result(
+      { ...result, transcriptions: [] },
+      { text: formatOutput({ task_id: taskId, status: result.output.task_status }, "text") },
+    );
     return;
   }
 

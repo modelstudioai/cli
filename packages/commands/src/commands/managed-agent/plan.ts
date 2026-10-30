@@ -1,10 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -57,7 +51,6 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
     // Offline mode never talks to a provider and never saves refreshed state:
     // --no-refresh by explicit request, --dry-run by contract (read-only run).
@@ -73,7 +66,8 @@ export default defineCommand({
         return planProjectContext(runtime, {
           provider: "bailian",
           refresh: !offline,
-          quiet: format === "json",
+          // SDK quiet also drops warnings before onFeedback; the reporter owns filtering.
+          quiet: false,
           onFeedback: (event) => renderAgentFeedback(ctx.output, event),
         });
       }),

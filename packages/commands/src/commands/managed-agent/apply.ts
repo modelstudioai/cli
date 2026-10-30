@@ -74,7 +74,7 @@ export default defineCommand({
         return planProjectContext(runtime, {
           provider: "bailian",
           refresh: !flags.noRefresh,
-          quiet: true,
+          quiet: false,
           onFeedback: (event) => renderAgentFeedback(ctx.output, event),
         });
       }),

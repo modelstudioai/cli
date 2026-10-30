@@ -411,16 +411,36 @@ test("missing transcription URL remains silent in text and preserves metadata in
   expect(JSON.parse(json.stdout)).toMatchObject({ output: taskOutput, transcriptions: [] });
 });
 
-test("no transcription items keeps the existing status result and ignores --out", async () => {
-  taskOutput = { task_id: "task-test", task_status: "SUCCEEDED" };
-  const destination = join(directory, "unused.json");
-  const result = await invoke(
-    { ...flags, out: destination, pollInterval: 0 },
-    { format: "json", quiet: true },
-  );
-  expect(JSON.parse(result.stdout)).toEqual({ task_id: "task-test", status: "SUCCEEDED" });
-  expect(existsSync(destination)).toBe(false);
-});
+test.each(displays)(
+  "empty async result retains task JSON and text summary without writing --out: $format q=$quiet v=$verbose",
+  async (display) => {
+    taskOutput = {
+      task_id: "task-test",
+      task_status: "SUCCEEDED",
+      results: [],
+      future: { values: [false, 0, null, []] },
+    };
+    const destination = join(directory, "unused.json");
+    const result = await invoke({ ...flags, out: destination, pollInterval: 0 }, display);
+    expect(result.exitCode, result.stderr).toBe(0);
+    if (display.format === "json")
+      expect(JSON.parse(result.stdout)).toEqual({
+        output: taskOutput,
+        request_id: "poll-request",
+        usage: { duration: 2 },
+        transcriptions: [],
+      });
+    else expect(result.stdout).toBe("task_id: task-test\nstatus: SUCCEEDED\n");
+    expect(requests).toHaveLength(1);
+    expect(polls).toBe(1);
+    expect(downloads).toEqual([]);
+    expect(existsSync(destination)).toBe(false);
+    expect(result.stderr).not.toContain("Full result saved to:");
+    expect(result.stderr).not.toContain("test-placeholder");
+    if (display.format === "json") checkDiagnostics(result, display);
+    else expect(result.stderr.includes("[Model:")).toBe(!display.quiet);
+  },
+);
 
 test.each(["text", "json"] as const)(
   "submission-only returns task ID without polling or writing: %s",

@@ -211,7 +211,7 @@ export const managedAgentProjectPublish = defineCommand({
         planProjectPublish(root, {
           provider: "bailian",
           refresh: !ctx.flags.noRefresh,
-          quiet: true,
+          quiet: false,
           onFeedback: (event) => renderAgentFeedback(ctx.output, event),
           resolveBuild,
         }),

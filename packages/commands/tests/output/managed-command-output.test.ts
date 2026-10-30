@@ -25,6 +25,7 @@ import {
   createDirectoryWorkspaceVersionService,
   initializeDirectoryProject,
   previewProjectBuild,
+  PROJECT_STATE_FILE,
 } from "@openagentpack/sdk/project-workspace";
 import mapping from "./fixtures/managed-command-map.json" with { type: "json" };
 import baseline from "./fixtures/managed-command-baseline.json" with { type: "json" };
@@ -109,6 +110,7 @@ async function invoke(
     fail?: boolean;
     existingOutput?: boolean;
     interruptStream?: boolean;
+    refreshFailure?: boolean;
     flags?: Record<string, unknown>;
   } = {},
 ) {
@@ -163,13 +165,25 @@ agents:
     remote_id: "fixture-agent",
     content_hash: "fixture-hash",
   });
-  if (options.dryRun === false && entry.name === "managedAgentSessionRun")
+  if (
+    (options.dryRun === false && entry.name === "managedAgentSessionRun") ||
+    (options.refreshFailure && entry.name === "managedAgentAgentCreate")
+  )
     state.setResource({
       address: { provider: "bailian", type: "environment", name: "dev" },
       remote_id: "fixture-env",
       content_hash: "fixture-hash",
     });
   await state.save();
+  if (options.refreshFailure && entry.name === "managedAgentProjectPublish") {
+    const projectState = StateManager.initialize(join(projectDirectory, PROJECT_STATE_FILE));
+    projectState.setResource({
+      address: { provider: "bailian", type: "agent", name: "assistant" },
+      remote_id: "fixture-agent",
+      content_hash: "fixture-hash",
+    });
+    await projectState.save();
+  }
   const versions = createDirectoryWorkspaceVersionService(projectDirectory);
   await versions.enable("fixture version");
   const history = await versions.listVersions();
@@ -305,6 +319,7 @@ agents:
       method,
       body: typeof init?.body === "string" ? init.body : null,
     });
+    if (options.refreshFailure && method === "GET") throw new Error("fixture refresh unavailable");
     if (options.fail)
       return Response.json(
         {
@@ -680,3 +695,52 @@ test.each([false, true])(
     });
   },
 );
+
+const refreshScenarios = [
+  { name: "managedAgentPlan", dryRun: false, yes: false, exitCode: 0 },
+  { name: "managedAgentApply", dryRun: false, yes: false, exitCode: 1 },
+  { name: "managedAgentProjectPublish", dryRun: true, yes: false, exitCode: 0 },
+  { name: "managedAgentAgentCreate", dryRun: false, yes: false, exitCode: 0 },
+  { name: "managedAgentAgentCreate", dryRun: false, yes: true, exitCode: 2 },
+  { name: "managedAgentDeploymentCreate", dryRun: false, yes: false, exitCode: 0 },
+  { name: "managedAgentDeploymentCreate", dryRun: false, yes: true, exitCode: 2 },
+];
+for (const scenario of refreshScenarios) {
+  test.each(
+    (["text", "json"] as const).flatMap((format) =>
+      [false, true].map((quiet) => ({ format, quiet, verbose: false })),
+    ),
+  )(
+    `${scenario.name} dryRun=${scenario.dryRun} yes=${scenario.yes} retains SDK refresh warnings: $format quiet=$quiet`,
+    async (display) => {
+      const result = await invoke(find(scenario.name), display, {
+        dryRun: scenario.dryRun,
+        refreshFailure: true,
+        flags: { noRefresh: false, yes: scenario.yes, environment: "dev" },
+      });
+      expect(result.exitCode, result.stderr).toBe(scenario.exitCode);
+      expect(result.strayOut + result.strayErr).toBe("");
+      expect(result.calls.some((call) => (call as { method: string }).method === "GET")).toBe(true);
+      if (display.format === "json") {
+        if (result.stdout) expect(() => JSON.parse(result.stdout)).not.toThrow();
+        const diagnostics = result.stderr
+          .trim()
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => JSON.parse(line));
+        const warnings = diagnostics.filter(
+          (record) =>
+            record.warning?.code === "AGENT_RUNTIME_FEEDBACK" &&
+            record.warning.details?.type === "refresh_resource_failed",
+        );
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0].warning.message).toContain("fixture refresh unavailable");
+        expect(diagnostics.every((record) => record.warning || record.error)).toBe(true);
+      } else {
+        expect(result.stderr.match(/Failed to refresh/g)).toHaveLength(1);
+        expect(result.stderr).toContain("fixture refresh unavailable");
+      }
+      expect(result.stderr).not.toContain("fixture-api-key");
+    },
+  );
+}
