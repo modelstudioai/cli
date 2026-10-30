@@ -1,13 +1,12 @@
 import {
   defineCommand,
-  detectOutputFormat,
   DECISION_REGIONS,
   DEFAULT_DECISION_MODEL,
   DEFAULT_DECISION_REGION,
   type DecisionRequest,
   type DecisionResponse,
 } from "bailian-cli-core";
-import { emitBare, emitRequestId, emitResult } from "bailian-cli-runtime";
+
 import {
   buildDecisionInput,
   decisionInputFlagsError,
@@ -17,6 +16,7 @@ import {
 } from "./shared.ts";
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Run the decision model: typed choice / noul / score answers with probabilities",
     "zh-CN": "调用决策模型：一次返回 choice / noul / score 判定结果及概率分布",
@@ -150,10 +150,10 @@ export default defineCommand({
       client: ctx.client,
       localize: ctx.localize,
     });
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -164,15 +164,13 @@ export default defineCommand({
     });
 
     if (format !== "text") {
-      emitResult(response, format);
+      ctx.output.result(response);
       return;
     }
 
-    emitBare(formatDecisionAnswers(response));
-    if (!settings.quiet) {
-      const stats = formatDecisionStats(response);
-      if (stats) process.stderr.write(`${stats}\n`);
-    }
-    emitRequestId(response.request_id, settings.quiet);
+    ctx.output.result(response, { text: formatDecisionAnswers(response) });
+    const stats = formatDecisionStats(response);
+    if (stats) ctx.output.info(stats);
+    if (response.request_id) ctx.output.info(`request_id: ${response.request_id}`);
   },
 });

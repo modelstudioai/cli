@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 
 export default defineCommand({
   description: {
@@ -39,27 +38,20 @@ export default defineCommand({
     const filePath = flags.file;
     const model = flags.model;
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult({ action: "upload", file: filePath, model }, format);
+      ctx.output.result({ action: "upload", file: filePath, model });
       return;
     }
 
     const ossUrl = await ctx.client.uploadFile(filePath, model);
 
-    if (settings.quiet) {
-      emitBare(ossUrl);
-    } else {
-      emitResult(
-        {
-          url: ossUrl,
-          model,
-          expires_in: "48 hours",
-          note: "When using this URL in API calls, add header: X-DashScope-OssResourceResolve: enable",
-        },
-        format,
-      );
+    {
+      ctx.output.result({
+        url: ossUrl,
+        model,
+        expires_in: "48 hours",
+        note: "When using this URL in API calls, add header: X-DashScope-OssResourceResolve: enable",
+      });
     }
   },
 });
