@@ -1,5 +1,4 @@
 import { defineCommand } from "bailian-cli-core";
-import { emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: {
@@ -32,69 +31,93 @@ export default defineCommand({
     const store = ctx.authStore;
     const stored = store.stored();
 
-    if (flags.console) {
-      if (settings.dryRun) {
-        if (stored.console) emitBare(`Would clear access_token from ${store.path}`);
-        else emitBare("No console access_token to clear.");
-        emitBare("No changes made.");
-        return;
-      }
-      if (await store.logout("console")) {
-        process.stderr.write(`Cleared access_token from ${store.path}\n`);
-        if (stored.apiKey) {
-          process.stderr.write(
-            "api_key is still configured and will be used for authentication.\n",
-          );
-        }
-      } else {
-        process.stderr.write("No console access_token to clear.\n");
-      }
-      return;
-    }
-
-    if (flags.openApi) {
-      if (settings.dryRun) {
-        if (stored.openapi)
-          emitBare(
-            `Would clear access_key_id / access_key_secret / security_token from ${store.path}`,
-          );
-        else emitBare("No OpenAPI AK/SK credentials to clear.");
-        emitBare("No changes made.");
-        return;
-      }
-      if (await store.logout("openapi")) {
-        process.stderr.write(
-          `Cleared access_key_id / access_key_secret / security_token from ${store.path}\n`,
-        );
-        if (stored.apiKey || stored.console) {
-          process.stderr.write(
-            "Other credentials are still configured and will be used for authentication.\n",
-          );
-        }
-      } else {
-        process.stderr.write("No OpenAPI AK/SK credentials to clear.\n");
-      }
-      return;
-    }
-
-    const hasStoredAuth = stored.apiKey || stored.console || stored.openapi || !!stored.baseUrl;
-
+    const scope = flags.console ? "console" : flags.openApi ? "openapi" : "all";
+    const hasStoredAuth =
+      scope === "console"
+        ? stored.console
+        : scope === "openapi"
+          ? stored.openapi
+          : !!(stored.apiKey || stored.console || stored.openapi || stored.baseUrl);
+    const fields =
+      scope === "console"
+        ? "access_token"
+        : scope === "openapi"
+          ? "access_key_id / access_key_secret / security_token"
+          : "api_key / base_url / access_token / access_key_id / access_key_secret / security_token";
+    const empty =
+      scope === "console"
+        ? {
+            "en-US": "No console access_token to clear.",
+            "zh-CN": "没有可清除的控制台 access_token。",
+          }
+        : scope === "openapi"
+          ? {
+              "en-US": "No OpenAPI AK/SK credentials to clear.",
+              "zh-CN": "没有可清除的 OpenAPI AK/SK 凭证。",
+            }
+          : {
+              "en-US": "No credentials or model Base URL to clear.",
+              "zh-CN": "没有可清除的凭证或模型 Base URL。",
+            };
     if (settings.dryRun) {
-      if (hasStoredAuth)
-        emitBare(
-          `Would clear api_key / base_url / access_token / access_key_id / access_key_secret / security_token from ${store.path}`,
-        );
-      else emitBare("No credentials or model Base URL to clear.");
-      emitBare("No changes made.");
+      ctx.output.result(
+        {
+          action: "auth.logout",
+          scope,
+          would_clear: hasStoredAuth,
+          config: settings.configName ?? "default",
+          config_file: store.path,
+        },
+        {
+          text: [
+            ctx.localize(
+              hasStoredAuth
+                ? {
+                    "en-US": `Would clear ${fields} from ${store.path}`,
+                    "zh-CN": `将从 ${store.path} 清除 ${fields}`,
+                  }
+                : empty,
+            ),
+            ctx.localize({ "en-US": "No changes made.", "zh-CN": "未进行任何修改。" }),
+          ].join("\n"),
+        },
+      );
       return;
     }
-
-    if (await store.logout("all")) {
-      process.stderr.write(
-        `Cleared api_key / base_url / access_token / access_key_id / access_key_secret / security_token from ${store.path}\n`,
+    const cleared = await store.logout(scope);
+    const lines = [
+      ctx.localize(
+        cleared
+          ? {
+              "en-US": `Cleared ${fields} from ${store.path}`,
+              "zh-CN": `已从 ${store.path} 清除 ${fields}`,
+            }
+          : empty,
+      ),
+    ];
+    if (cleared && scope === "console" && stored.apiKey)
+      lines.push(
+        ctx.localize({
+          "en-US": "api_key is still configured and will be used for authentication.",
+          "zh-CN": "api_key 仍已配置，将用于认证。",
+        }),
       );
-    } else {
-      process.stderr.write("No credentials or model Base URL to clear.\n");
-    }
+    if (cleared && scope === "openapi" && (stored.apiKey || stored.console))
+      lines.push(
+        ctx.localize({
+          "en-US": "Other credentials are still configured and will be used for authentication.",
+          "zh-CN": "其他凭证仍已配置，将用于认证。",
+        }),
+      );
+    ctx.output.result(
+      {
+        action: "auth.logout",
+        scope,
+        cleared,
+        config: settings.configName ?? "default",
+        config_file: store.path,
+      },
+      { text: lines.join("\n") },
+    );
   },
 });

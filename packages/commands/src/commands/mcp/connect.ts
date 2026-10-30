@@ -6,12 +6,10 @@ import {
   bailianMcpPath,
   bailianMcpSsePath,
   defineCommand,
-  detectOutputFormat,
   getConfigDir,
   trackingHeaders,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 import {
   MCP_AGENT_IDS,
   connectMcpAgents,
@@ -109,19 +107,15 @@ export default defineCommand({
     const endpoint = `${REGIONS.cn}${endpointPath}`;
     const channelHeaders = trackingHeaders(ctx.identity);
     const headerNames = ["Authorization", ...Object.keys(channelHeaders)];
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          server: flags.server,
-          transport,
-          endpoint,
-          agents,
-          header_names: headerNames,
-        },
-        format,
-      );
+      ctx.output.result({
+        server: flags.server,
+        transport,
+        endpoint,
+        agents,
+        header_names: headerNames,
+      });
       return;
     }
 
@@ -139,6 +133,6 @@ export default defineCommand({
       configDir: getConfigDir(),
     });
 
-    emitResult({ server: flags.server, transport, endpoint, results }, format);
+    ctx.output.result({ server: flags.server, transport, endpoint, results });
   },
 });

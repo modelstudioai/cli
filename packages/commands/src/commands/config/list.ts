@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 
 export default defineCommand({
   description: {
@@ -11,24 +10,16 @@ export default defineCommand({
   async run(ctx) {
     const profiles = ctx.configStore.profiles();
     const names = ["default", ...Object.keys(profiles.named).sort()];
-    const format = detectOutputFormat(ctx.settings.output);
-
-    if (format === "json") {
-      emitResult(
-        {
-          active_config: profiles.active,
-          profiles: names,
-          config_file: ctx.configStore.path,
-        },
-        format,
-      );
-      return;
-    }
-
+    const result = {
+      active_config: profiles.active,
+      profiles: names,
+      config_file: ctx.configStore.path,
+    };
     const nameWidth = Math.max("NAME".length, ...names.map((name) => name.length));
-    emitBare(`${"NAME".padEnd(nameWidth)}  ACTIVE`);
+    const lines = [`${"NAME".padEnd(nameWidth)}  ACTIVE`];
     for (const name of names) {
-      emitBare(`${name.padEnd(nameWidth)}  ${name === profiles.active ? "*" : ""}`);
+      lines.push(`${name.padEnd(nameWidth)}  ${name === profiles.active ? "*" : ""}`);
     }
+    ctx.output.result(result, { text: lines.join("\n") });
   },
 });

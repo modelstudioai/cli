@@ -309,6 +309,10 @@ export interface RecommendDeps {
   catalog: () => Promise<ModelProfile[]>;
   families?: () => Promise<Map<string, FamilyProfile>>;
   verbose?: boolean;
+  /** Optional host-owned trace sink; the pure engine never writes standard streams. */
+  onTrace?: (trace: RecommendTrace) => void;
+  /** Optional host-owned agent diagnostic sink. */
+  onDiagnostic?: (message: string) => void;
   /** When provided, the engine appends decision-log lines here (--think). */
   decisionLog?: string[];
   /** When > 0, overrides the router's default slate size (`--top`). */

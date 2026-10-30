@@ -1,6 +1,7 @@
 import { expect, test } from "vite-plus/test";
+import { createOutputReporter } from "bailian-cli-runtime";
 import { makeAuthUiBridge } from "../src/commands/auth/console-ui.ts";
-import type { AuthState, AuthStore, Identity, Settings } from "bailian-cli-core";
+import { buildSettings, type AuthState, type AuthStore, type Identity } from "bailian-cli-core";
 
 /** Build a bridge over a fake AuthStore. Only describe()/logout() are used by
  * the surface under test; startConsoleLogin() is intentionally not exercised
@@ -16,7 +17,10 @@ function bridgeWith(state: AuthState, onLogout?: (scope: string) => Promise<bool
   } as unknown as AuthStore;
   return makeAuthUiBridge({
     identity: {} as unknown as Identity,
-    settings: {} as unknown as Settings,
+    settings: buildSettings({ flags: { output: "text" }, file: {}, env: {} }),
+    output: createOutputReporter({
+      settings: buildSettings({ flags: { output: "text" }, file: {}, env: {} }),
+    }).output,
     authStore,
   });
 }

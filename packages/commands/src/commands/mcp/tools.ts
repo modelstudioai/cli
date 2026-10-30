@@ -1,5 +1,4 @@
-import { defineCommand, bailianMcpPath, detectOutputFormat } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, bailianMcpPath } from "bailian-cli-core";
 import { rethrowWithMcpActivateHint } from "./activate-hint.ts";
 
 export default defineCommand({
@@ -40,10 +39,9 @@ export default defineCommand({
     const code = flags.server;
 
     const previewUrl = flags.url || ctx.client.url(bailianMcpPath(code));
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ server: code, url: previewUrl, action: "tools/list" }, format);
+      ctx.output.result({ server: code, url: previewUrl, action: "tools/list" });
       return;
     }
 
@@ -52,7 +50,7 @@ export default defineCommand({
       const connected = await ctx.client.connectBailianMcp(code, flags.url);
       client = connected.client;
       const tools = await connected.client.listTools();
-      emitResult({ server: code, url: connected.url, tools }, format);
+      ctx.output.result({ server: code, url: connected.url, tools });
     } catch (error) {
       if (!flags.url) {
         rethrowWithMcpActivateHint(error, code);

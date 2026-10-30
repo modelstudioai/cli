@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  generateCLIAccessToken,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, generateCLIAccessToken, type FlagsDef } from "bailian-cli-core";
 
 const FLAGS = {
   accessKeyId: {
@@ -43,17 +37,17 @@ export default defineCommand({
   exampleArgs: ["--access-key-id LTAIxxxxx --access-key-secret xxxxx --security-token <token>"],
   async run(ctx) {
     const { identity, settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
 
     const resp = await generateCLIAccessToken({
       identity,
       settings,
+      debug: (record) => ctx.output.debug(record),
       baseUrl: ctx.client.baseUrl,
       accessKeyId: flags.accessKeyId,
       accessKeySecret: flags.accessKeySecret,
       securityToken: flags.securityToken || undefined,
     });
 
-    emitResult(resp, format);
+    ctx.output.result(resp);
   },
 });
