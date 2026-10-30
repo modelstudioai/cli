@@ -8,6 +8,12 @@ export { default as authStatus } from "./commands/auth/status.ts";
 export { default as authLogout } from "./commands/auth/logout.ts";
 export { default as authGenerateAccessToken } from "./commands/auth/generate-access-token.ts";
 export { default as textChat } from "./commands/text/chat.ts";
+export { default as batchConvert } from "./commands/batch/convert.ts";
+export { default as batchCreate } from "./commands/batch/create.ts";
+export { default as batchList } from "./commands/batch/list.ts";
+export { default as batchGet } from "./commands/batch/get.ts";
+export { default as batchCancel } from "./commands/batch/cancel.ts";
+export { default as batchDownload } from "./commands/batch/download.ts";
 export { default as textOmni } from "./commands/omni/chat.ts";
 export { default as imageGenerate } from "./commands/image/generate.ts";
 export { default as imageEdit } from "./commands/image/edit.ts";
@@ -18,6 +24,10 @@ export { default as videoTaskGet } from "./commands/video/task-get.ts";
 export { default as videoDownload } from "./commands/video/download.ts";
 export { default as visionDescribe } from "./commands/vision/describe.ts";
 export { default as decisionPredict } from "./commands/decision/predict.ts";
+export { default as parsexParseSubmit } from "./commands/parsex/parse-submit.ts";
+export { default as parsexParseResult } from "./commands/parsex/parse-result.ts";
+export { default as parsexExtractSubmit } from "./commands/parsex/extract-submit.ts";
+export { default as parsexExtractResult } from "./commands/parsex/extract-result.ts";
 export { default as configShow } from "./commands/config/show.ts";
 export { default as configSet } from "./commands/config/set.ts";
 export { default as configList } from "./commands/config/list.ts";
@@ -32,9 +42,14 @@ export { default as memorySearch } from "./commands/memory/search.ts";
 export { default as memoryList } from "./commands/memory/list.ts";
 export { default as memoryUpdate } from "./commands/memory/update.ts";
 export { default as memoryDelete } from "./commands/memory/delete.ts";
+export { default as memoryNodeShow } from "./commands/memory/node-show.ts";
+export { default as memorySkillExport } from "./commands/memory/skill-export.ts";
 export { default as memoryProfileCreate } from "./commands/memory/profile-create.ts";
+export { default as memoryProfileList } from "./commands/memory/profile-list.ts";
+export { default as memoryProfileShow } from "./commands/memory/profile-show.ts";
+export { default as memoryProfileUpdate } from "./commands/memory/profile-update.ts";
+export { default as memoryProfileDelete } from "./commands/memory/profile-delete.ts";
 export { default as memoryProfileGet } from "./commands/memory/profile-get.ts";
-export { default as knowledgeRetrieve } from "./commands/knowledge/retrieve.ts";
 export { default as knowledgeSearch } from "./commands/knowledge/search.ts";
 export { default as knowledgeChat } from "./commands/knowledge/chat.ts";
 export { default as knowledgeKbList } from "./commands/knowledge/kb-list.ts";
@@ -42,6 +57,7 @@ export { default as knowledgeKbInfo } from "./commands/knowledge/kb-info.ts";
 export { default as knowledgeDocList } from "./commands/knowledge/doc-list.ts";
 export { default as knowledgeDocStatus } from "./commands/knowledge/doc-status.ts";
 export { default as knowledgeDocUpload } from "./commands/knowledge/doc-upload.ts";
+export { default as knowledgeInit } from "./commands/knowledge/init.ts";
 export { default as knowledgeKbCreate } from "./commands/knowledge/kb-create.ts";
 export { default as knowledgeKbUpdate } from "./commands/knowledge/kb-update.ts";
 export { default as knowledgeKbDelete } from "./commands/knowledge/kb-delete.ts";
@@ -279,6 +295,18 @@ export {
   managedAgentFileSearch,
   managedAgentFileUpload,
 } from "./commands/managed-agent/file.ts";
+export {
+  managedAgentWebhookCreate,
+  managedAgentWebhookList,
+  managedAgentWebhookGet,
+  managedAgentWebhookUpdate,
+  managedAgentWebhookDelete,
+  managedAgentWebhookEnable,
+  managedAgentWebhookDisable,
+  managedAgentWebhookTest,
+  managedAgentWebhookResetSecret,
+  managedAgentWebhookEvents,
+} from "./commands/managed-agent/webhook.ts";
 export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";
@@ -308,3 +336,21 @@ export {
   sandboxTemplateList,
   sandboxTemplateUpdate,
 } from "./commands/sandbox/template.ts";
+
+export { default as knowledgeDocImport } from "./commands/knowledge/doc-import.ts";
+
+export { default as knowledgeDocSync } from "./commands/knowledge/doc-sync.ts";
+
+export { default as managedAgentMemoryStoreCreate } from "./commands/managed-agent/memory-store/create.ts";
+export {
+  managedAgentMemoryStoreList,
+  managedAgentMemoryStoreGet,
+  managedAgentMemoryCreate,
+  managedAgentMemoryList,
+  managedAgentMemoryGet,
+  managedAgentMemoryUpdate,
+  managedAgentMemoryDelete,
+  managedAgentMemoryVersionList,
+  managedAgentMemoryVersionGet,
+  managedAgentMemoryVersionRedact,
+} from "./commands/managed-agent/memory-store/api.ts";

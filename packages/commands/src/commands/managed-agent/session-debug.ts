@@ -17,6 +17,7 @@ import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { writeOutputFile } from "./_engine/output-file.ts";
 import { fetchAllPages } from "./_engine/pagination.ts";
+import { redactEnvironmentVariables } from "./_engine/environment-variables.ts";
 
 const SESSION_ID_FLAG = {
   sessionId: {
@@ -145,10 +146,17 @@ export function redactSensitiveValues(value: unknown): unknown {
   if (typeof value === "string") return redactSensitiveText(value);
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [
-      key,
-      SENSITIVE_KEY.test(key) ? "[REDACTED]" : redactSensitiveValues(entry),
-    ]),
+    Object.entries(value).map(([key, entry]) => {
+      if (
+        key === "environment_variables" &&
+        entry !== null &&
+        typeof entry === "object" &&
+        !Array.isArray(entry)
+      ) {
+        return [key, redactEnvironmentVariables(entry as Record<string, unknown>)];
+      }
+      return [key, SENSITIVE_KEY.test(key) ? "[REDACTED]" : redactSensitiveValues(entry)];
+    }),
   );
 }
 

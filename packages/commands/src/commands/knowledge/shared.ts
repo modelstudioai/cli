@@ -12,18 +12,9 @@ import {
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 
-// Knowledge APIs use a workspace-specific host, so --workspace-id is a per-command
-// flag here (the console credential scope does not apply).
-export const WORKSPACE_FLAG = {
-  workspaceId: {
-    type: "string",
-    valueHint: "<id>",
-    description: {
-      "en-US": "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
-      "zh-CN": "API Endpoint URL 使用的 Workspace ID（也可设置 BAILIAN_WORKSPACE_ID）",
-    },
-  },
-} satisfies FlagsDef;
+// The workspace scope is shared with the memory commands, so it lives in
+// ../shared/workspace.ts; re-exported here to keep the knowledge imports local.
+export { resolveWorkspaceId, WORKSPACE_FLAG } from "../shared/workspace.ts";
 
 // Unified pagination flags for admin list commands. The server-side page/size
 // parameter names differ per endpoint (page_number/page_num/pageNum/pageNumber…)
@@ -42,23 +33,6 @@ export const PAGE_FLAGS = {
     description: { "en-US": "Page size per request", "zh-CN": "每次请求的分页大小" },
   },
 } satisfies FlagsDef;
-
-/** Three-level fallback: flag > BAILIAN_WORKSPACE_ID env > config (env/config are merged into settings); missing → USAGE. */
-export function resolveWorkspaceId(ctx: {
-  flags: { workspaceId?: string };
-  settings: { workspaceId?: string };
-  identity: { binName: string };
-}): string {
-  const workspaceId = ctx.flags.workspaceId || ctx.settings.workspaceId;
-  if (!workspaceId) {
-    throw new BailianError(
-      "Workspace ID is required.",
-      ExitCode.USAGE,
-      `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${ctx.identity.binName} config set workspace_id <id>`,
-    );
-  }
-  return workspaceId;
-}
 
 /** Truncate text-mode table rows to the terminal width; no truncation when not a TTY (pipe/redirect). */
 export function truncateLine(line: string): string {
@@ -145,13 +119,18 @@ export async function pollImportJob(
   settings: Settings,
   options: { statusUrl: string; intervalSec: number },
 ): Promise<RagIndexJobStatusResponse> {
+  const deadline = Date.now() + settings.timeout * 1000;
   return poll<RagIndexJobStatusResponse>(client, settings, {
     url: options.statusUrl,
+    load: () => readImportJobPages(client, options.statusUrl, deadline),
     intervalSec: options.intervalSec,
     timeoutSec: settings.timeout,
     isComplete: (data) => {
       const response = data as RagIndexJobStatusResponse;
-      return importJobStatus(response) === "COMPLETED" || allDocsTerminal(response);
+      const total = response.data?.total_count;
+      const rows = response.data?.rows ?? [];
+      const covered = typeof total === "number" && total >= 0 && rows.length >= total;
+      return covered && (importJobStatus(response) === "COMPLETED" || allDocsTerminal(response));
     },
     isFailed: () => false,
     getStatus: (data) => {
@@ -167,10 +146,63 @@ export async function pollImportJob(
   });
 }
 
+/** One bounded polling snapshot: start at page one and retain all unique documents. */
+async function readImportJobPages(
+  client: Client,
+  statusUrl: string,
+  deadline: number,
+): Promise<RagIndexJobStatusResponse> {
+  const url = new URL(statusUrl);
+  const requestedSize = Number(url.searchParams.get("page_size") ?? 100);
+  const pageSize =
+    Number.isInteger(requestedSize) && requestedSize > 0 ? Math.min(requestedSize, 100) : 100;
+  url.searchParams.set("page_size", String(pageSize));
+  url.searchParams.set("page_number", "1");
+  const first = await client.requestJson<RagIndexJobStatusResponse>({
+    path: url.toString(),
+    method: "GET",
+  });
+  const documents = new Map<string, RagIndexJobDoc>();
+  function addRows(response: RagIndexJobStatusResponse): void {
+    for (const document of response.data?.rows ?? []) {
+      if (document.doc_id) documents.set(document.doc_id, document);
+    }
+  }
+  addRows(first);
+  const total = first.data?.total_count;
+  if (typeof total !== "number" || !Number.isSafeInteger(total) || total < 0) {
+    // No total means we cannot prove coverage; leave the snapshot non-terminal.
+    return {
+      ...first,
+      data: { ...first.data, total_count: undefined, rows: [...documents.values()] },
+    };
+  }
+  for (let pageNumber = 2; pageNumber <= Math.ceil(total / pageSize); pageNumber++) {
+    if (Date.now() >= deadline) throw new BailianError("Polling timed out.", ExitCode.TIMEOUT);
+    url.searchParams.set("page_number", String(pageNumber));
+    const page = await client.requestJson<RagIndexJobStatusResponse>({
+      path: url.toString(),
+      method: "GET",
+    });
+    const previousSize = documents.size;
+    addRows(page);
+    if (page.data?.total_count !== total) {
+      // A changing result set is not a complete snapshot. Retry from page one.
+      return {
+        ...first,
+        data: { ...first.data, total_count: undefined, rows: [...documents.values()] },
+      };
+    }
+    if (documents.size === previousSize) break;
+  }
+  return { ...first, data: { ...first.data, rows: [...documents.values()] } };
+}
+
 /** Attach a hint for partial-success cases while preserving server context (api/rawResponse kept) */
 export function withPartialSuccessHint(error: unknown, hint: string): unknown {
-  if (!(error instanceof BailianError) || error.hint) return error;
-  return new BailianError(error.message, error.exitCode, hint, {
+  if (!(error instanceof BailianError)) return error;
+  const combinedHint = error.hint ? `${error.hint}\n${hint}` : hint;
+  return new BailianError(error.message, error.exitCode, combinedHint, {
     cause: error,
     api: error.api,
     rawResponse: error.rawResponse,

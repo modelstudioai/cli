@@ -53,3 +53,7 @@ packages/cli/scene/**/outputs/
 
 # Local scratch / plan drafts (never commit)
 .scratch/
+
+# Internal planning and QA handoff documents stay outside the public repository
+/docs/superpowers/
+/docs/testing/

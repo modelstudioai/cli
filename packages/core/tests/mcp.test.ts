@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { expect, test } from "vite-plus/test";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -204,11 +205,11 @@ test("mapSdkError：SseError 结合捕获的 SSE GET 失败重建文案契约；
 // ---- SdkMcpAdapter (streamable) ----
 
 test("SdkMcpAdapter：注入 Authorization / User-Agent / 追踪头，并发送 clientInfo", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const seenHeaders: Headers[] = [];
   const bodies: Array<{ method?: string; params?: { clientInfo?: unknown } }> = [];
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     seenHeaders.push(new Headers(init?.headers));
     const body = parseBody(init);
     bodies.push(body as never);
@@ -240,15 +241,15 @@ test("SdkMcpAdapter：注入 Authorization / User-Agent / 追踪头，并发送 
     });
     adapter.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：serviceSource 覆写 X-Dashscope-Service（AIGC auto → bailian-cli-call）", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const seenHeaders: Headers[] = [];
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     seenHeaders.push(new Headers(init?.headers));
     const body = parseBody(init);
     if (body.method === "initialize") {
@@ -276,15 +277,15 @@ test("SdkMcpAdapter：serviceSource 覆写 X-Dashscope-Service（AIGC auto → b
     }
     adapter.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：握手挂死时整体超时为 TIMEOUT 并清理状态可重试", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let calls = 0;
   // 挂死：不 resolve 也不 reject，模拟服务端吞掉 initialize POST。
-  globalThis.fetch = () => {
+  httpTransport.fetch = () => {
     calls += 1;
     return new Promise<Response>(() => undefined);
   };
@@ -308,15 +309,15 @@ test("SdkMcpAdapter：握手挂死时整体超时为 TIMEOUT 并清理状态可�
     expect(calls).toBeGreaterThan(1);
     adapter.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：握手期间 close() abort 在途请求并使 initialize 结束", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const signals: Array<AbortSignal | null | undefined> = [];
 
-  globalThis.fetch = (_input, init) =>
+  httpTransport.fetch = (_input, init) =>
     new Promise<Response>((_resolve, reject) => {
       signals.push(init?.signal);
       init?.signal?.addEventListener("abort", () => reject(new Error("fetch aborted")), {
@@ -346,14 +347,14 @@ test("SdkMcpAdapter：握手期间 close() abort 在途请求并使 initialize �
     expect((error as BailianError).exitCode).toBe(ExitCode.NETWORK);
     expect(signals.some((signal) => signal?.aborted)).toBe(true);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：无 token 时 initialize 抛 AUTH（不发请求）", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let called = false;
-  globalThis.fetch = async () => {
+  httpTransport.fetch = async () => {
     called = true;
     return new Response(null, { status: 200 });
   };
@@ -368,14 +369,14 @@ test("SdkMcpAdapter：无 token 时 initialize 抛 AUTH（不发请求）", asyn
     await expect(adapter.initialize()).rejects.toMatchObject({ exitCode: ExitCode.AUTH });
     expect(called).toBe(false);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：listTools 与 callTool 结果映射回 McpTool / McpToolResult 形状", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     const body = parseBody(init);
     if (body.method === "initialize") {
       return jsonResponse(jsonRpc(body.id!, INIT_RESULT));
@@ -445,14 +446,14 @@ test("SdkMcpAdapter：listTools 与 callTool 结果映射回 McpTool / McpToolRe
     expect(result.content[1]).toEqual({ type: "image", data: "AAAA", mimeType: "image/png" });
     adapter.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：callTool 原样保留 resource / resource_link 与 structuredContent", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     const body = parseBody(init);
     if (body.method === "initialize") {
       return jsonResponse(jsonRpc(body.id!, INIT_RESULT));
@@ -498,15 +499,15 @@ test("SdkMcpAdapter：callTool 原样保留 resource / resource_link 与 structu
     expect(result.isError).toBe(false);
     adapter.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：同源 307 重定向交给 SDK 跟随并完成握手", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const seenUrls: string[] = [];
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     seenUrls.push(url);
     const body = parseBody(init);
@@ -536,14 +537,14 @@ test("SdkMcpAdapter：同源 307 重定向交给 SDK 跟随并完成握手", asy
     expect(seenUrls).toContain("https://example.test/mcp2");
     adapter.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：跨源 307 不被跟随，保留 `MCP request failed: <status>` 文案", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
-  globalThis.fetch = async () =>
+  httpTransport.fetch = async () =>
     new Response(null, {
       status: 307,
       headers: { Location: "https://other.test/mcp" },
@@ -561,14 +562,14 @@ test("SdkMcpAdapter：跨源 307 不被跟随，保留 `MCP request failed: <sta
     expect(error).toBeInstanceOf(BailianError);
     expect((error as BailianError).message).toMatch(/^MCP request failed: 307/);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("McpClient 兼容导出：原构造签名委托 SdkMcpAdapter 完成调用", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
-  globalThis.fetch = async (_input, init) => {
+  httpTransport.fetch = async (_input, init) => {
     const body = parseBody(init);
     if (body.method === "initialize") {
       return jsonResponse(jsonRpc(body.id!, INIT_RESULT));
@@ -586,14 +587,14 @@ test("McpClient 兼容导出：原构造签名委托 SdkMcpAdapter 完成调用"
     expect(result.content[0]).toEqual({ type: "text", text: "hi" });
     client.close();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：HTTP 4xx POST 复刻 `MCP request failed: <status> - <body>` 文案契约", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
-  globalThis.fetch = async () =>
+  httpTransport.fetch = async () =>
     new Response("MCP不存在或未开通", { status: 404, statusText: "Not Found" });
 
   try {
@@ -608,14 +609,14 @@ test("SdkMcpAdapter：HTTP 4xx POST 复刻 `MCP request failed: <status> - <body
     expect((error as BailianError).message).toMatch(/^MCP request failed:\s*404\b/);
     expect((error as BailianError).message).toContain("MCP不存在或未开通");
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("SdkMcpAdapter：经典 SSE GET 4xx 保留状态码与服务端正文（开通判定契约）", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
 
-  globalThis.fetch = async () =>
+  httpTransport.fetch = async () =>
     new Response("MCP_IS_INVALID", { status: 404, statusText: "Not Found" });
 
   try {
@@ -631,17 +632,17 @@ test("SdkMcpAdapter：经典 SSE GET 4xx 保留状态码与服务端正文（开
     expect((error as BailianError).message).toContain("MCP_IS_INVALID");
     expect((error as BailianError).api?.httpStatus).toBe(404);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 // ---- connectBailianMcpWithFallback orchestration ----
 
 test("connectBailianMcpWithFallback：成功走 Streamable", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const urls: string[] = [];
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     urls.push(`${init?.method ?? "GET"} ${url}`);
     if (url.includes("/sse")) {
@@ -666,15 +667,15 @@ test("connectBailianMcpWithFallback：成功走 Streamable", async () => {
     expect(urls.some((entry) => entry.includes("/sse"))).toBe(false);
     connected.client.close?.();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("connectBailianMcpWithFallback：WebSearch 405 不降级、抛 BailianError、不触达 /sse", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const urls: string[] = [];
 
-  globalThis.fetch = async (input) => {
+  httpTransport.fetch = async (input) => {
     urls.push(requestUrl(input));
     return new Response("current mcp not support streamableHttp", {
       status: 405,
@@ -694,15 +695,15 @@ test("connectBailianMcpWithFallback：WebSearch 405 不降级、抛 BailianError
     ).rejects.toBeInstanceOf(BailianError);
     expect(urls.some((url) => url.includes("/sse"))).toBe(false);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("connectBailianMcpWithFallback：Bailian 路径 404 不降级，错误含 404", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const urls: string[] = [];
 
-  globalThis.fetch = async (input) => {
+  httpTransport.fetch = async (input) => {
     urls.push(requestUrl(input));
     return new Response("MCP不存在或未开通", { status: 404, statusText: "Not Found" });
   };
@@ -719,17 +720,17 @@ test("connectBailianMcpWithFallback：Bailian 路径 404 不降级，错误含 4
     ).rejects.toMatchObject({ message: expect.stringContaining("404") });
     expect(urls.some((url) => url.includes("/sse"))).toBe(false);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("connectBailianMcpWithFallback：405 降级到经典 SSE 并连接成功", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const urls: string[] = [];
   const encoder = new TextEncoder();
   let sseController: ReadableStreamDefaultController<Uint8Array> | undefined;
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     const method = init?.method ?? "GET";
     urls.push(`${method} ${url}`);
@@ -778,15 +779,15 @@ test("connectBailianMcpWithFallback：405 降级到经典 SSE 并连接成功", 
     expect(urls.some((entry) => entry.startsWith("GET ") && entry.includes("/sse"))).toBe(true);
     connected.client.close?.();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("connectBailianMcpWithFallback：405 降级后经典 SSE GET 4xx 仍保留正文（开通提示契约）", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const urls: string[] = [];
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     const method = init?.method ?? "GET";
     urls.push(`${method} ${url}`);
@@ -809,18 +810,18 @@ test("connectBailianMcpWithFallback：405 降级后经典 SSE GET 4xx 仍保留�
     expect((error as BailianError).message).toContain("MCP不存在或未开通");
     expect(urls.some((entry) => entry.startsWith("GET ") && entry.includes("/sse"))).toBe(true);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test("connectBailianMcpWithFallback：--url 覆盖，POST 405 后同 URL GET SSE 降级", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const urls: string[] = [];
   const encoder = new TextEncoder();
   const overrideUrl = "https://custom.example/mcp";
   let sseController: ReadableStreamDefaultController<Uint8Array> | undefined;
 
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     const method = init?.method ?? "GET";
     urls.push(`${method} ${url}`);
@@ -868,6 +869,6 @@ test("connectBailianMcpWithFallback：--url 覆盖，POST 405 后同 URL GET SSE
     expect(urls.some((entry) => entry.startsWith(`GET ${overrideUrl}`))).toBe(true);
     connected.client.close?.();
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });

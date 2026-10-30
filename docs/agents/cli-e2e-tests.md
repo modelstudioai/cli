@@ -75,28 +75,33 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 | 场景                    | 条件                                                                                                       |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 文本/搜索/记忆/配置     | `isDashScopeE2EReady()`（`.env` 中的 `DASHSCOPE_API_KEY`）                                                 |
+| 文本/搜索/配置          | `isDashScopeE2EReady()`（`.env` 中的 `DASHSCOPE_API_KEY`）                                                 |
 | 图像/语音               | `isBailianE2EMediaEnabled() && isDashScopeE2EReady()`                                                      |
 | 视频                    | `isBailianE2EVideoEnabled() && isDashScopeE2EReady()`                                                      |
 | OpenAPI AK/SK           | `isOpenApiE2EReady()`（`.env` 中必须同时提供完整 AK/SK）                                                   |
 | 视频 download/task      | 另需 `BAILIAN_E2E_VIDEO_TASK_ID`                                                                           |
 | 知识库 chat/search live | `isChatE2EReady()` / `isSearchE2EReady()`（`knowledge chat/search`，需 `BAILIAN_WORKSPACE_ID` + agent ID） |
+| 记忆 live               | `isMemoryE2EReady()`（另需 `BAILIAN_E2E_MEMORY_LIBRARY_ID`；记忆服务需账号单独开通）                       |
 
 ## 用例类型
 
 1. **--help**：`runCommandHelp(ROUTES, [..., "--help"])` → stderr 含主要 flags；产品层另保留少量真实子进程 help 验证 shell/stdio/env
 2. **缺参**：带无害全局 flag（如 `--quiet`）且不传 required flag → `exitCode === 2`
-3. **--dry-run**：实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本
+3. **--dry-run**：静态命令在联网/上传/写盘之前返回；prepare 命令可先鉴权并读取完整远端计划，但不得产生远端或本地写入。断言 stdout JSON/文本及请求清单。
 4. **真实集成**：放在 skip 块**末尾**
 
 高风险命令额外要求：
 
 - `--help` 展示 runtime 注入的 `--yes`
 - 无 `--yes` 返回 exit code 7 和 JSON `type: "requires_confirmation"`
-- `--dry-run` 无需 `--yes`，且必须证明在任何远端请求或本地写入之前返回
+- `--dry-run` 无需 `--yes`；静态命令证明零网络/零写入，prepare 命令证明缺凭证返回 AUTH、只调用读接口且零写入
+- prepare 命令同时验证：实际无风险可执行，有风险时错误包含 plan/notices，预览/确认前不运行自动升级，服务端错误原样透传
+- `--introspect` 根/组/叶均跳过必填、validate、prepare、auth 和 run；输出实际产品路径及确定性 JSON
 - runtime 的离线 high-risk fixture 必须覆盖带 `--yes` 确实进入 `run()`，并断言 `yes` 不进入 command 自有 flags
 
 ## Journey 层（用户旅程全链路）
+
+- Memory 主干：`packages/commands/tests/e2e/memory/journeys`（J1–J5 CLI）与 `packages/bailian-memo-dsh/tests/journeys`（J6–J8 受控宿主）；严格入口 `node tools/test-memory-journeys.mjs`。默认库只要求 Key/Workspace，缺环境或跳过必跑项不能当作通过。真实 Agent 会话验收与受控宿主分开报告。
 
 - **定位**：命令 E2E 验单命令契约；journey 验“用户带着目标跨命令走通回路”，结构性断言不在 journey 重复
 - **闭环断言**：fixture 埋独特标记词，以“标记词能否被召回”判定回路闭合；硬断言 fail，软断言 `recordSoft` 落报告人工复核
@@ -163,6 +168,10 @@ test("foo bar --dry-run 仅输出计划", async () => {
   expect(data.request).toBeDefined();
 });
 ```
+
+## Memory 发布前审计
+
+发布判断应包含命令契约、风险到测试的映射和安装产物验证，不能只看用例总数或源代码 harness 全绿。参考 [Memory CLI 发布审计](../memory/2026-10-19-cli-release-audit.md)。`tools/smoke-memory-package.mjs` 接受本地 tarball 目录，使用隔离配置安装并执行产物 bin；`--live` 只对随机测试身份执行自清理 CRUD。服务 fixture 未配置的分组必须在报告中列为未运行，不能当作通过。真实 dsh/Skill 宿主是否作为门槛按当次用户明确的范围决定。
 
 ## 与批量压测的关系
 

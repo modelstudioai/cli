@@ -1,4 +1,10 @@
-import { maskToken, type AuthStore, type Identity, type Settings } from "bailian-cli-core";
+import {
+  maskToken,
+  type AuthStore,
+  type Identity,
+  type LocalizedText,
+  type Settings,
+} from "bailian-cli-core";
 import { runConsoleLogin, resolveConsoleOrigin } from "./login-console.ts";
 
 /** Read-only auth snapshot the config UI account widget renders. bl stores no
@@ -32,8 +38,9 @@ export function makeAuthUiBridge(ctx: {
   identity: Identity;
   settings: Settings;
   authStore: AuthStore;
+  localize?: (text: LocalizedText) => string;
 }): AuthUiBridge {
-  const { identity, settings, authStore } = ctx;
+  const { identity, settings, authStore, localize } = ctx;
   return {
     status() {
       const a = authStore.describe();
@@ -63,7 +70,7 @@ export function makeAuthUiBridge(ctx: {
       // endpoint to detect completion. Errors are logged, not surfaced.
       void runConsoleLogin(
         origin,
-        { identity, settings, authStore },
+        { identity, settings, authStore, localize },
         {
           needApiKey: !hasApiKey,
         },

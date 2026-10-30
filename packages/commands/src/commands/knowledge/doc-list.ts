@@ -5,11 +5,19 @@ import {
   detectOutputFormat,
   type FlagsDef,
   type RagIndexFilesResponse,
+  type RagIndexFileDetailsResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare, ansi } from "bailian-cli-runtime";
 import { resolveWorkspaceId, truncateLine, PAGE_FLAGS, WORKSPACE_FLAG } from "./shared.ts";
 
 const DOC_LIST_FLAGS = {
+  details: {
+    type: "switch",
+    description: {
+      "en-US": "Include file-level chunk configuration (page size up to 10)",
+      "zh-CN": "查询文件级切片配置（每页最多 10 条）",
+    },
+  },
   indexId: {
     type: "string",
     valueHint: "<id>",
@@ -35,14 +43,30 @@ export default defineCommand({
       "zh-CN": "文本模式会突出显示状态为 FAILED 的文档——请使用导入任务状态命令检查失败详情。",
     },
     {
-      "en-US": "Page size defaults to 10 (server default), max 100.",
-      "zh-CN": "分页大小默认为 10（服务端默认值），最大为 100。",
+      "en-US": "Page size defaults to 10; max 100 normally, or 10 with --details.",
+      "zh-CN": "分页大小默认 10；通常最大 100，--details 模式最大 10。",
     },
   ],
   exampleArgs: ["--index-id idx-xxx --workspace-id ws-xxx", "--index-id idx-xxx --page-size 100"],
   validate(flags) {
-    if (flags.pageSize !== undefined && (flags.pageSize < 1 || flags.pageSize > 100)) {
-      return "--page-size must be between 1 and 100";
+    const maximum = flags.details ? 10 : 100;
+    if (
+      flags.pageSize !== undefined &&
+      (!Number.isInteger(flags.pageSize) || flags.pageSize < 1 || flags.pageSize > maximum)
+    ) {
+      return {
+        "en-US": `--page-size must be an integer between 1 and ${maximum}.`,
+        "zh-CN": `--page-size 必须为 1 到 ${maximum} 之间的整数。`,
+      };
+    }
+    if (
+      flags.pageNumber !== undefined &&
+      (!Number.isInteger(flags.pageNumber) || flags.pageNumber < 1)
+    ) {
+      return {
+        "en-US": "--page-number must be a positive integer.",
+        "zh-CN": "--page-number 必须为正整数。",
+      };
     }
     return undefined;
   },
@@ -56,16 +80,28 @@ export default defineCommand({
     url.searchParams.set("index_id", flags.indexId);
     url.searchParams.set("page_num", String(flags.pageNumber ?? 1));
     url.searchParams.set("page_size", String(flags.pageSize ?? 10));
-    const endpoint = url.toString();
+    const endpoint = flags.details
+      ? ragEndpoint(workspaceId, RAG_PATHS.indexFileDetails)
+      : url.toString();
+    const request = flags.details
+      ? {
+          indexId: flags.indexId,
+          pageNumber: flags.pageNumber ?? 1,
+          pageSize: flags.pageSize ?? 10,
+        }
+      : null;
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: null }, format);
+      emitResult({ endpoint, request }, format);
       return;
     }
 
-    const response = await ctx.client.requestJson<RagIndexFilesResponse>({
+    const response = await ctx.client.requestJson<
+      RagIndexFilesResponse | RagIndexFileDetailsResponse
+    >({
       path: endpoint,
-      method: "GET",
+      method: flags.details ? "POST" : "GET",
+      ...(request ? { body: request } : {}),
     });
 
     const rows = response.data?.rows ?? [];
@@ -83,6 +119,19 @@ export default defineCommand({
             [row.doc_id, row.status, row.doc_name, row.doc_type ?? "-", row.size ?? "-"].join("  "),
           );
           emitBare(row.status === "FAILED" ? styles.red(line) : line);
+          if (flags.details) {
+            for (const key of [
+              "chunkSize",
+              "overlapSize",
+              "separator",
+              "chunkMode",
+              "enableHeaders",
+            ]) {
+              emitBare(
+                `  ${key}: ${row[key] === undefined || row[key] === null ? "-" : JSON.stringify(row[key])}`,
+              );
+            }
+          }
         }
       }
       emitBare(`total: ${response.data?.total_count ?? rows.length}`);

@@ -34,6 +34,7 @@ import { ExitCode } from "../errors/codes.ts";
 import { trackingHeaders } from "./headers.ts";
 import type { HttpDeps } from "./http.ts";
 import type { McpConnectedClient, McpTool, McpToolResult } from "./mcp.ts";
+import { httpTransport } from "./transport.ts";
 
 /**
  * Low-level Streamable HTTP MCP client keeping the constructor and method
@@ -167,9 +168,12 @@ export interface SseGetFailure {
 }
 
 /**
- * Build the transport-level fetch. It reproduces the old client's error contract
- * for message POSTs and mirrors its `--verbose` wire logging. GET responses are
- * passed through untouched so the SDK's own SSE-stream handling (including the
+ * Build the transport-level fetch. Requests go through the shared
+ * `httpTransport` (packaged Undici fetch on Node, native fetch on Bun) so the
+ * MCP path honors the configured dispatcher/proxy like every other request
+ * path. It reproduces the old client's error contract for message POSTs and
+ * mirrors its `--verbose` wire logging. GET responses are passed through
+ * untouched so the SDK's own SSE-stream handling (including the
  * tolerated 405 on a standalone Streamable GET) stays intact — except that a
  * failing classic SSE stream GET has its status/body captured first, since
  * `eventsource` would drop them. Redirect responses are likewise passed through:
@@ -199,7 +203,7 @@ function createMcpFetch(
       }
     }
 
-    const response = await fetch(url, init);
+    const response = await httpTransport.fetch(url, init);
 
     if (deps.settings.verbose) {
       console.error(`< ${response.status} ${response.statusText}`);

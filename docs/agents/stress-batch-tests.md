@@ -1,7 +1,5 @@
 # 批量压测脚本（多能力统一入口）
 
-**使用者文档**（方案说明、命令示例、fixtures、默认值表）：[../stress-testing.md](../stress-testing.md)
-
 ## 触发条件
 
 - 新增、修改或排查 `packages/cli/tests/stress/**/*.mjs` 批量压测代码

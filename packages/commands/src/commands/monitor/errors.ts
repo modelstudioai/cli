@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
@@ -52,7 +53,7 @@ function printTable(rows: ErrorCodeRow[], startTime: number, endTime: number): v
   for (const line of lines) process.stdout.write(line + "\n");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "Show failure breakdown by HTTP status code and error code",
     "zh-CN": "查看失败明细（按 HTTP 状态码与错误码统计分布）",
@@ -91,7 +92,7 @@ export default defineCommand({
         {
           api: ERROR_CODE_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

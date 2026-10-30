@@ -321,6 +321,7 @@ export async function createKbWithDocs(
   const createRun = await reporter.runStep("kb create --wait", routes, [
     "knowledge",
     "create",
+    "--yes",
     "--name",
     kbName,
     "--description",
@@ -382,7 +383,7 @@ export async function cleanupKbFixture(
 // ---- Marker-recall predicate (strict) ----
 
 /**
- * Positive recall check for retrieve/search JSON output: the marker must appear
+ * Positive recall check for search/chunk-list JSON output: the marker must appear
  * inside a returned node's text (not merely anywhere in the raw output — doc_name
  * or other metadata echoing the marker must not count as recall).
  * Negative assertions ("marker gone") should keep scanning the whole stdout:

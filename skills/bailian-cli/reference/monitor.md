@@ -40,6 +40,8 @@ Index: [index.md](index.md)
 #### Notes
 
 - Only the delivery switch is turned off; the CMS service and the Prometheus instance (with stored data) are kept. Re-enable with `monitor delivery enable`.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -77,6 +79,8 @@ bl monitor delivery disable --output json
 #### Notes
 
 - Steps: 1) authorize the CMS service-linked role, 2) open the CMS service (async, polled via openStatus), 3) create the dedicated Prometheus instance (async, polled until Ready), 4) turn on the monitor delivery switch for all models. Server-side throttles duplicate submissions within 30s.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -109,6 +113,11 @@ bl monitor delivery enable --output json
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -148,6 +157,8 @@ bl monitor delivery status --output json
 #### Notes
 
 - Only real-time (online) inference calls are counted in monitor statistics.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -199,6 +210,8 @@ bl monitor errors --output json
 
 - Metrics: model_call_count, model_call_duration, model_first_token_duration, model_generation_duration_per_token, model_call_failed_count, model_call_4xx_count, model_call_5xx_count, model_call_429_count, model_call_data_inspection_failed_count, model_total_amount, model_input_amount, model_output_amount, model_usage, model_tps_per_request, model_cache_hit_percent, model_ptu_token_quota, model_ptu_usage_quota, model_ptu_total_tokens, model_ptu_quota, model_ptu_utilization
 - Only real-time (online) inference calls are counted in monitor statistics.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -251,6 +264,8 @@ bl monitor metrics --metric model_total_amount --output json
 #### Notes
 
 - Only real-time (online) inference calls are counted in monitor statistics.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -298,6 +313,8 @@ bl monitor models --max-results 50 --output json
 #### Notes
 
 - Only real-time (online) inference calls are counted in the overview.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 

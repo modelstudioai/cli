@@ -49,6 +49,12 @@ Index: [index.md](index.md)
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
+#### Notes
+
+- Uses the audit list API's totalCount for the selected time range and filters. Fetches at most one metadata row per response, without full request/response content or pagination.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
+
 #### Examples
 
 ```bash
@@ -57,6 +63,10 @@ bl log audit count
 
 ```bash
 bl log audit count --model qwen3.6-plus --hours 24
+```
+
+```bash
+bl log audit count --workspace-id ws-example --hours 144
 ```
 
 ```bash
@@ -84,6 +94,8 @@ bl log audit count --output json
 #### Notes
 
 - Refused while the inference log is still enabled — disable the inference log first (the console enforces the same rule).
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -122,6 +134,8 @@ bl log audit disable --output json
 
 - Steps: 1) authorize the SLS service-linked role, 2) initialize the SLS store instance (async), 3) turn on audit log delivery for all models in the workspace.
 - The audit log records call metadata only and is required before enabling the inference log.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -163,6 +177,8 @@ bl log audit enable --output json
 #### Notes
 
 - Audit entries carry call metadata plus the raw audit record; request/response content lives in the inference log (`log inference get`).
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -172,6 +188,10 @@ bl log audit get --request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 ```bash
 bl log audit get --request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx --hours 24
+```
+
+```bash
+bl log audit get --request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx --workspace-id ws-example
 ```
 
 ```bash
@@ -212,6 +232,9 @@ bl log audit get --request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx --output json
 #### Notes
 
 - Audit logs carry call metadata only. For full request/response content, enable and query the inference log (`log inference list` / `log inference get`).
+- Use --call-source Online to match the console's online inference filter.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -221,6 +244,10 @@ bl log audit list
 
 ```bash
 bl log audit list --model qwen3.6-plus --hours 3
+```
+
+```bash
+bl log audit list --workspace-id ws-example --hours 144
 ```
 
 ```bash
@@ -260,7 +287,10 @@ bl log audit list --output json
 
 #### Notes
 
-- Only calls made while inference log delivery was enabled are counted.
+- Uses the inference list API's totalCount for the selected time range and filters. Fetches at most one metadata row per response, without full request/response content or pagination.
+- Comma-separated models and API key IDs are deduplicated, then queried sequentially as single-model/single-key combinations. The counts are summed only after every query succeeds.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -270,6 +300,10 @@ bl log inference count
 
 ```bash
 bl log inference count --model qwen3.6-plus --hours 24
+```
+
+```bash
+bl log inference count --model qwen3.6-plus,qwen3.6-flash --hours 144
 ```
 
 ```bash
@@ -297,6 +331,8 @@ bl log inference count --output json
 #### Notes
 
 - Only the inference log (request/response content) is disabled; the audit log keeps its own switch (`log audit disable`).
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -335,6 +371,8 @@ bl log inference disable --output json
 
 - Steps: 1) authorize the SLS service-linked role, 2) initialize the SLS store instance (async), 3) turn on inference log delivery for all models in the workspace.
 - Requires the audit log to be enabled first (`log audit enable`) — the console enforces the same rule.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -376,6 +414,8 @@ bl log inference enable --output json
 #### Notes
 
 - The origin content is fetched back by request ID from the inference log store, so inference log delivery must have been enabled when the call happened.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -422,6 +462,8 @@ bl log inference get --request-id 6f6b2f1e-xxxx-xxxx-xxxx-xxxxxxxxxxxx --output 
 #### Notes
 
 - Requires inference log delivery (`log inference enable`), which itself requires the audit log. Entries here mirror the audit trail; full request/response content is fetched per request via `log inference get`.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -466,6 +508,8 @@ bl log inference list --output json
 #### Notes
 
 - Both log kinds have independent switches; the inference log additionally requires the audit log to stay on.
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -499,6 +543,11 @@ bl log status --output json
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 
@@ -539,6 +588,11 @@ bl log trace get --trace-id 0a1b2c3d4e5f --output json
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
+
 #### Examples
 
 ```bash
@@ -575,6 +629,11 @@ bl log trace list --resource-id 123456 --resource-type app --output json
 | `--console-site <site>`        | string | no       | Console site: domestic, international                     |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                     |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                  |
+
+#### Notes
+
+- Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
+- When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 
 #### Examples
 

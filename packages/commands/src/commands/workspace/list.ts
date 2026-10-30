@@ -2,39 +2,13 @@ import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
-const LIST_WORKSPACES_API = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+import {
+  LIST_WORKSPACES_API,
+  listConsoleWorkspaces,
+  type ConsoleWorkspaceInfo,
+} from "../shared/workspace.ts";
 
-interface WorkspaceInfo {
-  workspaceId: string;
-  agentName: string;
-  defaultAgent: boolean;
-}
-
-function getNestedRecord(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
-  const val = obj[key];
-  if (val && typeof val === "object" && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
-function extractResponseData(result: Record<string, unknown>): Record<string, unknown> {
-  const data = getNestedRecord(result, "data");
-  if (!data) return result;
-
-  const dataV2 = getNestedRecord(data, "DataV2");
-  if (dataV2) {
-    const inner = getNestedRecord(dataV2, "data");
-    const innerData = inner ? getNestedRecord(inner, "data") : undefined;
-    return innerData ?? inner ?? dataV2;
-  }
-
-  const direct = getNestedRecord(data, "data");
-  return direct ?? data;
-}
-
-function printTable(workspaces: WorkspaceInfo[]): void {
+function printTable(workspaces: ConsoleWorkspaceInfo[]): void {
   const color = ansi(process.stdout);
 
   const headers = ["Name", "Workspace ID", "Default"];
@@ -88,11 +62,8 @@ export default defineCommand({
       return;
     }
 
-    const result = await ctx.client.console(LIST_WORKSPACES_API, {});
-
-    const resp = extractResponseData(result as Record<string, unknown>);
-    const dataArr = resp.data as Record<string, unknown>[] | undefined;
-    if (!Array.isArray(dataArr) || dataArr.length === 0) {
+    let workspaces = await listConsoleWorkspaces(ctx.client);
+    if (workspaces.length === 0) {
       if (format === "json") {
         emitResult([], format);
       } else {
@@ -101,7 +72,6 @@ export default defineCommand({
       return;
     }
 
-    let workspaces = dataArr as unknown as WorkspaceInfo[];
     if (limit > 0) workspaces = workspaces.slice(0, limit);
 
     if (format === "json") {

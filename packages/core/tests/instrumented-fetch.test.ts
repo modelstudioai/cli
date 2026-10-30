@@ -1,3 +1,4 @@
+import { httpTransport } from "../src/client/transport.ts";
 import { expect, test } from "vite-plus/test";
 import type { Identity, Settings } from "../src/index.ts";
 import { createInstrumentedFetch, sourceConfig } from "../src/index.ts";
@@ -16,14 +17,14 @@ interface CapturedRequest {
   headers: Headers;
 }
 
-/** Run the wrapper against a stubbed globalThis.fetch and capture what reaches it. */
+/** Run the wrapper against a stubbed httpTransport.fetch and capture what reaches it. */
 async function capture(
   input: string | URL | Request,
   init?: RequestInit,
 ): Promise<CapturedRequest> {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   let captured: CapturedRequest | undefined;
-  globalThis.fetch = (async (fetchInput: string | URL | Request, fetchInit?: RequestInit) => {
+  httpTransport.fetch = (async (fetchInput: string | URL | Request, fetchInit?: RequestInit) => {
     captured = {
       url:
         typeof fetchInput === "string"
@@ -39,7 +40,7 @@ async function capture(
   try {
     await createInstrumentedFetch({ identity, settings })(input, init);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
   if (!captured) throw new Error("stubbed fetch was not called");
   return captured;

@@ -2,9 +2,153 @@
 
 All notable changes to the `bailian-cli` packages are documented here.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The `bailian-cli`, `bailian-cli-core`, `bailian-cli-runtime`, `bailian-cli-commands`, and `knowledge-studio-cli` packages share a single version number.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The `bailian-cli`, `bailian-cli-core`, `bailian-cli-runtime`, `bailian-cli-commands`, `knowledge-studio-cli`, `bailian-kb-dsh`, and `bailian-memo-dsh` packages share a single version number.
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
+
+## [2.7.1] - 2026-10-29
+
+### Fixed
+
+- **Token Plan quota queries**: Display all quota windows returned by the API, and add `hasQuotaData` to JSON output to distinguish missing quota data from a normal result.
+
+## [2.7.0] - 2026-10-29
+
+### Added
+
+- **ParseX parsing**: Add `bl parsex parse submit/result` for document and audio/video parsing, result queries, and Markdown output.
+- **ParseX field extraction**: Add `bl parsex extract submit/result` to extract fields with a JSON Schema from documents or existing parsing results, including source citations.
+- **Configuration source diagnostics**: Show API key and Base URL sources in `bl config show`, and warn when requests use values from different configuration sources.
+
+### Fixed
+
+- **Workspace API key login**: Fix `bl auth login` rejecting valid workspace API keys on MaaS endpoints.
+- **Login validation errors**: Preserve service and network errors during API key validation instead of reporting every failure as an invalid key.
+
+## [2.6.2] - 2026-10-28
+
+### Changed
+
+- **Default telemetry output (BREAKING)**: Business results from `bl alert`, `bl monitor`, and `bl log` now default to JSON, even when the Profile specifies text. Scripts relying on text must pass `--output text` or set `DASHSCOPE_OUTPUT=text`.
+
+### Fixed
+
+- **Workspace identity**: Resolve the selected workspace's Console identity automatically and share it across preflight, business requests, asynchronous polling, and follow-up requests, fixing ineffective `--workspace-id` filtering and incorrect cross-workspace results without changing saved configuration.
+- **Audit log parsing**: Normalize timestamps, models, request IDs, workspace IDs, and usage; fix missing fields, NaN timestamps, and malformed count displays, and reject audit results from a mismatched workspace.
+- **Log counts**: Use each corresponding list API's `totalCount` for `log audit count` and `log inference count`, fixing zero counts for non-empty lists without paginating or fetching full log content.
+- **Inference count filters and completion**: Preserve multiple-model and multiple-API-key filters by deduplicating and querying single-value combinations. Support asynchronous polling and emit totals only after every query succeeds; reject empty filters, invalid counts, and aggregate overflow.
+- **Dry-run previews**: Show the workspace identity resolution plan and actual count request combinations without sending business requests.
+
+## [2.6.1] - 2026-10-28
+
+### Added
+
+- **Asynchronous Batch inference**: Add `bl batch convert/create/list/get/cancel/download` for CSV-to-JSONL conversion, Chat/Embedding task creation, progress tracking, cancellation, and result/error downloads with optional CSV export.
+- **Synchronous Batch Chat**: Add `bl text chat --batch` for one non-streaming request, separate from asynchronous file-based Batch tasks, with request timeouts of 60–3600 seconds.
+- **Model recommendation options**: Add `--top`, `--model`, `--no-agent`, `--trace`, `--think`, and `--no-thinking` to `bl advisor recommend`.
+
+### Changed
+
+- **Model recommendations**: Upgrade intent analysis, routing, recall, scoring, and ranking; support Agent clarification in interactive terminals and multi-step recommendations while preserving the existing recommendation JSON envelope.
+
+### Removed
+
+- **Advisor library interfaces (BREAKING)**: Remove legacy recommendation exports, including `getModels`, `recallCandidates`, `recallSemantic`, and `rankModels`. Library consumers must adapt to the new recommendation engine; legacy types are exported as `LegacyIntentProfile`, `LegacyModelProfile`, and `LegacyRecommendResult`.
+
+### Fixed
+
+- **Temporary file uploads**: Select the upload service from the active model endpoint, fixing Singapore and Prime video uploads incorrectly using Beijing. Official temporary uploads support only Beijing and Singapore; unsupported regions and Token Plan fail explicitly, while explicit custom upload proxies are no longer rejected based on key type.
+- **Node 26 compatibility**: Fix fetch/dispatcher incompatibility and proxy initialization across model requests, console requests, uploads, and downloads.
+- **API error passthrough**: Recognize nested business errors and preserve non-JSON error bodies and request IDs instead of treating error responses as successful results.
+
+## [2.6.0] - 2026-10-27
+
+### Added
+
+- **Knowledge initialization**: Add `knowledge init` to upload a sample, create a knowledge base and retrieval service, and verify retrieval, with recovery and resource reuse.
+- **Directory sync and file import**: Add `knowledge doc sync` and `knowledge doc import` for local directories and existing files.
+- **Multimedia knowledge bases**: Support audio/video knowledge bases, parser configuration, streaming uploads, image-only search, and online search filters.
+- **Agent capability discovery**: Add `--introspect` and the `bailian-knowledge` skill, with corresponding capabilities in Knowledge Studio CLI.
+
+### Changed
+
+- **Chat output**: Separate answers, phases, tools, sources, and usage in structured output; quiet mode emits only the final answer.
+- **Knowledge-base creation**: Add billing notices, resource records, and cleanup guidance.
+
+### Fixed
+
+- Reject blank required inputs in knowledge commands.
+- Report completed, unconfirmed, and unexecuted batches when chunk deletion fails.
+
+## [2.5.1] - 2026-10-23
+
+### Added
+
+- **Console login**: Support `--no-browser` for manually opening the login URL and `--token-stdin` for importing and validating console credentials from standard input.
+- **Agent attribution**: Support declaring the calling Agent, Skill name and version; undeclared callers remain unknown.
+
+### Fixed
+
+- **Login completion**: Handle fast browser callbacks reliably and report a timeout when no credentials are received.
+- **Credential refresh**: Correct region selection and validate the retried request before saving refreshed credentials.
+
+## [2.5.0] - 2026-10-20
+
+### Added
+
+- **Memory management** — Add node details, Skill memory export, and profile schema listing, inspection, updates and deletion; support rule-scoped recall, pro/lite search, skill metadata and profile-only extraction.
+- **Personal memory Skill** — Add `bailian-memory` for consent-based personal memory, recall and user profile workflows.
+- **DeepSeek Harness integrations** — Add the personal memory plugin with automatic recall, asynchronous curation and remember/forget tools; update the knowledge plugin for dsh 0.2.1 settings and isolated management credentials.
+
+### Changed
+
+- **Memory CLI migration (BREAKING)** — Memory commands now use a Workspace-specific endpoint. Configure `--workspace-id`, `BAILIAN_WORKSPACE_ID` or `workspace_id`; replace `--memory-library-id` with `--library-id` on commands that support it. Remove `--user-id` from `memory update` and `memory delete`; confirmed node deletion now requires `--yes`.
+- **Memory writes (BREAKING)** — `memory add` now submits asynchronous extraction and waits up to 120 seconds by default. Use `--wait 0` for submission-only behavior. JSON consumers must handle `event_id` and `events`; a submission receipt is not proof of completed extraction.
+- **Unified releases** — CLI, Knowledge Studio CLI and both dsh plugins now share one version and release workflow. The dsh knowledge plugin moves from its independent 0.1.x series to 2.5.0.
+
+### Removed
+
+- **Legacy knowledge retrieval (BREAKING)** — Remove `bl knowledge retrieve`, `kscli retrieve` and the `knowledgeRetrieve` command export. Migrate to `bl knowledge search` or `kscli search` using a retrieval service's `--agent-id`; old index-based arguments are not interchangeable.
+- **Legacy Memory library API (BREAKING)** — Replace the exported `MemoryAddResponse` type with `MemoryAddAsyncResponse`; library consumers must adapt to the updated asynchronous request/response contracts.
+
+### Fixed
+
+- **Memory completion and input validation** — Empty event lists and missing event IDs no longer falsely confirm completion; polling obeys its deadline, partial failures return a non-zero exit code, and malformed JSON elements and attribute types are rejected before requests.
+- **Search documentation** — Clarify that `--min-score` defaults to 0.3 and only applies to pro search; lite does not filter by this threshold.
+
+### Security
+
+- **Workspace endpoints** — Reject Workspace identifiers that could alter the destination host, preventing credentials from being sent to an unintended host.
+
+## [2.4.0] - 2026-10-19
+
+### Added
+
+- **Managed Agent memory** — Manage Memory Stores, memory contents and historical versions, and mount memory into Sessions.
+- **Workspace Webhooks** — Manage and test Webhooks, rotate signing secrets, and inspect delivery events.
+- **Agent resource bindings** — Agent creation supports default Environment and Vault bindings and MCP market servers through `--environment`, `--vault` and `--mcp`.
+- **Runtime environment variables** — Session creation, Session runs and Deployment creation accept repeatable `--environment_variables KEY=VALUE`.
+
+## [2.3.3] - 2026-10-19
+
+### Fixed
+
+- **Binary CLI requests** — Fix model API requests failing in the binary CLI, including speech and video generation.
+- **Request timeouts** — Fix long-running core API requests timing out before the configured `--timeout`; add streaming idle protection and release connections when streams end.
+- **Windows console login** — Fix console login URLs losing query parameters when opening the browser on Windows.
+- **Login guidance** — After console login or when running `bl auth status`, clearly indicate when a model API key is missing and show the commands needed to configure it.
+
+## [2.3.2] - 2026-10-16
+
+### Fixed
+
+- **CLI update** — `bl update` now exits with a non-zero status when an upgrade fails or the latest version cannot be determined, allowing scripts and agents to detect the failure.
+
+## [2.3.1] - 2026-10-16
+
+### Fixed
+
+- **Request timeout** — Requests configured with a timeout longer than 300 seconds are no longer interrupted by the default response-header timeout.
 
 ## [2.3.0] - 2026-10-14
 

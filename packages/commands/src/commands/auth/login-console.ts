@@ -4,10 +4,13 @@ import http from "node:http";
 import {
   BailianError,
   ExitCode,
+  validateConsoleAccessToken,
+  type ConsoleGatewayTarget,
   type AuthPersistPatch,
   type AuthStore,
   type ConfigFile,
   type Identity,
+  type LocalizedText,
   type Settings,
 } from "bailian-cli-core";
 import { listenLocalServer, openInBrowser } from "../shared/local-server.ts";
@@ -18,6 +21,13 @@ export interface LoginDeps {
   identity: Identity;
   settings: Settings;
   authStore: AuthStore;
+  /** 缺省时用户可见新文案回退到 en-US。 */
+  localize?: (text: LocalizedText) => string;
+}
+
+function localizeLogin(deps: LoginDeps, text: LocalizedText): string {
+  if (typeof text === "string") return text;
+  return deps.localize ? deps.localize(text) : text["en-US"];
 }
 
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
@@ -364,18 +374,97 @@ function listenServerOnFreeLocalPort(server: http.Server): Promise<number> {
   return listenLocalServer(server);
 }
 
+/** 人工导入只接受管道中的原始 token，不把凭证放进 argv 或终端回显。 */
+export async function runConsoleTokenLogin(
+  deps: LoginDeps,
+  target: Omit<ConsoleGatewayTarget, "token">,
+): Promise<void> {
+  const input = process.stdin;
+  if (input.isTTY) {
+    throw new BailianError(
+      localizeLogin(deps, {
+        "en-US":
+          "Pipe a raw console access token to --token-stdin; interactive input is disabled to avoid echoing secrets.",
+        "zh-CN":
+          "请通过管道向 --token-stdin 输入原始控制台 access token；为避免凭证回显，不接受交互式输入。",
+      }),
+      ExitCode.USAGE,
+    );
+  }
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of input) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+    size += bytes.length;
+    if (size > MAX_AUTH_CALLBACK_BODY) {
+      throw new BailianError(
+        localizeLogin(deps, {
+          "en-US": "Console token input exceeds 64 KiB.",
+          "zh-CN": "控制台 token 输入超过 64 KiB。",
+        }),
+        ExitCode.USAGE,
+      );
+    }
+    chunks.push(bytes);
+  }
+  const token = Buffer.concat(chunks).toString("utf8").trim();
+  if (!token || /[\s\p{Cc}]/u.test(token) || token.startsWith("{") || token.startsWith("[")) {
+    throw new BailianError(
+      localizeLogin(deps, {
+        "en-US":
+          "stdin must contain one raw console access token, without JSON or a Bearer prefix.",
+        "zh-CN": "stdin 必须包含一个原始控制台 access token，不接受 JSON 或 Bearer 前缀。",
+      }),
+      ExitCode.USAGE,
+    );
+  }
+  await validateConsoleAccessToken({ ...target, token }, deps.settings);
+  await deps.authStore.login({
+    access_token: token,
+    console_site: target.site,
+    console_region: target.region,
+  });
+  process.stderr.write(
+    `${localizeLogin(deps, {
+      "en-US": `Console token validated and saved to ${deps.authStore.path}`,
+      "zh-CN": `控制台 token 已校验并保存至 ${deps.authStore.path}`,
+    })}\n`,
+  );
+}
+
 export async function runConsoleLogin(
   consoleOrigin: string,
   deps: LoginDeps,
-  opts?: { needApiKey?: boolean },
+  opts?: { needApiKey?: boolean; noBrowser?: boolean },
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
   let callbackError: unknown;
+  let savedSessionWithoutApiKey = false;
+  let savedCredentials = false;
+  let savingCredentials = false;
+  let finished = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const server = http.createServer(async (req, res) => {
     try {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Vary", "Origin, Access-Control-Request-Private-Network");
+      const origin = req.headers.origin;
+      if (origin !== undefined && origin !== consoleOrigin) {
+        res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end(
+          localizeLogin(deps, { "en-US": "Origin not allowed\n", "zh-CN": "不允许的来源\n" }),
+        );
+        return;
+      }
+      if (origin === consoleOrigin) res.setHeader("Access-Control-Allow-Origin", consoleOrigin);
       if (req.method === "OPTIONS") {
+        if (
+          origin === consoleOrigin &&
+          req.headers["access-control-request-private-network"] === "true"
+        ) {
+          res.setHeader("Access-Control-Allow-Private-Network", "true");
+        }
         res.writeHead(204, {
-          "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type",
         });
@@ -386,7 +475,7 @@ export async function runConsoleLogin(
       const u = new URL(req.url ?? "/", "http://127.0.0.1");
       if (u.searchParams.get("state") !== state) {
         res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
-        res.end("bad state\n");
+        res.end(localizeLogin(deps, { "en-US": "bad state\n", "zh-CN": "无效的 state\n" }));
         return;
       }
 
@@ -400,49 +489,82 @@ export async function runConsoleLogin(
         workspaceId,
       } = await extractCredentialsFromRequest(req);
 
-      const hasConfig =
-        accessToken || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent || workspaceId;
+      if (finished || savingCredentials) {
+        res.writeHead(409);
+        res.end(
+          localizeLogin(deps, {
+            "en-US": "Login is no longer waiting for credentials\n",
+            "zh-CN": "登录已不再等待凭证\n",
+          }),
+        );
+        return;
+      }
+      if (!accessToken) {
+        res.writeHead(400);
+        res.end(
+          localizeLogin(deps, {
+            "en-US": "Missing access_token\n",
+            "zh-CN": "缺少 access_token\n",
+          }),
+        );
+        return;
+      }
 
-      if (hasConfig || apiKey) {
-        try {
-          const callbackPatch: AuthPersistPatch = {
-            access_token: accessToken || undefined,
-            console_site: (consoleSite || undefined) as ConfigFile["console_site"],
-            console_region: consoleRegion || undefined,
-            console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
-            workspace_id: workspaceId || undefined,
-          };
-          if (apiKey) {
-            await persistApiKey(deps, apiKey, {
-              persistBaseUrl: baseUrl || undefined,
-              persistPatch: callbackPatch,
-            });
-            process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
-          } else if (hasConfig) {
-            await deps.authStore.login({
-              ...callbackPatch,
-              base_url: baseUrl || undefined,
-            });
-            process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
-          }
-        } catch (err: unknown) {
-          callbackError = err;
-          res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
-          res.end("Failed to save credentials\n");
-          server.close();
-          return;
+      savingCredentials = true;
+      clearTimeout(timer);
+      try {
+        const callbackPatch: AuthPersistPatch = {
+          access_token: accessToken || undefined,
+          console_site: (consoleSite || undefined) as ConfigFile["console_site"],
+          console_region: consoleRegion || undefined,
+          console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
+          workspace_id: workspaceId || undefined,
+        };
+        if (apiKey) {
+          await persistApiKey(deps, apiKey, {
+            persistBaseUrl: baseUrl || undefined,
+            persistPatch: callbackPatch,
+          });
+          process.stderr.write(
+            `${localizeLogin(deps, {
+              "en-US": `Config saved to ${deps.authStore.path}`,
+              "zh-CN": `配置已保存至 ${deps.authStore.path}`,
+            })}\n`,
+          );
+        } else {
+          await deps.authStore.login({
+            ...callbackPatch,
+            base_url: baseUrl || undefined,
+          });
+          savedSessionWithoutApiKey = true;
+          process.stderr.write(
+            `${localizeLogin(deps, {
+              "en-US": `Config saved to ${deps.authStore.path}`,
+              "zh-CN": `配置已保存至 ${deps.authStore.path}`,
+            })}\n`,
+          );
         }
+        savedCredentials = true;
+      } catch (error: unknown) {
+        callbackError = error;
       }
-
-      res.writeHead(200, {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Access-Control-Allow-Origin": "*",
-      });
-      res.end("OK\n");
-
-      if (hasConfig || apiKey) {
-        server.close();
+      finished = true;
+      server.close();
+      if (res.destroyed) {
+        server.closeAllConnections();
+        return;
       }
+      res.once("finish", () => server.closeAllConnections());
+      res.once("close", () => server.closeAllConnections());
+      res.writeHead(callbackError ? 500 : 200, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end(
+        callbackError
+          ? localizeLogin(deps, {
+              "en-US": "Failed to save credentials\n",
+              "zh-CN": "凭证保存失败\n",
+            })
+          : "OK\n",
+      );
     } catch {
       res.statusCode = 500;
       res.end();
@@ -452,10 +574,13 @@ export async function runConsoleLogin(
   let port: number;
   try {
     port = await listenServerOnFreeLocalPort(server);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     throw new BailianError(
-      `Could not bind to 127.0.0.1 (no free port or permission denied): ${msg}`,
+      localizeLogin(deps, {
+        "en-US": `Could not bind to 127.0.0.1 (no free port or permission denied): ${message}`,
+        "zh-CN": `无法监听 127.0.0.1（无可用端口或权限被拒绝）：${message}`,
+      }),
       ExitCode.USAGE,
     );
   }
@@ -465,45 +590,88 @@ export async function runConsoleLogin(
     loginUrl += "&needapikey=true";
   }
 
+  // 先注册完成事件，再打开浏览器，避免快速回调或打开程序挂起造成漏报。
+  const completion = new Promise<void>((resolve, reject) => {
+    server.once("close", resolve);
+    server.once("error", reject);
+    timer = setTimeout(() => {
+      finished = true;
+      callbackError = new BailianError(
+        localizeLogin(deps, {
+          "en-US": "Console login timed out: no credentials were received from the browser.",
+          "zh-CN": "控制台登录超时：未收到浏览器回传的凭证。",
+        }),
+        ExitCode.TIMEOUT,
+        localizeLogin(deps, {
+          "en-US":
+            "Check the site's local network permission, retry with --console --no-browser and open the URL in Firefox, or import a token with --console --token-stdin --console-region <region>.",
+          "zh-CN":
+            "请检查站点的本地网络权限，使用 --console --no-browser 重试并在 Firefox 打开地址，或使用 --console --token-stdin --console-region <region> 导入 token。",
+        }),
+      );
+      server.close();
+      server.closeAllConnections();
+    }, CONSOLE_LOGIN_TIMEOUT_MS);
+  });
+  process.stderr.write(
+    `${localizeLogin(deps, {
+      "en-US": "Open this login URL in a browser on this machine:",
+      "zh-CN": "请在本机浏览器中打开以下登录地址：",
+    })}\n${loginUrl}\n${localizeLogin(deps, {
+      "en-US":
+        "Waiting up to 15 minutes for credentials. If blocked, check local network permission or open the same URL in Firefox. Press Ctrl+C to cancel.",
+      "zh-CN":
+        "最多等待 15 分钟接收凭证。如被拦截，请检查本地网络权限或在 Firefox 打开同一地址。按 Ctrl+C 取消。",
+    })}\n`,
+  );
+  if (!opts?.noBrowser) {
+    void openInBrowser(loginUrl).then(
+      () => {
+        if (!finished)
+          process.stderr.write(
+            `${localizeLogin(deps, {
+              "en-US": "Opened the login page in your default browser.",
+              "zh-CN": "已在默认浏览器打开登录页面。",
+            })}\n`,
+          );
+      },
+      () => {
+        if (!finished)
+          process.stderr.write(
+            `${localizeLogin(deps, {
+              "en-US": "Could not open the default browser. Open the URL above manually.",
+              "zh-CN": "无法打开默认浏览器，请手动打开上方地址。",
+            })}\n`,
+          );
+      },
+    );
+  }
   try {
-    await openInBrowser(loginUrl);
-    process.stderr.write(
-      "Opened the login page in your default browser. This process keeps the local port open for the console; press Ctrl+C when finished (or wait for idle timeout).\n",
-    );
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    process.stderr.write(
-      `Could not open the default browser (${msg}). Open this URL manually:\n\n`,
-    );
-    process.stdout.write(`${loginUrl}\n`);
-    process.stderr.write(
-      "\nThis process keeps the local port open for the console; press Ctrl+C when finished (or wait for idle timeout).\n",
+    await completion;
+  } finally {
+    finished = true;
+    clearTimeout(timer);
+    server.close();
+    server.closeAllConnections();
+  }
+  if (callbackError) throw callbackError;
+  if (!savedCredentials) {
+    throw new BailianError(
+      localizeLogin(deps, {
+        "en-US": "Console login ended without saving credentials.",
+        "zh-CN": "控制台登录已结束，但未保存凭证。",
+      }),
+      ExitCode.GENERAL,
     );
   }
 
-  await new Promise<void>((resolve, reject) => {
-    let finished = false;
-    const done = () => {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timer);
-      resolve();
-    };
-    const timer = setTimeout(() => {
-      server.close();
-    }, CONSOLE_LOGIN_TIMEOUT_MS);
-
-    server.once("close", done);
-    server.once("error", (err) => {
-      clearTimeout(timer);
-      if (!finished) {
-        finished = true;
-        reject(err);
-      }
-    });
-  });
-
-  if (callbackError) {
-    throw callbackError;
+  if (opts?.needApiKey && savedSessionWithoutApiKey) {
+    const binName = deps.identity.binName;
+    process.stderr.write(
+      `${localizeLogin(deps, {
+        "en-US": `Saved the console session only. Model commands still need an API key: ${binName} auth login --console, or ${binName} auth login --api-key <key>`,
+        "zh-CN": `仅保存了控制台会话。模型命令仍需要 API Key：${binName} auth login --console，或 ${binName} auth login --api-key <key>`,
+      })}\n`,
+    );
   }
 }

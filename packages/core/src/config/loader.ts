@@ -269,6 +269,13 @@ export function buildSettings(s: ResolutionSources): Settings {
     configName: s.configName,
     output: detectOutputFormat(flags.output || env.DASHSCOPE_OUTPUT || file.output),
     outputExplicit: Boolean(flags.output || env.DASHSCOPE_OUTPUT || file.output),
+    outputSource: flags.output
+      ? "flag"
+      : env.DASHSCOPE_OUTPUT
+        ? "env"
+        : file.output
+          ? "file"
+          : "default",
     outputDir: file.output_dir || undefined,
     timeout,
     watermark: file.watermark ?? true,

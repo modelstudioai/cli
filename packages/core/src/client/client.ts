@@ -1,3 +1,4 @@
+import { httpTransport } from "./transport.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential } from "../auth/types.ts";
 import { BailianError } from "../errors/base.ts";
@@ -149,11 +150,17 @@ export class Client {
     return requestJson<T>(this.http, this.toOpts(opts));
   }
 
-  /** Resolve a file arg: upload a local path to OSS (returns oss:// URL), or pass a URL through. */
-  uploadFile(source: string, model: string, opts: { signal?: AbortSignal } = {}): Promise<string> {
+  /** Resolve a file arg, honoring a lazy service default origin just like {@link url}. */
+  uploadFile(
+    source: string,
+    model: string,
+    opts: { signal?: AbortSignal; defaultBaseUrl?: () => string } = {},
+  ): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
-    return resolveFileUrl(source, this.requireApi().token, model, {
-      ...opts,
+    const credential = this.requireApi();
+    return resolveFileUrl(source, credential.token, model, {
+      signal: opts.signal,
+      baseUrl: this.url("", opts.defaultBaseUrl),
       identity: this.deps.identity,
       timeout: this.deps.settings.timeout,
     });
@@ -167,13 +174,13 @@ export class Client {
   resolveImageInput(
     source: string,
     model: string,
-    opts: { signal?: AbortSignal } = {},
+    opts: { signal?: AbortSignal; defaultBaseUrl?: () => string } = {},
   ): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
     if (this.usesTokenPlanEndpoint()) {
       return Promise.resolve(imageFileToDataUri(source));
     }
-    return this.uploadFile(source, model, { signal: opts.signal });
+    return this.uploadFile(source, model, opts);
   }
 
   usesTokenPlanEndpoint(): boolean {
@@ -232,6 +239,15 @@ export class Client {
     });
   }
 
+  /** 创建仅本次调用链使用的 Console 身份；不修改原 Client、Settings 或持久化配置。 */
+  withConsoleSwitchAgent(switchAgent: number): Client {
+    return new Client({
+      ...this.deps,
+      settings: { ...this.deps.settings, consoleSwitchAgent: switchAgent },
+      consoleCred: this.deps.consoleCred ? { ...this.deps.consoleCred, switchAgent } : undefined,
+    });
+  }
+
   async console<T>(api: string, data: Record<string, unknown>): Promise<T> {
     if (!this.deps.consoleCred) {
       throw new BailianError("This command needs a console access token.", ExitCode.AUTH);
@@ -253,18 +269,29 @@ export class Client {
       ) {
         throw err;
       }
+      const credential = this.deps.consoleCred;
+      let retryResult: unknown;
       const newToken = await refreshAccessToken({
         identity: this.deps.identity,
-        settings: this.deps.settings,
+        settings: {
+          ...this.deps.settings,
+          consoleRegion: credential.region,
+          consoleSite: credential.site,
+          consoleSwitchAgent: credential.switchAgent,
+        },
         baseUrl: this.deps.baseUrl,
+        validateToken: async (token) => {
+          retryResult = await callConsoleGateway(
+            { ...credential, token },
+            timeout,
+            gwOpts,
+            this.deps.settings,
+          );
+        },
       });
       if (!newToken) throw err;
-      return (await callConsoleGateway(
-        { ...this.deps.consoleCred, token: newToken },
-        timeout,
-        gwOpts,
-        this.deps.settings,
-      )) as T;
+      this.deps.consoleCred = { ...credential, token: newToken };
+      return retryResult as T;
     }
   }
 
@@ -302,7 +329,7 @@ export class Client {
     }
 
     const timeoutMs = this.deps.settings.timeout * 1000;
-    const res = await fetch(endpoint, {
+    const res = await httpTransport.fetch(endpoint, {
       method: opts.method,
       headers: { ...headers, ...trackingHeaders(this.deps.identity) },
       body: bodyStr || undefined,

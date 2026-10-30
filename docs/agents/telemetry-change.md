@@ -96,10 +96,21 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 - `command`、`timestamp`、`durationMs`、`success`
 - `cliVersion`、`nodeVersion`、`os`
 - `authMethod`
+- `callerType`（必填：`agent` 或 `unknown`）；`callerType=agent` 时可选 `callerName`、`skillName`、`skillVersion`
 - 失败时的 `errorMessage`、`exitCode`、`httpStatus`、`requestId`
 - 安全 allowlist 过滤后的 `params`
 
+调用方归因只认本次进程的 `BAILIAN_CALLER_*`（由 `readCaller` 归一化后写入事件）：
+
+- `BAILIAN_CALLER_TYPE` 为 `agent` / `ai_agent`（大小写不敏感）→ `callerType=agent`
+- 未设置、空白或其他值 → `callerType=unknown`；不要把该字段当成人工
+- `callerName` / `skillName` / `skillVersion` 仅在 `agent` 时发送；`kscli` 通常没有 skill 字段
+
+新 CLI 每条进入 middleware 的命令事件都有 `callerType`。旧 CLI 没有该字段。看板只统计带 `callerType` 的事件，不能把字段缺失混进分母。`unknown` 只表示未识别为 agent，不是人工。新 CLI + 旧 skill / Agent 漏设变量时，会落进 `unknown`。`BAILIAN_CALLER_*` 是调用方声明，不是 `Identity`，不得用来猜 `bl` / `kscli`。
+
 参数默认不上传，只有 `packages/core/src/telemetry/tracker.ts` 的 `PARAM_ALLOWLIST` 中字段会进入事件。不得加入 prompt、凭证、文件路径、URL、账号/租户/工作空间 ID 或其他用户内容。
+
+`page` 仅记录有限数值页码；Webhook 等命令使用的不透明字符串游标不得进入本地日志或远端 AEM，即使字符串内容看起来是数字。
 
 事件同时写入两处：
 
@@ -112,16 +123,16 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 AEM 映射：
 
-| AEM 字段   | 内容                                                               |
-| ---------- | ------------------------------------------------------------------ |
-| event name | 命令路径                                                           |
-| `et`       | `EXP`                                                              |
-| `ext`      | 除 `command`、`params` 外的结构化事件字段，包含失败时的 `exitCode` |
-| `c1`       | allowlist 参数                                                     |
-| `c2`       | `success` / `failure`                                              |
-| `c3`       | HTTP status                                                        |
-| `c4`       | 错误文案，最多 500 字符                                            |
-| `c5`       | request ID                                                         |
+| AEM 字段   | 内容                                                                             |
+| ---------- | -------------------------------------------------------------------------------- |
+| event name | 命令路径                                                                         |
+| `et`       | `EXP`                                                                            |
+| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `callerType` 与失败时的 `exitCode` |
+| `c1`       | allowlist 参数                                                                   |
+| `c2`       | `success` / `failure`                                                            |
+| `c3`       | HTTP status                                                                      |
+| `c4`       | 错误文案，最多 500 字符                                                          |
+| `c5`       | request ID                                                                       |
 
 远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。
 
@@ -139,6 +150,7 @@ AEM 映射：
 
 - [ ] 同时核对 `packages/core/src/client/http.ts`、`mcp.ts`、`instrumented-fetch.ts`、`client.ts` 与 `files/upload.ts`
 - [ ] 产品身份必须来自 `Identity`；不得从命令路径、环境变量或 `process.argv` 猜测
+- [ ] `BAILIAN_CALLER_*` 是调用方声明，不得用来猜产品身份（`bl` / `kscli`）
 - [ ] `bl` 与 `kscli` 必须分别验证 `binName`、`clientName`、`version`
 - [ ] OSS、结果文件、npm、二进制和 Skill 下载不得为了业务渠道统计新增 source-config
 - [ ] 改 URL / host 范围时同时执行 [URL / 渠道变更](url-change.md) 清单
@@ -147,6 +159,7 @@ AEM 映射：
 
 - [ ] 更新 `TrackingEvent`、`createTrackingEvent()` 与 `buildRemoteAemOptions()` 的字段映射
 - [ ] 本地 JSONL 与远端 AEM 必须基于同一结构化事件，不能维护两套字段口径
+- [ ] 调用方字段经 `readCaller` → `TrackingDeps.caller` → 事件；仅显式 `agent` / `ai_agent` 为 `agent`，其余为 `unknown`
 - [ ] 成功与失败均覆盖；遥测异常必须静默且不改变业务退出码
 - [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口
@@ -156,15 +169,17 @@ AEM 映射：
 
 ```sh
 rg -n "trackingHeaders|x-dashscope-source-config|User-Agent" packages --glob '*.ts'
-rg -n "trackCommandExecution|PARAM_ALLOWLIST|buildRemoteAemOptions" packages/core packages/runtime --glob '*.ts'
+rg -n "trackCommandExecution|PARAM_ALLOWLIST|buildRemoteAemOptions|readCaller" packages/core packages/runtime --glob '*.ts'
 vp check
-vp test packages/core/tests packages/commands/tests/e2e/auth.e2e.test.ts
+vp test packages/core/tests packages/runtime/tests/telemetry-stage.test.ts packages/commands/tests/e2e/auth.e2e.test.ts
 ```
 
 ## 常见漏点
 
 - ✗ 只看 AEM 命令事件，误以为它能替代网关侧请求渠道统计
 - ✗ 把 `authMethod` 当成实际凭证来源；它只是命令声明的鉴权域
+- ✗ 把旧 CLI「没有 `callerType`」或「`callerType=unknown`」当成人工占比
+- ✗ 用 `BAILIAN_CALLER_*` 猜测产品身份，或根据 TTY / 安装目录反推调用方
 - ✗ 新增 bypass `fetch` 后漏掉应由网关消费的 source-config，或把它发给 OSS / npm / 第三方下载地址
 - ✗ 只改 `bl` 入口，导致 `kscli` 的产品名或版本标签错误
 - ✗ 把帮助、版本或参数校验失败算进“全部命令”；这些路径当前没有进入 telemetry middleware

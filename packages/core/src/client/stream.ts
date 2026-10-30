@@ -130,6 +130,9 @@ export async function* parseSSE(response: Response): AsyncGenerator<ServerSentEv
       yield { data: event.data, event: event.event, id: event.id };
     }
   } finally {
+    // A consumer may stop at [DONE] before network EOF. Cancel the body so
+    // core HTTP releases its idle timer, abort listener, and connection.
+    await reader.cancel().catch(() => {});
     reader.releaseLock();
   }
 }

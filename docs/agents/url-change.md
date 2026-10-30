@@ -23,9 +23,23 @@ runtime/src/urls.ts                      ← 用户面控制台 URL(cn-only)
   MCP_WEBSEARCH_PAGE        mcpMarketplaceDetailPage("WebSearch")
   mcpMarketplaceDetailPage    BAILIAN_CONSOLE?tab=mcp#/mcp-market/detail/<serverCode>
 
-core/files/upload.ts                     ← 文件上传 endpoint(cn-pinned)
-  UPLOAD_API                ${REGIONS.cn}/api/v1/uploads
+core/files/upload.ts                     ← model baseUrl → 同源临时上传 endpoint
+  北京/新加坡公共站         保持当前公共站 origin + /api/v1/uploads
+  北京/新加坡 Workspace     保持当前 Workspace origin + /api/v1/uploads
+  显式自定义代理            保持代理 origin,不改写到公共站
+  其他官方地域 / Token Plan 联网前报 usage error,引导使用 HTTPS URL
+  UploadOptions.baseUrl     直接 SDK 调用未提供时保持北京公共站默认值
 ```
+
+Prime 视频命令通过 `Client.uploadFile` / `resolveImageInput` 的 `defaultBaseUrl` 回调,
+复用 `resolvePrimeEndpoint` 推导 model Workspace origin;上传策略与模型提交均保持该
+Workspace origin。显式配置的 model origin 仍优先;已有媒体 URL 不触发上传或求值上传默认地址。
+
+官方临时文件上传当前只支持 `cn-beijing` 与 `ap-southeast-1`。Token Plan 主机,以及这些官方
+endpoint 上的 `sk-sp-` 密钥,在发送 API Key 前失败。显式自定义代理视为自身路由的权威来源,
+保持同源且不按密钥前缀拦截,由代理/服务决定能力。任何路径都不得回退公共站或跨 origin 重试;
+不支持时用户可改用服务可访问的 HTTPS 媒体 URL。服务端错误保留 message/code/request ID/raw
+response,并在 message 的结构化上下文中展示本次有效上传 endpoint。
 
 ## 必查清单
 
@@ -52,7 +66,7 @@ grep -rnE "https://dashscope[a-z-]*\.aliyuncs\.com" packages/ --include="*.ts" \
 ### B. 非 TS 文件(只能人工同步,无法 import)
 
 - [ ] `skills/*/reference/` 各 `<group>.md` 中 API/控制台 URL(`generate:reference` 重建后核对并提交)
-- [ ] `README.md` / `README.zh.md` 中所有 URL
+- [ ] `README.md` / `README.zh.md` 中所有 URL；内容图必须用可公网绝对 URL，且根目录与 `packages/cli` 逐字节一致（`assertReadmeSync`）。`img.alicdn.com` 会被 GitHub Camo 拒绝；相对路径在 npm 上解析不到。优先 `https://raw.githubusercontent.com/modelstudioai/cli/main/assets/...`
 
 ### C. 渠道追踪参数
 
@@ -75,5 +89,6 @@ pnpm -F bailian-cli exec tsx src/main.ts help                # help 命令
 ## 常见漏点
 
 - ✗ 改了 `urls.ts` / 登录站点 / 文档 deep link 但忘记同步 README(用户最先看到)
+- ✗ README 内容图用相对路径或阿里云 CDN：发版 `assertReadmeSync` / GitHub Camo / npm 子包 README 至少会坏一处
 - ✗ 在 runtime / command 文件里 inline `https://bailian.console.aliyun.com/...` 而不是从 `urls.ts` import
 - ✗ 在 core 的 hint 里写 URL(违反 [error-hint-change.md](error-hint-change.md) 不变量 1)

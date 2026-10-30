@@ -17,7 +17,9 @@ const READ_ONLY_ENV: NodeJS.ProcessEnv = {
   BAILIAN_CONFIG_DIR: fileURLToPath(
     new URL("./fixtures/deploy-query-no-user-config", import.meta.url),
   ),
-  NODE_OPTIONS: `--import=data:text/javascript,${encodeURIComponent('globalThis.fetch = async () => { throw new Error("Network disabled for deploy query E2E"); };')}`,
+  NODE_OPTIONS: `--import=data:text/javascript,${encodeURIComponent(`import { createRequire } from "node:module";
+const require = createRequire(${JSON.stringify(fileURLToPath(new URL("../../../core/package.json", import.meta.url)))});
+require("undici").fetch = globalThis.fetch = async () => { throw new Error("Network disabled for deploy query E2E"); };`)}`,
 };
 
 function runReadOnlyDeploy(args: string[]) {

@@ -1,6 +1,7 @@
 import type { Identity, Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import type { AuthRequirement } from "../types/command.ts";
+import type { CallerAttribution } from "./caller.ts";
 import { createTrackingEvent } from "./event.ts";
 import { localSink, remoteSink } from "./sink.ts";
 
@@ -77,6 +78,8 @@ function extractParams(flags: Record<string, unknown>): Record<string, unknown> 
     if (GLOBAL_FLAG_KEYS.has(key)) continue;
     if (!PARAM_ALLOWLIST.has(key)) continue;
     if (value === undefined || value === false) continue;
+    // Some commands use page for an opaque cursor rather than a numeric page.
+    if (key === "page" && (typeof value !== "number" || !Number.isFinite(value))) continue;
     params[key] = value;
   }
   return params;
@@ -87,6 +90,8 @@ export interface TrackingDeps {
   identity: Identity;
   settings: Settings;
   authMethod?: AuthRequirement;
+  /** From `readCaller(process.env)` in telemetryStage. */
+  caller: CallerAttribution;
 }
 
 export async function trackCommandExecution(
@@ -131,6 +136,7 @@ export async function trackCommandExecution(
       cliVersion: deps.identity.version,
       authMethod: deps.authMethod,
       params: extractParams(flags),
+      caller: deps.caller,
     });
 
     // Fire-and-forget — never block the CLI exit or mask errors

@@ -124,6 +124,28 @@ describe("usage token-plan view", () => {
       "The monthly limit may be unlimited; verify in the Bailian Token Plan console.",
     );
   });
+
+  test("renders every quota window returned by the API, ordered by duration", async () => {
+    process.env.NO_COLOR = "1";
+    const output = captureStdout();
+
+    await runTokenPlan(
+      wrapResponse({
+        per1WeekPercentage: 0.13,
+        per1WeekResetTime: 1_786_417_680_000,
+        per5HourPercentage: 0.43,
+        per5HourResetTime: 1_785_868_560_000,
+      }),
+    );
+
+    const renderedOutput = output.join("");
+    expect(renderedOutput).toContain("5-hour quota");
+    expect(renderedOutput).toContain("1-week quota");
+    expect(renderedOutput).not.toContain("Monthly quota");
+    expect(renderedOutput.indexOf("5-hour quota")).toBeLessThan(
+      renderedOutput.indexOf("1-week quota"),
+    );
+  });
 });
 
 describe("usage token-plan json", () => {
@@ -135,15 +157,39 @@ describe("usage token-plan json", () => {
     expect(JSON.parse(output.join(""))).toEqual({
       per1MonthPercentage: 0.5,
       per1MonthResetTime: 1_786_000_000_000,
+      hasQuotaData: true,
     });
   });
 
-  test("returns an empty JSON object when no quota fields are available", async () => {
+  test("flags the absence of quota data instead of returning a bare empty object", async () => {
     const output = captureStdout();
 
     await runTokenPlan(makeUsageResponse(), "json");
 
-    expect(output.join("").trim()).toBe("{}");
+    expect(JSON.parse(output.join(""))).toEqual({ hasQuotaData: false });
+  });
+
+  test("outputs every per* quota window returned by the API", async () => {
+    const output = captureStdout();
+
+    await runTokenPlan(
+      wrapResponse({
+        per5HourPercentage: 0.43,
+        per5HourResetTime: 1_785_868_560_000,
+        per1WeekPercentage: 0.13,
+        per1WeekResetTime: 1_786_417_680_000,
+        requestId: "ignored",
+      }),
+      "json",
+    );
+
+    expect(JSON.parse(output.join(""))).toEqual({
+      per5HourPercentage: 0.43,
+      per5HourResetTime: 1_785_868_560_000,
+      per1WeekPercentage: 0.13,
+      per1WeekResetTime: 1_786_417_680_000,
+      hasQuotaData: true,
+    });
   });
 
   test("omits non-numeric quota fields from the JSON output", async () => {
@@ -154,6 +200,9 @@ describe("usage token-plan json", () => {
       "json",
     );
 
-    expect(JSON.parse(output.join(""))).toEqual({ per1MonthResetTime: 1_786_000_000_000 });
+    expect(JSON.parse(output.join(""))).toEqual({
+      per1MonthResetTime: 1_786_000_000_000,
+      hasQuotaData: false,
+    });
   });
 });

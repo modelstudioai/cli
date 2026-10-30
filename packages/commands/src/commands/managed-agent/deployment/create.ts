@@ -2,6 +2,10 @@ import type { DeploymentDecl } from "@openagentpack/sdk";
 import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import {
+  ENVIRONMENT_VARIABLE_FLAGS,
+  parseEnvironmentVariables,
+} from "../_engine/environment-variables.ts";
+import {
   loadScopedCreateProject,
   parseJsonInputs,
   parseMetadata,
@@ -11,6 +15,7 @@ import {
 } from "../_engine/scoped-create.ts";
 
 const FLAGS = {
+  ...ENVIRONMENT_VARIABLE_FLAGS,
   name: {
     type: "string",
     valueHint: "<name>",
@@ -121,12 +126,14 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--name <name> --agent <yaml-key> (--message <text>... | --event <json|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--vault <yaml-key>...] [--resource <json|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--file <path>] [--yes]",
+    "--name <name> --agent <yaml-key> (--message <text>... | --event <json|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--environment_variables <KEY=VALUE>...] [--vault <yaml-key>...] [--resource <json|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--file <path>] [--yes]",
   flags: FLAGS,
   exampleArgs: [
     {
-      "en-US": '--name Daily --agent assistant --message "Generate the report"',
-      "zh-CN": '--name Daily --agent assistant --message "生成报告"',
+      "en-US":
+        '--name Daily --agent assistant --message "Generate the report" --environment_variables LOG_LEVEL=info',
+      "zh-CN":
+        '--name Daily --agent assistant --message "生成报告" --environment_variables LOG_LEVEL=info',
     },
     {
       "en-US":
@@ -140,6 +147,12 @@ export default defineCommand({
     ...SCOPED_CREATE_NOTE,
     {
       "en-US":
+        "--environment_variables writes string values to the Deployment YAML declaration when --yes is used. Repeat the flag for multiple variables; empty values and values containing = are allowed. Later apply runs manage these values; removing the field or using {} clears them. YAML stores these values; the key `__proto__` is reserved.",
+      "zh-CN":
+        "使用 --yes 时，--environment_variables 将字符串值写入 Deployment 的 YAML 声明。可重复传入，允许空值及包含 = 的值。后续 apply 会管理这些值；删除字段或设置为 {} 会清空变量。YAML 会保存这些值；不支持保留键 `__proto__`。",
+    },
+    {
+      "en-US":
         "Initial Events must contain 1-50 user.message/system.message entries. --resource accepts only File Resources in this release.",
       "zh-CN":
         "Initial Events 必须包含 1–50 条 user.message/system.message；本期 --resource 仅接受 File Resource。",
@@ -151,6 +164,7 @@ export default defineCommand({
     },
   ],
   validate: (flags) => {
+    parseDeploymentEnvironmentVariables(flags.environment_variables);
     if (!flags.name.trim()) return "--name must not be empty.";
     if (!flags.agent.trim()) return "--agent must not be empty.";
     if (flags.message?.length && flags.event?.length) {
@@ -189,6 +203,7 @@ export default defineCommand({
       agent: ctx.flags.agent,
       agent_version: ctx.flags.agentVersion,
       environment: ctx.flags.environment,
+      environment_variables: parseDeploymentEnvironmentVariables(ctx.flags.environment_variables),
       vaults: ctx.flags.vault,
       resources,
       initial_events: initialEvents,
@@ -224,6 +239,19 @@ export default defineCommand({
     });
   },
 });
+
+function parseDeploymentEnvironmentVariables(
+  entries: string[] | undefined,
+): Record<string, string> | undefined {
+  const variables = parseEnvironmentVariables(entries);
+  if (variables && Object.hasOwn(variables, "__proto__")) {
+    throw new BailianError(
+      "Deployment environment_variables cannot use the reserved key __proto__. / Deployment 环境变量不能使用保留键 __proto__。",
+      ExitCode.USAGE,
+    );
+  }
+  return variables;
+}
 
 function validateEvents(
   values: unknown[],

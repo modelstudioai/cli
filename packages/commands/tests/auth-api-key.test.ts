@@ -1,3 +1,4 @@
+import { httpTransport } from "bailian-cli-core";
 import { BailianError, ExitCode, type Identity, type Settings } from "bailian-cli-core";
 import { expect, test } from "vite-plus/test";
 import {
@@ -24,10 +25,10 @@ const settings: Settings = {
   telemetry: false,
 };
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
   });
 }
 
@@ -72,12 +73,12 @@ test("普通 Key 优先使用已保存地址，再尝试 Workspace 专属地址�
     }),
   ).toEqual([
     "https://stored.example.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.cn-beijing.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.ap-southeast-1.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.cn-hongkong.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.ap-northeast-1.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.eu-central-1.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
-    "https://llm-test-workspace.us-east-1.maas.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+    "https://llm-test-workspace.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.cn-hongkong.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.ap-northeast-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.eu-central-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://llm-test-workspace.us-east-1.maas.aliyuncs.com/compatible-mode/v1/models",
     "https://dashscope.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
     "https://dashscope-intl.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
     "https://dashscope-us.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
@@ -85,10 +86,67 @@ test("普通 Key 优先使用已保存地址，再尝试 Workspace 专属地址�
   ]);
 });
 
+test("已保存的 Workspace MaaS 地址使用 Compatible /models", () => {
+  expect(
+    candidateUrls("sk-ws-placeholder", {
+      storedBaseUrl: "https://ws-stored.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+    }),
+  ).toEqual([
+    "https://ws-stored.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    "https://dashscope.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+    "https://dashscope-intl.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+    "https://dashscope-us.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+    "https://cn-hongkong.dashscope.aliyuncs.com/api/v1/models?page_no=1&page_size=1",
+  ]);
+});
+
+test("Workspace 地域候选先于公共站点选择首个成功地域", async () => {
+  const originalFetch = httpTransport.fetch;
+  const workspaceOrigin = "https://llm-test-workspace.ap-southeast-1.maas.aliyuncs.com";
+  httpTransport.fetch = async (input) => {
+    const url = requestUrl(input);
+    if (url === `${workspaceOrigin}/compatible-mode/v1/models`) {
+      return jsonResponse({ object: "list", data: [{ id: "workspace-model" }] });
+    }
+    if (url.startsWith("https://dashscope-intl.aliyuncs.com/")) {
+      return jsonResponse({ data: [{ id: "public-model" }] });
+    }
+    const status = url.includes(".maas.aliyuncs.com/") ? 404 : 401;
+    return jsonResponse({ code: "Rejected", message: "candidate rejected" }, status);
+  };
+
+  try {
+    await expect(
+      validateApiKey({ identity, settings }, "sk-ws-placeholder", {
+        workspaceId: "llm-test-workspace",
+      }),
+    ).resolves.toEqual({
+      baseUrl: workspaceOrigin,
+      kind: "ordinary",
+    });
+  } finally {
+    httpTransport.fetch = originalFetch;
+  }
+});
+
 test("其他格式 Key 不限制端点类型", () => {
   expect(
     apiKeyValidationCandidates("custom-key-placeholder", {}).map((candidate) => candidate.kind),
   ).toEqual(["ordinary", "ordinary", "ordinary", "ordinary", "token-plan", "token-plan"]);
+});
+
+test("未知格式 Key 指向 Token Plan host 时保留 Token Plan kind", () => {
+  expect(
+    apiKeyValidationCandidates("custom-key-placeholder", {
+      explicitBaseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com",
+    }),
+  ).toEqual([
+    {
+      baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com",
+      kind: "token-plan",
+      modelsUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/models",
+    },
+  ]);
 });
 
 test("显式 Base URL 只校验指定站点，并根据 Key 类型选择 /models 路径", () => {
@@ -102,12 +160,17 @@ test("显式 Base URL 只校验指定站点，并根据 Key 类型选择 /models
       explicitBaseUrl: "https://workspace.example.com/compatible-mode/v1",
     }),
   ).toEqual(["https://workspace.example.com/api/v1/models?page_no=1&page_size=1"]);
+  expect(
+    candidateUrls("sk-ws-placeholder", {
+      explicitBaseUrl: "https://ws-explicit.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+    }),
+  ).toEqual(["https://ws-explicit.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/models"]);
 });
 
 test("Token Plan 多地区并行校验选择实际接受 Key 的国际站点", async () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = httpTransport.fetch;
   const requests: Array<{ authorization: string; url: string }> = [];
-  globalThis.fetch = async (input, init) => {
+  httpTransport.fetch = async (input, init) => {
     const url = requestUrl(input);
     requests.push({
       authorization: new Headers(init?.headers).get("authorization") ?? "",
@@ -135,32 +198,74 @@ test("Token Plan 多地区并行校验选择实际接受 Key 的国际站点", a
       },
     ]);
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
   }
 });
 
-test("所有候选站点明确拒绝 Key 时返回 AUTH 校验失败", async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () =>
-    jsonResponse({ code: "InvalidApiKey", message: "invalid key" }, 401);
+test("所有候选站点拒绝 Key 时透传首个服务端错误", async () => {
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async (input) => {
+    const requestId = requestUrl(input).includes("cn-beijing")
+      ? "req-cn-rejected"
+      : "req-sg-rejected";
+    return jsonResponse(
+      { code: "InvalidApiKey", message: "invalid key", request_id: requestId },
+      401,
+    );
+  };
 
   try {
     const error = await captureValidationError("sk-sp-placeholder");
-    expect(error.exitCode).toBe(ExitCode.AUTH);
-    expect(error.message).toMatch(/API key validation failed/);
+    expect(error.exitCode).toBe(ExitCode.GENERAL);
+    expect(error.message).toBe("invalid key");
+    expect(error.api).toEqual({
+      httpStatus: 401,
+      apiCode: "InvalidApiKey",
+      requestId: "req-cn-rejected",
+    });
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
+  }
+});
+
+test("显式 Base URL 返回 404 时保留状态和 request ID", async () => {
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async () =>
+    jsonResponse({ code: "NotFound", message: "models route not found" }, 404, {
+      "x-request-id": "req-route-not-found",
+    });
+
+  try {
+    const error = await validateApiKey({ identity, settings }, "sk-ws-placeholder", {
+      explicitBaseUrl: "https://ws-explicit.ap-southeast-1.maas.aliyuncs.com",
+    }).catch((caught) => caught);
+    expect(error).toBeInstanceOf(BailianError);
+    expect(error).toMatchObject({
+      exitCode: ExitCode.GENERAL,
+      message: "models route not found",
+      api: {
+        httpStatus: 404,
+        apiCode: "NotFound",
+        requestId: "req-route-not-found",
+      },
+    });
+  } finally {
+    httpTransport.fetch = originalFetch;
   }
 });
 
 test.each([
   { name: "5xx", status: 503, message: "temporary outage" },
   { name: "429", status: 429, message: "too many requests" },
-])("存在 $name 时校验结论不确定，不误报 Key 无效", async ({ status, message }) => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (input) => {
-    if (requestUrl(input).startsWith("https://dashscope.aliyuncs.com/")) {
-      return jsonResponse({ code: "TemporaryFailure", message }, status);
+])("后续候选出现 $name 时优先透传该错误", async ({ status, message }) => {
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async (input) => {
+    const url = requestUrl(input);
+    if (url.startsWith("https://dashscope-intl.aliyuncs.com/")) {
+      return jsonResponse(
+        { code: "TemporaryFailure", message, request_id: `req-${status}` },
+        status,
+      );
     }
     return jsonResponse({ code: "InvalidApiKey", message: "invalid key" }, 401);
   };
@@ -169,7 +274,63 @@ test.each([
     const error = await captureValidationError("sk-placeholder");
     expect(error.exitCode).toBe(ExitCode.GENERAL);
     expect(error.message).toBe(message);
+    expect(error.api).toEqual({
+      httpStatus: status,
+      apiCode: "TemporaryFailure",
+      requestId: `req-${status}`,
+    });
   } finally {
-    globalThis.fetch = originalFetch;
+    httpTransport.fetch = originalFetch;
+  }
+});
+
+test("后续候选出现网络错误时优先透传该错误", async () => {
+  const originalFetch = httpTransport.fetch;
+  const networkError = new TypeError("fetch failed", {
+    cause: Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
+  });
+  httpTransport.fetch = async (input) => {
+    if (requestUrl(input).startsWith("https://dashscope-intl.aliyuncs.com/")) {
+      throw networkError;
+    }
+    return jsonResponse({ code: "InvalidApiKey", message: "invalid key" }, 401);
+  };
+
+  try {
+    const error = await validateApiKey({ identity, settings }, "sk-placeholder", {}).catch(
+      (caught) => caught,
+    );
+    expect(error).toBe(networkError);
+  } finally {
+    httpTransport.fetch = originalFetch;
+  }
+});
+
+test("同一优先级的 HTTP 错误保持候选顺序", async () => {
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async (input) => {
+    const url = requestUrl(input);
+    if (url.startsWith("https://dashscope.aliyuncs.com/")) {
+      return jsonResponse(
+        { code: "FirstRejected", message: "first candidate rejected", request_id: "req-first" },
+        401,
+      );
+    }
+    return jsonResponse(
+      { code: "LaterRejected", message: "later candidate rejected", request_id: "req-later" },
+      404,
+    );
+  };
+
+  try {
+    const error = await captureValidationError("sk-placeholder");
+    expect(error.message).toBe("first candidate rejected");
+    expect(error.api).toEqual({
+      httpStatus: 401,
+      apiCode: "FirstRejected",
+      requestId: "req-first",
+    });
+  } finally {
+    httpTransport.fetch = originalFetch;
   }
 });

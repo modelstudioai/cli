@@ -5,6 +5,7 @@ import {
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runCommandInProcess,
 } from "../helpers.ts";
 import { KNOWLEDGE_CHAT_ROUTES } from "../topic-routes.ts";
 
@@ -31,6 +32,91 @@ interface DryRunBody {
 }
 
 describe("e2e: knowledge chat", () => {
+  test.each([
+    { args: ["--agent-id", "", "--message", "hello"], flag: "--agent-id" },
+    { args: ["--agent-id", " \t", "--message", "hello"], flag: "--agent-id" },
+    { args: ["--agent-id", "aid_test", "--message", ""], flag: "--message" },
+    { args: ["--agent-id", "aid_test", "--message", " \t"], flag: "--message" },
+    { args: ["--agent-id", "aid_test", "--message", "user:   "], flag: "--message" },
+    {
+      args: ["--agent-id", "aid_test", "--message", '{"role":"user","content":[]}'],
+      flag: "--message",
+    },
+    { args: ["--agent-id", "aid_test", "--image", ""], flag: "--image" },
+    { args: ["--agent-id", "aid_test", "--message", "hello", "--image", " \t"], flag: "--image" },
+  ])("空输入在执行和 dry-run 前被拒绝：$args", async ({ args, flag }) => {
+    for (const dryRun of [true, false]) {
+      const result = await runCommandInProcess(KNOWLEDGE_CHAT_ROUTES, [
+        "knowledge",
+        "chat",
+        ...args,
+        "--workspace-id",
+        "ws_test",
+        ...(dryRun ? ["--dry-run"] : []),
+        "--output",
+        "json",
+      ]);
+      expect(result.exitCode).toBe(2);
+      expect(result.stdout).toBe("");
+      const diagnostic = JSON.parse(result.stderr);
+      expect(diagnostic.error.code).toBe(2);
+      expect(diagnostic.error.message).toContain(flag);
+      expect(diagnostic.error.message).toMatch(/empty|nonempty|whitespace/);
+    }
+  });
+
+  test.each([
+    {
+      role: "user",
+      content: [{ type: "image_url", image_url: { url: "https://example.com/image.png" } }],
+    },
+    {
+      role: "assistant",
+      content: "",
+      tool_calls: [{ id: "call-test", function: { name: "search", arguments: "{}" } }],
+    },
+  ])("--dry-run 保留结构化图片和工具调用：$role", async (message) => {
+    const result = await runCommandInProcess(KNOWLEDGE_CHAT_ROUTES, [
+      "knowledge",
+      "chat",
+      "--agent-id",
+      "aid_test",
+      "--message",
+      JSON.stringify(message),
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(parseStdoutJson<DryRunBody>(result.stdout).request?.input?.messages).toEqual([message]);
+  });
+
+  test("--dry-run 允许空文本搭配有效图片", async () => {
+    const result = await runCommandInProcess(KNOWLEDGE_CHAT_ROUTES, [
+      "knowledge",
+      "chat",
+      "--agent-id",
+      "aid_test",
+      "--message",
+      "",
+      "--image",
+      "https://example.com/image.png",
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const body = parseStdoutJson<DryRunBody>(result.stdout);
+    expect(body.request?.input?.messages?.[0]?.content).toContainEqual({
+      type: "image_url",
+      image_url: { url: "https://example.com/image.png" },
+    });
+  });
+
   test("knowledge chat --help 正常退出", async () => {
     const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",

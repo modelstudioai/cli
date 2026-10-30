@@ -1,3 +1,4 @@
+import { httpTransport } from "../client/transport.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { withRetry } from "../utils/retry.ts";
@@ -35,7 +36,7 @@ export async function fetchSkillsIndex(
       const url = `${getSkillRegistryBaseUrl()}/index.json`;
       let res: Response;
       try {
-        res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+        res = await httpTransport.fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
       } catch (err) {
         throw new BailianError(
           `Cannot access skill registry: ${url}`,
@@ -106,7 +107,7 @@ export async function downloadSkillAsset(
       const url = `${getSkillRegistryBaseUrl()}/${name}/${resolveAssetFileName(entry)}`;
       let res: Response;
       try {
-        res = await fetch(url, { signal: AbortSignal.timeout(ASSET_TIMEOUT_MS) });
+        res = await httpTransport.fetch(url, { signal: AbortSignal.timeout(ASSET_TIMEOUT_MS) });
       } catch (err) {
         throw new BailianError(
           `Failed to download skill ${name}: ${url}`,

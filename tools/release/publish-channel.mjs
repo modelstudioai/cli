@@ -7,7 +7,6 @@ import { headSha7, utcDateStamp } from "./lib/git.mjs";
 import { npmViewExists, pnpmPublish } from "./lib/npm.mjs";
 import {
   ALL_PACKAGES,
-  PACKAGES,
   packageJsonPath,
   readPackageJson,
   writePackageJson,
@@ -27,18 +26,14 @@ const { values } = parseArgs({
   options: {
     channel: { type: "string" },
     "dry-run": { type: "boolean", default: false },
-    knowledge: { type: "boolean", default: false },
     "skip-binary": { type: "boolean", default: false },
   },
   allowPositionals: false,
 });
 const channel = values.channel;
 const dryRun = values["dry-run"];
-const knowledge = values.knowledge;
-// knowledge-studio-cli channel publishes are npm-only: binary artifacts are `bl`
-// and must not overwrite CDN sync-release.json used by bailian-cli install verify.
-const skipBinary = values["skip-binary"] || knowledge;
-const packages = knowledge ? ALL_PACKAGES : PACKAGES;
+const skipBinary = values["skip-binary"];
+const packages = ALL_PACKAGES;
 assertChannel(channel);
 
 if (!dryRun && !process.env.CI) {
@@ -71,7 +66,7 @@ try {
     writePackageJson(pkg, json);
   }
 
-  await runCheck({ channel: true, knowledge });
+  await runCheck({ channel: true });
 
   step(`idempotency: check ${betaVersion} against registry`);
   const published = new Map();
@@ -83,10 +78,7 @@ try {
   // 1) binary GitHub Release before npm, and before finally restores package.json.
   // OSS sync-release.json can fail on a network blip; npm must not land first.
   if (skipBinary) {
-    const reason = knowledge
-      ? "[knowledge] skipping binary (npm-only; does not touch sync-release.json)"
-      : "[skip-binary] skipping binary GitHub Release";
-    log(`\n${reason}`);
+    log("\n[skip-binary] skipping binary GitHub Release");
   } else {
     step(
       `publish binary GitHub Release (mode=channel, npm-tag=${channel}, CDN=sync-release, version=${betaVersion})`,
@@ -94,7 +86,7 @@ try {
     await releaseBinaryArtifacts({ mode: "channel", channel, dryRun });
   }
 
-  // 2) npm (dependency order: core → runtime → commands → cli [→ kscli])
+  // 2) npm (dependency order: core → runtime → commands → cli → kscli → dsh plugins)
   if (packages.every((pkg) => published.get(pkg.key))) {
     log("\nall packages already published; nothing to do for npm.");
   } else {

@@ -1,4 +1,6 @@
 export {
+  parsexBaseUrl,
+  parsexEndpoint,
   appCompletionPath,
   chatPath,
   imagePath,
@@ -6,15 +8,18 @@ export {
   imageText2ImagePath,
   image2ImagePath,
   knowledgeChatEndpoint,
-  knowledgeRetrievePath,
   knowledgeSearchEndpoint,
-  memoryAddPath,
+  memoryAddAsyncPath,
+  memoryEndpoint,
+  memoryEventPath,
   memoryListPath,
   memoryNodePath,
   memorySearchPath,
+  memorySkillExportPath,
   mcpWebSearchPath,
   modelsLimitsPath,
   modelsPermissionsPath,
+  profileSchemaItemPath,
   profileSchemaPath,
   ragEndpoint,
   RAG_PATHS,
@@ -37,6 +42,7 @@ export {
   speechVocabularyPath,
   taskPath,
   userProfilePath,
+  userProfileValuesPath,
   videoGeneratePath,
   image2videoPath,
   workspaceMaaSBaseUrl,
@@ -144,3 +150,4 @@ export {
 } from "./aigc-mcp.ts";
 export type { ServerSentEvent } from "./stream.ts";
 export { parseSSE } from "./stream.ts";
+export { httpTransport } from "./transport.ts";

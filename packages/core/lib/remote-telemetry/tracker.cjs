@@ -59,7 +59,9 @@ module.exports = (function (e) {
     e.exports = require("os");
   },
   function (e, t) {
-    e.exports = globalThis.fetch;
+    // Keep the proxy dispatcher and fetch on the same Undici implementation.
+    e.exports = (...args) =>
+      (process.versions.bun ? globalThis.fetch : require("undici").fetch)(...args);
   },
   function (e, t, n) {
     "use strict";

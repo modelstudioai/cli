@@ -1,4 +1,5 @@
-import { defineCommand, detectOutputFormat, effectiveConsoleGatewayConfig } from "bailian-cli-core";
+import { detectOutputFormat } from "bailian-cli-core";
+import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
 import { ensureAlertReady, extractAlertPage, ALERT_LEVELS } from "./shared.ts";
 
@@ -43,7 +44,7 @@ function printTable(list: AlertRuleItem[]): void {
   for (const line of lines) process.stdout.write(line + "\n");
 }
 
-export default defineCommand({
+export default defineTelemetryCommand({
   description: {
     "en-US": "List model alert rules",
     "zh-CN": "查看模型告警规则列表",
@@ -112,7 +113,7 @@ export default defineCommand({
   exampleArgs: ["", "--enabled true", "--name 失败率 --level ERROR", "--output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = detectOutputFormat(settings.output);
 
     const reqDTO = {
       workspaceId: settings.workspaceId,
@@ -132,7 +133,7 @@ export default defineCommand({
         {
           api: LIST_RULES_API,
           data: { reqDTO },
-          ...effectiveConsoleGatewayConfig(settings),
+          ...telemetryGatewayPreview(settings),
         },
         format,
       );

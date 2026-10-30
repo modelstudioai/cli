@@ -69,6 +69,32 @@ export function isConnectorE2EReady(): boolean {
   return isKbAdminE2EReady() && process.env.BAILIAN_E2E_CONNECTOR === "1";
 }
 
+/**
+ * 记忆库 fixture（memory / memory profile live 闭环）
+ *
+ * 记忆 API 没有「列出记忆库」接口，ID 只能从控制台抄，因此必须显式配置；
+ * 另外记忆服务需要在账号上单独开通，未开通时服务端返回 ServiceNotOpened。
+ * 记忆 API 部署在 workspace 专属域名上，所以还需要 BAILIAN_WORKSPACE_ID。
+ */
+export function isMemoryE2EReady(): boolean {
+  return (
+    isDashScopeE2EReady() &&
+    !!process.env.BAILIAN_E2E_MEMORY_LIBRARY_ID?.trim() &&
+    !!process.env.BAILIAN_WORKSPACE_ID?.trim()
+  );
+}
+
+/**
+ * skill 记忆 fixture（skill 抽取 live 闭环）
+ *
+ * skill 类型的 project 无法通过 CLI 创建（项目管理接口非对客），且 skill 抽取
+ * 仅对加白账号开放，因此需要在控制台预置 skill 项目后通过
+ * BAILIAN_E2E_MEMORY_SKILL_PROJECT_ID 注入；未配置时 skill live 用例整体跳过。
+ */
+export function isMemorySkillE2EReady(): boolean {
+  return isMemoryE2EReady() && !!process.env.BAILIAN_E2E_MEMORY_SKILL_PROJECT_ID?.trim();
+}
+
 // ---- Long-lived knowledge fixtures (created manually in the console; the CLI
 // cannot create table/image-type bases or multimodal services itself) ----
 
@@ -104,5 +130,16 @@ export function isOssImportE2EReady(): boolean {
     !!process.env.BAILIAN_E2E_OSS_BUCKET?.trim() &&
     !!process.env.BAILIAN_E2E_OSS_REGION?.trim() &&
     !!process.env.BAILIAN_E2E_OSS_KEY?.trim()
+  );
+}
+
+/** RAG ingestion is expensive: ordinary live/media/video gates never enable this journey. */
+export function isRagMediaWriteE2EReady(): boolean {
+  return (
+    isKbAdminE2EReady() &&
+    process.env.BAILIAN_E2E_RAG_MEDIA_WRITE === "1" &&
+    !!process.env.BAILIAN_E2E_RAG_MEDIA_FILE?.trim() &&
+    !!process.env.BAILIAN_E2E_RAG_MEDIA_RUN_ID?.trim() &&
+    ["upload", "existing-file"].includes(process.env.BAILIAN_E2E_RAG_MEDIA_PATH ?? "")
   );
 }

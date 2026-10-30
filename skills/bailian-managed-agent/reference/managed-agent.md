@@ -7,91 +7,112 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                                    | Authentication | Description                                                                  |
-| ------------------------------------------ | -------------- | ---------------------------------------------------------------------------- |
-| `bl managed-agent agent create`            | API Key        | Declare and create one Managed Agent through an isolated YAML apply          |
-| `bl managed-agent agent get`               | API Key        | Get a Managed Agent                                                          |
-| `bl managed-agent agent list`              | API Key        | List Managed Agents                                                          |
-| `bl managed-agent agent search`            | API Key        | Search Managed Agents                                                        |
-| `bl managed-agent agent versions`          | API Key        | List Managed Agent versions                                                  |
-| `bl managed-agent apply`                   | API Key        | Apply planned changes to create/update/delete agent resources                |
-| `bl managed-agent deployment create`       | API Key        | Declare and create one Managed Agent Deployment through a scoped YAML apply  |
-| `bl managed-agent deployment get`          | API Key        | Get a Managed Agent deployment                                               |
-| `bl managed-agent deployment list`         | API Key        | List Managed Agent deployments                                               |
-| `bl managed-agent deployment pause`        | API Key        | Pause a Managed Agent deployment                                             |
-| `bl managed-agent deployment run`          | API Key        | Run a Managed Agent deployment now                                           |
-| `bl managed-agent deployment runs get`     | API Key        | Get a Managed Agent deployment run                                           |
-| `bl managed-agent deployment runs list`    | API Key        | List runs for a Managed Agent deployment                                     |
-| `bl managed-agent deployment search`       | API Key        | Search Managed Agent deployments                                             |
-| `bl managed-agent deployment unpause`      | API Key        | Unpause a Managed Agent deployment                                           |
-| `bl managed-agent destroy`                 | API Key        | Destroy all managed agent resources tracked in state                         |
-| `bl managed-agent environment create`      | API Key        | Declare and create one Managed Agent Environment through a scoped YAML apply |
-| `bl managed-agent environment get`         | API Key        | Get a Managed Agent environment                                              |
-| `bl managed-agent environment list`        | API Key        | List Managed Agent environments                                              |
-| `bl managed-agent environment search`      | API Key        | Search Managed Agent environments                                            |
-| `bl managed-agent file delete`             | API Key        | Delete a Managed Agent file                                                  |
-| `bl managed-agent file download`           | API Key        | Download Managed Agent file content                                          |
-| `bl managed-agent file get`                | API Key        | Get Managed Agent file metadata                                              |
-| `bl managed-agent file list`               | API Key        | List Managed Agent files                                                     |
-| `bl managed-agent file search`             | API Key        | Search Managed Agent files                                                   |
-| `bl managed-agent file upload`             | API Key        | Upload a Managed Agent file                                                  |
-| `bl managed-agent init`                    | No Auth        | Create an agents.yaml template                                               |
-| `bl managed-agent plan`                    | API Key        | Show what changes would be applied to agent infrastructure                   |
-| `bl managed-agent playground`              | API Key        | Launch a Session Preview for an agents.yaml Agent                            |
-| `bl managed-agent project build`           | No Auth        | Organize directory source and generate the immutable Publish Build           |
-| `bl managed-agent project init`            | No Auth        | Create a directory project or convert the local agents.yaml                  |
-| `bl managed-agent project publish`         | API Key        | Publish the current directory-project Build and record a version             |
-| `bl managed-agent project validate`        | No Auth        | Validate a directory Agent project                                           |
-| `bl managed-agent project version disable` | No Auth        | Disable directory project versions                                           |
-| `bl managed-agent project version enable`  | No Auth        | Enable directory project versions                                            |
-| `bl managed-agent project version list`    | No Auth        | List directory project versions                                              |
-| `bl managed-agent project version preview` | No Auth        | Preview a directory project version                                          |
-| `bl managed-agent project version restore` | No Auth        | Restore a version to the project working directory                           |
-| `bl managed-agent project version status`  | No Auth        | Show directory project version status                                        |
-| `bl managed-agent project workbench`       | API Key        | Launch the directory project Workbench                                       |
-| `bl managed-agent session archive`         | API Key        | Archive a Managed Agent session                                              |
-| `bl managed-agent session create`          | API Key        | Create a new session for an agent                                            |
-| `bl managed-agent session debug`           | API Key        | Aggregate session diagnostics                                                |
-| `bl managed-agent session delete`          | API Key        | Delete a session                                                             |
-| `bl managed-agent session event list`      | API Key        | List events for a Managed Agent session                                      |
-| `bl managed-agent session event send`      | API Key        | Send raw events to a Managed Agent session                                   |
-| `bl managed-agent session event stream`    | API Key        | Stream events from a Managed Agent session                                   |
-| `bl managed-agent session events`          | API Key        | List events for a Managed Agent session                                      |
-| `bl managed-agent session export`          | API Key        | Export session diagnostics as a ZIP                                          |
-| `bl managed-agent session get`             | API Key        | Get details of a session                                                     |
-| `bl managed-agent session list`            | API Key        | List sessions from the provider                                              |
-| `bl managed-agent session run`             | API Key        | Create a session, send a message, and stream the response                    |
-| `bl managed-agent session search`          | API Key        | Search Managed Agent sessions                                                |
-| `bl managed-agent session send`            | API Key        | Send a message to an existing session and stream the response                |
-| `bl managed-agent session update`          | API Key        | Update a Managed Agent session                                               |
-| `bl managed-agent skill create`            | API Key        | Declare and create one custom Managed Agent Skill from a local source        |
-| `bl managed-agent skill download`          | API Key        | Download a Managed Agent skill version                                       |
-| `bl managed-agent skill get`               | API Key        | Get a Managed Agent skill                                                    |
-| `bl managed-agent skill list`              | API Key        | List Managed Agent skills                                                    |
-| `bl managed-agent skill search`            | API Key        | Search Managed Agent skills                                                  |
-| `bl managed-agent skill versions`          | API Key        | List Managed Agent skill versions                                            |
-| `bl managed-agent skill-list`              | API Key        | List Managed Agent skills                                                    |
-| `bl managed-agent state import`            | API Key        | Import an existing remote resource into agents state                         |
-| `bl managed-agent state list`              | No Auth        | List resources tracked in agents state                                       |
-| `bl managed-agent state rm`                | No Auth        | Remove a resource from state without destroying it remotely                  |
-| `bl managed-agent state show`              | No Auth        | Show details of a resource in agents state                                   |
-| `bl managed-agent validate`                | No Auth        | Validate an agents.yaml configuration (offline)                              |
-| `bl managed-agent vault create`            | API Key        | Declare and create one empty Managed Agent Vault through a scoped YAML apply |
-| `bl managed-agent vault credential create` | API Key        | Append and create one environment-variable Credential in a tracked Vault     |
-| `bl managed-agent vault get`               | API Key        | Get a Managed Agent vault                                                    |
-| `bl managed-agent vault list`              | API Key        | List Managed Agent vaults                                                    |
-| `bl managed-agent vault search`            | API Key        | Search Managed Agent vaults                                                  |
+| Command                                         | Authentication | Description                                                                  |
+| ----------------------------------------------- | -------------- | ---------------------------------------------------------------------------- |
+| `bl managed-agent agent create`                 | API Key        | Declare and create one Managed Agent through an isolated YAML apply          |
+| `bl managed-agent agent get`                    | API Key        | Get a Managed Agent                                                          |
+| `bl managed-agent agent list`                   | API Key        | List Managed Agents                                                          |
+| `bl managed-agent agent search`                 | API Key        | Search Managed Agents                                                        |
+| `bl managed-agent agent versions`               | API Key        | List Managed Agent versions                                                  |
+| `bl managed-agent apply`                        | API Key        | Apply planned changes to create/update/delete agent resources                |
+| `bl managed-agent deployment create`            | API Key        | Declare and create one Managed Agent Deployment through a scoped YAML apply  |
+| `bl managed-agent deployment get`               | API Key        | Get a Managed Agent deployment                                               |
+| `bl managed-agent deployment list`              | API Key        | List Managed Agent deployments                                               |
+| `bl managed-agent deployment pause`             | API Key        | Pause a Managed Agent deployment                                             |
+| `bl managed-agent deployment run`               | API Key        | Run a Managed Agent deployment now                                           |
+| `bl managed-agent deployment runs get`          | API Key        | Get a Managed Agent deployment run                                           |
+| `bl managed-agent deployment runs list`         | API Key        | List runs for a Managed Agent deployment                                     |
+| `bl managed-agent deployment search`            | API Key        | Search Managed Agent deployments                                             |
+| `bl managed-agent deployment unpause`           | API Key        | Unpause a Managed Agent deployment                                           |
+| `bl managed-agent destroy`                      | API Key        | Destroy all managed agent resources tracked in state                         |
+| `bl managed-agent environment create`           | API Key        | Declare and create one Managed Agent Environment through a scoped YAML apply |
+| `bl managed-agent environment get`              | API Key        | Get a Managed Agent environment                                              |
+| `bl managed-agent environment list`             | API Key        | List Managed Agent environments                                              |
+| `bl managed-agent environment search`           | API Key        | Search Managed Agent environments                                            |
+| `bl managed-agent file delete`                  | API Key        | Delete a Managed Agent file                                                  |
+| `bl managed-agent file download`                | API Key        | Download Managed Agent file content                                          |
+| `bl managed-agent file get`                     | API Key        | Get Managed Agent file metadata                                              |
+| `bl managed-agent file list`                    | API Key        | List Managed Agent files                                                     |
+| `bl managed-agent file search`                  | API Key        | Search Managed Agent files                                                   |
+| `bl managed-agent file upload`                  | API Key        | Upload a Managed Agent file                                                  |
+| `bl managed-agent init`                         | No Auth        | Create an agents.yaml template                                               |
+| `bl managed-agent memory-store create`          | API Key        | Declare and create a Memory Store through scoped YAML apply                  |
+| `bl managed-agent memory-store get`             | API Key        | Get a Memory Store                                                           |
+| `bl managed-agent memory-store list`            | API Key        | List Memory Stores                                                           |
+| `bl managed-agent memory-store memories create` | API Key        | Create a memory file                                                         |
+| `bl managed-agent memory-store memories delete` | API Key        | Delete a memory file                                                         |
+| `bl managed-agent memory-store memories get`    | API Key        | Get a memory file                                                            |
+| `bl managed-agent memory-store memories list`   | API Key        | List memory files and prefixes                                               |
+| `bl managed-agent memory-store memories update` | API Key        | Update memory content with an optional SHA-256 precondition                  |
+| `bl managed-agent memory-store versions get`    | API Key        | Get a memory version                                                         |
+| `bl managed-agent memory-store versions list`   | API Key        | List Memory Store versions                                                   |
+| `bl managed-agent memory-store versions redact` | API Key        | Permanently redact a memory version's content                                |
+| `bl managed-agent plan`                         | API Key        | Show what changes would be applied to agent infrastructure                   |
+| `bl managed-agent playground`                   | API Key        | Launch a Session Preview for an agents.yaml Agent                            |
+| `bl managed-agent project build`                | No Auth        | Organize directory source and generate the immutable Publish Build           |
+| `bl managed-agent project init`                 | No Auth        | Create a directory project or convert the local agents.yaml                  |
+| `bl managed-agent project publish`              | API Key        | Publish the current directory-project Build and record a version             |
+| `bl managed-agent project validate`             | No Auth        | Validate a directory Agent project                                           |
+| `bl managed-agent project version disable`      | No Auth        | Disable directory project versions                                           |
+| `bl managed-agent project version enable`       | No Auth        | Enable directory project versions                                            |
+| `bl managed-agent project version list`         | No Auth        | List directory project versions                                              |
+| `bl managed-agent project version preview`      | No Auth        | Preview a directory project version                                          |
+| `bl managed-agent project version restore`      | No Auth        | Restore a version to the project working directory                           |
+| `bl managed-agent project version status`       | No Auth        | Show directory project version status                                        |
+| `bl managed-agent project workbench`            | API Key        | Launch the directory project Workbench                                       |
+| `bl managed-agent session archive`              | API Key        | Archive a Managed Agent session                                              |
+| `bl managed-agent session create`               | API Key        | Create a new session for an agent                                            |
+| `bl managed-agent session debug`                | API Key        | Aggregate session diagnostics                                                |
+| `bl managed-agent session delete`               | API Key        | Delete a session                                                             |
+| `bl managed-agent session event list`           | API Key        | List events for a Managed Agent session                                      |
+| `bl managed-agent session event send`           | API Key        | Send raw events to a Managed Agent session                                   |
+| `bl managed-agent session event stream`         | API Key        | Stream events from a Managed Agent session                                   |
+| `bl managed-agent session events`               | API Key        | List events for a Managed Agent session                                      |
+| `bl managed-agent session export`               | API Key        | Export session diagnostics as a ZIP                                          |
+| `bl managed-agent session get`                  | API Key        | Get details of a session                                                     |
+| `bl managed-agent session list`                 | API Key        | List sessions from the provider                                              |
+| `bl managed-agent session run`                  | API Key        | Create a session, send a message, and stream the response                    |
+| `bl managed-agent session search`               | API Key        | Search Managed Agent sessions                                                |
+| `bl managed-agent session send`                 | API Key        | Send a message to an existing session and stream the response                |
+| `bl managed-agent session update`               | API Key        | Update a Managed Agent session                                               |
+| `bl managed-agent skill create`                 | API Key        | Declare and create one custom Managed Agent Skill from a local source        |
+| `bl managed-agent skill download`               | API Key        | Download a Managed Agent skill version                                       |
+| `bl managed-agent skill get`                    | API Key        | Get a Managed Agent skill                                                    |
+| `bl managed-agent skill list`                   | API Key        | List Managed Agent skills                                                    |
+| `bl managed-agent skill search`                 | API Key        | Search Managed Agent skills                                                  |
+| `bl managed-agent skill versions`               | API Key        | List Managed Agent skill versions                                            |
+| `bl managed-agent skill-list`                   | API Key        | List Managed Agent skills                                                    |
+| `bl managed-agent state import`                 | API Key        | Import an existing remote resource into agents state                         |
+| `bl managed-agent state list`                   | No Auth        | List resources tracked in agents state                                       |
+| `bl managed-agent state rm`                     | No Auth        | Remove a resource from state without destroying it remotely                  |
+| `bl managed-agent state show`                   | No Auth        | Show details of a resource in agents state                                   |
+| `bl managed-agent validate`                     | No Auth        | Validate an agents.yaml configuration (offline)                              |
+| `bl managed-agent vault create`                 | API Key        | Declare and create one empty Managed Agent Vault through a scoped YAML apply |
+| `bl managed-agent vault credential create`      | API Key        | Append and create one environment-variable Credential in a tracked Vault     |
+| `bl managed-agent vault get`                    | API Key        | Get a Managed Agent vault                                                    |
+| `bl managed-agent vault list`                   | API Key        | List Managed Agent vaults                                                    |
+| `bl managed-agent vault search`                 | API Key        | Search Managed Agent vaults                                                  |
+| `bl managed-agent webhook create`               | API Key        | Create a Webhook endpoint                                                    |
+| `bl managed-agent webhook delete`               | API Key        | Delete a Webhook endpoint                                                    |
+| `bl managed-agent webhook disable`              | API Key        | Disable a Webhook endpoint                                                   |
+| `bl managed-agent webhook enable`               | API Key        | Enable a Webhook endpoint                                                    |
+| `bl managed-agent webhook events`               | API Key        | List recent Webhook delivery events                                          |
+| `bl managed-agent webhook get`                  | API Key        | Get a Webhook endpoint                                                       |
+| `bl managed-agent webhook list`                 | API Key        | List all Webhook endpoints                                                   |
+| `bl managed-agent webhook reset-secret`         | API Key        | Reset a Webhook signing secret                                               |
+| `bl managed-agent webhook test`                 | API Key        | Send a real Webhook test event                                               |
+| `bl managed-agent webhook update`               | API Key        | Update a Webhook endpoint                                                    |
 
 ## Command details
 
 ### `bl managed-agent agent create`
 
-| Field              | Value                                                                                                                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent agent create`                                                                                                                                                                                                    |
-| **Description**    | Declare and create one Managed Agent through an isolated YAML apply                                                                                                                                                             |
-| **Authentication** | API Key                                                                                                                                                                                                                         |
-| **Usage**          | `bl managed-agent agent create --name <name> --model <model> --instructions <text\|path> [--description <text>] [--skill <id>...] [--type custom\|official] [--skill-dir <path>...] [--tool <name>...] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent agent create`                                                                                                                                                                                                                                                                             |
+| **Description**    | Declare and create one Managed Agent through an isolated YAML apply                                                                                                                                                                                                                                      |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                                                  |
+| **Usage**          | `bl managed-agent agent create --name <name> --model <model> --instructions <text\|path> [--description <text>] [--skill <id>...] [--type custom\|official] [--skill-dir <path>...] [--tool <name>...] [--environment <yaml-key>] [--vault <yaml-key>] [--mcp <server-code>...] [--file <path>] [--yes]` |
 
 #### Flags
 
@@ -105,6 +126,9 @@ Index: [index.md](index.md)
 | `--skill-dir <path>`          | array  | no       | Local Skill directory or ZIP to declare, upload, and attach through the same scoped create (repeatable) |
 | `--type <custom\|official>`   | string | no       | Type applied to every --skill value (default: custom)                                                   |
 | `--tool <name>`               | array  | no       | Builtin tool name (repeatable)                                                                          |
+| `--environment <yaml-key>`    | string | no       | Existing Environment key from agents.yaml, used as the default Session/Deployment environment           |
+| `--vault <yaml-key>`          | string | no       | Existing Vault key from agents.yaml, used as the default Session/Deployment vault                       |
+| `--mcp <server-code>`         | array  | no       | MCP market server code; all of its tools are enabled (repeatable)                                       |
 | `--file <path>`               | string | no       | Config file path (default: agents.yaml)                                                                 |
 | `--yes`                       | switch | no       | Write YAML and run the scoped remote create                                                             |
 | `--api-key <key>`             | string | no       | API key                                                                                                 |
@@ -118,6 +142,8 @@ Index: [index.md](index.md)
 - Without --yes, previews the generated YAML key and scoped plan. --dry-run stays offline. Unrelated resources are not refreshed or drift-checked.
 - --skill writes an external Skill reference directly into the Agent declaration. --type defaults to custom; use --type official for platform Skills. These Skills are not managed through the top-level skills map.
 - --skill-dir accepts a local Skill directory or ZIP, writes it as a top-level custom Skill declaration, and writes its generated YAML key into the Agent skills list. Skill and Agent are created together in dependency order. --type applies only to --skill IDs.
+- --environment and --vault write existing YAML keys into the Agent declaration as default runtime bindings; they are not sent to the Agent API. session create|run and deployment create use them unless those commands pass their own. The referenced Environment and Vault must already be created.
+- --mcp accepts MCP market server codes (see mcp list) and enables all of their tools. To toggle individual tools, edit tools.mcp in YAML and run a full apply.
 
 #### Examples
 
@@ -135,6 +161,10 @@ bl managed-agent agent create --name slides --model qwen3.8-max --instructions .
 
 ```bash
 bl managed-agent agent create --name reviewer --model qwen3.8-max --instructions ./prompts/reviewer.md --skill-dir ./skills/code-review --yes
+```
+
+```bash
+bl managed-agent agent create --name researcher --model qwen3.8-max --instructions ./prompts/researcher.md --environment dev --vault secrets --mcp market-cmgjmcp00074952 --yes
 ```
 
 ### `bl managed-agent agent get`
@@ -326,33 +356,34 @@ bl managed-agent apply --yes
 
 ### `bl managed-agent deployment create`
 
-| Field              | Value                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent deployment create`                                                                                                                                                                                                                                                                                                                        |
-| **Description**    | Declare and create one Managed Agent Deployment through a scoped YAML apply                                                                                                                                                                                                                                                                              |
-| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                  |
-| **Usage**          | `bl managed-agent deployment create --name <name> --agent <yaml-key> (--message <text>... \| --event <json\|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--vault <yaml-key>...] [--resource <json\|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent deployment create`                                                                                                                                                                                                                                                                                                                                                                 |
+| **Description**    | Declare and create one Managed Agent Deployment through a scoped YAML apply                                                                                                                                                                                                                                                                                                                       |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Usage**          | `bl managed-agent deployment create --name <name> --agent <yaml-key> (--message <text>... \| --event <json\|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--environment_variables <KEY=VALUE>...] [--vault <yaml-key>...] [--resource <json\|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--file <path>] [--yes]` |
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                             |
-| -------------------------- | ------ | -------- | ----------------------------------------------------------------------- |
-| `--name <name>`            | string | yes      | Remote Deployment display name; the YAML key is generated automatically |
-| `--agent <yaml-key>`       | string | yes      | Existing Agent key from agents.yaml                                     |
-| `--agent-version <number>` | number | no       | Agent version                                                           |
-| `--environment <yaml-key>` | string | no       | Existing Environment key from agents.yaml                               |
-| `--vault <yaml-key>`       | array  | no       | Existing Vault key from agents.yaml (repeatable)                        |
-| `--message <text>`         | array  | no       | Initial user message (repeatable)                                       |
-| `--event <json\|@path>`    | array  | no       | Initial user.message or system.message JSON (repeatable)                |
-| `--resource <json\|@path>` | array  | no       | File Resource JSON with source or file_id (repeatable)                  |
-| `--schedule <cron>`        | string | no       | Five-field cron expression                                              |
-| `--timezone <timezone>`    | string | no       | IANA schedule timezone                                                  |
-| `--description <text>`     | string | no       | Deployment description                                                  |
-| `--metadata <key=value>`   | array  | no       | Metadata entry (repeatable)                                             |
-| `--file <path>`            | string | no       | Config file path (default: agents.yaml)                                 |
-| `--yes`                    | switch | no       | Write YAML and run the scoped remote create                             |
-| `--api-key <key>`          | string | no       | API key                                                                 |
-| `--base-url <url>`         | string | no       | API base URL                                                            |
+| Flag                                  | Type   | Required | Description                                                                |
+| ------------------------------------- | ------ | -------- | -------------------------------------------------------------------------- |
+| `--environment_variables <KEY=VALUE>` | array  | no       | Runtime environment variable; repeat for multiple values (last value wins) |
+| `--name <name>`                       | string | yes      | Remote Deployment display name; the YAML key is generated automatically    |
+| `--agent <yaml-key>`                  | string | yes      | Existing Agent key from agents.yaml                                        |
+| `--agent-version <number>`            | number | no       | Agent version                                                              |
+| `--environment <yaml-key>`            | string | no       | Existing Environment key from agents.yaml                                  |
+| `--vault <yaml-key>`                  | array  | no       | Existing Vault key from agents.yaml (repeatable)                           |
+| `--message <text>`                    | array  | no       | Initial user message (repeatable)                                          |
+| `--event <json\|@path>`               | array  | no       | Initial user.message or system.message JSON (repeatable)                   |
+| `--resource <json\|@path>`            | array  | no       | File Resource JSON with source or file_id (repeatable)                     |
+| `--schedule <cron>`                   | string | no       | Five-field cron expression                                                 |
+| `--timezone <timezone>`               | string | no       | IANA schedule timezone                                                     |
+| `--description <text>`                | string | no       | Deployment description                                                     |
+| `--metadata <key=value>`              | array  | no       | Metadata entry (repeatable)                                                |
+| `--file <path>`                       | string | no       | Config file path (default: agents.yaml)                                    |
+| `--yes`                               | switch | no       | Write YAML and run the scoped remote create                                |
+| `--api-key <key>`                     | string | no       | API key                                                                    |
+| `--base-url <url>`                    | string | no       | API base URL                                                               |
 
 #### Notes
 
@@ -360,13 +391,14 @@ bl managed-agent apply --yes
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
+- --environment_variables writes string values to the Deployment YAML declaration when --yes is used. Repeat the flag for multiple variables; empty values and values containing = are allowed. Later apply runs manage these values; removing the field or using {} clears them. YAML stores these values; the key `__proto__` is reserved.
 - Initial Events must contain 1-50 user.message/system.message entries. --resource accepts only File Resources in this release.
 - Use either repeatable --message values or repeatable --event values; the two input forms cannot be mixed.
 
 #### Examples
 
 ```bash
-bl managed-agent deployment create --name Daily --agent assistant --message "Generate the report"
+bl managed-agent deployment create --name Daily --agent assistant --message "Generate the report" --environment_variables LOG_LEVEL=info
 ```
 
 ```bash
@@ -1102,6 +1134,381 @@ bl managed-agent init
 bl managed-agent init --agent-name assistant
 ```
 
+### `bl managed-agent memory-store create`
+
+| Field              | Value                                                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store create`                                                                                                                        |
+| **Description**    | Declare and create a Memory Store through scoped YAML apply                                                                                                |
+| **Authentication** | API Key                                                                                                                                                    |
+| **Usage**          | `bl managed-agent memory-store create --name <name> [--description <text>] [--metadata <key=value>...] [--entry <json\|@path>...] [--file <path>] [--yes]` |
+
+#### Flags
+
+| Flag                     | Type   | Required | Description                                          |
+| ------------------------ | ------ | -------- | ---------------------------------------------------- |
+| `--name <name>`          | string | yes      | Memory Store display name; generates a YAML key      |
+| `--description <text>`   | string | no       | Store description (default: empty)                   |
+| `--metadata <key=value>` | array  | no       | Metadata entry (repeatable)                          |
+| `--entry <json\|@path>`  | array  | no       | Initial entry JSON with key and content (repeatable) |
+| `--file <path>`          | string | no       | Config file path (default: agents.yaml)              |
+| `--yes`                  | switch | no       | Write YAML and run the scoped remote create          |
+| `--api-key <key>`        | string | no       | API key                                              |
+| `--base-url <url>`       | string | no       | API base URL                                         |
+
+#### Notes
+
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
+- Store lifecycle is managed by agents.yaml. Entries initialize new stores; existing content is preserved unless entries_mode: sync is explicitly configured.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store create --name Notes
+```
+
+```bash
+bl managed-agent memory-store create --name Notes --entry '{"key":"notes.md","content":"Initial notes"}' --dry-run
+```
+
+### `bl managed-agent memory-store get`
+
+| Field              | Value                                                                     |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store get`                                          |
+| **Description**    | Get a Memory Store                                                        |
+| **Authentication** | API Key                                                                   |
+| **Usage**          | `bl managed-agent memory-store get --store-id <id> [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                       |
+| --------------------- | ------ | -------- | ------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID; optional with a configured Base URL |
+| `--store-id <id>`     | string | yes      | Remote Memory Store ID                            |
+| `--api-key <key>`     | string | no       | API key                                           |
+| `--base-url <url>`    | string | no       | API base URL                                      |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store get --workspace-id ws-example --store-id memstore_example
+```
+
+### `bl managed-agent memory-store list`
+
+| Field              | Value                                                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store list`                                                                               |
+| **Description**    | List Memory Stores                                                                                              |
+| **Authentication** | API Key                                                                                                         |
+| **Usage**          | `bl managed-agent memory-store list [--workspace-id <id>] [--limit <n>] [--page <cursor>] [--include-archived]` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                        |
+| --------------------- | ------ | -------- | -------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID; optional with a configured Base URL  |
+| `--limit <n>`         | number | no       | Page size (1–100)                                  |
+| `--page <cursor>`     | string | no       | Opaque next_page cursor from the previous response |
+| `--include-archived`  | switch | no       | Include archived stores                            |
+| `--api-key <key>`     | string | no       | API key                                            |
+| `--base-url <url>`    | string | no       | API base URL                                       |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store list --workspace-id ws-example --output json
+```
+
+### `bl managed-agent memory-store memories create`
+
+| Field              | Value                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store memories create`                                                                              |
+| **Description**    | Create a memory file                                                                                                      |
+| **Authentication** | API Key                                                                                                                   |
+| **Usage**          | `bl managed-agent memory-store memories create --store-id <id> --path <path> (--content <text> \| --content-file <path>)` |
+| **Risk**           | `high`                                                                                                                    |
+| **Risk message**   | This changes persistent memory content. Review the dry-run request before confirming.                                     |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                                    |
+| ----------------------- | ------ | -------- | -------------------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional with a configured Base URL              |
+| `--store-id <id>`       | string | yes      | Remote Memory Store ID                                         |
+| `--content <text>`      | string | no       | Memory content; an empty string is allowed                     |
+| `--content-file <path>` | string | no       | Read UTF-8 content from a local file; exclusive with --content |
+| `--path <path>`         | string | yes      | Memory file path                                               |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                               |
+| `--api-key <key>`       | string | no       | API key                                                        |
+| `--base-url <url>`      | string | no       | API base URL                                                   |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store memories create --store-id memstore_example --path notes.md --content-file ./notes.md --dry-run
+```
+
+### `bl managed-agent memory-store memories delete`
+
+| Field              | Value                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store memories delete`                                          |
+| **Description**    | Delete a memory file                                                                  |
+| **Authentication** | API Key                                                                               |
+| **Usage**          | `bl managed-agent memory-store memories delete --store-id <id> --memory-id <id>`      |
+| **Risk**           | `high`                                                                                |
+| **Risk message**   | This changes persistent memory content. Review the dry-run request before confirming. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                       |
+| --------------------- | ------ | -------- | ------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID; optional with a configured Base URL |
+| `--store-id <id>`     | string | yes      | Remote Memory Store ID                            |
+| `--memory-id <id>`    | string | yes      | Remote Memory ID                                  |
+| `--yes`               | switch | no       | Confirm this high-risk operation                  |
+| `--api-key <key>`     | string | no       | API key                                           |
+| `--base-url <url>`    | string | no       | API base URL                                      |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store memories delete --store-id memstore_example --memory-id mem_example --dry-run
+```
+
+### `bl managed-agent memory-store memories get`
+
+| Field              | Value                                                                         |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store memories get`                                     |
+| **Description**    | Get a memory file                                                             |
+| **Authentication** | API Key                                                                       |
+| **Usage**          | `bl managed-agent memory-store memories get --store-id <id> --memory-id <id>` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                       |
+| --------------------- | ------ | -------- | ------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID; optional with a configured Base URL |
+| `--store-id <id>`     | string | yes      | Remote Memory Store ID                            |
+| `--memory-id <id>`    | string | yes      | Remote Memory ID                                  |
+| `--api-key <key>`     | string | no       | API key                                           |
+| `--base-url <url>`    | string | no       | API base URL                                      |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store memories get --store-id memstore_example --memory-id mem_example
+```
+
+### `bl managed-agent memory-store memories list`
+
+| Field              | Value                                                                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store memories list`                                                                                                                  |
+| **Description**    | List memory files and prefixes                                                                                                                              |
+| **Authentication** | API Key                                                                                                                                                     |
+| **Usage**          | `bl managed-agent memory-store memories list --store-id <id> [--page <cursor>] [--limit <n>] [--path-prefix <prefix>] [--depth <n>] [--view <basic\|full>]` |
+
+#### Flags
+
+| Flag                     | Type   | Required | Description                                        |
+| ------------------------ | ------ | -------- | -------------------------------------------------- |
+| `--workspace-id <id>`    | string | no       | Workspace ID; optional with a configured Base URL  |
+| `--store-id <id>`        | string | yes      | Remote Memory Store ID                             |
+| `--limit <n>`            | number | no       | Page size (1–20)                                   |
+| `--page <cursor>`        | string | no       | Opaque next_page cursor from the previous response |
+| `--view <basic\|full>`   | string | no       | Response view (basic or full)                      |
+| `--path-prefix <prefix>` | string | no       | Filter by memory path prefix                       |
+| `--depth <n>`            | number | no       | Directory listing depth                            |
+| `--api-key <key>`        | string | no       | API key                                            |
+| `--base-url <url>`       | string | no       | API base URL                                       |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store memories list --store-id memstore_example --path-prefix /notes/ --view full
+```
+
+### `bl managed-agent memory-store memories update`
+
+| Field              | Value                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store memories update`                                                                                                                      |
+| **Description**    | Update memory content with an optional SHA-256 precondition                                                                                                       |
+| **Authentication** | API Key                                                                                                                                                           |
+| **Usage**          | `bl managed-agent memory-store memories update --store-id <id> --memory-id <id> (--content <text> \| --content-file <path>) [--expected-content-sha256 <sha256>]` |
+| **Risk**           | `high`                                                                                                                                                            |
+| **Risk message**   | This changes persistent memory content. Review the dry-run request before confirming.                                                                             |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                                 | Type   | Required | Description                                                    |
+| ------------------------------------ | ------ | -------- | -------------------------------------------------------------- |
+| `--workspace-id <id>`                | string | no       | Workspace ID; optional with a configured Base URL              |
+| `--store-id <id>`                    | string | yes      | Remote Memory Store ID                                         |
+| `--memory-id <id>`                   | string | yes      | Remote Memory ID                                               |
+| `--content <text>`                   | string | no       | Memory content; an empty string is allowed                     |
+| `--content-file <path>`              | string | no       | Read UTF-8 content from a local file; exclusive with --content |
+| `--expected-content-sha256 <sha256>` | string | no       | Expected current SHA-256; reject a concurrent content change   |
+| `--yes`                              | switch | no       | Confirm this high-risk operation                               |
+| `--api-key <key>`                    | string | no       | API key                                                        |
+| `--base-url <url>`                   | string | no       | API base URL                                                   |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store memories update --store-id memstore_example --memory-id mem_example --content-file ./notes.md --dry-run
+```
+
+### `bl managed-agent memory-store versions get`
+
+| Field              | Value                                                                          |
+| ------------------ | ------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent memory-store versions get`                                      |
+| **Description**    | Get a memory version                                                           |
+| **Authentication** | API Key                                                                        |
+| **Usage**          | `bl managed-agent memory-store versions get --store-id <id> --version-id <id>` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                       |
+| --------------------- | ------ | -------- | ------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID; optional with a configured Base URL |
+| `--store-id <id>`     | string | yes      | Remote Memory Store ID                            |
+| `--version-id <id>`   | string | yes      | Remote Memory Version ID                          |
+| `--api-key <key>`     | string | no       | API key                                           |
+| `--base-url <url>`    | string | no       | API base URL                                      |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store versions get --store-id memstore_example --version-id memver_example
+```
+
+### `bl managed-agent memory-store versions list`
+
+| Field              | Value                                                                                                                                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent memory-store versions list`                                                                                                                                                                                                       |
+| **Description**    | List Memory Store versions                                                                                                                                                                                                                       |
+| **Authentication** | API Key                                                                                                                                                                                                                                          |
+| **Usage**          | `bl managed-agent memory-store versions list --store-id <id> [--memory-id <id>] [--operation <created\|modified\|deleted>] [--created-at-gte <timestamp>] [--created-at-lte <timestamp>] [--page <cursor>] [--limit <n>] [--view <basic\|full>]` |
+
+#### Flags
+
+| Flag                                       | Type   | Required | Description                                        |
+| ------------------------------------------ | ------ | -------- | -------------------------------------------------- |
+| `--workspace-id <id>`                      | string | no       | Workspace ID; optional with a configured Base URL  |
+| `--store-id <id>`                          | string | yes      | Remote Memory Store ID                             |
+| `--limit <n>`                              | number | no       | Page size (1–100)                                  |
+| `--page <cursor>`                          | string | no       | Opaque next_page cursor from the previous response |
+| `--view <basic\|full>`                     | string | no       | Response view (basic or full)                      |
+| `--memory-id <id>`                         | string | no       | Remote Memory ID                                   |
+| `--operation <created\|modified\|deleted>` | string | no       | Filter by version operation                        |
+| `--created-at-gte <timestamp>`             | string | no       | Inclusive creation timestamp lower bound           |
+| `--created-at-lte <timestamp>`             | string | no       | Inclusive creation timestamp upper bound           |
+| `--api-key <key>`                          | string | no       | API key                                            |
+| `--base-url <url>`                         | string | no       | API base URL                                       |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store versions list --store-id memstore_example --operation modified --view full
+```
+
+### `bl managed-agent memory-store versions redact`
+
+| Field              | Value                                                                             |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent memory-store versions redact`                                      |
+| **Description**    | Permanently redact a memory version's content                                     |
+| **Authentication** | API Key                                                                           |
+| **Usage**          | `bl managed-agent memory-store versions redact --store-id <id> --version-id <id>` |
+| **Risk**           | `high`                                                                            |
+| **Risk message**   | This permanently redacts the selected version's content and cannot be undone.     |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                       |
+| --------------------- | ------ | -------- | ------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID; optional with a configured Base URL |
+| `--store-id <id>`     | string | yes      | Remote Memory Store ID                            |
+| `--version-id <id>`   | string | yes      | Remote Memory Version ID                          |
+| `--yes`               | switch | no       | Confirm this high-risk operation                  |
+| `--api-key <key>`     | string | no       | API key                                           |
+| `--base-url <url>`    | string | no       | API base URL                                      |
+
+#### Notes
+
+- Calls the SDK with the CLI API Key and workspace settings; no agents.yaml or State is required for reading stores or managing their contents.
+- Store lifecycle remains in agents.yaml. Pass the remote Store ID to these API commands and pass next_page back unchanged.
+
+#### Examples
+
+```bash
+bl managed-agent memory-store versions redact --store-id memstore_example --version-id memver_example --dry-run
+```
+
 ### `bl managed-agent plan`
 
 | Field              | Value                                                                   |
@@ -1546,25 +1953,27 @@ bl managed-agent session archive --session-id sess_abc --yes
 
 ### `bl managed-agent session create`
 
-| Field              | Value                                                                                                       |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent session create`                                                                              |
-| **Description**    | Create a new session for an agent                                                                           |
-| **Authentication** | API Key                                                                                                     |
-| **Usage**          | `bl managed-agent session create [--agent <name>] [--environment <name>] [--title <title>] [--file <path>]` |
+| Field              | Value                                                                                                                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session create`                                                                                                                                                                              |
+| **Description**    | Create a new session for an agent                                                                                                                                                                           |
+| **Authentication** | API Key                                                                                                                                                                                                     |
+| **Usage**          | `bl managed-agent session create [--agent <name>] [--environment <name>] [--title <title>] [--environment_variables <KEY=VALUE>...] [--memory-stores <keys>] [--resource <json\|@path>...] [--file <path>]` |
 
 #### Flags
 
-| Flag                      | Type   | Required | Description                                                  |
-| ------------------------- | ------ | -------- | ------------------------------------------------------------ |
-| `--file <path>`           | string | no       | Config file path (default: agents.yaml)                      |
-| `--agent <name>`          | string | no       | Agent name (auto-detected when only one agent is configured) |
-| `--environment <name>`    | string | no       | Override agent's declared environment                        |
-| `--vault <name>`          | string | no       | Override agent's declared vault                              |
-| `--memory-stores <names>` | string | no       | Override agent's memory stores (comma-separated)             |
-| `--title <title>`         | string | no       | Session title                                                |
-| `--api-key <key>`         | string | no       | API key                                                      |
-| `--base-url <url>`        | string | no       | API base URL                                                 |
+| Flag                                  | Type   | Required | Description                                                                               |
+| ------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------- |
+| `--environment_variables <KEY=VALUE>` | array  | no       | Runtime environment variable; repeat for multiple values (last value wins)                |
+| `--resource <json\|@path>`            | array  | no       | Session resource JSON (repeatable); memory_store uses a YAML key, access and instructions |
+| `--file <path>`                       | string | no       | Config file path (default: agents.yaml)                                                   |
+| `--agent <name>`                      | string | no       | Agent name (auto-detected when only one agent is configured)                              |
+| `--environment <name>`                | string | no       | Override agent's declared environment                                                     |
+| `--vault <name>`                      | string | no       | Override agent's declared vault                                                           |
+| `--memory-stores <names>`             | string | no       | Override memory stores with comma-separated YAML keys                                     |
+| `--title <title>`                     | string | no       | Session title                                                                             |
+| `--api-key <key>`                     | string | no       | API key                                                                                   |
+| `--base-url <url>`                    | string | no       | API base URL                                                                              |
 
 #### Notes
 
@@ -1573,6 +1982,14 @@ bl managed-agent session archive --session-id sess_abc --yes
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
+
+```bash
+bl managed-agent session create --agent assistant --environment_variables LOG_LEVEL=info --environment_variables FEATURE_FLAG=on
+```
+
+```bash
+bl managed-agent session create --agent assistant --resource '{"type":"memory_store","memory_store":"notes","access":"read_only"}'
+```
 
 ```bash
 bl managed-agent session create
@@ -1920,27 +2337,29 @@ bl managed-agent session list --all
 
 ### `bl managed-agent session run`
 
-| Field              | Value                                                                                         |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent session run`                                                                   |
-| **Description**    | Create a session, send a message, and stream the response                                     |
-| **Authentication** | API Key                                                                                       |
-| **Usage**          | `bl managed-agent session run --prompt <text> [--agent <name>] [--no-stream] [--file <path>]` |
+| Field              | Value                                                                                                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session run`                                                                                                                                                                   |
+| **Description**    | Create a session, send a message, and stream the response                                                                                                                                     |
+| **Authentication** | API Key                                                                                                                                                                                       |
+| **Usage**          | `bl managed-agent session run --prompt <text> [--agent <name>] [--no-stream] [--environment_variables <KEY=VALUE>...] [--memory-stores <keys>] [--resource <json\|@path>...] [--file <path>]` |
 
 #### Flags
 
-| Flag                      | Type   | Required | Description                                                  |
-| ------------------------- | ------ | -------- | ------------------------------------------------------------ |
-| `--prompt <text>`         | string | yes      | Prompt to send (required)                                    |
-| `--file <path>`           | string | no       | Config file path (default: agents.yaml)                      |
-| `--agent <name>`          | string | no       | Agent name (auto-detected when only one agent is configured) |
-| `--environment <name>`    | string | no       | Override agent's declared environment                        |
-| `--vault <name>`          | string | no       | Override agent's declared vault                              |
-| `--memory-stores <names>` | string | no       | Override agent's memory stores (comma-separated)             |
-| `--title <title>`         | string | no       | Session title                                                |
-| `--no-stream`             | switch | no       | Use polling instead of SSE streaming                         |
-| `--api-key <key>`         | string | no       | API key                                                      |
-| `--base-url <url>`        | string | no       | API base URL                                                 |
+| Flag                                  | Type   | Required | Description                                                                               |
+| ------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------- |
+| `--environment_variables <KEY=VALUE>` | array  | no       | Runtime environment variable; repeat for multiple values (last value wins)                |
+| `--resource <json\|@path>`            | array  | no       | Session resource JSON (repeatable); memory_store uses a YAML key, access and instructions |
+| `--prompt <text>`                     | string | yes      | Prompt to send (required)                                                                 |
+| `--file <path>`                       | string | no       | Config file path (default: agents.yaml)                                                   |
+| `--agent <name>`                      | string | no       | Agent name (auto-detected when only one agent is configured)                              |
+| `--environment <name>`                | string | no       | Override agent's declared environment                                                     |
+| `--vault <name>`                      | string | no       | Override agent's declared vault                                                           |
+| `--memory-stores <names>`             | string | no       | Override memory stores with comma-separated YAML keys                                     |
+| `--title <title>`                     | string | no       | Session title                                                                             |
+| `--no-stream`                         | switch | no       | Use polling instead of SSE streaming                                                      |
+| `--api-key <key>`                     | string | no       | API key                                                                                   |
+| `--base-url <url>`                    | string | no       | API base URL                                                                              |
 
 #### Notes
 
@@ -1950,6 +2369,14 @@ bl managed-agent session list --all
 - --output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.
 
 #### Examples
+
+```bash
+bl managed-agent session run --agent assistant --environment_variables LOG_LEVEL=info --prompt "hello"
+```
+
+```bash
+bl managed-agent session run --agent assistant --resource '{"type":"memory_store","memory_store":"notes","access":"read_only"}' --prompt "hello"
+```
 
 ```bash
 bl managed-agent session run --prompt "hello"
@@ -2659,4 +3086,358 @@ bl managed-agent vault search --query github
 
 ```bash
 bl managed-agent vault search --query production --page-limit 20 --output json
+```
+
+### `bl managed-agent webhook create`
+
+| Field              | Value                                                                                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook create`                                                                                             |
+| **Description**    | Create a Webhook endpoint                                                                                                  |
+| **Authentication** | API Key                                                                                                                    |
+| **Usage**          | `bl managed-agent webhook create --url <url> --event <type> [--event <type>] [--description <text>] [--workspace-id <id>]` |
+| **Risk**           | `high`                                                                                                                     |
+| **Risk message**   | This creates a Webhook and starts delivering subscribed events to its callback URL.                                        |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                   | Type   | Required | Description                                                                     |
+| ---------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| `--workspace-id <id>`  | string | no       | Workspace ID; optional when a base URL is configured                            |
+| `--url <url>`          | string | yes      | Public HTTP or HTTPS callback URL                                               |
+| `--event <type>`       | array  | yes      | Named event subscription; repeat for multiple events, wildcards are unsupported |
+| `--description <text>` | string | no       | Description, up to 256 characters; an empty string clears it on update          |
+| `--yes`                | switch | no       | Confirm this high-risk operation                                                |
+| `--api-key <key>`      | string | no       | API key                                                                         |
+| `--base-url <url>`     | string | no       | API base URL                                                                    |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Signing Secret is returned only on create/reset. Save it from this successful response; the CLI does not persist it.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook create --workspace-id workspace-example --url https://example.com/webhooks --event session.updated --yes
+```
+
+### `bl managed-agent webhook delete`
+
+| Field              | Value                                                                         |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook delete`                                                |
+| **Description**    | Delete a Webhook endpoint                                                     |
+| **Authentication** | API Key                                                                       |
+| **Usage**          | `bl managed-agent webhook delete --webhook-id <wep_id> [--workspace-id <id>]` |
+| **Risk**           | `high`                                                                        |
+| **Risk message**   | This deletes the Webhook and cancels its pending deliveries.                  |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook delete --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook disable`
+
+| Field              | Value                                                                          |
+| ------------------ | ------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent webhook disable`                                                |
+| **Description**    | Disable a Webhook endpoint                                                     |
+| **Authentication** | API Key                                                                        |
+| **Usage**          | `bl managed-agent webhook disable --webhook-id <wep_id> [--workspace-id <id>]` |
+| **Risk**           | `high`                                                                         |
+| **Risk message**   | This stops new event deliveries and cancels pending deliveries.                |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook disable --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook enable`
+
+| Field              | Value                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent webhook enable`                                                       |
+| **Description**    | Enable a Webhook endpoint                                                            |
+| **Authentication** | API Key                                                                              |
+| **Usage**          | `bl managed-agent webhook enable --webhook-id <wep_id> [--workspace-id <id>]`        |
+| **Risk**           | `high`                                                                               |
+| **Risk message**   | This resumes new event deliveries. Events from the disabled period are not replayed. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook enable --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook events`
+
+| Field              | Value                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook events`                                                                                    |
+| **Description**    | List recent Webhook delivery events                                                                               |
+| **Authentication** | API Key                                                                                                           |
+| **Usage**          | `bl managed-agent webhook events --webhook-id <wep_id> [--limit <count>] [--page <cursor>] [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--limit <count>`       | number | no       | Page size, 1–100 (default: 20)                       |
+| `--page <cursor>`       | string | no       | Opaque next_page cursor from the previous response   |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Returns one page of delivery events retained for 7 days. Continue with next_page; deleted Webhooks' retained events remain queryable.
+
+#### Examples
+
+```bash
+bl managed-agent webhook events --workspace-id workspace-example --webhook-id wep_example --limit 20 --output json
+```
+
+### `bl managed-agent webhook get`
+
+| Field              | Value                                                                      |
+| ------------------ | -------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook get`                                                |
+| **Description**    | Get a Webhook endpoint                                                     |
+| **Authentication** | API Key                                                                    |
+| **Usage**          | `bl managed-agent webhook get --webhook-id <wep_id> [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+
+#### Examples
+
+```bash
+bl managed-agent webhook get --workspace-id workspace-example --webhook-id wep_example
+```
+
+### `bl managed-agent webhook list`
+
+| Field              | Value                                                 |
+| ------------------ | ----------------------------------------------------- |
+| **Name**           | `managed-agent webhook list`                          |
+| **Description**    | List all Webhook endpoints                            |
+| **Authentication** | API Key                                               |
+| **Usage**          | `bl managed-agent webhook list [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                          |
+| --------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID; optional when a base URL is configured |
+| `--api-key <key>`     | string | no       | API key                                              |
+| `--base-url <url>`    | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Returns every undeleted Webhook without pagination.
+
+#### Examples
+
+```bash
+bl managed-agent webhook list --workspace-id workspace-example --output json
+```
+
+### `bl managed-agent webhook reset-secret`
+
+| Field              | Value                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook reset-secret`                                                                    |
+| **Description**    | Reset a Webhook signing secret                                                                          |
+| **Authentication** | API Key                                                                                                 |
+| **Usage**          | `bl managed-agent webhook reset-secret --webhook-id <wep_id> [--workspace-id <id>]`                     |
+| **Risk**           | `high`                                                                                                  |
+| **Risk message**   | This immediately invalidates the previous signing secret. Save the new secret and update your receiver. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Signing Secret is returned only on create/reset. Save it from this successful response; the CLI does not persist it.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook reset-secret --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook test`
+
+| Field              | Value                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent webhook test`                                                                           |
+| **Description**    | Send a real Webhook test event                                                                         |
+| **Authentication** | API Key                                                                                                |
+| **Usage**          | `bl managed-agent webhook test --webhook-id <wep_id> [--workspace-id <id>]`                            |
+| **Risk**           | `high`                                                                                                 |
+| **Risk message**   | This sends a real callback request; redirects or security validation failures may disable the Webhook. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Tests are synchronous, are not retried or recorded, and do not affect consecutive failure counts.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook test --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook update`
+
+| Field              | Value                                                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook update`                                                                                                      |
+| **Description**    | Update a Webhook endpoint                                                                                                           |
+| **Authentication** | API Key                                                                                                                             |
+| **Usage**          | `bl managed-agent webhook update --webhook-id <wep_id> [--url <url>] [--event <type>] [--description <text>] [--workspace-id <id>]` |
+| **Risk**           | `high`                                                                                                                              |
+| **Risk message**   | This updates the callback URL, description, or event subscriptions of the Webhook.                                                  |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                                                     |
+| ----------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured                            |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                                             |
+| `--url <url>`           | string | no       | Public HTTP or HTTPS callback URL                                               |
+| `--event <type>`        | array  | no       | Named event subscription; repeat for multiple events, wildcards are unsupported |
+| `--description <text>`  | string | no       | Description, up to 256 characters; an empty string clears it on update          |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                                                |
+| `--api-key <key>`       | string | no       | API key                                                                         |
+| `--base-url <url>`      | string | no       | API base URL                                                                    |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Omitted fields stay unchanged; --event replaces the complete subscription list.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook update --workspace-id workspace-example --webhook-id wep_example --description "" --yes
 ```

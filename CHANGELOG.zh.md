@@ -2,9 +2,153 @@
 
 `bailian-cli` 系列包的所有重要变更都记录在此。
 
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands`、`knowledge-studio-cli` 共享一个版本号。
+格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands`、`knowledge-studio-cli`、`bailian-kb-dsh`、`bailian-memo-dsh` 共享一个版本号。
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
+
+## [2.7.1] - 2026-10-29
+
+### 修复
+
+- **Token Plan 配额查询**：支持展示接口返回的全部配额窗口，JSON 输出新增 `hasQuotaData`，用于区分无配额数据与正常结果。
+
+## [2.7.0] - 2026-10-29
+
+### 新增
+
+- **ParseX 解析**：新增 `bl parsex parse submit/result`，支持文档及音视频解析、结果查询和 Markdown 输出。
+- **ParseX 字段抽取**：新增 `bl parsex extract submit/result`，支持按 JSON Schema 从文档或已有解析结果中抽取字段，并返回原文引用。
+- **配置来源诊断**：`bl config show` 展示 API Key 与 Base URL 的生效来源，请求使用的两者来自不同配置源时给出提示。
+
+### 修复
+
+- **工作空间 API Key 登录**：修复 `bl auth login` 在 MaaS Endpoint 上拒绝有效工作空间 API Key 的问题。
+- **登录校验错误**：API Key 校验保留服务端及网络错误，避免将所有失败统一报告为 Key 无效。
+
+## [2.6.2] - 2026-10-28
+
+### 变更
+
+- **遥测默认输出（BREAKING）**：`bl alert`、`bl monitor` 和 `bl log` 的业务结果统一默认 JSON，即使 Profile 配置为 text。依赖文本输出的脚本需显式传入 `--output text` 或设置 `DASHSCOPE_OUTPUT=text`。
+
+### 修复
+
+- **工作空间身份**：遥测命令根据选定空间自动解析 Console 身份，预检、业务请求、异步轮询及后续请求使用同一身份，修复 `--workspace-id` 过滤失效及跨空间结果异常；不修改已保存配置。
+- **审计日志解析**：规范化时间、模型、请求 ID、工作空间及用量字段，修复缺失字段、NaN 时间及异常计数展示；拒绝空间不匹配的审计结果。
+- **日志计数**：`log audit count` 和 `log inference count` 分别采用对应列表接口的 `totalCount`，修复列表非空而计数为 0 的问题，不遍历分页或获取完整日志内容。
+- **推理计数过滤与完成判定**：保留多模型、多 API Key 过滤，去重后按单值组合查询并汇总；支持异步轮询，仅全部成功后输出，空过滤、无效计数及累计溢出明确报错。
+- **Dry-run 预览**：展示工作空间身份解析计划和实际计数请求组合，不发送业务请求。
+
+## [2.6.1] - 2026-10-28
+
+### 新增
+
+- **异步批量推理**：新增 `bl batch convert/create/list/get/cancel/download`，支持 CSV 转 JSONL、创建 Chat/Embedding 批量任务、跟踪进度、取消任务及下载结果和错误文件，可选导出 CSV。
+- **同步 Batch Chat**：`bl text chat --batch` 支持单次非流式请求，与异步文件批量任务分开使用；支持 60–3600 秒请求超时。
+- **模型推荐参数**：`bl advisor recommend` 新增 `--top`、`--model`、`--no-agent`、`--trace`、`--think` 和 `--no-thinking`。
+
+### 变更
+
+- **模型推荐**：升级意图分析、路由、候选召回、评分及排序流程；交互终端支持 Agent 澄清与多步骤推荐，推荐结果保留原有 JSON 主结构。
+
+### 已移除
+
+- **Advisor 库接口（BREAKING）**：移除旧推荐流程导出，包括 `getModels`、`recallCandidates`、`recallSemantic` 和 `rankModels`。库调用方需适配新的推荐引擎接口；旧类型通过 `LegacyIntentProfile`、`LegacyModelProfile` 和 `LegacyRecommendResult` 导出。
+
+### 修复
+
+- **临时文件上传**：根据当前模型 Endpoint 选择上传服务，修复新加坡地域及 Prime 视频上传误用北京地址的问题；官方临时上传仅支持北京和新加坡，不支持的地域及 Token Plan 明确报错，显式自定义上传代理不再因 Key 类型被提前拒绝。
+- **Node 26 兼容**：修复 fetch 与 dispatcher 不兼容及代理初始化问题，覆盖模型请求、控制台请求、文件上传和下载。
+- **API 错误透传**：正确识别嵌套业务错误，保留非 JSON 错误正文及请求 ID，避免将错误响应作为成功结果。
+
+## [2.6.0] - 2026-10-27
+
+### 新增
+
+- **知识库初始化**：新增 `knowledge init`，串联样例上传、建库、检索服务创建及首次检索验证，支持恢复和资源复用。
+- **目录同步与文件导入**：新增 `knowledge doc sync` 和 `knowledge doc import`，支持同步本地目录及导入已有文件。
+- **多媒体知识库**：支持音视频知识库、解析配置、流式上传、纯图片检索及在线检索过滤配置。
+- **Agent 能力发现**：新增 `--introspect` 结构化命令说明和 `bailian-knowledge` Skill；Knowledge Studio CLI 同步提供对应能力。
+
+### 变更
+
+- **知识库问答输出**：结构化输出区分最终答案、阶段、工具、来源和用量；quiet 模式仅输出最终答案。
+- **建库提示**：补充计费说明、资源记录与清理指引。
+
+### 修复
+
+- 拒绝知识库命令中的空白必填参数。
+- 切片批量删除失败时，明确报告已完成批次、结果未确认批次及未执行部分。
+
+## [2.5.1] - 2026-10-23
+
+### 新增
+
+- **控制台登录**：支持 `--no-browser` 手动打开登录地址，以及 `--token-stdin` 从标准输入导入并校验控制台凭证。
+- **Agent 调用标识**：支持声明 Agent 来源、Skill 名称和版本；未声明来源记为未知。
+
+### 修复
+
+- **登录完成判定**：修复浏览器快速回调时的登录状态处理，未收到凭证时明确报告超时。
+- **凭证刷新**：修复控制台凭证刷新的地域选择，刷新后验证请求成功再保存凭证。
+
+## [2.5.0] - 2026-10-20
+
+### 新增
+
+- **Memory 管理** —— 新增节点详情、Skill记忆导出，以及画像模板列表、详情、更新和删除；支持按规则召回、pro/lite检索、技能元数据和仅画像抽取。
+- **个人记忆 Skill** —— 新增 `bailian-memory`，支持经用户授权的个人记忆、召回和画像流程。
+- **DeepSeek Harness 集成** —— 新增个人记忆插件，提供自动召回、异步整理和记住/遗忘工具；知识库插件适配dsh 0.2.1设置体系与隔离的管理凭据。
+
+### 变更
+
+- **Memory CLI 迁移（BREAKING）** —— Memory命令改用Workspace专属端点。配置 `--workspace-id`、`BAILIAN_WORKSPACE_ID` 或 `workspace_id`；在支持记忆库参数的命令中将 `--memory-library-id` 替换为 `--library-id`。`memory update` 和 `memory delete` 移除 `--user-id`；确认删除节点时需传 `--yes`。
+- **记忆写入（BREAKING）** —— `memory add` 改为提交异步抽取，默认最多等待120秒。仅提交可使用 `--wait 0`；JSON调用方需适配 `event_id`、`events`，提交回执不等于抽取完成。
+- **统一发布** —— CLI、Knowledge Studio CLI和两个dsh插件共用版本与发布流程；dsh知识库插件从独立0.1.x版本系列迁至2.5.0。
+
+### 已移除
+
+- **旧知识库检索（BREAKING）** —— 移除 `bl knowledge retrieve`、`kscli retrieve` 和 `knowledgeRetrieve` 命令导出。迁移至 `bl knowledge search` 或 `kscli search`，使用检索服务的 `--agent-id`；旧的index参数不能直接照搬。
+- **旧Memory库接口（BREAKING）** —— 导出类型 `MemoryAddResponse` 替换为 `MemoryAddAsyncResponse`；库调用方需适配更新后的异步请求/响应契约。
+
+### 修复
+
+- **记忆完成判定与输入校验** —— 空事件列表或缺少事件ID不再误报完成；轮询遵守超时预算，部分失败返回非零退出码，非法JSON元素和属性类型在请求前拒绝。
+- **检索说明** —— 明确 `--min-score` 默认0.3且仅对pro生效，lite不按该阈值过滤。
+
+### 安全
+
+- **Workspace端点** —— 拒绝可能改变请求目标主机的Workspace标识，防止凭据被发送到非预期主机。
+
+## [2.4.0] - 2026-10-19
+
+### 新增
+
+- **Managed Agent 记忆管理** —— 支持管理 Memory Store、记忆内容和历史版本，并将记忆挂载到 Session。
+- **工作空间 Webhook** —— 支持管理和测试 Webhook、重置签名密钥及查询投递事件。
+- **Agent 资源绑定** —— 创建 Agent 时可通过 `--environment`、`--vault` 和 `--mcp` 绑定默认 Environment、Vault 及 MCP 市场服务。
+- **运行时环境变量** —— 创建 Session、运行 Session 和创建 Deployment 时可重复传入 `--environment_variables KEY=VALUE`。
+
+## [2.3.3] - 2026-10-19
+
+### 修复
+
+- **二进制 CLI 请求** —— 修复二进制 CLI 的模型 API 请求失败问题，包括语音和视频生成。
+- **请求超时** —— 修复核心 API 长请求在配置的 `--timeout` 之前提前超时的问题；补充流式响应空闲保护，并在流结束时释放连接。
+- **Windows 控制台登录** —— 修复 Windows 打开浏览器时控制台登录链接的查询参数丢失问题。
+- **登录提示** —— 控制台登录后或执行 `bl auth status` 时，若未配置模型 API Key，会明确提示模型调用仍需配置 Key，并给出配置命令。
+
+## [2.3.2] - 2026-10-16
+
+### 修复
+
+- **CLI 更新** —— `bl update` 在升级失败或无法获取最新版本时返回非零退出码，便于脚本和 Agent 正确识别失败。
+
+## [2.3.1] - 2026-10-16
+
+### 修复
+
+- **请求超时** —— 设置超过 300 秒的请求超时时间后，不再被默认的响应头超时提前中断。
 
 ## [2.3.0] - 2026-10-14
 

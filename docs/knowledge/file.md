@@ -2,7 +2,7 @@
 
 数据中心是知识库文件的存储层。文件通过 `doc upload` 或 `doc import-oss` 进入数据中心，再导入到知识库。数据中心文件可被多个知识库引用。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
+> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](knowledge-cli-guide.md#通用约定)。
 
 ---
 
@@ -154,4 +154,8 @@ bl knowledge file delete --file-id file-xxx --yes
 
 ---
 
-← [返回总览](../knowledge-cli-guide.md)
+← [返回总览](knowledge-cli-guide.md)
+
+## 音视频文件
+
+`file get --file-id` 沿用现有接口查看 parser、状态和原始文件属性，JSON 保留服务端媒体字段。数据中心 fileId 可由 `file list --category-id` 分页查询，再交给 `doc import` 导入已有库。上传媒体与 parser 配置使用 [文档接入命令](doc.md#已有文件导入与音视频接入)，无需新增另一套上传协议。

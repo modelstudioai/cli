@@ -14,8 +14,8 @@
  * - An empty scene omits its whole section. `no chat services` is pure noise and
  *   invites the model to handle a case that does not exist. An empty CATALOG is
  *   the opposite case and does get a message: see {@link buildNoServiceNotice}.
- * - `bl` is only ever recommended together with how to get it. This plugin talks
- *   to the API directly and never shells out, so a fully configured deployment
+ * - `bl` is only ever recommended together with how to get it. The retrieval tools talk
+ *   to the API directly, so a retrieval-only deployment
  *   can have no `bl` on PATH at all.
  */
 
@@ -37,7 +37,7 @@ const DESCRIPTION_LIMIT = 200;
  * command. A single-service catalog never carries it.
  */
 const BL_AVAILABILITY_NOTE =
-  "(`bl` is the Bailian CLI — install it with `npm install -g bailian-cli` if the command is not found.)";
+  "(Execute these bl knowledge examples through kb_manage: pass only the arguments after bl knowledge, without connection flags or shell syntax, so dsh settings remain authoritative. `bl` is the Bailian CLI — install it with `npm install -g bailian-cli` if the command is not found.)";
 
 export interface CatalogInput {
   entries: readonly ServiceEntry[];

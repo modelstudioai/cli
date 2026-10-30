@@ -1,8 +1,14 @@
+import { httpTransport } from "bailian-cli-core";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { createServer, type Server } from "http";
 import { tmpdir } from "os";
 import { join } from "path";
-import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
+import { Readable } from "node:stream";
+import { execFile, type ExecFileException } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vite-plus/test";
+import { readConfigFile, readConfigProfiles, writeConfigFile } from "bailian-cli-core";
+import { buildIsolatedCliEnv, withIsolatedHome } from "e2e/isolation";
 import {
   isDashScopeE2EReady,
   isOpenApiE2EReady,
@@ -10,6 +16,7 @@ import {
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runCommandInProcess,
 } from "./helpers.ts";
 import { AUTH_ROUTES } from "./topic-routes.ts";
 
@@ -20,13 +27,23 @@ let modelsOrigin: string;
 
 beforeAll(async () => {
   modelsServer = createServer((request, response) => {
-    if (request.method !== "GET" || !request.url?.includes("/models")) {
+    const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
+    const isNativeModels =
+      requestUrl.pathname === "/api/v1/models" &&
+      requestUrl.searchParams.get("page_no") === "1" &&
+      requestUrl.searchParams.get("page_size") === "1";
+    const isCompatibleModels =
+      requestUrl.pathname === "/compatible-mode/v1/models" && requestUrl.search === "";
+    if (request.method !== "GET" || (!isNativeModels && !isCompatibleModels)) {
       response.writeHead(404, { "content-type": "application/json" });
       response.end(JSON.stringify({ code: "NotFound", message: "models route required" }));
       return;
     }
     if (request.headers.authorization === "Bearer sk-rejected-placeholder") {
-      response.writeHead(401, { "content-type": "application/json" });
+      response.writeHead(401, {
+        "content-type": "application/json",
+        "x-request-id": "req-auth-rejected",
+      });
       response.end(JSON.stringify({ code: "InvalidApiKey", message: "invalid key" }));
       return;
     }
@@ -51,6 +68,9 @@ describe("e2e: auth", () => {
     expect(stderr).toMatch(/--console-site.*ordinary API key/i);
     expect(stderr).toMatch(/subscription plans.*--api-key/i);
     expect(stderr).toMatch(/--open-api/);
+    expect(stderr).toContain("--no-browser");
+    expect(stderr).toContain("--token-stdin");
+    expect(stderr).toContain("--console-region");
     expect(stderr).toContain("bl auth login --console\n");
     expect(stderr).not.toContain("bl auth login --console --console-site domestic");
   });
@@ -140,6 +160,287 @@ describe("e2e: auth", () => {
     }
   });
 
+  test.each(["success", "NotLogined", "network", "invalid-response", "empty-token"])(
+    "auth login --open-api 校验 %s 后才写入并激活 Profile",
+    async (outcome) => {
+      await withIsolatedHome(async (home, configDir) => {
+        await writeConfigFile({ access_token: "default-token" });
+        const previous = {
+          access_token: "browser-token",
+          access_key_id: "old-ak",
+          access_key_secret: "old-secret",
+          base_url: "https://token-plan.ap-southeast-1.maas.aliyuncs.com",
+          console_site: "international" as const,
+          console_switch_agent: 123,
+        };
+        await writeConfigFile(previous, "token-plan");
+        const originalFetch = httpTransport.fetch;
+        const requests: string[] = [];
+        httpTransport.fetch = async (input, init) => {
+          const endpoint = new URL(input instanceof Request ? input.url : input);
+          requests.push(endpoint.hostname);
+          expect(readConfigFile("token-plan")).toEqual(previous);
+          expect(readConfigProfiles().active).toBe("default");
+          if (endpoint.pathname === "/modelstudio/cli/generateAccessToken") {
+            return new Response(
+              JSON.stringify({ cliAccessToken: outcome === "empty-token" ? " " : "new-token" }),
+            );
+          }
+          expect(endpoint.searchParams.get("api")).toBe(
+            "zeldaEasy.cornerstone-portal.cs-console.loginInfo",
+          );
+          expect(new Headers(init?.headers).get("authorization")).toBe("Bearer new-token");
+          const payload = JSON.parse(new URLSearchParams(init?.body as string).get("params")!);
+          expect(payload.Data.cornerstoneParam.switchAgent).toBe(123);
+          if (outcome === "network") throw new TypeError("fetch failed");
+          if (outcome === "NotLogined") {
+            return new Response(
+              JSON.stringify({
+                data: { success: false, errorCode: "BailianGateway.Login.NotLogined" },
+              }),
+            );
+          }
+          if (outcome === "invalid-response") return new Response("{}");
+          return new Response(
+            JSON.stringify({
+              data: { success: true, DataV2: { data: { data: { aliyun: { uid: "test-user" } } } } },
+            }),
+          );
+        };
+        try {
+          const result = await runCommandInProcess(
+            AUTH_ROUTES,
+            [
+              "auth",
+              "login",
+              "--open-api",
+              "--access-key-id",
+              "mock-ak",
+              "--access-key-secret",
+              "mock-secret",
+              "--config",
+              "token-plan",
+            ],
+            {
+              HOME: home,
+              BAILIAN_CONFIG_DIR: configDir,
+              DASHSCOPE_BASE_URL: "",
+              NODE_OPTIONS: "",
+              HTTP_PROXY: "",
+              HTTPS_PROXY: "",
+              http_proxy: "",
+              https_proxy: "",
+            },
+          );
+          if (outcome === "success") {
+            expect(result.exitCode, result.stderr).toBe(0);
+            expect(readConfigFile("token-plan")).toMatchObject({
+              ...previous,
+              access_token: "new-token",
+              access_key_id: "mock-ak",
+              access_key_secret: "mock-secret",
+              console_region: "ap-southeast-1",
+            });
+            expect(readConfigProfiles().active).toBe("token-plan");
+          } else {
+            expect(result.exitCode, result.stderr).not.toBe(0);
+            expect(readConfigFile("token-plan")).toEqual(previous);
+            expect(readConfigProfiles().active).toBe("default");
+          }
+          expect(readConfigFile().access_token).toBe("default-token");
+          expect(requests).toEqual(
+            outcome === "empty-token"
+              ? ["modelstudio.ap-southeast-1.aliyuncs.com"]
+              : [
+                  "modelstudio.ap-southeast-1.aliyuncs.com",
+                  "bailian-singapore-cs.alibabacloud.com",
+                ],
+          );
+        } finally {
+          httpTransport.fetch = originalFetch;
+        }
+      });
+    },
+  );
+
+  test.each([
+    ["--no-browser"],
+    ["--token-stdin"],
+    ["--console", "--token-stdin"],
+    ["--console", "--token-stdin", "--console-region", "unknown-region"],
+    ["--console", "--console-region", "ap-southeast-1"],
+    ["--console", "--token-stdin", "--no-browser", "--console-region", "ap-southeast-1"],
+  ])("Console 兜底参数组合 %j 返回用法错误", async (...flags) => {
+    const result = await runCommandInProcess(AUTH_ROUTES, ["auth", "login", ...flags, "--dry-run"]);
+    expect(result.exitCode, result.stderr).toBe(2);
+    expect(result.stderr).not.toContain("Unknown flag");
+  });
+
+  test.each(["--no-browser", "--token-stdin"])(
+    "Console %s dry-run 不读 stdin、不打开浏览器、不写配置",
+    async (flag) => {
+      await withIsolatedHome(async (home, configDir) => {
+        const extra = flag === "--token-stdin" ? ["--console-region", "ap-southeast-1"] : [];
+        const previous = readFileSync(join(configDir, "config.json"), "utf8");
+        const result = await runCommandE2e(
+          AUTH_ROUTES,
+          ["auth", "login", "--console", flag, ...extra, "--dry-run"],
+          { HOME: home, BAILIAN_CONFIG_DIR: configDir },
+        );
+        expect(result.exitCode, result.stderr).toBe(0);
+        expect(result.stdout).toContain(
+          flag === "--token-stdin" ? "stdin" : "without opening a browser",
+        );
+        expect(readFileSync(join(configDir, "config.json"), "utf8")).toBe(previous);
+      });
+    },
+  );
+
+  test("Console stdin 子进程读取真实管道并拒绝非原始 token，不回显或写配置", async () => {
+    await withIsolatedHome(async (home, configDir) => {
+      const previous = readFileSync(join(configDir, "config.json"), "utf8");
+      const isolated = buildIsolatedCliEnv({
+        overrides: {
+          HOME: home,
+          BAILIAN_CONFIG_DIR: configDir,
+          DO_NOT_TRACK: "1",
+          NODE_NO_WARNINGS: "1",
+          NODE_OPTIONS: "",
+          BAILIAN_E2E_ROUTES: JSON.stringify(
+            Object.entries(AUTH_ROUTES).map(([path, exportName]) => ({ path, export: exportName })),
+          ),
+        },
+      });
+      try {
+        const result = await new Promise<{ code: ExecFileException["code"]; output: string }>(
+          (resolve) => {
+            const child = execFile(
+              process.execPath,
+              [
+                "--import",
+                import.meta.resolve("tsx"),
+                fileURLToPath(new URL("./harness/main.ts", import.meta.url)),
+                "auth",
+                "login",
+                "--console",
+                "--token-stdin",
+                "--console-region",
+                "ap-southeast-1",
+                "--console-site",
+                "international",
+              ],
+              { env: isolated.env, timeout: 10_000 },
+              (error, stdout, stderr) => {
+                resolve({ code: error?.code, output: stdout + stderr });
+              },
+            );
+            child.stdin!.on("error", () => {});
+            child.stdin!.end("Bearer pipe-secret-placeholder\n");
+          },
+        );
+        expect(result.code, result.output).toBe(2);
+        expect(result.output).toContain("stdin must contain one raw console access token");
+        expect(result.output).not.toContain("pipe-secret-placeholder");
+        expect(readFileSync(join(configDir, "config.json"), "utf8")).toBe(previous);
+      } finally {
+        isolated.dispose();
+      }
+    });
+  });
+
+  test.each(["success", "rejected", "network", "empty", "oversized"])(
+    "Console stdin 导入 %s：验证成功才保存并激活 Profile",
+    async (outcome) => {
+      await withIsolatedHome(async (home, configDir) => {
+        await writeConfigFile({ access_token: "default-token" });
+        const previous = { access_token: "old-token", api_key: "sk-kept", access_key_id: "old-ak" };
+        await writeConfigFile(previous, "imported");
+        const input = Readable.from([
+          outcome === "empty"
+            ? " \n"
+            : outcome === "oversized"
+              ? "x".repeat(65537)
+              : " pasted-console-token\n",
+        ]);
+        const stdin = vi
+          .spyOn(process, "stdin", "get")
+          .mockReturnValue(input as typeof process.stdin);
+        const originalFetch = httpTransport.fetch;
+        let validations = 0;
+        httpTransport.fetch = async (url, init) => {
+          const endpoint = new URL(url instanceof Request ? url.url : url);
+          expect(endpoint.hostname).toBe("bailian-singapore-cs.alibabacloud.com");
+          expect(endpoint.searchParams.get("api")).toBe(
+            "zeldaEasy.cornerstone-portal.cs-console.loginInfo",
+          );
+          expect(new Headers(init?.headers).get("authorization")).toBe(
+            "Bearer pasted-console-token",
+          );
+          expect(readConfigFile("imported")).toEqual(previous);
+          expect(readConfigProfiles().active).toBe("default");
+          validations++;
+          if (outcome === "network") throw new TypeError("fetch failed");
+          return new Response(
+            JSON.stringify({
+              data:
+                outcome === "rejected"
+                  ? { success: false, errorCode: "BailianGateway.Login.NotLogined" }
+                  : { success: true },
+            }),
+          );
+        };
+        try {
+          const result = await runCommandInProcess(
+            AUTH_ROUTES,
+            [
+              "auth",
+              "login",
+              "--console",
+              "--token-stdin",
+              "--console-site",
+              "international",
+              "--console-region",
+              "ap-southeast-1",
+              "--config",
+              "imported",
+              "--verbose",
+            ],
+            {
+              HOME: home,
+              BAILIAN_CONFIG_DIR: configDir,
+              NODE_OPTIONS: "",
+              HTTP_PROXY: "",
+              HTTPS_PROXY: "",
+              http_proxy: "",
+              https_proxy: "",
+            },
+          );
+          expect(result.stdout + result.stderr).not.toContain("pasted-console-token");
+          expect(validations).toBe(["empty", "oversized"].includes(outcome) ? 0 : 1);
+          if (outcome === "success") {
+            expect(result.exitCode, result.stderr).toBe(0);
+            expect(readConfigFile("imported")).toMatchObject({
+              ...previous,
+              access_token: "pasted-console-token",
+              console_site: "international",
+              console_region: "ap-southeast-1",
+            });
+            expect(readConfigProfiles().active).toBe("imported");
+          } else {
+            expect(result.exitCode, result.stderr).not.toBe(0);
+            expect(readConfigFile("imported")).toEqual(previous);
+            expect(readConfigProfiles().active).toBe("default");
+          }
+          expect(readConfigFile().access_token).toBe("default-token");
+        } finally {
+          stdin.mockRestore();
+          input.destroy();
+          httpTransport.fetch = originalFetch;
+        }
+      });
+    },
+  );
+
   test("auth logout --help 正常退出", async () => {
     const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "logout", "--help"]);
     expect(exitCode, stderr).toBe(0);
@@ -211,6 +512,112 @@ describe("e2e: auth", () => {
     >;
     expect(config.api_key).toBe("sk-e2e-placeholder");
     expect(config.base_url).toBe(modelsOrigin);
+  });
+
+  test("auth login sk-ws Key 使用显式 Workspace MaaS Compatible /models", async () => {
+    await withIsolatedHome(async (home, configDir) => {
+      const workspaceOrigin = "https://ws-explicit.ap-southeast-1.maas.aliyuncs.com";
+      const originalFetch = httpTransport.fetch;
+      const requests: string[] = [];
+      httpTransport.fetch = async (input) => {
+        const endpoint = new URL(input instanceof Request ? input.url : input);
+        requests.push(endpoint.toString());
+        if (endpoint.toString() === `${workspaceOrigin}/compatible-mode/v1/models`) {
+          return new Response(JSON.stringify({ object: "list", data: [] }), {
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ code: "NotFound", message: "route not found" }), {
+          status: 404,
+          headers: { "content-type": "application/json" },
+        });
+      };
+
+      try {
+        const login = await runCommandInProcess(
+          AUTH_ROUTES,
+          [
+            "auth",
+            "login",
+            "--api-key",
+            "sk-ws-explicit-placeholder",
+            "--base-url",
+            workspaceOrigin,
+          ],
+          {
+            HOME: home,
+            BAILIAN_CONFIG_DIR: configDir,
+            DASHSCOPE_API_KEY: "",
+            DASHSCOPE_BASE_URL: "",
+            NODE_OPTIONS: "",
+            HTTP_PROXY: "",
+            HTTPS_PROXY: "",
+            http_proxy: "",
+            https_proxy: "",
+          },
+        );
+        expect(login.exitCode, login.stderr).toBe(0);
+        expect(requests).toEqual([`${workspaceOrigin}/compatible-mode/v1/models`]);
+        expect(readConfigFile()).toMatchObject({
+          api_key: "sk-ws-explicit-placeholder",
+          base_url: workspaceOrigin,
+        });
+      } finally {
+        httpTransport.fetch = originalFetch;
+      }
+    });
+  });
+
+  test("auth login sk-ws Key 重用已保存的 Workspace MaaS Compatible /models", async () => {
+    await withIsolatedHome(async (home, configDir) => {
+      const workspaceOrigin = "https://ws-stored.ap-southeast-1.maas.aliyuncs.com";
+      await writeConfigFile({ base_url: workspaceOrigin });
+      const originalFetch = httpTransport.fetch;
+      const requests: string[] = [];
+      httpTransport.fetch = async (input) => {
+        const endpoint = new URL(input instanceof Request ? input.url : input);
+        requests.push(endpoint.toString());
+        if (endpoint.toString() === `${workspaceOrigin}/compatible-mode/v1/models`) {
+          return new Response(JSON.stringify({ object: "list", data: [] }), {
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return new Response(
+          JSON.stringify({ code: "InvalidApiKey", message: "invalid key for this endpoint" }),
+          {
+            status: 401,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      };
+
+      try {
+        const login = await runCommandInProcess(
+          AUTH_ROUTES,
+          ["auth", "login", "--api-key", "sk-ws-stored-placeholder"],
+          {
+            HOME: home,
+            BAILIAN_CONFIG_DIR: configDir,
+            DASHSCOPE_API_KEY: "",
+            DASHSCOPE_BASE_URL: "",
+            NODE_OPTIONS: "",
+            HTTP_PROXY: "",
+            HTTPS_PROXY: "",
+            http_proxy: "",
+            https_proxy: "",
+          },
+        );
+        expect(login.exitCode, login.stderr).toBe(0);
+        expect(requests).toContain(`${workspaceOrigin}/compatible-mode/v1/models`);
+        expect(requests).not.toContain(`${workspaceOrigin}/api/v1/models?page_no=1&page_size=1`);
+        expect(readConfigFile()).toMatchObject({
+          api_key: "sk-ws-stored-placeholder",
+          base_url: workspaceOrigin,
+        });
+      } finally {
+        httpTransport.fetch = originalFetch;
+      }
+    });
   });
 
   test("auth login --config token-plan 接受 Anthropic SDK Base URL", async () => {
@@ -587,8 +994,10 @@ describe("e2e: auth", () => {
         DASHSCOPE_BASE_URL: "",
       },
     );
-    expect(login.exitCode).toBe(3);
-    expect(login.stderr).toMatch(/API key validation failed/);
+    expect(login.exitCode).toBe(1);
+    expect(login.stderr).toMatch(/invalid key/);
+    expect(login.stderr).toMatch(/Status:\s+HTTP 401 \(InvalidApiKey\)/);
+    expect(login.stderr).toMatch(/Request ID:\s+req-auth-rejected/);
     expect(existsSync(join(configDir, "config.json"))).toBe(false);
   });
 
@@ -679,6 +1088,47 @@ describe("e2e: auth", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("No changes made.");
     expect(stderr).not.toContain("Cleared api_key");
+  });
+
+  test("auth status 在只有控制台会话时标明模型 API Key 仍未配置", async () => {
+    const configDir = makeE2eOutputDir("auth-status-console-only");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        language: "zh-CN",
+        access_token: "console-token-placeholder",
+        console_region: "cn-beijing",
+        console_site: "domestic",
+      }),
+    );
+    const env = {
+      BAILIAN_CONFIG_DIR: configDir,
+      DASHSCOPE_API_KEY: undefined,
+      DASHSCOPE_BASE_URL: undefined,
+      ALIBABA_CLOUD_ACCESS_KEY_ID: undefined,
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: undefined,
+      ALIBABA_CLOUD_SECURITY_TOKEN: undefined,
+    };
+
+    const json = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "json"], env);
+    expect(json.exitCode, json.stderr).toBe(0);
+    const data = parseStdoutJson<{
+      authenticated?: boolean;
+      api_key?: unknown;
+      console?: { region?: string };
+      hint?: string;
+    }>(json.stdout);
+    expect(data.authenticated).toBe(true);
+    expect(data.api_key).toBeUndefined();
+    expect(data.console?.region).toBe("cn-beijing");
+    expect(data.hint).toContain("尚未配置模型 API Key");
+    expect(data.hint).toContain("bl auth login --api-key <key>");
+    expect(json.stdout).not.toContain("console-token-placeholder");
+
+    const text = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "text"], env);
+    expect(text.exitCode, text.stderr).toBe(0);
+    expect(text.stdout).toContain("API key (model):  not configured");
+    expect(text.stdout).toContain("尚未配置模型 API Key");
   });
 
   test("auth logout 清除当前 Config 的全部凭证和 Base URL，保留普通配置", async () => {
