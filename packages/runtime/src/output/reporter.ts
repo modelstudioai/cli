@@ -31,7 +31,7 @@ export interface OutputReporter {
   error(error: unknown): ExitCode;
 }
 
-/** No global interception: legacy emitters remain separate until they are migrated. */
+/** Each invocation owns its writers, final result slot and terminal error state. */
 export function createOutputReporter(options: OutputReporterOptions): OutputReporter {
   const { output: format, quiet, verbose } = options.settings;
   const stdout = options.stdout ?? process.stdout;

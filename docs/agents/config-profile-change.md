@@ -50,7 +50,7 @@
 - `config list` 标识所有 Profile 与当前激活项。
 - `config show`、`auth status` 只输出本次最终选择的 `config` 和 `config_file`，不重复携带激活状态。
 - `config show` 额外展示 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL`（有值才输出，key 脱敏）；JSON 字段值保持干净，另用 `active: { api_key?, base_url? }` 标生效源；text 模式才在生效层值后追加 `(active)` / `（active）`。`base_url` 展示文件层或内置默认，不再被 client 生效值覆盖来源语义。
-- 模型域 `api_key` 与显式 `base_url` 来自不同优先级层级时，仅 `auth: "apiKey"` 命令在 `authStage` 向 stderr 告警一次（`--quiet` 抑制；`--output json` 为 `API_KEY_BASE_URL_SOURCE_MISMATCH`）；同源或仅一端显式配置不告。排查建议指向 `{binName} config show`。
+- 模型域 `api_key` 与显式 `base_url` 来自不同优先级层级时，仅 `auth: "apiKey"` 命令在 `authStage` 向 stderr 告警一次（`--quiet` 保留；`--output json` 为单行结构化 `API_KEY_BASE_URL_SOURCE_MISMATCH` warning）；同源或仅一端显式配置不告。排查建议指向 `{binName} config show`。
 - `config ui` 从持久化元数据读取激活项，提供显式激活操作，并在删除激活项后刷新为 `default`。
 - `config ui` 展示并可编辑完整 `ConfigFile`（含 `console_*`、`telemetry`），保存时按类型（数字/布尔/枚举）归一化写回；`config set` 仍只暴露较窄的 `VALID_KEYS`。UI 未管理的顶层元数据（如 `active_config`）不进入 Profile block，仍由写盘逻辑单独保留。
 - `config ui` 只读展示本地 agent 生态：Skills 跨全部 agent skill 目录（`~/.agents/skills` 及各 agent 的 `skills/`，含软链接）按 id 聚合并标注安装来源；MCP、Agents 从各 agent 本地配置读取。
