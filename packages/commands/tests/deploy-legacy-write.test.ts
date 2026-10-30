@@ -1,3 +1,4 @@
+import { withCommandOutput } from "./output/command-context.ts";
 import { httpTransport } from "bailian-cli-core";
 import {
   BailianError,
@@ -95,17 +96,19 @@ async function run(
       typeof validation === "string" ? validation : validation["en-US"],
       ExitCode.USAGE,
     );
-  await command.run({
-    identity: {
-      binName: "test-cli",
-      version: "test",
-      npmPackage: "test-cli",
-      clientName: "test-cli",
-    },
-    settings: { ...SETTINGS, ...settings },
-    flags,
-    client,
-  } as Parameters<AnyCommand["run"]>[0]);
+  await command.run(
+    withCommandOutput({
+      identity: {
+        binName: "test-cli",
+        version: "test",
+        npmPackage: "test-cli",
+        clientName: "test-cli",
+      },
+      settings: { ...SETTINGS, ...settings },
+      flags,
+      client,
+    }) as Parameters<AnyCommand["run"]>[0],
+  );
 }
 
 function requests(mock: ReturnType<typeof mockClient>) {
@@ -281,8 +284,7 @@ describe.each(CREATE_COMMANDS)("$name create", ({ command }) => {
         capacity: 2,
         billing_method: "POST_PAY",
       });
-      if (quiet) expect(stdout.trim()).toBe(MODEL_CODE);
-      else expect(JSON.parse(stdout)).toEqual(response);
+      expect(JSON.parse(stdout)).toEqual(response);
     },
   );
 });
@@ -344,8 +346,7 @@ describe("create plan isolation", () => {
       plan: "lora",
       capacity: 1,
     });
-    if (quiet) expect(stdout.trim()).toBe(MODEL_CODE);
-    else expect(JSON.parse(stdout)).toEqual(response);
+    expect(JSON.parse(stdout)).toEqual(response);
   });
 });
 
@@ -406,8 +407,7 @@ describe("scale capacity validation and dry-run", () => {
       body: { capacity: 0 },
     });
     expect(requests(mock)[0].body).toEqual({ capacity: 0 });
-    if (quiet) expect(stdout.trim()).toBe(MODEL_CODE);
-    else expect(JSON.parse(stdout)).toEqual(response);
+    expect(JSON.parse(stdout)).toEqual(response);
   });
 });
 
@@ -585,7 +585,7 @@ describe("PTU asynchronous write handling", () => {
       output: { operation_id: "123" },
       client_request_id: REQUEST_ID,
     });
-    expect(JSON.parse(stderr)).toEqual({
+    expect(JSON.parse(stderr).warning.details).toEqual({
       submitted: true,
       deployed_model: MODEL_CODE,
       operation_id: "123",
@@ -715,7 +715,7 @@ describe("delete safety", () => {
       const mock = mockClient({ output: { plan: "mu", status } }, { output: { deleted: true } });
       await run(deployDelete, { deployedModel: MODEL_CODE }, mock.client);
       expect(requests(mock).map(({ method }) => method)).toEqual(["GET", "DELETE"]);
-      expect(stdout.trim()).toBe(MODEL_CODE);
+      expect(JSON.parse(stdout)).toEqual({ output: { deleted: true } });
     },
   );
 

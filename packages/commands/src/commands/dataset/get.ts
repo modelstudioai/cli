@@ -1,5 +1,4 @@
 import { defineCommand, getDataset, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const GET_FLAGS = {
   fileId: {
@@ -11,6 +10,7 @@ const GET_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Get details of a single dataset file",
     "zh-CN": "获取单个数据集文件的详情",
@@ -24,7 +24,11 @@ export default defineCommand({
     const fileId = flags.fileId;
 
     if (settings.dryRun) {
-      emitResult({ action: "dataset.get", file_id: fileId }, "json");
+      const resultData1 = { action: "dataset.get", file_id: fileId };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
@@ -32,7 +36,12 @@ export default defineCommand({
     const file = response.data;
 
     if (!file) {
-      emitBare(`No data returned for ${fileId}`);
+      ctx.output.result(null, {
+        text: ctx.localize({
+          "en-US": `No data returned for ${fileId}`,
+          "zh-CN": `未返回 ${fileId} 的数据`,
+        }),
+      });
       return;
     }
 
@@ -47,10 +56,12 @@ export default defineCommand({
       description: file.description ?? "",
     };
 
-    if (settings.quiet) {
-      emitBare(item.file_id);
-    } else {
-      emitResult({ ...item, request_id: response.request_id }, "json");
+    {
+      const resultData2 = { ...item, request_id: response.request_id };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+      );
     }
   },
 });

@@ -5,10 +5,11 @@ import {
   getDeployment,
   updateDeploymentOverflow,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { DEPLOYED_MODEL_FLAG, validateQueryIds } from "./query-shared.ts";
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Set the overflow strategy for a throughput reservation ModelCode",
     "zh-CN": "设置吞吐预留 ModelCode 的溢出策略",
@@ -52,13 +53,14 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.overflow",
-          deployed_model: flags.deployedModel,
-          body: { overflow_strategy: flags.strategy },
-        },
-        "json",
+      const resultData1 = {
+        action: "deploy.overflow",
+        deployed_model: flags.deployedModel,
+        body: { overflow_strategy: flags.strategy },
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -76,6 +78,10 @@ export default defineCommand({
         { cause: { response, deployment } },
       );
     }
-    emitResult({ ...response, deployment }, "json");
+    const resultData2 = { ...response, deployment };
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+    );
   },
 });

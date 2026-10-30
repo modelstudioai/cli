@@ -7,7 +7,6 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const VALIDATE_FLAGS = {
   file: {
@@ -39,6 +38,7 @@ const VALIDATE_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Locally validate a dataset file (.jsonl or .zip) without uploading",
     "zh-CN": "在本地验证数据集文件（.jsonl 或 .zip），不执行上传",
@@ -88,14 +88,15 @@ export default defineCommand({
     const filePath = flags.file;
     const schema = parseDatasetSchemaFlag(flags.schema);
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "dataset.validate",
-          file: filePath,
-          full: flags.fullValidate,
-          schema: schema ?? "auto",
-        },
-        "json",
+      const resultData1 = {
+        action: "dataset.validate",
+        file: filePath,
+        full: flags.fullValidate,
+        schema: schema ?? "auto",
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -106,11 +107,10 @@ export default defineCommand({
       maxBytes: schema === "decision" ? MAX_DECISION_DATASET_BYTES : undefined,
     });
 
-    if (settings.quiet) {
-      emitBare(result.valid ? "ok" : "fail");
-    } else {
-      emitResult(result, "json");
-    }
+    ctx.output.result(
+      result,
+      ctx.settings.output === "text" ? { text: JSON.stringify(result, null, 2) } : undefined,
+    );
 
     if (!result.valid) {
       // Match the upload command's exit-code convention; details already printed.

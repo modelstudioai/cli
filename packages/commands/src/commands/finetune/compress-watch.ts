@@ -5,7 +5,7 @@ import {
   getCompressJob,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+
 import {
   COMPRESS_JOB_ID_FLAGS,
   COMPRESS_TERMINAL_STATUSES,
@@ -42,6 +42,7 @@ const WATCH_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Probe or follow a compression job's status",
     "zh-CN": "查询或持续跟踪压缩任务状态",
@@ -78,33 +79,33 @@ export default defineCommand({
     const jobId = ctx.flags.jobId;
     const intervalSec = ctx.flags.interval ?? DEFAULT_INTERVAL_SEC;
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          action: "finetune.compress.watch",
-          job_id: jobId,
-          follow: ctx.flags.follow,
-          interval: intervalSec,
-          timeout: ctx.flags.pollTimeout,
-        },
-        "json",
+      const resultData1 = {
+        action: "finetune.compress.watch",
+        job_id: jobId,
+        follow: ctx.flags.follow,
+        interval: intervalSec,
+        timeout: ctx.flags.pollTimeout,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
     if (!ctx.flags.follow) {
       const response = await getCompressJob(ctx.client, jobId);
       const status = String(response.output?.status ?? "UNKNOWN").toUpperCase();
-      if (ctx.settings.quiet) emitBare(status);
-      else
-        emitResult(
-          {
-            job_id: jobId,
-            status,
-            terminal: COMPRESS_TERMINAL_STATUSES.has(status),
-            quantized_output: response.output?.quantized_output,
-            request_id: response.request_id,
-          },
-          "json",
-        );
+      const resultData2 = {
+        job_id: jobId,
+        status,
+        terminal: COMPRESS_TERMINAL_STATUSES.has(status),
+        quantized_output: response.output?.quantized_output,
+        request_id: response.request_id,
+      };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+      );
       if (COMPRESS_TERMINAL_STATUSES.has(status) && status !== "SUCCEEDED")
         throw formatCompressFailure(jobId, status, response.output?.error?.message);
       return;
@@ -119,8 +120,12 @@ export default defineCommand({
         const response = await getCompressJob(ctx.client, jobId, controller.signal);
         const status = String(response.output?.status ?? "UNKNOWN").toUpperCase();
         if (COMPRESS_TERMINAL_STATUSES.has(status)) {
-          if (ctx.settings.quiet) emitBare(status);
-          else emitResult(response, "json");
+          ctx.output.result(
+            response,
+            ctx.settings.output === "text"
+              ? { text: JSON.stringify(response, null, 2) }
+              : undefined,
+          );
           if (status !== "SUCCEEDED")
             throw formatCompressFailure(jobId, status, response.output?.error?.message);
           return;
@@ -138,9 +143,7 @@ export default defineCommand({
       }
     } catch (error) {
       if (controller.signal.aborted) {
-        process.stderr.write(
-          `\n${ctx.localize({ "en-US": "Interrupted.", "zh-CN": "已中断。" })}\n`,
-        );
+        ctx.output.info({ "en-US": "Interrupted.", "zh-CN": "已中断。" });
         return;
       }
       throw error;

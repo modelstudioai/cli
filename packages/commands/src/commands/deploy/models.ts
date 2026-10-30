@@ -1,5 +1,4 @@
 import { defineCommand, listDeployableModels, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 
 const MODELS_FLAGS = {
   page: {
@@ -32,6 +31,7 @@ const MODELS_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "List models available for deployment", "zh-CN": "列出可部署的模型" },
   auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--catalog-version <v>] [--source <custom|public>]",
@@ -50,15 +50,16 @@ export default defineCommand({
     const modelSource = flags.source || undefined;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.models",
-          page: flags.page,
-          page_size: flags.pageSize,
-          version,
-          model_source: modelSource,
-        },
-        "json",
+      const resultData1 = {
+        action: "deploy.models",
+        page: flags.page,
+        page_size: flags.pageSize,
+        version,
+        model_source: modelSource,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -125,6 +126,10 @@ export default defineCommand({
       }
       return out;
     });
-    emitResult({ items, total, request_id: response.request_id }, "json");
+    const resultData2 = { items, total, request_id: response.request_id };
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+    );
   },
 });
