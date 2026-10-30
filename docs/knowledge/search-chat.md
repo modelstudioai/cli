@@ -177,13 +177,16 @@ bl knowledge chat --agent-id aid-xxx --messages-file ./messages.json --output js
 
 chat 仍使用 SSE 接口，各输出模式共享事件聚合：
 
-| 模式                     | stdout                                                                        |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| JSON                     | answer 只含最终回答，request_id 保留；新增 phases、tools、docs、usage、events |
-| text + TTY               | 按规划/工具/回答显示过程，末尾可读来源摘要                                    |
-| text + 管道              | 仅最终回答                                                                    |
-| quiet，包括 JSON + quiet | 仅裸最终回答；TTY 同样遵守                                                    |
-| verbose                  | 主结果不变，事件诊断写 stderr                                                 |
+| 模式         | stdout                                                                        |
+| ------------ | ----------------------------------------------------------------------------- |
+| JSON         | answer 只含最终回答，request_id 保留；新增 phases、tools、docs、usage、events |
+| text + TTY   | 按规划/工具/回答显示过程，末尾可读来源摘要                                    |
+| text + 管道  | 仅最终回答                                                                    |
+| JSON + quiet | 与 JSON 相同的完整结果，不裁剪为裸回答                                        |
+| text + quiet | 隐藏阶段过程；TTY 保留最终回答与来源摘要，管道保留最终回答                    |
+| verbose      | 主结果不变，事件诊断写 stderr                                                 |
+
+warning 始终写 stderr，quiet 不隐藏；JSON 模式的 warning/debug/error 每条为单行 JSON，与 stdout 分别解析。
 
 `events` 顺序保存原始 SSE event/data，未知字段不会因聚合而丢失；不是 HTTP 字节流快照。`usage` 取最终生成结算帧，不能将累计帧相加；工具阶段用量可在原始事件中查看。无完整最终回答或流中断会非零退出，不把规划或工具摘要当作成功回答。相比旧版，answer 不再混入过程文本，依赖旧混合内容的脚本需要改读 phases/tools/events。
 

@@ -5,7 +5,6 @@ import {
   defineCommand,
   knowledgeChatEndpoint,
   parseSSE,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type FlagsDef,
@@ -14,7 +13,7 @@ import {
   type KnowledgeChatMessage,
   type KnowledgeChatRequest,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CHAT_FLAGS = {
@@ -340,7 +339,7 @@ export default defineCommand({
 
     const workspaceId = resolveWorkspaceId(ctx);
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     // API only supports SSE; streamOutput controls whether to print tokens in real-time
     const streamOutput = !settings.quiet && format === "text" && !!process.stdout.isTTY;
 
@@ -378,7 +377,7 @@ export default defineCommand({
     const url = knowledgeChatEndpoint(workspaceId);
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, request: body }, format);
+      ctx.output.result({ endpoint: url, request: body });
       return;
     }
 
@@ -392,7 +391,11 @@ export default defineCommand({
     const accumulator = createChatAccumulator(ctx.localize);
     let displayedStage = "";
     for await (const event of parseSSE(res)) {
-      if (settings.verbose) process.stderr.write(`[event] ${event.event ?? "message"}\n`);
+      ctx.output.debug({
+        code: "KNOWLEDGE_CHAT_EVENT",
+        message: { "en-US": "Knowledge chat event", "zh-CN": "知识库对话事件" },
+        details: { event: event.event ?? "message" },
+      });
       const fragments = accumulator.accept(event);
       if (streamOutput) {
         for (const fragment of fragments) {
@@ -413,28 +416,37 @@ export default defineCommand({
       if (event.data === "[DONE]") break;
     }
     const result = accumulator.finish();
-    if (settings.quiet) emitBare(result.answer);
-    else if (format !== "text") emitResult(result, format);
-    else if (!streamOutput) emitBare(result.answer);
-    else {
-      process.stdout.write("\n");
-      if (result.docs.length) emitBare(ctx.localize({ "en-US": "Sources:", "zh-CN": "来源：" }));
-      for (const doc of result.docs) {
-        if (doc === null || typeof doc !== "object" || Array.isArray(doc)) continue;
-        const record = doc as Record<string, unknown>;
-        const metadata =
-          record.metadata && typeof record.metadata === "object" && !Array.isArray(record.metadata)
-            ? (record.metadata as Record<string, unknown>)
-            : record;
-        emitBare(
-          JSON.stringify({
-            doc_id: metadata.doc_id,
-            title: metadata.title,
-            citation: metadata._citation_index,
-          }),
-        );
-        for (const line of mediaSummary(metadata)) emitBare(line);
-      }
+    let text: string | undefined;
+    if (format === "text") {
+      if (process.stdout.isTTY) {
+        const footer: string[] = [];
+        if (result.docs.length)
+          footer.push(ctx.localize({ "en-US": "Sources:", "zh-CN": "来源：" }));
+        for (const doc of result.docs) {
+          if (doc === null || typeof doc !== "object" || Array.isArray(doc)) continue;
+          const record = doc as Record<string, unknown>;
+          const metadata =
+            record.metadata &&
+            typeof record.metadata === "object" &&
+            !Array.isArray(record.metadata)
+              ? (record.metadata as Record<string, unknown>)
+              : record;
+          footer.push(
+            JSON.stringify({
+              doc_id: metadata.doc_id,
+              title: metadata.title,
+              citation: metadata._citation_index,
+            }),
+          );
+          footer.push(...mediaSummary(metadata));
+        }
+        text = streamOutput
+          ? footer.length
+            ? "\n" + footer.join("\n")
+            : ""
+          : [result.answer, ...footer].join("\n");
+      } else text = result.answer;
     }
+    ctx.output.result(result, text === undefined ? undefined : { text });
   },
 });

@@ -1,3 +1,5 @@
+import { readDocumentIds, readIngestionStatus } from "../document-response.ts";
+import { readServiceMutationField } from "../service-response.ts";
 // J2 content operations: routine document add/remove and the visibility loop.
 // create (doc1+doc2) → doc list/status checks → doc tag → search hits both markers
 // → doc delete doc2 → search verifies markerB is gone and markerA remains.
@@ -49,9 +51,11 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(serviceRun.exitCode, serviceRun.stderr).toBe(0);
-      const agentId = serviceRun.stdout.trim().split("\n").pop()!;
+      const agentId = readServiceMutationField(serviceRun.stdout, "agent_id");
       searchAgentId = agentId;
       expect(agentId).toMatch(/^aid-/);
       reporter.trackResource("service", agentId);
@@ -69,9 +73,11 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(docListRun.exitCode, docListRun.stderr).toBe(0);
-      const listedDocIds = docListRun.stdout.trim().split("\n");
+      const listedDocIds = readDocumentIds(docListRun.stdout);
       expect(listedDocIds).toContain(fileIdA);
       expect(listedDocIds).toContain(fileIdB);
 
@@ -86,9 +92,11 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(docStatusRun.exitCode, docStatusRun.stderr).toBe(0);
-      expect(docStatusRun.stdout.trim()).toBe("COMPLETED");
+      expect(readIngestionStatus(docStatusRun.stdout)).toBe("COMPLETED");
 
       // 2.1) Negative branch: querying a job id that does not exist on this base —
       // the server error (Index.IndexJobNotExist, verified live) passes through

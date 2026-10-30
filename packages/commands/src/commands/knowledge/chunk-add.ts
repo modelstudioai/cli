@@ -3,13 +3,11 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type FlagsDef,
   type RagMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 import { readUtf8TextFile } from "./upload-support.ts";
 
@@ -180,7 +178,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // dry-run also reads the file and parses --field (rehearsal semantics)
     let field: Record<string, unknown>;
@@ -209,7 +207,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.chunkCreate);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -219,13 +217,22 @@ export default defineCommand({
       body,
     });
 
-    // The response carries no chunk_id — quiet mode exits 0 silently on success
-    if (settings.quiet) return;
-    if (format === "text") {
-      emitBare(`chunk created (pipeline: ${flags.indexId})`);
-      emitBare("List chunks to find the new chunk id.");
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: [
+              ctx.localize({
+                "en-US": `chunk created (pipeline: ${flags.indexId})`,
+                "zh-CN": `切片已创建 (pipeline: ${flags.indexId})`,
+              }),
+              ctx.localize({
+                "en-US": "List chunks to find the new chunk id.",
+                "zh-CN": "请列出切片以获取新切片 ID。",
+              }),
+            ].join("\n"),
+          }
+        : undefined,
+    );
   },
 });

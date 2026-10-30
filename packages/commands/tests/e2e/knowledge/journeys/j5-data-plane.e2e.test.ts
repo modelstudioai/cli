@@ -1,3 +1,4 @@
+import { readUploadedFileIds } from "../document-response.ts";
 import type {
   RagGetConnectorResponse,
   RagAddCategoryResponse,
@@ -120,9 +121,11 @@ describe.skipIf(!isConnectorE2EReady())("journey J5: 数据面治理 (live, 自�
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(uploadRun.exitCode, uploadRun.stderr).toBe(0);
-      const fileId = uploadRun.stdout.trim();
+      const fileId = readUploadedFileIds(uploadRun.stdout)[0]!;
       expect(fileId).toMatch(/^file_/);
       reporter.trackResource("data-center-file", fileId);
 

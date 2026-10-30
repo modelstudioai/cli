@@ -2,13 +2,11 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type FlagsDef,
   type RagJobCreateResponse,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import {
   WORKSPACE_FLAG,
   resolveWorkspaceId,
@@ -170,9 +168,9 @@ export default defineCommand({
         ? { sourceType: "DATA_CENTER_FILE", docIds: flags.docId }
         : { sourceType: "DATA_CENTER_CATEGORY", categoryIds: flags.categoryId }),
     };
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     if (settings.dryRun) {
-      emitResult({ endpoint, request }, format);
+      ctx.output.result({ endpoint, request });
       return;
     }
     const response = await ctx.client.requestJson<RagJobCreateResponse>({
@@ -215,15 +213,26 @@ export default defineCommand({
         );
       }
     }
-    if (settings.quiet) {
-      emitBare(ingestionId);
-      return;
-    }
-    if (format === "text") {
-      emitBare(`ingestionId: ${ingestionId}`);
-      if (status) emitBare(`status: ${status.data?.ingestion_status ?? "UNKNOWN"}`);
-      return;
-    }
-    emitResult({ ...response, ...(status ? { status } : {}) }, format);
+    ctx.output.result(
+      { ...response, ...(status ? { status } : {}) },
+      format === "text"
+        ? {
+            text: [
+              ctx.localize({
+                "en-US": `ingestionId: ${ingestionId}`,
+                "zh-CN": `导入任务: ${ingestionId}`,
+              }),
+              ...(status
+                ? [
+                    ctx.localize({
+                      "en-US": `status: ${status.data?.ingestion_status ?? "UNKNOWN"}`,
+                      "zh-CN": `状态: ${status.data?.ingestion_status ?? "UNKNOWN"}`,
+                    }),
+                  ]
+                : []),
+            ].join("\n"),
+          }
+        : undefined,
+    );
   },
 });

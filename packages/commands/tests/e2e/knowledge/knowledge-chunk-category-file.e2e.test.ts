@@ -1,3 +1,9 @@
+import {
+  readChunkIds,
+  readDocumentIds,
+  readImportedFileIds,
+  readUploadedFileIds,
+} from "./document-response.ts";
 import type {
   RagCreateIndexV2Response,
   RagGetConnectorResponse,
@@ -1071,9 +1077,11 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(uploadRun.exitCode, uploadRun.stderr).toBe(0);
-        const fileId = uploadRun.stdout.trim();
+        const fileId = readUploadedFileIds(uploadRun.stdout)[0]!;
 
         const fileListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
           "knowledge",
@@ -1227,9 +1235,11 @@ describe.skipIf(!isKbAdminE2EReady())(
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(uploadRun.exitCode, uploadRun.stderr).toBe(0);
-      const fileId = uploadRun.stdout.trim();
+      const fileId = readUploadedFileIds(uploadRun.stdout)[0]!;
 
       // Operating on an existing knowledge base would pollute it, and picking one from
       // kb list is unreliable — the chunk add → list → update → delete chain needs the
@@ -1282,9 +1292,11 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(listRun.exitCode, listRun.stderr).toBe(0);
-        const chunkIds = listRun.stdout.trim().split("\n").filter(Boolean);
+        const chunkIds = readChunkIds(listRun.stdout);
         expect(chunkIds.length).toBeGreaterThan(0);
         const targetChunkId = chunkIds[chunkIds.length - 1]!;
 
@@ -1425,9 +1437,11 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(fullListRun.exitCode, fullListRun.stderr).toBe(0);
-        const allChunkIds = fullListRun.stdout.trim().split("\n").filter(Boolean);
+        const allChunkIds = readChunkIds(fullListRun.stdout);
         expect(allChunkIds.length).toBeGreaterThan(10);
 
         // batch delete all chunks — asserts the automatic split into multiple batches
@@ -1459,9 +1473,11 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(postDeleteListRun.exitCode, postDeleteListRun.stderr).toBe(0);
-        expect(postDeleteListRun.stdout.trim()).toBe("");
+        expect(readChunkIds(postDeleteListRun.stdout)).toEqual([]);
 
         // doc delete verifies document-level delete semantics (only unlinks from this
         // base, unlike file delete). The --doc-id must be the full doc_id from doc
@@ -1521,9 +1537,11 @@ describe.skipIf(!isKbAdminE2EReady())(
             "--workspace-id",
             workspaceId,
             "--quiet",
+            "--output",
+            "json",
           ]);
           expect(postDocListRun.exitCode, postDocListRun.stderr).toBe(0);
-          if (!postDocListRun.stdout.trim().includes(fullDocId)) {
+          if (!readDocumentIds(postDocListRun.stdout).includes(fullDocId)) {
             docGone = true;
             break;
           }
@@ -1630,9 +1648,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(uploadRun.exitCode, uploadRun.stderr).toBe(0);
-    const fileId = uploadRun.stdout.trim();
+    const fileId = readUploadedFileIds(uploadRun.stdout)[0]!;
     let indexId: string | undefined;
 
     try {
@@ -2046,9 +2066,11 @@ describe.skipIf(!isTableKbE2EReady())("e2e: chunk --field 表格库 live (常驻
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(docListRun.exitCode, docListRun.stderr).toBe(0);
-    const tableDocId = docListRun.stdout.trim().split("\n")[0];
+    const tableDocId = readDocumentIds(docListRun.stdout)[0];
     expect(tableDocId, "表格 fixture 库应至少有 1 个文档").toBeTruthy();
 
     // Server gotcha (verified live): table bases reject field chunks without --doc-id
@@ -2181,9 +2203,11 @@ describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(importRun.exitCode, importRun.stderr).toBe(0);
-    const firstFileId = importRun.stdout.trim();
+    const firstFileId = readImportedFileIds(importRun.stdout)[0]!;
     expect(firstFileId).toMatch(/^file_/);
 
     // 2) re-import with --overwrite: the server replaces the file and issues a NEW
@@ -2202,9 +2226,11 @@ describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(overwriteRun.exitCode, overwriteRun.stderr).toBe(0);
-    const overwriteFileId = overwriteRun.stdout.trim();
+    const overwriteFileId = readImportedFileIds(overwriteRun.stdout)[0]!;
     expect(overwriteFileId).toMatch(/^file_/);
     expect(overwriteFileId).not.toBe(firstFileId);
 
@@ -2343,9 +2369,11 @@ describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(importRun.exitCode, importRun.stderr).toBe(0);
-      const fileId = importRun.stdout.trim();
+      const fileId = readImportedFileIds(importRun.stdout)[0]!;
       expect(fileId).toMatch(/^file_/);
 
       try {

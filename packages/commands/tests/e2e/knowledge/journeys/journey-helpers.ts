@@ -1,3 +1,4 @@
+import { readUploadedFileIds } from "../document-response.ts";
 // Shared journey-level infrastructure: marker-word fixtures, eventual-consistency
 // polling, IndexStatusError retrying deletes, and an on-disk reporter (per-step
 // stdout/stderr, soft assertions, resource inventory, human-readable report).
@@ -308,11 +309,14 @@ export async function createKbWithDocs(
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     if (uploadRun.exitCode !== 0) {
       throw new Error(`doc upload failed (marker ${marker}): ${uploadRun.stderr}`);
     }
-    const fileId = uploadRun.stdout.trim();
+    const fileId = readUploadedFileIds(uploadRun.stdout)[0];
+    if (!fileId) throw new Error(`doc upload returned no file ID (marker ${marker})`);
     reporter.trackResource("data-center-file", fileId);
     fileIds.push(fileId);
   }

@@ -3,12 +3,11 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   type FlagsDef,
   type RagMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare, normalizeError } from "bailian-cli-runtime";
+import { normalizeError } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CHUNK_DELETE_FLAGS = {
@@ -75,21 +74,18 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const batches = splitIntoBatches(flags.chunkId);
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.chunkDelete);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          endpoint,
-          batches: batches.map((batchIds) => ({
-            request: { pipelineId: flags.indexId, chunkIds: batchIds },
-          })),
-        },
-        format,
-      );
+      ctx.output.result({
+        endpoint,
+        batches: batches.map((batchIds) => ({
+          request: { pipelineId: flags.indexId, chunkIds: batchIds },
+        })),
+      });
       return;
     }
 
@@ -133,11 +129,16 @@ export default defineCommand({
       }
     }
 
-    if (settings.quiet) return;
-    if (format === "text") {
-      emitBare(`deleted: ${deletedCount} chunk(s) in ${batches.length} batch(es)`);
-      return;
-    }
-    emitResult({ deleted_count: deletedCount, batches: batches.length }, format);
+    ctx.output.result(
+      { deleted_count: deletedCount, batches: batches.length },
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `deleted: ${deletedCount} chunk(s) in ${batches.length} batch(es)`,
+              "zh-CN": `已删除: ${deletedCount} 个切片，共 ${batches.length} 个批次`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

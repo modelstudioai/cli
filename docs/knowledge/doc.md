@@ -58,7 +58,7 @@ bl knowledge doc sync --dir ./docs --index-id idx-xxx --delete --yes
 
 执行失败后保留状态文件；下一次运行先恢复未完成操作，恢复完成后重新预览剩余变更。不要删除状态或换名称来绕过未知写请求。确认之后若本地内容、状态版本或远端清单变化，执行停止，需重新预览。
 
-JSON 输出包含 `summary`、`actions`、`skipped`、`unmanaged`、`orphans`、`notices`、`stateFile`；失败时 stderr 的 `KNOWLEDGE_SYNC_INCOMPLETE` 提供最新可读 checkpoint，原错误继续输出并返回非零退出码。中途已完成的项目以 checkpoint 为准，不将部分失败报告为全部成功。
+JSON 输出包含 `summary`、`actions`、`skipped`、`unmanaged`、`orphans`、`notices`、`stateFile`；失败时 stderr 单行 JSON 的 `warning.code = KNOWLEDGE_SYNC_INCOMPLETE` 提供恢复信息，`warning.details` 包含 `stateFile` 和最新可读 `checkpoint`，原错误继续输出并返回非零退出码。中途已完成的项目以 checkpoint 为准，不将部分失败报告为全部成功。
 
 ---
 
@@ -93,7 +93,7 @@ doc-xxx  COMPLETED  intro.md  md  1024
 total: 1
 ```
 
-quiet 模式：每行一个 `doc_id`。
+quiet 模式：仅隐藏过程提示，保留完整结果。提取 ID 时使用 `--output json`，读取 `data.rows[].doc_id`。
 
 json 模式：返回 API 原始响应。
 
@@ -144,7 +144,7 @@ status: COMPLETED
   doc-xxx  COMPLETED  intro.md
 ```
 
-quiet 模式：输出任务状态（`PENDING`/`RUNNING`/`COMPLETED`）。
+quiet 模式：仅隐藏过程提示，保留完整结果。提取任务状态时使用 `--output json`，读取 `data.ingestion_status`。
 
 json 模式：返回 API 原始响应，`data.rows[]` 包含每个文档的状态。
 
@@ -204,9 +204,9 @@ status: COMPLETED
 Uploaded 1 file.
 ```
 
-quiet 模式：每行一个 `fileId`。
+quiet 模式：仅隐藏过程提示，保留完整结果。提取文件 ID 时显式使用 `--output json`。
 
-json 模式：返回自定义结构，包含 `files`（路径和 fileId）、`skipped`、`index_id`、`ingestion_id`、`final_status`。
+json 模式：返回自定义结构，包含 `files`（路径和 fileId）、`skipped`，以及实际产生的 `index_id`、`ingestion_id`、`final_status`；文件 ID 从 `files[].fileId` 提取。大小建议警告通过 stderr 输出，JSON 下为单行 JSON，quiet 下保留。
 
 **注意事项**
 
@@ -262,14 +262,14 @@ deleted: 2 document(s)
   doc-b
 ```
 
-quiet 模式：每行一个已删除的 `doc_id`。
+quiet 模式：仅隐藏过程提示，保留完整结果和删除数量不符的警告。
 
 json 模式：返回 API 原始响应，`data.deleted[]` 为实际删除的 ID 列表。
 
 **注意事项**
 
 - 只从知识库索引中移除文档，数据中心源文件不受影响（用 `file delete` 删除源文件）。
-- `doc_id` 应从 `knowledge doc list --quiet` 获取，而非 `doc upload` 返回的 `fileId`。
+- `doc_id` 应从 `knowledge doc list --output json` 的 `data.rows[].doc_id` 获取，而非 `doc upload` 返回的 `fileId`。
 - 删除是异步的：服务端立即返回 Success，但 `doc list` 中可能仍显示该文档（约 30 秒后传播完成）。
 - 输出的是服务端实际删除的 ID 列表，可能与请求的数量不一致（会在 stderr 警告）。
 
@@ -319,7 +319,7 @@ text 模式：
 tagged: 2 file(s) with [project-a, draft]
 ```
 
-quiet 模式：无输出。
+quiet 模式：仅隐藏过程提示，保留完整结果。
 
 json 模式：返回 API 原始响应。
 
@@ -375,7 +375,7 @@ imported: 2 file(s)
   file-b  SUCCESS  docs/b.docx
 ```
 
-quiet 模式：每行一个 `fileId`。
+quiet 模式：仅隐藏过程提示，保留完整结果。提取文件 ID 时显式使用 `--output json`。
 
 json 模式：返回 API 原始响应，`data.addFileResultList[]` 包含每个文件的 fileId、status 和 ossKey。
 
@@ -430,7 +430,7 @@ bl knowledge doc list --index-id idx-xxx --details --page-number 2 --page-size 1
 | `--enable-headers` | boolean | 显式传 true 或 false，控制标题提取。                           |
 | `--dry-run`        | switch  | 预览请求，不执行导入。                                         |
 
-导入复用已有 fileId，不重新上传文件或创建知识库。任务返回 ingestionId；需要实际完成状态时使用 --wait。已有文件的类型和导入数量由服务端校验，不能用分类个数代替文件数。文档切片参数不是音视频按秒切片参数。
+导入复用已有 fileId，不重新上传文件或创建知识库。quiet 仅隐藏过程提示，保留完整结果。JSON 保留原始响应，任务 ID 从 `data.ingestionId` 提取；`--wait` 成功时另含完整 `status` 响应。需要实际完成状态时使用 --wait。已有文件的类型和导入数量由服务端校验，不能用分类个数代替文件数。文档切片参数不是音视频按秒切片参数。
 
 ### 不同场景怎么处理
 

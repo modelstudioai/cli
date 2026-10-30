@@ -2,13 +2,13 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type FlagsDef,
   type RagIndexJobStatusResponse,
+  type LocalizedText,
 } from "bailian-cli-core";
-import { emitResult, emitBare, ansi } from "bailian-cli-runtime";
+import { ansi } from "bailian-cli-runtime";
 import {
   resolveWorkspaceId,
   PAGE_FLAGS,
@@ -53,14 +53,23 @@ const DOC_STATUS_FLAGS = {
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
-function printStatus(response: RagIndexJobStatusResponse): void {
+function statusText(
+  response: RagIndexJobStatusResponse,
+  localize: (text: LocalizedText) => string,
+): string {
   const styles = ansi(process.stdout);
-  emitBare(`status: ${response.data?.ingestion_status ?? "UNKNOWN"}`);
+  const lines = [
+    localize({
+      "en-US": `status: ${response.data?.ingestion_status ?? "UNKNOWN"}`,
+      "zh-CN": `状态: ${response.data?.ingestion_status ?? "UNKNOWN"}`,
+    }),
+  ];
   for (const doc of response.data?.rows ?? []) {
     const docState = doc.code ?? doc.status ?? "?";
     const line = `  ${doc.doc_id ?? "?"}  ${docState}  ${doc.doc_name ?? ""}`;
-    emitBare(docState.includes("FAILED") ? styles.red(line) : line);
+    lines.push(docState.includes("FAILED") ? styles.red(line) : line);
   }
+  return lines.join("\n");
 }
 
 export default defineCommand({
@@ -95,7 +104,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // Both required flags are enforced by the parser up front; parameters go in
     // the query string (they are ignored in the body)
@@ -111,7 +120,7 @@ export default defineCommand({
     const endpoint = url.toString();
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: null }, format);
+      ctx.output.result({ endpoint, request: null });
       return;
     }
 
@@ -139,14 +148,9 @@ export default defineCommand({
       );
     }
 
-    if (settings.quiet) {
-      emitBare(response.data?.ingestion_status ?? "UNKNOWN");
-      return;
-    }
-    if (format === "text") {
-      printStatus(response);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      format === "text" ? { text: statusText(response, ctx.localize) } : undefined,
+    );
   },
 });

@@ -1,3 +1,4 @@
+import { readUploadedFileIds } from "./document-response.ts";
 import type { RagCreateIndexV2Response, RagIndexListResponse } from "bailian-cli-core";
 // The live group chains the full lifecycle: upload → create → update → upload --index-id
 // (import orchestration) → delete → list to verify removal.
@@ -96,9 +97,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(uploadRun.exitCode, uploadRun.stderr).toBe(0);
-      const fileId = uploadRun.stdout.trim();
+      const fileId = readUploadedFileIds(uploadRun.stdout)[0]!;
       expect(fileId).toMatch(/^file_/);
       fixtureFileIds.push(fileId);
 

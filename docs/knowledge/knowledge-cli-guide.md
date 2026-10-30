@@ -136,7 +136,7 @@
 
 - **text 模式**（默认）：人类友好的表格/结构化文本，适合终端查看。不同命令的输出格式见各命令的「输出」部分。
 - **json 模式**（`--output json`）：返回 API 原始 JSON 响应，适合程序化处理和 agent 解析。
-- **quiet 模式**（`--quiet`）：已迁移的知识库管理、类目、数据中心文件和数据集合命令仅隐藏过程提示，保留完整最终结果。需要 ID 时使用 `--output json` 并读取对应字段；其余及新增命令尚在迁移，行为见各自手册。
+- **quiet 模式**（`--quiet`）：已迁移的知识库管理、类目、数据中心文件、数据集合、Service、文档 list/status/upload/delete/tag/import/import-oss 和全部 chunk 命令仅隐藏过程提示，保留完整最终结果。需要 ID 时使用 `--output json` 并读取对应字段；其余及新增命令尚在迁移，行为见各自手册。
 
 ### 危险操作确认
 
@@ -762,7 +762,7 @@ bl config set workspace_id ws-xxx
 
 **原因**：通过 `knowledge create --doc-id` 导入的文档，`doc_id` 等于 `fileId`；但通过 `doc upload --index-id` 导入的，`doc_id` 可能含 workspace 后缀。
 
-**解决**：始终用 `doc list --quiet` 获取 `doc_id`。
+**解决**：使用 `doc list --output json` 的 `data.rows[].doc_id` 获取 `doc_id`。
 
 ### OSS 导入权限错误
 

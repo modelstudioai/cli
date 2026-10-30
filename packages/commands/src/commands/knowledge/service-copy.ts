@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagAgentMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_COPY_FLAGS = {
@@ -45,13 +43,13 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body = { agent_id: flags.agentId };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentCopy);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -61,20 +59,23 @@ export default defineCommand({
       body,
     });
 
-    const newAgentId = agentMutationField(response, "agent_id");
-    if (settings.quiet) {
-      emitBare(newAgentId ?? "");
-      return;
-    }
-    if (format === "text") {
-      emitBare(
-        `new agent_id: ${newAgentId ?? "-"}  (name: ${agentMutationField(response, "agent_name") ?? "-"}, status: ${agentMutationField(response, "agent_status") ?? "draft"})`,
-      );
-      emitBare(
-        "Test the draft with --agent-version beta on search/chat, then deploy it to publish.",
-      );
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: [
+              ctx.localize({
+                "en-US": `new agent_id: ${agentMutationField(response, "agent_id") ?? "-"}  (name: ${agentMutationField(response, "agent_name") ?? "-"}, status: ${agentMutationField(response, "agent_status") ?? "draft"})`,
+                "zh-CN": `新 agent_id: ${agentMutationField(response, "agent_id") ?? "-"}  (名称: ${agentMutationField(response, "agent_name") ?? "-"}, 状态: ${agentMutationField(response, "agent_status") ?? "draft"})`,
+              }),
+              ctx.localize({
+                "en-US":
+                  "Test the draft with --agent-version beta on search/chat, then deploy it to publish.",
+                "zh-CN": "在 search/chat 中使用 --agent-version beta 测试草稿，然后部署发布。",
+              }),
+            ].join("\n"),
+          }
+        : undefined,
+    );
   },
 });

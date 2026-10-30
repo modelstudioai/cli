@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagAgentMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_DELETE_FLAGS = {
@@ -54,13 +52,13 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body = { agent_id: flags.agentId };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentDelete);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -70,13 +68,16 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet) return;
-    if (format === "text") {
-      emitBare(
-        `deleted: ${flags.agentId}  (status: ${agentMutationField(response, "agent_status") ?? "deleted"})`,
-      );
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `deleted: ${flags.agentId}  (status: ${agentMutationField(response, "agent_status") ?? "deleted"})`,
+              "zh-CN": `已删除: ${flags.agentId}  (状态: ${agentMutationField(response, "agent_status") ?? "deleted"})`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

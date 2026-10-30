@@ -1,3 +1,4 @@
+import { readUploadedFileIds } from "./document-response.ts";
 import type { RagIndexListResponse } from "bailian-cli-core";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -306,9 +307,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc upload (live)", () => 
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const fileIds = stdout.trim().split("\n").filter(Boolean);
+    const fileIds = readUploadedFileIds(stdout);
     expect(fileIds).toHaveLength(2);
     for (const fileId of fileIds) {
       expect(fileId).toMatch(/^file_/);

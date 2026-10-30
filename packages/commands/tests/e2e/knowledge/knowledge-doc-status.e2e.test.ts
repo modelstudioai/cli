@@ -1,3 +1,4 @@
+import { readUploadedFileIds } from "./document-response.ts";
 import type { RagCreateIndexV2Response } from "bailian-cli-core";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -135,9 +136,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc status (live, 自清�
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(uploadRunA.exitCode, uploadRunA.stderr).toBe(0);
-    const fileIdA = uploadRunA.stdout.trim();
+    const fileIdA = readUploadedFileIds(uploadRunA.stdout)[0]!;
     expect(fileIdA).toMatch(/^file_/);
 
     let indexId = "";

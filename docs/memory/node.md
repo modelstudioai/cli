@@ -31,7 +31,7 @@ bl memory list --user-id <id> [flags]
 
 **输出**
 
-json返回 `memory_nodes` / `total` 等字段；text / quiet显示类型、节点ID、正文、元数据和总数（如有），空集合显示提示。
+json返回 `memory_nodes` / `total` 等字段；text显示类型、节点ID、正文、元数据和总数（如有），空集合显示提示。
 
 **注意事项**
 
@@ -68,7 +68,7 @@ bl memory node show --node-id <id> [flags]
 
 **输出**
 
-json返回 `memory_node`；text / quiet显示正文、类型、状态、规则、时间戳和元数据等存在的字段。
+json返回 `memory_node`；text显示正文、类型、状态、规则、时间戳和元数据等存在的字段。
 
 **注意事项**
 
@@ -111,7 +111,7 @@ bl memory update --node-id <id> --content <text> [flags]
 
 **输出**
 
-json保留服务响应；text / quiet输出节点更新确认信息。
+json保留服务响应；text输出节点更新确认信息。
 
 **注意事项**
 
@@ -150,7 +150,7 @@ bl memory delete --node-id <id> [flags]
 
 **输出**
 
-json保留服务响应；text / quiet输出节点删除确认信息。
+json保留服务响应；text输出节点删除确认信息。
 
 **注意事项**
 
@@ -163,3 +163,5 @@ bl memory delete --node-id '<node-id>' --dry-run --output json
 # 确认节点ID后执行
 bl memory delete --node-id '<node-id>' --yes --output json
 ```
+
+`--quiet` 仅隐藏过程提示，不改变最终结果；与 `--output json` 组合时仍返回完整 JSON，与 text 组合时保留完整文本结果。
