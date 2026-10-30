@@ -1,4 +1,5 @@
 // Pipeline types — minimal extraction from packages/pipeline
+import type { CommandOutput } from "bailian-cli-core";
 import type { StepDispatcher } from "./dispatcher.ts";
 
 export const WORKFLOW_VERSION = "workflow/v1";
@@ -283,6 +284,8 @@ export type PipelineEventHandler = (event: PipelineLifecycleEvent) => void | Pro
 // --- Execution options ---
 
 export interface ExecutePipelineOptions {
+  /** Invocation diagnostic sink; omitted library calls remain silent. */
+  output?: Pick<CommandOutput, "debug">;
   onEvent?: PipelineEventHandler;
   concurrency?: number;
   retryDelayBaseMs?: number;

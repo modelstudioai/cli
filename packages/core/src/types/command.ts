@@ -302,8 +302,14 @@ export interface CommandPreparation<Prepared> {
 }
 
 export interface Command<F extends FlagsDef = FlagsDef, Prepared = undefined> {
-  /** Default for commands with a format policy; explicit flag/env still take precedence. */
+  /** Fallback when no output format is configured by flag, environment or Profile. */
   defaultOutput?: Settings["output"];
+  /** Native terminal presentation when no flag, environment or Profile selects a format. */
+  defaultInteractiveOutput?: Settings["output"];
+  /** Existing command switches that explicitly request diagnostic output (for example --trace). */
+  verboseFlags?: readonly (keyof F & string)[];
+  /** Apply defaultOutput over a Profile preference; flag/env still take precedence. */
+  defaultOutputOverridesProfile?: boolean;
   description: LocalizedText;
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;

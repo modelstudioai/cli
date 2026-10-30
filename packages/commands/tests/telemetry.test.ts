@@ -133,6 +133,8 @@ describe("遥测命令的空间身份与默认 JSON", () => {
   test.each(Object.entries(telemetryCommands))(
     "%s 默认 JSON、dry-run 展示解析计划且零网络",
     async (_path, command) => {
+      expect(command.defaultOutput).toBe("json");
+      expect(command.defaultOutputOverridesProfile).toBe(true);
       const transport = mockTelemetryGateway();
       const ctx = makeTelemetryContext(
         { dryRun: true },

@@ -165,7 +165,6 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   const { binName, version, npmPackage, clientName } = opts;
   const identity: Identity = { binName, version, npmPackage, clientName };
   const commandPackPolicy = opts.commandPacks ?? { supported: {} };
-  const commandPackManager = createCommandPackManager(identity, commandPackPolicy);
   let loadedCommandPacksPromise: ReturnType<typeof loadCommandPacks> | undefined;
 
   const runMiddleware = compose([
@@ -227,10 +226,22 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       flags: res.kind === "run" ? res.parsedFlags : initialSources.flags,
     });
     if (command?.defaultOutput !== undefined) {
-      if (outputSettings.outputSource !== "flag" && outputSettings.outputSource !== "env") {
-        outputSettings.output = command.defaultOutput;
+      if (
+        outputSettings.outputSource === "default" ||
+        (outputSettings.outputSource === "file" && command.defaultOutputOverridesProfile)
+      ) {
+        outputSettings.output =
+          outputSettings.outputSource === "default" && process.stdout.isTTY
+            ? (command.defaultInteractiveOutput ?? command.defaultOutput)
+            : command.defaultOutput;
       }
       outputSettings.outputExplicit = true;
+    }
+    if (
+      res.kind === "run" &&
+      command?.verboseFlags?.some((flag) => Boolean(res.parsedFlags[flag]))
+    ) {
+      outputSettings.verbose = true;
     }
     // Parsing can fail after identifying a command; its output default still applies.
     const reporter = configureOutput(outputSettings);
@@ -284,7 +295,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             sources,
             configStore: makeConfigStore(sources.configName),
             authStore: makeAuthStore(sources),
-            commandPacks: commandPackManager,
+            commandPacks: createCommandPackManager(identity, commandPackPolicy, reporter.output),
             client: new Client({
               identity,
               settings,

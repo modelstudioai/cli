@@ -5,6 +5,7 @@ import {
   resolveApiKey,
   resolveModelBaseUrl,
   type ApiKeyCredential,
+  type CommandOutput,
   type Identity,
   type ResolutionSources,
   type Settings,
@@ -37,7 +38,7 @@ export function applyProfileWatermarkToStepInput(
  * as the CLI itself (env vars, config file; no CLI flags), but forces JSON
  * output + quiet mode.
  */
-export function buildPipelineEnv(): PipelineEnv {
+export function buildPipelineEnv(output?: Pick<CommandOutput, "debug">): PipelineEnv {
   const sources: ResolutionSources = buildSources({});
   const settings: Settings = {
     ...buildSettings(sources),
@@ -58,7 +59,13 @@ export function buildPipelineEnv(): PipelineEnv {
     /* 无 key:步骤真正发请求时由 Client 报错 */
   }
   return {
-    client: new Client({ identity, settings, baseUrl: resolveModelBaseUrl(sources), apiCred }),
+    client: new Client({
+      identity,
+      settings,
+      baseUrl: resolveModelBaseUrl(sources),
+      apiCred,
+      debug: output ? (diagnostic) => output.debug(diagnostic) : undefined,
+    }),
     settings,
   };
 }

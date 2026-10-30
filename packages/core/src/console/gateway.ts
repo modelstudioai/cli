@@ -75,6 +75,7 @@ export type ConsoleCall = (api: string, data: Record<string, unknown>) => Promis
  */
 export function anonymousConsoleCall(
   config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout">,
+  diagnostics: Pick<HttpDeps, "debug"> = {},
 ): ConsoleCall {
   const eff = effectiveConsoleGatewayConfig(config);
   return (api, data) =>
@@ -82,6 +83,7 @@ export function anonymousConsoleCall(
       { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
       config.timeout,
       { api, data },
+      diagnostics,
     );
 }
 

@@ -18,6 +18,7 @@ export function defineTelemetryCommand<F extends FlagsDef>(spec: Command<F>): Co
   return {
     ...spec,
     defaultOutput: "json",
+    defaultOutputOverridesProfile: true,
     notes: [
       ...(spec.notes ?? []),
       {
@@ -34,15 +35,7 @@ export function defineTelemetryCommand<F extends FlagsDef>(spec: Command<F>): Co
       },
     ],
     async run(ctx) {
-      const source = ctx.settings.outputSource;
-      // 兼容旧宿主手工构造的 Settings；正式 CLI 使用 loader 提供的来源。
-      const explicitOutput =
-        source === undefined ? ctx.settings.outputExplicit : source === "flag" || source === "env";
-      const settings: Settings = {
-        ...ctx.settings,
-        output: explicitOutput ? ctx.settings.output : "json",
-        outputExplicit: true,
-      };
+      const settings = ctx.settings;
       let client = ctx.client;
       if (!settings.dryRun) {
         ensureTelemetryRegionSupported(settings);
