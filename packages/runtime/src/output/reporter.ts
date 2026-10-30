@@ -134,10 +134,14 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
         while (cause instanceof Error && seen.size < 5 && !seen.has(cause)) {
           seen.add(cause);
           const code = (cause as NodeJS.ErrnoException).code;
-          field(
-            { "en-US": "Caused by", "zh-CN": "原因" },
-            code ? `${code}: ${cause.message}` : cause.message,
-          );
+          const repeatsNormalizedMessage =
+            failure !== error && cause === error && cause.message === failure.message && !code;
+          if (!repeatsNormalizedMessage) {
+            field(
+              { "en-US": "Caused by", "zh-CN": "原因" },
+              code ? `${code}: ${cause.message}` : cause.message,
+            );
+          }
           cause = cause.cause;
         }
         field({ "en-US": "Exit code", "zh-CN": "退出码" }, failure.exitCode);

@@ -159,7 +159,8 @@ test("invalid profile selection honors explicit JSON", async () => {
 test("explicit text overrides profile-selected JSON on failure", async () => {
   const result = await invoke(["fail", "--output=text"], { output: "json" });
   expect(result.exitCode).toBe(1);
-  expect(result.stderr).toContain("Error: Invalid local JSON");
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toBe("Error: Invalid local JSON\nExit code: 1\n");
 });
 
 test("a closed stdout pipe still exits successfully after version dispatch", async () => {

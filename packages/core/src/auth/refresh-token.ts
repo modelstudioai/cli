@@ -74,7 +74,6 @@ export async function validateConsoleAccessToken(
 export async function generateCLIAccessToken(opts: {
   identity: Identity;
   settings: Settings;
-  // TODO(output-contract): Pass ctx.output.debug from auth generate-access-token and auth login.
   debug?: HttpDeps["debug"];
   baseUrl: string;
   accessKeyId: string;

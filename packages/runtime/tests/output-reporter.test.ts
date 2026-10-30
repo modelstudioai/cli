@@ -3,7 +3,10 @@ import { BailianError, ExitCode, type Settings } from "bailian-cli-core";
 import { createOutputReporter } from "../src/output/reporter.ts";
 import { createTranslator } from "../src/i18n.ts";
 
-function capture(settings: Pick<Settings, "output" | "quiet" | "verbose">) {
+function capture(
+  settings: Pick<Settings, "output" | "quiet" | "verbose">,
+  language: "en-US" | "zh-CN" = "en-US",
+) {
   let stdout = "";
   let stderr = "";
   const reporter = createOutputReporter({
@@ -18,7 +21,7 @@ function capture(settings: Pick<Settings, "output" | "quiet" | "verbose">) {
         stderr += chunk;
       },
     },
-    localize: (text) => createTranslator("en-US").localize(text),
+    localize: (text) => createTranslator(language).localize(text),
   });
   return { reporter, stdout: () => stdout, stderr: () => stderr };
 }
@@ -311,6 +314,40 @@ test.each([false, true])("text errors retain API context and causes with verbose
   expect(streams.stderr()).toContain("Exit code: 1");
 });
 
+test.each(["en-US", "zh-CN"] as const)(
+  "ordinary errors retain the real cause without repeating the normalized message in %s",
+  (language) => {
+    const streams = capture({ output: "text", quiet: true, verbose: false }, language);
+    const failure = new Error("Invalid input", { cause: new Error("Unexpected token") });
+    expect(streams.reporter.error(failure)).toBe(ExitCode.GENERAL);
+    expect(streams.stdout()).toBe("");
+    expect(streams.stderr()).toBe(
+      language === "en-US"
+        ? "Error: Invalid input\nCaused by: Unexpected token\nExit code: 1\n"
+        : "错误: Invalid input\n原因: Unexpected token\n退出码: 1\n",
+    );
+  },
+);
+
+test.each([
+  {
+    label: "explicit business cause",
+    failure: new BailianError("Invalid input", ExitCode.GENERAL, undefined, {
+      cause: new Error("Invalid input"),
+    }),
+    cause: "Invalid input",
+  },
+  {
+    label: "coded ordinary cause",
+    failure: Object.assign(new Error("Invalid input"), { code: "INVALID_INPUT" }),
+    cause: "INVALID_INPUT: Invalid input",
+  },
+])("text errors preserve $label even when its message repeats", ({ failure, cause }) => {
+  const streams = capture({ output: "text", quiet: true, verbose: false });
+  expect(streams.reporter.error(failure)).toBe(ExitCode.GENERAL);
+  expect(streams.stderr()).toBe(`Error: Invalid input\nCaused by: ${cause}\nExit code: 1\n`);
+});
+
 test("normalizes fetch failures without losing network exit code or errno", () => {
   const streams = capture({ output: "json", quiet: true, verbose: false });
   const cause = Object.assign(new Error("getaddrinfo ENOTFOUND example.invalid"), {
@@ -497,6 +534,15 @@ test.each(matrix)(
           : [],
       );
       expect(records.at(-1).error.code).toBe(ExitCode.GENERAL);
+      expect(records.at(-1).error.cause).toEqual({ message: "Invalid local JSON" });
+    } else {
+      expect(
+        streams
+          .stderr()
+          .split("\n")
+          .filter((line) => line.startsWith("Caused by:")),
+      ).toEqual([]);
+      expect(streams.stderr()).toContain("Error: Invalid local JSON\nExit code: 1\n");
     }
   },
 );
