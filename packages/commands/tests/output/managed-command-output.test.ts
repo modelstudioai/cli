@@ -79,6 +79,8 @@ const event = {
   created_at: "2026-01-01T00:00:00Z",
 };
 beforeEach(() => {
+  vi.stubEnv("USER", "fixture-author");
+  vi.stubEnv("USERNAME", "fixture-author");
   for (const key of [
     ...Object.values(AGENTS_PROVIDER_FIELDS).flatMap((fields) => fields.map((field) => field.key)),
     "BAILIAN_API_KEY",
