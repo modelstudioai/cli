@@ -230,7 +230,7 @@ describe("e2e: Sandbox template file upload", () => {
   });
 
   test.each(["json", "text", "quiet"])(
-    "%s output returns checking status or the bare ID without polling or creating a template",
+    "%s output returns the complete checking response without polling or creating a template",
     async (output) => {
       const pending = { ...RESPONSE, status: "checking" };
       const { origin, received } = await gateway(pending);
@@ -243,12 +243,12 @@ describe("e2e: Sandbox template file upload", () => {
           ...UPLOAD_COMMAND,
           "--path",
           path,
-          ...(output === "quiet" ? ["--quiet"] : ["--output", output]),
+          ...(output === "quiet" ? ["--quiet", "--output", "json"] : ["--output", output]),
         ],
         env,
       );
       expect(result.exitCode, result.stderr).toBe(0);
-      if (output === "quiet") expect(result.stdout.trim()).toBe(RESPONSE.id);
+      if (output === "quiet") expect(parseStdoutJson(result.stdout)).toEqual(pending);
       else {
         expect(result.stdout).toContain("checking");
         expect(result.stdout).toContain(RESPONSE.id);

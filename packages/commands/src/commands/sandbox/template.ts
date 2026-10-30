@@ -1,6 +1,5 @@
 import {
   BailianError,
-  detectOutputFormat,
   defineCommand,
   ExitCode,
   sandboxApiPath,
@@ -8,11 +7,12 @@ import {
   sandboxTemplateBuildStatusPath,
   sandboxTemplatePath,
   type Client,
+  type CommandOutput,
   type FlagsDef,
   type ParsedFlags,
   type Settings,
 } from "bailian-cli-core";
-import { createSpinner, emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 import { resolveSandboxImage, SANDBOX_IMAGE_CHOICES, SANDBOX_IMAGE_NOTES } from "./images.ts";
 import {
   BODY_FLAG,
@@ -275,38 +275,37 @@ export async function waitForTemplateBuild(
   settings: Settings,
   endpoint: string,
   intervalSec: number,
+  output: CommandOutput,
 ): Promise<TemplateBuildStatus> {
   const deadline = Date.now() + settings.timeout * 1000;
-  const spinner = createSpinner("Waiting for template build...");
-  if (!settings.quiet) spinner.start();
-  try {
-    while (true) {
-      const remainingMs = deadline - Date.now();
-      if (remainingMs <= 0) break;
-      const status = await client.requestJson<TemplateBuildStatus>({
-        path: endpoint,
-        method: "GET",
-        timeout: remainingMs / 1000,
-      });
-      if (!settings.quiet) spinner.update(`Build status: ${status.status ?? "unknown"}`);
-      if (status.status === "ready") {
-        spinner.stop("Template build ready.");
-        return status;
-      }
-      if (status.status === "error") {
-        spinner.stop("Template build failed.");
-        const reason =
-          status.reason?.message ??
-          (status.reason?.code !== undefined ? `${status.reason.code}` : "Template build failed.");
-        throw new BailianError(reason, ExitCode.GENERAL);
-      }
-      const sleepMs = Math.min(intervalSec * 1000, deadline - Date.now());
-      if (sleepMs > 0) {
-        await new Promise<void>((resolve) => setTimeout(resolve, sleepMs));
-      }
+  output.progress({ "en-US": "Waiting for template build...", "zh-CN": "等待模版构建……" });
+  while (true) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
+    const status = await client.requestJson<TemplateBuildStatus>({
+      path: endpoint,
+      method: "GET",
+      timeout: remainingMs / 1000,
+    });
+    output.progress({
+      "en-US": `Build status: ${status.status ?? "unknown"}`,
+      "zh-CN": `构建状态：${status.status ?? "unknown"}`,
+    });
+    if (status.status === "ready") {
+      output.progress({ "en-US": "Template build ready.", "zh-CN": "模版构建已就绪。" });
+      return status;
     }
-  } finally {
-    spinner.stop();
+    if (status.status === "error") {
+      output.progress({ "en-US": "Template build failed.", "zh-CN": "模版构建失败。" });
+      const reason =
+        status.reason?.message ??
+        (status.reason?.code !== undefined ? `${status.reason.code}` : "Template build failed.");
+      throw new BailianError(reason, ExitCode.GENERAL);
+    }
+    const sleepMs = Math.min(intervalSec * 1000, deadline - Date.now());
+    if (sleepMs > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, sleepMs));
+    }
   }
   throw new BailianError(
     "Template build polling timed out.",
@@ -330,10 +329,10 @@ async function emitTemplateMutationResult(options: {
   endpoint: string;
   client: Client;
   settings: Settings;
+  output: CommandOutput;
   async: boolean;
   pollInterval?: number;
 }): Promise<void> {
-  const format = detectOutputFormat(options.settings.output);
   if (!options.response.templateID || !options.response.buildID) {
     throw new BailianError(
       "Template mutation response is missing templateID or buildID.",
@@ -341,11 +340,7 @@ async function emitTemplateMutationResult(options: {
     );
   }
   if (options.async) {
-    if (options.settings.quiet) {
-      emitBare(`${options.response.templateID}\t${options.response.buildID}`);
-    } else {
-      emitResult(options.response, format);
-    }
+    options.output.result(options.response);
     return;
   }
   // Poll the same origin that accepted the build, including custom gateways.
@@ -362,11 +357,20 @@ async function emitTemplateMutationResult(options: {
       options.settings,
       buildEndpoint,
       options.pollInterval ?? 5,
+      options.output,
     );
   } catch (error) {
     const hint =
       `Submitted build / 已提交的构建: templateID=${options.response.templateID}, buildID=${options.response.buildID}.\n` +
       "Check this build with sandbox template build-status before submitting another build. / 请先通过 sandbox template build-status 查询本次构建，再决定是否重新提交。";
+    options.output.warning({
+      code: "SANDBOX_TEMPLATE_BUILD_SUBMITTED",
+      message: {
+        "en-US": `Submitted build: templateID=${options.response.templateID}, buildID=${options.response.buildID}. Check it with sandbox template build-status before submitting another build.`,
+        "zh-CN": `已提交的构建：templateID=${options.response.templateID}, buildID=${options.response.buildID}。请先通过 sandbox template build-status 查询本次构建，再决定是否重新提交。`,
+      },
+      details: { templateID: options.response.templateID, buildID: options.response.buildID },
+    });
     if (error instanceof BailianError) {
       throw new BailianError(
         error.message,
@@ -379,19 +383,10 @@ async function emitTemplateMutationResult(options: {
         },
       );
     }
-    // Leave transport errors intact so runtime retains timeout/network classification.
-    const recovery = {
-      templateID: options.response.templateID,
-      buildID: options.response.buildID,
-      hint,
-    };
-    process.stderr.write(
-      format === "json" ? `${JSON.stringify(recovery, null, 2)}\n\n` : `${hint}\n`,
-    );
+    // Retain transport identity so runtime keeps its network/timeout classification.
     throw error;
   }
-  if (options.settings.quiet) emitBare(displayValue(options.response.templateID));
-  else emitResult({ template: options.response, build }, format);
+  options.output.result({ template: options.response, build });
 }
 
 export const sandboxTemplateCreate = defineCommand({
@@ -428,11 +423,10 @@ export const sandboxTemplateCreate = defineCommand({
   ],
   validate: validatePollInterval,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const endpoint = resolveSandboxEndpoint(ctx, SANDBOX_PATHS.templateCreate);
     const body = await buildTemplateCreateBody(ctx.flags);
     if (ctx.settings.dryRun) {
-      emitResult({ method: "POST", endpoint, request: redactRequestSecrets(body) }, format);
+      ctx.output.result({ method: "POST", endpoint, request: redactRequestSecrets(body) });
       return;
     }
     const response = await ctx.client.requestJson<TemplateInfo>({
@@ -445,6 +439,7 @@ export const sandboxTemplateCreate = defineCommand({
       endpoint,
       client: ctx.client,
       settings: ctx.settings,
+      output: ctx.output,
       async: ctx.flags.async,
       pollInterval: ctx.flags.pollInterval,
     });
@@ -482,17 +477,8 @@ export const sandboxTemplateList = defineCommand({
       path: url.toString(),
       method: "GET",
     });
-    if (ctx.settings.quiet) {
-      for (const template of response) emitBare(displayValue(template.templateID));
-      return;
-    }
-    const format = detectOutputFormat(ctx.settings.output);
-    if (format === "json") {
-      emitResult(response, format);
-      return;
-    }
-    if (response.length === 0) {
-      emitBare("No Sandbox templates found.");
+    if (ctx.settings.output === "json") {
+      ctx.output.result(response);
       return;
     }
     const rows = response.map((template) => [
@@ -504,12 +490,18 @@ export const sandboxTemplateList = defineCommand({
       displayValue(template.buildCount),
       displayValue(template.updatedAt),
     ]);
-    for (const line of formatTable(
-      ["ID", "NAME", "CPU", "MEMORY_MB", "INSTANCES", "BUILDS", "UPDATED_AT"],
-      rows,
-    )) {
-      emitBare(line);
-    }
+    ctx.output.result(response, {
+      text:
+        response.length === 0
+          ? ctx.localize({
+              "en-US": "No Sandbox templates found.",
+              "zh-CN": "未找到 Sandbox 模版。",
+            })
+          : formatTable(
+              ["ID", "NAME", "CPU", "MEMORY_MB", "INSTANCES", "BUILDS", "UPDATED_AT"],
+              rows,
+            ).join("\n"),
+    });
   },
 });
 
@@ -523,8 +515,7 @@ export const sandboxTemplateGet = defineCommand({
   async run(ctx) {
     const endpoint = resolveSandboxEndpoint(ctx, sandboxTemplatePath(ctx.flags.templateId));
     const response = await ctx.client.requestJson<TemplateInfo>({ path: endpoint, method: "GET" });
-    if (ctx.settings.quiet) emitBare(displayValue(response.templateID));
-    else emitResult(response, detectOutputFormat(ctx.settings.output));
+    ctx.output.result(response);
   },
 });
 
@@ -566,11 +557,10 @@ export const sandboxTemplateUpdate = defineCommand({
   ],
   validate: validatePollInterval,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const endpoint = resolveSandboxEndpoint(ctx, sandboxTemplatePath(ctx.flags.templateId));
     const body = await buildTemplateUpdateBody(ctx.flags);
     if (ctx.settings.dryRun) {
-      emitResult({ method: "PUT", endpoint, request: redactRequestSecrets(body) }, format);
+      ctx.output.result({ method: "PUT", endpoint, request: redactRequestSecrets(body) });
       return;
     }
     const response = await ctx.client.requestJson<TemplateInfo>({
@@ -583,6 +573,7 @@ export const sandboxTemplateUpdate = defineCommand({
       endpoint,
       client: ctx.client,
       settings: ctx.settings,
+      output: ctx.output,
       async: ctx.flags.async,
       pollInterval: ctx.flags.pollInterval,
     });
@@ -611,8 +602,7 @@ export const sandboxTemplateBuildStatus = defineCommand({
       path: endpoint,
       method: "GET",
     });
-    if (ctx.settings.quiet) emitBare(displayValue(response.status));
-    else emitResult(response, detectOutputFormat(ctx.settings.output));
+    ctx.output.result(response);
   },
 });
 
@@ -638,15 +628,13 @@ export const sandboxTemplateDelete = defineCommand({
     },
   ],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const endpoint = resolveSandboxEndpoint(ctx, sandboxTemplatePath(ctx.flags.templateId));
     if (ctx.settings.dryRun) {
-      emitResult({ method: "DELETE", endpoint, request: null }, format);
+      ctx.output.result({ method: "DELETE", endpoint, request: null });
       return;
     }
     const response = await ctx.client.request({ path: endpoint, method: "DELETE" });
     await response.body?.cancel();
-    if (ctx.settings.quiet) emitBare(ctx.flags.templateId);
-    else emitResult({ templateID: ctx.flags.templateId, deleted: true }, format);
+    ctx.output.result({ templateID: ctx.flags.templateId, deleted: true });
   },
 });

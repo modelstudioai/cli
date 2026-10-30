@@ -321,19 +321,19 @@ describe("e2e: Sandbox submitted build recovery", () => {
       if (output === "json") {
         const diagnostics = result.stderr
           .trim()
-          .split(/\n\s*\n/)
+          .split("\n")
           .map((diagnostic) => JSON.parse(diagnostic));
         expect(diagnostics.at(-1)).toMatchObject({ error: { code: exitCode } });
-        if (failure === "timeout") {
-          expect(diagnostics).toHaveLength(1);
-          expect(diagnostics[0].error.message).toBe("Template build polling timed out.");
-        } else {
-          expect(diagnostics[0]).toMatchObject({
-            templateID: "template-recovery",
-            buildID: "build-recovery",
-          });
-          expect(diagnostics.at(-1).error.message).toContain("Network request failed");
-        }
+        expect(diagnostics).toHaveLength(2);
+        expect(diagnostics[0]).toMatchObject({
+          warning: {
+            code: "SANDBOX_TEMPLATE_BUILD_SUBMITTED",
+            details: { templateID: "template-recovery", buildID: "build-recovery" },
+          },
+        });
+        expect(diagnostics.at(-1).error.message).toContain(
+          failure === "timeout" ? "Template build polling timed out." : "Network request failed",
+        );
       } else {
         expect(result.stderr).toContain("original service failure");
         expect(result.stderr).toContain("HTTP 503 (100005)");

@@ -1,15 +1,15 @@
 import {
   BailianError,
-  detectOutputFormat,
   defineCommand,
   ExitCode,
   SANDBOX_PATHS,
   sandboxInstanceActionPath,
   sandboxInstancePath,
+  type CommandOutput,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 import {
   BODY_FLAG,
   displayValue,
@@ -204,14 +204,10 @@ async function buildConnectionBody(flags: {
 
 function emitSandboxObject(
   sandbox: SandboxInfo,
-  options: { format: "text" | "json"; quiet: boolean; showCredentials: boolean },
+  output: CommandOutput,
+  showCredentials: boolean,
 ): void {
-  const output = options.showCredentials ? sandbox : redactConnectionCredentials(sandbox);
-  if (options.quiet) {
-    emitBare(displayValue(sandbox.sandboxID));
-    return;
-  }
-  emitResult(output, options.format);
+  output.result(showCredentials ? sandbox : redactConnectionCredentials(sandbox));
 }
 
 export const sandboxCreate = defineCommand({
@@ -227,11 +223,10 @@ export const sandboxCreate = defineCommand({
   ],
   notes: SANDBOX_NOTES,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const endpoint = resolveSandboxEndpoint(ctx, SANDBOX_PATHS.sandboxes);
     const body = await buildSandboxCreateBody(ctx.flags);
     if (ctx.settings.dryRun) {
-      emitResult({ method: "POST", endpoint, request: redactRequestSecrets(body) }, format);
+      ctx.output.result({ method: "POST", endpoint, request: redactRequestSecrets(body) });
       return;
     }
     const response = await ctx.client.requestJson<SandboxInfo>({
@@ -239,11 +234,7 @@ export const sandboxCreate = defineCommand({
       method: "POST",
       body,
     });
-    emitSandboxObject(response, {
-      format,
-      quiet: ctx.settings.quiet,
-      showCredentials: ctx.flags.showCredentials,
-    });
+    emitSandboxObject(response, ctx.output, ctx.flags.showCredentials);
   },
 });
 
@@ -273,17 +264,8 @@ export const sandboxList = defineCommand({
       path: url.toString(),
       method: "GET",
     });
-    if (ctx.settings.quiet) {
-      for (const sandbox of response) emitBare(displayValue(sandbox.sandboxID));
-      return;
-    }
-    const format = detectOutputFormat(ctx.settings.output);
-    if (format === "json") {
-      emitResult(response, format);
-      return;
-    }
-    if (response.length === 0) {
-      emitBare("No Sandbox instances found.");
+    if (ctx.settings.output === "json") {
+      ctx.output.result(response);
       return;
     }
     const rows = response.map((sandbox) => [
@@ -295,12 +277,18 @@ export const sandboxList = defineCommand({
       displayValue(sandbox.startedAt),
       displayValue(sandbox.endAt),
     ]);
-    for (const line of formatTable(
-      ["ID", "TEMPLATE", "STATE", "CPU", "MEMORY_MB", "STARTED_AT", "END_AT"],
-      rows,
-    )) {
-      emitBare(line);
-    }
+    ctx.output.result(response, {
+      text:
+        response.length === 0
+          ? ctx.localize({
+              "en-US": "No Sandbox instances found.",
+              "zh-CN": "未找到 Sandbox 实例。",
+            })
+          : formatTable(
+              ["ID", "TEMPLATE", "STATE", "CPU", "MEMORY_MB", "STARTED_AT", "END_AT"],
+              rows,
+            ).join("\n"),
+    });
   },
 });
 
@@ -314,11 +302,7 @@ export const sandboxGet = defineCommand({
   async run(ctx) {
     const endpoint = resolveSandboxEndpoint(ctx, sandboxInstancePath(ctx.flags.sandboxId));
     const response = await ctx.client.requestJson<SandboxInfo>({ path: endpoint, method: "GET" });
-    emitSandboxObject(response, {
-      format: detectOutputFormat(ctx.settings.output),
-      quiet: ctx.settings.quiet,
-      showCredentials: ctx.flags.showCredentials,
-    });
+    emitSandboxObject(response, ctx.output, ctx.flags.showCredentials);
   },
 });
 
@@ -339,14 +323,13 @@ function connectionCommand(action: "connect" | "resume") {
     ],
     notes: SANDBOX_NOTES,
     async run(ctx) {
-      const format = detectOutputFormat(ctx.settings.output);
       const endpoint = resolveSandboxEndpoint(
         ctx,
         sandboxInstanceActionPath(ctx.flags.sandboxId, action),
       );
       const body = await buildConnectionBody(ctx.flags);
       if (ctx.settings.dryRun) {
-        emitResult({ method: "POST", endpoint, request: redactRequestSecrets(body) }, format);
+        ctx.output.result({ method: "POST", endpoint, request: redactRequestSecrets(body) });
         return;
       }
       const response = await ctx.client.requestJson<SandboxInfo>({
@@ -354,11 +337,7 @@ function connectionCommand(action: "connect" | "resume") {
         method: "POST",
         body: Object.keys(body).length > 0 ? body : undefined,
       });
-      emitSandboxObject(response, {
-        format,
-        quiet: ctx.settings.quiet,
-        showCredentials: ctx.flags.showCredentials,
-      });
+      emitSandboxObject(response, ctx.output, ctx.flags.showCredentials);
     },
   });
 }
@@ -374,19 +353,17 @@ export const sandboxPause = defineCommand({
   exampleArgs: ["--sandbox-id sbx-xxx", "--sandbox-id sbx-xxx --dry-run --output json"],
   notes: SANDBOX_NOTES,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const endpoint = resolveSandboxEndpoint(
       ctx,
       sandboxInstanceActionPath(ctx.flags.sandboxId, "pause"),
     );
     if (ctx.settings.dryRun) {
-      emitResult({ method: "POST", endpoint, request: null }, format);
+      ctx.output.result({ method: "POST", endpoint, request: null });
       return;
     }
     const response = await ctx.client.request({ path: endpoint, method: "POST" });
     await response.body?.cancel();
-    if (ctx.settings.quiet) emitBare(ctx.flags.sandboxId);
-    else emitResult({ sandboxID: ctx.flags.sandboxId, paused: true }, format);
+    ctx.output.result({ sandboxID: ctx.flags.sandboxId, paused: true });
   },
 });
 
@@ -405,15 +382,13 @@ export const sandboxDelete = defineCommand({
   exampleArgs: ["--sandbox-id sbx-xxx --dry-run", "--sandbox-id sbx-xxx --yes"],
   notes: SANDBOX_NOTES,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const endpoint = resolveSandboxEndpoint(ctx, sandboxInstancePath(ctx.flags.sandboxId));
     if (ctx.settings.dryRun) {
-      emitResult({ method: "DELETE", endpoint, request: null }, format);
+      ctx.output.result({ method: "DELETE", endpoint, request: null });
       return;
     }
     const response = await ctx.client.request({ path: endpoint, method: "DELETE" });
     await response.body?.cancel();
-    if (ctx.settings.quiet) emitBare(ctx.flags.sandboxId);
-    else emitResult({ sandboxID: ctx.flags.sandboxId, deleted: true }, format);
+    ctx.output.result({ sandboxID: ctx.flags.sandboxId, deleted: true });
   },
 });
