@@ -102,51 +102,74 @@ test("core transport is silent without a diagnostic callback", async () => {
   expect(legacy).not.toHaveBeenCalled();
 });
 
-test("MCP session diagnostics also use the callback", async () => {
-  const records: OutputMessage[] = [];
-  let stderr = "";
-  const output = createOutputReporter({
-    settings,
-    stderr: {
-      write: (chunk) => {
-        stderr += chunk;
-      },
-    },
-  }).output;
-  const legacy = vi.spyOn(console, "error").mockImplementation(() => {});
-  vi.spyOn(httpTransport, "fetch").mockImplementation(async (_input, init) => {
-    if (typeof init?.body !== "string") throw new Error("Expected RPC JSON body");
-    const body = JSON.parse(init.body);
-    return body.id === undefined
-      ? new Response(null, { status: 202 })
-      : new Response(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: body.id,
-            result: {
-              serverInfo: { name: "test" },
-              instructions: "https://example.invalid/?token=fake-mcp-secret",
-              customPayload: "private-user-content",
-            },
-          }),
-          { headers: { "content-type": "application/json" } },
-        );
-  });
-  const client = new McpClient(
-    {
-      identity,
+test.each([false, true])(
+  "MCP session diagnostics use only the invocation callback: %s",
+  async (withDiagnostic) => {
+    const records: OutputMessage[] = [];
+    let stderr = "";
+    const output = createOutputReporter({
       settings,
-      debug: (diagnostic) => {
-        records.push(diagnostic);
-        output.debug(diagnostic);
+      stderr: {
+        write: (chunk) => {
+          stderr += chunk;
+        },
       },
-    },
-    "https://example.invalid/mcp",
-    "fake-api-secret",
-  );
-  await client.initialize();
-  expect(records.length).toBeGreaterThanOrEqual(3);
-  expect(legacy).not.toHaveBeenCalled();
-  expect(stderr).not.toContain("fake-mcp-secret");
-  expect(stderr).not.toContain("private-user-content");
-});
+    }).output;
+    const legacy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(httpTransport, "fetch").mockImplementation(async (_input, init) => {
+      if (init?.method === "GET") return new Response(null, { status: 405 });
+      if (typeof init?.body !== "string") throw new Error("Expected RPC JSON body");
+      const body = JSON.parse(init.body);
+      return body.id === undefined
+        ? new Response(null, { status: 202 })
+        : new Response(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: body.id,
+              result: {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                serverInfo: { name: "test", version: "1.0.0" },
+                instructions: "https://example.invalid/?token=fake-mcp-secret",
+                customPayload: "private-user-content",
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          );
+    });
+    const client = new McpClient(
+      {
+        identity,
+        settings,
+        debug: withDiagnostic
+          ? (diagnostic) => {
+              records.push(diagnostic);
+              output.debug(diagnostic);
+            }
+          : undefined,
+      },
+      "https://example.invalid/mcp",
+      "fake-api-secret",
+    );
+    try {
+      await client.initialize();
+    } finally {
+      client.close();
+    }
+    if (withDiagnostic) {
+      expect(records.length).toBeGreaterThanOrEqual(3);
+      expect(
+        stderr
+          .trim()
+          .split("\n")
+          .every((line) => JSON.parse(line).debug),
+      ).toBe(true);
+    } else {
+      expect(records).toEqual([]);
+      expect(stderr).toBe("");
+    }
+    expect(legacy).not.toHaveBeenCalled();
+    expect(stderr).not.toContain("fake-mcp-secret");
+    expect(stderr).not.toContain("private-user-content");
+  },
+);

@@ -45,6 +45,10 @@ Index: [index.md](index.md)
 | `--api-key <key>`           | string  | no       | API key                                                                                           |
 | `--base-url <url>`          | string  | no       | API base URL                                                                                      |
 
+#### Notes
+
+- Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST. Auto edit accepts a single --image only.
+
 #### Examples
 
 ```bash
@@ -107,6 +111,10 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                                                                               |
 | `--api-key <key>`           | string  | no       | API key                                                                                                                  |
 | `--base-url <url>`          | string  | no       | API base URL                                                                                                             |
+
+#### Notes
+
+- Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.
 
 #### Examples
 

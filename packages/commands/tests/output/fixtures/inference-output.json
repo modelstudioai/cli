@@ -1673,10 +1673,10 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 1,
+          "id": 0,
           "method": "initialize",
           "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-11-25",
             "capabilities": {},
             "clientInfo": {
               "name": "test",
@@ -1698,7 +1698,7 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 2,
+          "id": 1,
           "method": "tools/call",
           "params": {
             "name": "bailian_web_search",
@@ -1737,10 +1737,10 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 1,
+          "id": 0,
           "method": "initialize",
           "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-11-25",
             "capabilities": {},
             "clientInfo": {
               "name": "test",
@@ -1762,7 +1762,7 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 2,
+          "id": 1,
           "method": "tools/call",
           "params": {
             "name": "bailian_web_search",
@@ -1783,10 +1783,10 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 1,
+          "id": 0,
           "method": "initialize",
           "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-11-25",
             "capabilities": {},
             "clientInfo": {
               "name": "test",
@@ -1808,7 +1808,7 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 2,
+          "id": 1,
           "method": "tools/call",
           "params": {
             "name": "bailian_web_search",
@@ -1847,10 +1847,10 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 1,
+          "id": 0,
           "method": "initialize",
           "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-11-25",
             "capabilities": {},
             "clientInfo": {
               "name": "test",
@@ -1872,7 +1872,7 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 2,
+          "id": 1,
           "method": "tools/call",
           "params": {
             "name": "bailian_web_search",
@@ -1893,10 +1893,10 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 1,
+          "id": 0,
           "method": "initialize",
           "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-11-25",
             "capabilities": {},
             "clientInfo": {
               "name": "test",
@@ -1918,7 +1918,7 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 2,
+          "id": 1,
           "method": "tools/list"
         }
       }
@@ -1943,10 +1943,10 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 1,
+          "id": 0,
           "method": "initialize",
           "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-11-25",
             "capabilities": {},
             "clientInfo": {
               "name": "test",
@@ -1968,7 +1968,7 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 2,
+          "id": 1,
           "method": "tools/list"
         }
       }
@@ -1982,10 +1982,10 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 1,
+          "id": 0,
           "method": "initialize",
           "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-11-25",
             "capabilities": {},
             "clientInfo": {
               "name": "test",
@@ -2007,7 +2007,7 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 2,
+          "id": 1,
           "method": "tools/list"
         }
       }
@@ -2032,10 +2032,10 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 1,
+          "id": 0,
           "method": "initialize",
           "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-11-25",
             "capabilities": {},
             "clientInfo": {
               "name": "test",
@@ -2057,7 +2057,7 @@
         "method": "POST",
         "body": {
           "jsonrpc": "2.0",
-          "id": 2,
+          "id": 1,
           "method": "tools/list"
         }
       }

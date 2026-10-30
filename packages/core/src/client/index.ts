@@ -77,6 +77,7 @@ export {
 export {
   CHANNEL,
   DASHSCOPE_SERVICE_HEADER,
+  MCP_CALL_SERVICE,
   OPEN_API_SOURCE,
   sourceConfig,
   trackingHeaders,
@@ -108,17 +109,45 @@ export {
 export type {
   McpTool,
   McpToolResult,
+  McpToolResultContent,
   McpConnectedClient,
   ConnectBailianMcpOptions,
 } from "./mcp.ts";
 export {
-  McpClient,
   bailianMcpPath,
   bailianMcpSsePath,
   isStreamableHttpUnsupported,
   isUrlOverrideSseFallbackCandidate,
   connectBailianMcpWithFallback,
 } from "./mcp.ts";
+export { McpClient } from "./mcp-sdk.ts";
+export {
+  AIGC_MCP_SERVER,
+  AIGC_MCP_TOOL,
+  MCP_IMAGE_GEN_RATIO_SIZES,
+  MCP_TTS_VOICES,
+  isMcpTtsVoice,
+  resolveMcpImageSize,
+  parseAigcToolResult,
+  buildImageGenArgs,
+  buildImageEditArgs,
+  buildTextToVideoArgs,
+  buildImageToVideoArgs,
+  buildVideoFetchArgs,
+  buildTtsArgs,
+  buildSpeechToTextArgs,
+  parseAigcImageResults,
+  parseAigcTtsResult,
+  parseAigcVideoTaskId,
+  parseAigcVideoTaskResult,
+  parseAigcAsrTexts,
+  type AigcImageGenInput,
+  type AigcImageEditInput,
+  type AigcVideoSubmitInput,
+  type AigcTtsInput,
+  type AigcTtsResult,
+  type AigcVideoTaskResult,
+} from "./aigc-mcp.ts";
 export type { ServerSentEvent } from "./stream.ts";
 export { parseSSE } from "./stream.ts";
 export { httpTransport } from "./transport.ts";

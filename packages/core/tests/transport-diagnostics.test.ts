@@ -4,7 +4,7 @@ import { validateConsoleAccessToken } from "../src/auth/refresh-token.ts";
 import { Client } from "../src/client/client.ts";
 import { requestJson, type HttpDeps } from "../src/client/http.ts";
 import { createInstrumentedFetch } from "../src/client/instrumented-fetch.ts";
-import { McpClient } from "../src/client/mcp.ts";
+import { McpClient } from "../src/client/mcp-sdk.ts";
 import { httpTransport } from "../src/client/transport.ts";
 import { buildSettings, buildSources } from "../src/config/loader.ts";
 import { getConfigPath } from "../src/config/paths.ts";
@@ -32,19 +32,37 @@ test.each(["requestJson", "instrumented fetch", "OpenAPI", "MCP", "console valid
     const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const diagnostics: OutputMessage[] = [];
     const debug: HttpDeps["debug"] = (diagnostic) => diagnostics.push(diagnostic);
-    vi.spyOn(httpTransport, "fetch").mockImplementation(
-      async () =>
-        new Response(
+    vi.spyOn(httpTransport, "fetch").mockImplementation(async (_input, init) => {
+      if (transport === "MCP") {
+        if (init?.method === "GET") return new Response(null, { status: 405 });
+        if (typeof init?.body !== "string") throw new Error("Expected MCP JSON body");
+        const body = JSON.parse(init.body);
+        if (body.id === undefined) return new Response(null, { status: 202 });
+        return new Response(
           JSON.stringify({
-            Success: true,
-            data: { success: true, sensitive: secret },
             jsonrpc: "2.0",
-            id: 1,
-            result: { sensitive: secret },
+            id: body.id,
+            result: {
+              protocolVersion: "2024-11-05",
+              capabilities: {},
+              serverInfo: { name: "test", version: "1.0.0" },
+              instructions: secret,
+            },
           }),
-          { status: 200, headers: { "x-request-id": "test-request-id" } },
-        ),
-    );
+          { headers: { "content-type": "application/json", "x-request-id": "test-request-id" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          Success: true,
+          data: { success: true, sensitive: secret },
+          jsonrpc: "2.0",
+          id: 1,
+          result: { sensitive: secret },
+        }),
+        { status: 200, headers: { "x-request-id": "test-request-id" } },
+      );
+    });
 
     if (transport === "requestJson") {
       await requestJson(
@@ -79,7 +97,12 @@ test.each(["requestJson", "instrumented fetch", "OpenAPI", "MCP", "console valid
         body: { sensitive: secret },
       });
     } else if (transport === "MCP") {
-      await new McpClient({ ...deps, debug }, endpoint, secret).initialize();
+      const client = new McpClient({ ...deps, debug }, endpoint, secret);
+      try {
+        await client.initialize();
+      } finally {
+        client.close();
+      }
     } else {
       await validateConsoleAccessToken(
         { region: "cn-beijing", site: "domestic", token: secret },
