@@ -454,7 +454,7 @@ describe("e2e: ParseX (offline HTTP fixture)", () => {
       data: { status: "success", layouts: resultData.layouts },
     });
     expect(requests).toHaveLength(4);
-    expect(result.stderr).toContain("processing");
+    expect(result.stderr).toBe("");
     expect(requests.every((request) => request.body.biz_id === "biz-fixture")).toBe(true);
   });
   test("single failed query succeeds; followed failure preserves service message and request ID", async () => {
@@ -548,7 +548,7 @@ describe("e2e: ParseX (offline HTTP fixture)", () => {
       request: { processing: { extract_processing_config: { extract_schema: exampleSchema } } },
     });
   });
-  test("quiet submit outputs only ID; quiet result outputs only status", async () => {
+  test("quiet submit and result retain complete JSON responses", async () => {
     const submitted = await local([
       "parse",
       "submit",
@@ -556,9 +556,17 @@ describe("e2e: ParseX (offline HTTP fixture)", () => {
       "https://example.com/file.pdf",
       "--quiet",
     ]);
-    expect(submitted.stdout.trim()).toBe("biz-fixture");
+    expect(parseStdoutJson(submitted.stdout)).toEqual({
+      request_id: "request-submit",
+      data: { biz_id: "biz-fixture" },
+    });
+    expect(submitted.stderr).toBe("");
     const queried = await local(["extract", "result", "--biz-id", "biz-fixture", "--quiet"]);
-    expect(queried.stdout.trim()).toBe("success");
+    expect(parseStdoutJson(queried.stdout)).toEqual({
+      request_id: "request-result",
+      data: { ...resultData, status: "success" },
+    });
+    expect(queried.stderr).toBe("");
   });
   test("Ctrl-C aborts polling, removes its listener and never cancels the remote job", async () => {
     interrupt = true;

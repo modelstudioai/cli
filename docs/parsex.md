@@ -122,8 +122,8 @@ The individual result parameter tables take precedence over the general OSS page
 | `--poll-timeout`           | Total deadline including in-flight HTTP requests, 1–86400 seconds; default 600                    |
 | `--timeout`                | Existing per-request HTTP timeout                                                                 |
 | Exit codes with `--follow` | Success 0; failed task/service error 1; invalid arguments 2; client deadline 5; Ctrl-C 130        |
-| `--output json`            | One final response on stdout; progress on stderr                                                  |
-| `--quiet`                  | Submit prints only biz_id; result prints only status                                              |
+| `--output json`            | One final response on stdout; structured diagnostics on stderr, without progress                  |
+| `--quiet`                  | Hides progress only; submit/result retain the complete response in the selected format            |
 | `--dry-run`                | Validates local input and prints a redacted request; no business requests or business file writes |
 
 Ctrl-C or timeout stops local polling without cancelling the task. Keep `biz_id` and use `result` to resume. A lost submit response does not prove that no task was created; check before resubmitting. Framework telemetry/update checks follow their existing settings.

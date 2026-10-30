@@ -1,5 +1,5 @@
 import { defineCommand, listBatches, BATCH_STATUSES, type FlagsDef } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 import { batchDate, batchInteger, DRY_RUN_NOTE } from "./shared.ts";
 const LIST_FLAGS = {
   limit: {
@@ -91,36 +91,37 @@ export default defineCommand({
       create_before: ctx.flags.createdBefore,
     };
     if (ctx.settings.dryRun) {
-      emitResult({ action: "batch.list", query }, "json");
+      const preview = { action: "batch.list", query };
+      ctx.output.result(preview, { text: JSON.stringify(preview, null, 2) });
       return;
     }
     const response = await listBatches(ctx.client, query);
-    if (ctx.settings.quiet) emitBare(response.data.map((job) => job.id).join("\n"));
-    else if (ctx.settings.output === "text")
-      emitBare(
-        formatTable(
-          ctx
-            .localize({
-              "en-US": "ID|NAME|STATUS|COMPLETED/FAILED/TOTAL|CREATED",
-              "zh-CN": "ID|名称|状态|成功/失败/总数|创建时间",
-            })
-            .split("|"),
-          response.data.map((job) => [
-            job.id,
-            job.metadata?.ds_name ?? "",
-            job.status,
-            `${job.request_counts?.completed ?? ""}/${job.request_counts?.failed ?? ""}/${job.request_counts?.total ?? ""}`,
-            job.created_at ? new Date(job.created_at * 1000).toISOString() : "",
-          ]),
-        ).join("\n"),
-      );
-    else emitResult(response, "json");
-    if (response.has_more && response.last_id && !ctx.settings.quiet)
-      console.error(
-        ctx.localize({
-          "en-US": `Next page: batch list --after ${response.last_id}`,
-          "zh-CN": `下一页：batch list --after ${response.last_id}`,
-        }),
-      );
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text"
+        ? {
+            text: formatTable(
+              ctx
+                .localize({
+                  "en-US": "ID|NAME|STATUS|COMPLETED/FAILED/TOTAL|CREATED",
+                  "zh-CN": "ID|名称|状态|成功/失败/总数|创建时间",
+                })
+                .split("|"),
+              response.data.map((job) => [
+                job.id,
+                job.metadata?.ds_name ?? "",
+                job.status,
+                `${job.request_counts?.completed ?? ""}/${job.request_counts?.failed ?? ""}/${job.request_counts?.total ?? ""}`,
+                job.created_at ? new Date(job.created_at * 1000).toISOString() : "",
+              ]),
+            ).join("\n"),
+          }
+        : undefined,
+    );
+    if (response.has_more && response.last_id)
+      ctx.output.info({
+        "en-US": `Next page: batch list --after ${response.last_id}`,
+        "zh-CN": `下一页：batch list --after ${response.last_id}`,
+      });
   },
 });
