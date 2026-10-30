@@ -73,7 +73,7 @@
 - Console token 自动刷新不从其他 Profile 借用 AK/SK，也不把新 token 写入其他 Profile。
 - Console/OpenAPI/none 命令不参与 API Key capability fallback；fallback 后的 Client 特殊端点行为必须跟随最终解析的 `base_url`，不能根据原 `settings.configName` 推断端点类型。
 - Fallback 反馈只描述 CLI 能权威确认的本地行为：当前 Profile 不支持空格分隔的用户可见叶子命令，本次将从 `default` 读取 API Key 配置；不得声称整个 Profile 已切换，也不得展示 capability ID 或 `<undeclared>` 等内部值。存在 `--api-key` / `--base-url` 或 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` 任一显式覆盖时必须跳过 fallback 且不输出反馈。
-- Fallback 反馈写 stderr，`--quiet` 抑制；text 模式输出本地化句子，`--output json` 输出两空格缩进的多行 `warning` 对象。dry-run 和后续鉴权失败仍保留反馈；JSON 模式下多个 diagnostics 以空行分隔，任何模式都不得输出凭证值。
+- Fallback 作为 warning 写 stderr，`--quiet` 下仍保留；text 模式输出本地化警告，`--output json` 每条输出一个单行 `warning` 对象（JSONL），记录之间不插入空行。dry-run 和后续鉴权失败仍保留反馈；stderr 与 stdout 的最终业务结果分开解析，任何模式都不得输出凭证值。
 - 跨源告警覆盖：env key + file base_url、flag/env 与另一层组合；同源与「仅 key + 默认 base_url」不告；quiet / json 形态与 fallback 一致。
 - `config list/show/use/ui`、`auth status` 和依赖默认模型的消费命令覆盖对应 E2E；`config show` 覆盖 env 脱敏与 active 标记。
 - `config ui` 覆盖保存时保留顶层元数据（如 `active_config`），继续允许空值清除字段，并覆盖 `console_*`/`telemetry` 的类型归一化与枚举校验。
