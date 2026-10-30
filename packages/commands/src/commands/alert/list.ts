@@ -1,6 +1,6 @@
-import { detectOutputFormat } from "bailian-cli-core";
+import type { LocalizedText } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { ensureAlertReady, extractAlertPage, ALERT_LEVELS } from "./shared.ts";
 
 const LIST_RULES_API = "zeldaEasy.bailian-telemetry.alertRule.listAlertRules";
@@ -16,16 +16,22 @@ interface AlertRuleItem {
   gmtModified?: number;
 }
 
-function printTable(list: AlertRuleItem[]): void {
+function ruleTable(list: AlertRuleItem[], localize: (text: LocalizedText) => string): string[] {
   const color = ansi(process.stdout);
 
   if (list.length === 0) {
-    process.stdout.write("No alert rules found.\n");
-    return;
+    return [localize({ "en-US": "No alert rules found.", "zh-CN": "未找到告警规则。" })];
   }
 
   const lines = renderBoxTable({
-    headers: ["Rule ID", "Name", "Level", "Enabled", "Models", "Interval"],
+    headers: [
+      localize({ "en-US": "Rule ID", "zh-CN": "规则 ID" }),
+      localize({ "en-US": "Name", "zh-CN": "名称" }),
+      localize({ "en-US": "Level", "zh-CN": "级别" }),
+      localize({ "en-US": "Enabled", "zh-CN": "启用" }),
+      localize({ "en-US": "Models", "zh-CN": "模型" }),
+      localize({ "en-US": "Interval", "zh-CN": "间隔" }),
+    ],
     rows: list.map((rule) => [
       rule.ruleId,
       rule.name,
@@ -41,7 +47,7 @@ function printTable(list: AlertRuleItem[]): void {
       return undefined;
     },
   });
-  for (const line of lines) process.stdout.write(line + "\n");
+  return lines;
 }
 
 export default defineTelemetryCommand({
@@ -113,7 +119,7 @@ export default defineTelemetryCommand({
   exampleArgs: ["", "--enabled true", "--name 失败率 --level ERROR", "--output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const reqDTO = {
       workspaceId: settings.workspaceId,
@@ -129,14 +135,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_RULES_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_RULES_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -145,14 +148,23 @@ export default defineTelemetryCommand({
     const raw = await ctx.client.console(LIST_RULES_API, { reqDTO });
     const page = extractAlertPage<AlertRuleItem>(raw);
 
-    if (format === "json") {
-      emitResult(page, format);
-      return;
-    }
-
-    printTable(page.list);
-    if (page.nextToken) {
-      process.stdout.write(`Next page: --next-token ${page.nextToken}\n`);
-    }
+    ctx.output.result(
+      page,
+      format === "text"
+        ? {
+            text: [
+              ...ruleTable(page.list, ctx.localize),
+              ...(page.nextToken
+                ? [
+                    ctx.localize({
+                      "en-US": `Next page: --next-token ${page.nextToken}`,
+                      "zh-CN": `下一页: --next-token ${page.nextToken}`,
+                    }),
+                  ]
+                : []),
+            ].join("\n"),
+          }
+        : undefined,
+    );
   },
 });

@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, modelsPermissionsPath } from "bailian-cli-core";
-import { emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { defineCommand, modelsPermissionsPath, type LocalizedText } from "bailian-cli-core";
+import { renderBoxTable } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
 
 // ---------------------------------------------------------------------------
@@ -33,31 +33,45 @@ interface PermissionsResponse {
 // ---------------------------------------------------------------------------
 
 /** Tri-state permission cell: true → yes, false → no, null/undefined → "-". */
-function formatGrant(granted: boolean | null | undefined): string {
+function formatGrant(
+  granted: boolean | null | undefined,
+  localize: (text: LocalizedText) => string,
+): string {
   if (granted == null) return "-";
-  return granted ? "yes" : "no";
+  return localize(granted ? { "en-US": "yes", "zh-CN": "是" } : { "en-US": "no", "zh-CN": "否" });
 }
 
-function printTable(permissions: ModelPermission[], total: number, emptyHint: string): void {
+function permissionTable(
+  permissions: ModelPermission[],
+  total: number,
+  emptyHint: string,
+  localize: (text: LocalizedText) => string,
+): string {
   if (permissions.length === 0) {
-    process.stdout.write(`No model permissions found.\n${emptyHint}\n`);
-    return;
+    return `${localize({ "en-US": "No model permissions found.", "zh-CN": "未找到模型授权记录。" })}\n${emptyHint}`;
   }
-  const headers = ["Model", "Name", "Inference", "Fine-tune", "Deploy"];
+  const headers = [
+    localize({ "en-US": "Model", "zh-CN": "模型" }),
+    localize({ "en-US": "Name", "zh-CN": "名称" }),
+    localize({ "en-US": "Inference", "zh-CN": "推理" }),
+    localize({ "en-US": "Fine-tune", "zh-CN": "精调" }),
+    localize({ "en-US": "Deploy", "zh-CN": "部署" }),
+  ];
   const rows = permissions.map((entry) => [
     entry.model,
     entry.name ?? "-",
-    formatGrant(entry.permissions?.inference),
-    formatGrant(entry.permissions?.fine_tune),
-    formatGrant(entry.permissions?.deploy),
+    formatGrant(entry.permissions?.inference, localize),
+    formatGrant(entry.permissions?.fine_tune, localize),
+    formatGrant(entry.permissions?.deploy, localize),
   ]);
   const lines = renderBoxTable({
     headers,
     rows,
     align: ["left", "left", "right", "right", "right"],
   });
-  for (const line of lines) process.stdout.write(line + "\n");
-  process.stdout.write(`\nTotal: ${total}\n`);
+  return [...lines, localize({ "en-US": `\nTotal: ${total}`, "zh-CN": `\n总计: ${total}` })].join(
+    "\n",
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -70,6 +84,7 @@ export default defineCommand({
     "zh-CN": "列出 Workspace 中的模型权限（推理 / 微调 / 部署）",
   },
   auth: "apiKey",
+  defaultOutput: "json",
   usageArgs: "[--scope <scope>] [--model <model>] [--name <name>] [--page <n>] [--page-size <n>]",
   flags: {
     scope: {
@@ -137,7 +152,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = settings.output;
     const scope = flags.scope ?? "authorizable";
 
     const query = {
@@ -149,10 +164,11 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        { endpoint: ctx.client.url(modelsPermissionsPath()), method: "GET", query },
-        format,
-      );
+      ctx.output.result({
+        endpoint: ctx.client.url(modelsPermissionsPath()),
+        method: "GET",
+        query,
+      });
       return;
     }
 
@@ -162,19 +178,23 @@ export default defineCommand({
     const permissions = resp.output?.permissions ?? [];
     const total = resp.output?.total ?? permissions.length;
 
-    if (format === "json") {
-      emitResult({ items: permissions, total }, format);
-      return;
+    let text: string | undefined;
+    if (format === "text") {
+      const binName = ctx.identity.binName;
+      const emptyHint = ctx.localize(
+        scope === "authorized"
+          ? {
+              "en-US": `Nothing granted yet in this workspace. Browse grantable models with \`${binName} permission list --scope authorizable\`, then grant with \`${binName} permission grant --model <model>\`.`,
+              "zh-CN": `此工作空间尚无授权记录。使用 \`${binName} permission list --scope authorizable\` 查看可授权模型，再通过 \`${binName} permission grant --model <model>\` 授权。`,
+            }
+          : {
+              "en-US":
+                "Adjust --name/--model filters, or check pagination with --page/--page-size.",
+              "zh-CN": "请调整 --name/--model 过滤条件，或通过 --page/--page-size 检查分页。",
+            },
+      );
+      text = permissionTable(permissions, total, emptyHint, ctx.localize);
     }
-
-    // The default authorized view is empty until something is granted — point
-    // at the authorizable catalog instead of ending with a bare "nothing".
-    const binName = ctx.identity.binName;
-    const emptyHint =
-      scope === "authorized"
-        ? `Nothing granted yet in this workspace. Browse grantable models with \`${binName} permission list --scope authorizable\`, then grant with \`${binName} permission grant --model <model>\`.`
-        : `Adjust --name/--model filters, or check pagination with --page/--page-size.`;
-
-    printTable(permissions, total, emptyHint);
+    ctx.output.result({ items: permissions, total }, text === undefined ? undefined : { text });
   },
 });

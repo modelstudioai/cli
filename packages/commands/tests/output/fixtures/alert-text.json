@@ -1,0 +1,14 @@
+{
+  "list": " Rule ID  │ Name │ Level │ Enabled │ Models               │ Interval \n rule-one │ Demo │ ERROR │ OFF     │ model-one, model-two │       0s\nNext page: --next-token cursor-out\n",
+  "create": "Alert rule created: rule-new\n",
+  "update": "Alert rule updated: rule-one\n",
+  "delete": "Deleted 2 alert rule(s).\n",
+  "enable": "Alert rule enabled: rule-one\n",
+  "disable": "Alert rule disabled: rule-one\n",
+  "history": " Start Time │ Rule │ Status │ Max Level │ Count │ Instance            \n -          │ Demo │ ALARM  │ ERROR     │     0 │ model:one,zone:test\nNext page: --next-token cursor-out\n",
+  "metrics": " Metric │ Aggregations │ Unit │ Description \n calls  │ sum, avg     │ -    │ Call count \n",
+  "template list": " Template ID  │ Name │ Source   │ Conditions                                     \n template-one │ Demo │ Official │ sum calls > 0 (60s) AND sum failures > 1 (60s)\n",
+  "template create": "Alert template created: template-new\n",
+  "template update": "Alert template updated: template-one\n",
+  "template delete": "Deleted 2 alert template(s).\n"
+}

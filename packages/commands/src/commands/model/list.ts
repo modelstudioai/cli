@@ -1,16 +1,16 @@
 import {
   anonymousConsoleCall,
   defineCommand,
-  detectOutputFormat,
   fetchModelDetail,
   fetchModelGroups,
   fetchPredictConfig,
   type FlagsDef,
+  type LocalizedText,
   type ModelGroup,
   type ModelPriceInfo,
   type PredictConfigEntry,
 } from "bailian-cli-core";
-import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 import {
   MODEL_FILTER_FLAGS,
   filterModelsLocally,
@@ -119,13 +119,25 @@ interface BrowseFooter {
   hiddenModality: number;
 }
 
-function printBrowseText(groups: ModelGroup[], footer: BrowseFooter): void {
+function browseText(
+  groups: ModelGroup[],
+  footer: BrowseFooter,
+  localize: (text: LocalizedText) => string,
+): string {
+  const lines: string[] = [];
   if (groups.length === 0) {
-    emitBare("No model families found.");
-    return;
+    lines.push(localize({ "en-US": "No model families found.", "zh-CN": "未找到模型系列。" }));
+    return lines.join("\n");
   }
 
-  const headers = ["NAME", "PROVIDER", "CAPABILITIES", "MODELS", "MAX_CONTEXT", "PRICE"];
+  const headers = [
+    localize({ "en-US": "NAME", "zh-CN": "名称" }),
+    localize({ "en-US": "PROVIDER", "zh-CN": "提供商" }),
+    localize({ "en-US": "CAPABILITIES", "zh-CN": "能力" }),
+    localize({ "en-US": "MODELS", "zh-CN": "模型数" }),
+    localize({ "en-US": "MAX_CONTEXT", "zh-CN": "最大上下文" }),
+    localize({ "en-US": "PRICE", "zh-CN": "价格" }),
+  ];
   const rows = groups.map((group) => {
     const meta = aggregateGroupMeta(group);
     return [
@@ -138,19 +150,26 @@ function printBrowseText(groups: ModelGroup[], footer: BrowseFooter): void {
     ];
   });
 
-  for (const line of formatTable(headers, rows)) emitBare(line);
-  emitBare(`\nTotal: ${footer.total}`);
+  for (const line of formatTable(headers, rows)) lines.push(line);
+  lines.push(localize({ "en-US": `\nTotal: ${footer.total}`, "zh-CN": `\n总计: ${footer.total}` }));
   // Modality filtering is per page, so the catalog total above predates it.
   if (footer.hiddenModality > 0) {
-    emitBare(
-      `${footer.hiddenModality} models on this page excluded by the modality filter (not reflected in Total).`,
+    lines.push(
+      localize({
+        "en-US": `${footer.hiddenModality} models on this page excluded by the modality filter (not reflected in Total).`,
+        "zh-CN": `本页有 ${footer.hiddenModality} 个模型被模态条件过滤（总数未扣除）。`,
+      }),
     );
   }
   if (footer.hiddenOffline > 0) {
-    emitBare(
-      `${footer.hiddenOffline} offline models hidden — use --include-deprecated to include them.`,
+    lines.push(
+      localize({
+        "en-US": `${footer.hiddenOffline} offline models hidden — use --include-deprecated to include them.`,
+        "zh-CN": `已隐藏 ${footer.hiddenOffline} 个下线模型，使用 --include-deprecated 可包含它们。`,
+      }),
     );
   }
+  return lines.join("\n");
 }
 
 function formatBrowseJson(groups: ModelGroup[], total: number) {
@@ -176,20 +195,39 @@ function formatBrowseJson(groups: ModelGroup[], total: number) {
 // Detail mode — single family with full enrichment
 // ---------------------------------------------------------------------------
 
-function printDetailText(detail: ModelGroup, includePredictConfig: boolean): void {
+function detailText(
+  detail: ModelGroup,
+  includePredictConfig: boolean,
+  localize: (text: LocalizedText) => string,
+): string {
+  const lines: string[] = [];
   const items = detail.items ?? [];
   const trunkItems = pickTrunkItems(items);
   const snapshotCount = items.length - trunkItems.length;
 
-  emitBare(detail.name ?? detail.model);
-  if (detail.description) emitBare(`  ${detail.description}`);
-  if (detail.updateAt) emitBare(`  Updated: ${detail.updateAt}`);
-  emitBare("");
+  lines.push(detail.name ?? detail.model);
+  if (detail.description) lines.push(`  ${detail.description}`);
+  if (detail.updateAt)
+    lines.push(
+      localize({
+        "en-US": `  Updated: ${detail.updateAt}`,
+        "zh-CN": `  更新日期: ${detail.updateAt}`,
+      }),
+    );
+  lines.push("");
 
   // Items table
   const showStatus = items.some((item) => formatOfflineMarker(modelLifecycle(item)) !== "");
-  const headers = ["MODEL", "PROVIDER", "CAPABILITIES", "CONTEXT", "OUTPUT", "CATEGORY", "PRICE"];
-  if (showStatus) headers.push("STATUS");
+  const headers = [
+    localize({ "en-US": "MODEL", "zh-CN": "模型" }),
+    localize({ "en-US": "PROVIDER", "zh-CN": "提供商" }),
+    localize({ "en-US": "CAPABILITIES", "zh-CN": "能力" }),
+    localize({ "en-US": "CONTEXT", "zh-CN": "上下文" }),
+    localize({ "en-US": "OUTPUT", "zh-CN": "输出" }),
+    localize({ "en-US": "CATEGORY", "zh-CN": "类别" }),
+    localize({ "en-US": "PRICE", "zh-CN": "价格" }),
+  ];
+  if (showStatus) headers.push(localize({ "en-US": "STATUS", "zh-CN": "状态" }));
   const rows = items.map((item) => {
     const row = [
       item.model ?? "-",
@@ -204,29 +242,51 @@ function printDetailText(detail: ModelGroup, includePredictConfig: boolean): voi
     return row;
   });
 
-  for (const line of formatTable(headers, rows)) emitBare(line);
-  emitBare(
-    `\nTotal: ${items.length} models (${trunkItems.length} trunk, ${snapshotCount} snapshots)`,
+  for (const line of formatTable(headers, rows)) lines.push(line);
+  lines.push(
+    localize({
+      "en-US": `\nTotal: ${items.length} models (${trunkItems.length} trunk, ${snapshotCount} snapshots)`,
+      "zh-CN": `\n总计: ${items.length} 个模型（${trunkItems.length} 个主干，${snapshotCount} 个快照）`,
+    }),
   );
 
   // Pricing details per trunk item
   for (const item of trunkItems) {
     if (!item.prices?.length) continue;
-    emitBare(`\n── Pricing: ${item.model} ──`);
-    const priceHeaders = ["TYPE", "PRICE", "UNIT"];
+    lines.push(
+      localize({
+        "en-US": `\n── Pricing: ${item.model} ──`,
+        "zh-CN": `\n── 价格: ${item.model} ──`,
+      }),
+    );
+    const priceHeaders = [
+      localize({ "en-US": "TYPE", "zh-CN": "类型" }),
+      localize({ "en-US": "PRICE", "zh-CN": "价格" }),
+      localize({ "en-US": "UNIT", "zh-CN": "单位" }),
+    ];
     const priceRows = item.prices.map((priceEntry) => [
       priceEntry.type ?? "-",
       String(priceEntry.price ?? "-"),
       priceEntry.priceUnit ?? "-",
     ]);
-    for (const line of formatTable(priceHeaders, priceRows)) emitBare(line);
+    for (const line of formatTable(priceHeaders, priceRows)) lines.push(line);
   }
 
   // QPM details per trunk item
   for (const item of trunkItems) {
     if (!item.qpmInfo || Object.keys(item.qpmInfo).length === 0) continue;
-    emitBare(`\n── Rate Limits: ${item.model} ──`);
-    const qpmHeaders = ["TIER", "RPM", "TPM", "TPM_FIELD"];
+    lines.push(
+      localize({
+        "en-US": `\n── Rate Limits: ${item.model} ──`,
+        "zh-CN": `\n── 速率限制: ${item.model} ──`,
+      }),
+    );
+    const qpmHeaders = [
+      localize({ "en-US": "TIER", "zh-CN": "层级" }),
+      localize({ "en-US": "RPM", "zh-CN": "RPM" }),
+      localize({ "en-US": "TPM", "zh-CN": "TPM" }),
+      localize({ "en-US": "TPM_FIELD", "zh-CN": "TPM_FIELD" }),
+    ];
     const qpmRows = Object.entries(item.qpmInfo).map(([tier, limits]) => {
       const period = (limits.count_limit_period as number) || 60;
       const rpm = period ? Math.floor((((limits.count_limit as number) || 0) * 60) / period) : 0;
@@ -241,17 +301,23 @@ function printDetailText(detail: ModelGroup, includePredictConfig: boolean): voi
         (limits.usage_limit_field as string) ?? "-",
       ];
     });
-    for (const line of formatTable(qpmHeaders, qpmRows)) emitBare(line);
+    for (const line of formatTable(qpmHeaders, qpmRows)) lines.push(line);
   }
 
   // PredictConfig sections
   if (includePredictConfig) {
     for (const item of trunkItems) {
       if (!item.predictConfig || item.predictConfig.length === 0) continue;
-      emitBare(`\n── predictConfig: ${item.model} ──`);
-      printPredictConfigTable(item.predictConfig);
+      lines.push(
+        localize({
+          "en-US": `\n── predictConfig: ${item.model} ──`,
+          "zh-CN": `\n── 参数配置: ${item.model} ──`,
+        }),
+      );
+      lines.push(...predictConfigLines(item.predictConfig, localize));
     }
   }
+  return lines.join("\n");
 }
 
 function formatDetailJson(detail: ModelGroup, includePredictConfig: boolean) {
@@ -291,15 +357,25 @@ function formatDetailJson(detail: ModelGroup, includePredictConfig: boolean) {
   };
 }
 
-function printPredictConfigTable(entries: PredictConfigEntry[]): void {
-  const headers = ["PARAM", "KEY", "DEFAULT", "RANGE"];
+function predictConfigLines(
+  entries: PredictConfigEntry[],
+  localize: (text: LocalizedText) => string,
+): string[] {
+  const lines: string[] = [];
+  const headers = [
+    localize({ "en-US": "PARAM", "zh-CN": "参数" }),
+    localize({ "en-US": "KEY", "zh-CN": "键" }),
+    localize({ "en-US": "DEFAULT", "zh-CN": "默认值" }),
+    localize({ "en-US": "RANGE", "zh-CN": "范围" }),
+  ];
   const rows = entries.map((entry) => [
     entry.name ?? "-",
     entry.key ?? "-",
     entry.default !== undefined ? JSON.stringify(entry.default) : "-",
     entry.range !== undefined ? JSON.stringify(entry.range) : "-",
   ]);
-  for (const line of formatTable(headers, rows)) emitBare(line);
+  for (const line of formatTable(headers, rows)) lines.push(line);
+  return lines;
 }
 
 // ---------------------------------------------------------------------------
@@ -312,6 +388,7 @@ export default defineCommand({
     "zh-CN": "浏览百炼模型市场中的模型系列，或查看模型详细信息",
   },
   auth: "none",
+  defaultOutput: "json",
   usageArgs:
     "[--model <model>] [--page <n>] [--page-size <n>] [--provider <p>] [--capability <c>] [--feature <f>] [--input-modality <m>] [--output-modality <m>] [--include-deprecated] [--enrich]",
   flags: LIST_FLAGS,
@@ -340,23 +417,35 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = settings.output;
     const modelKey = flags.model;
-    const call = anonymousConsoleCall(settings);
+    const call = anonymousConsoleCall(settings, {
+      debug: (diagnostic) => ctx.output.debug(diagnostic),
+    });
 
     // ── Detail mode ──
     if (modelKey) {
       const shouldEnrich = Boolean(flags.enrich);
 
       if (settings.dryRun) {
-        emitResult({ action: "model.detail", model: modelKey, enrich: shouldEnrich }, format);
+        ctx.output.result({ action: "model.detail", model: modelKey, enrich: shouldEnrich });
         return;
       }
 
       const detail = await fetchModelDetail(call, modelKey);
 
       if (!detail) {
-        emitBare(`Model "${modelKey}" not found.`);
+        ctx.output.result(
+          null,
+          format === "text"
+            ? {
+                text: ctx.localize({
+                  "en-US": `Model "${modelKey}" not found.`,
+                  "zh-CN": `未找到模型 "${modelKey}"。`,
+                }),
+              }
+            : undefined,
+        );
         return;
       }
 
@@ -371,12 +460,10 @@ export default defineCommand({
         );
       }
 
-      if (format === "json") {
-        emitResult(formatDetailJson(detail, shouldEnrich), format);
-        return;
-      }
-
-      printDetailText(detail, shouldEnrich);
+      ctx.output.result(
+        formatDetailJson(detail, shouldEnrich),
+        format === "text" ? { text: detailText(detail, shouldEnrich, ctx.localize) } : undefined,
+      );
       return;
     }
 
@@ -388,14 +475,11 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "model.list",
-          includeDeprecated: Boolean(flags.includeDeprecated),
-          ...params,
-        },
-        format,
-      );
+      ctx.output.result({
+        action: "model.list",
+        includeDeprecated: Boolean(flags.includeDeprecated),
+        ...params,
+      });
       return;
     }
 
@@ -418,11 +502,11 @@ export default defineCommand({
       (item) => !matchesModality(item, flags.inputModality ?? [], flags.outputModality ?? []),
     ).length;
 
-    if (format === "json") {
-      emitResult(formatBrowseJson(listedGroups, total), format);
-      return;
-    }
-
-    printBrowseText(listedGroups, { total, hiddenOffline, hiddenModality });
+    ctx.output.result(
+      formatBrowseJson(listedGroups, total),
+      format === "text"
+        ? { text: browseText(listedGroups, { total, hiddenOffline, hiddenModality }, ctx.localize) }
+        : undefined,
+    );
   },
 });

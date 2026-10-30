@@ -1,6 +1,6 @@
-import { detectOutputFormat, unwrapResponse } from "bailian-cli-core";
+import { unwrapResponse } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { renderBoxTable } from "bailian-cli-runtime";
 import { ensureAlertReady } from "./shared.ts";
 
 const LIST_METRICS_API = "zeldaEasy.bailian-telemetry.alertMetric.listMetrics";
@@ -23,17 +23,14 @@ export default defineTelemetryCommand({
   exampleArgs: ["", "--output json"],
   async run(ctx) {
     const { settings } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_METRICS_API,
-          data: { reqDTO: { workspaceId: settings.workspaceId, resourceType: "model" } },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_METRICS_API,
+        data: { reqDTO: { workspaceId: settings.workspaceId, resourceType: "model" } },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -47,26 +44,32 @@ export default defineTelemetryCommand({
       Array.isArray(resp) ? resp : (((resp.list ?? resp.result) as unknown[]) ?? [])
     ) as AlertMetric[];
 
-    if (format === "json") {
-      emitResult(list, format);
-      return;
+    let text: string | undefined;
+    if (format === "text") {
+      if (list.length === 0) {
+        text = ctx.localize({
+          "en-US": "No alertable metrics found.",
+          "zh-CN": "未找到可告警的指标。",
+        });
+      } else {
+        const lines = renderBoxTable({
+          headers: [
+            ctx.localize({ "en-US": "Metric", "zh-CN": "指标" }),
+            ctx.localize({ "en-US": "Aggregations", "zh-CN": "聚合方式" }),
+            ctx.localize({ "en-US": "Unit", "zh-CN": "单位" }),
+            ctx.localize({ "en-US": "Description", "zh-CN": "说明" }),
+          ],
+          rows: list.map((metric) => [
+            metric.metricName,
+            (metric.aggregators ?? []).join(", "),
+            metric.unit ?? "-",
+            metric.desc ?? "-",
+          ]),
+          align: ["left", "left", "left", "left"],
+        });
+        text = lines.join("\n");
+      }
     }
-
-    if (list.length === 0) {
-      process.stdout.write("No alertable metrics found.\n");
-      return;
-    }
-
-    const lines = renderBoxTable({
-      headers: ["Metric", "Aggregations", "Unit", "Description"],
-      rows: list.map((metric) => [
-        metric.metricName,
-        (metric.aggregators ?? []).join(", "),
-        metric.unit ?? "-",
-        metric.desc ?? "-",
-      ]),
-      align: ["left", "left", "left", "left"],
-    });
-    for (const line of lines) process.stdout.write(line + "\n");
+    ctx.output.result(list, text === undefined ? undefined : { text });
   },
 });

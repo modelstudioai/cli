@@ -1,6 +1,5 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatDateTime } from "../shared/format.ts";
 import { TELEMETRY_TIME_FLAGS, resolveTimeRange } from "../shared/telemetry.ts";
 import { ALERT_LEVELS, ensureAlertReady, extractAlertPage } from "./shared.ts";
@@ -105,7 +104,7 @@ export default defineTelemetryCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags);
 
     const reqDTO = {
@@ -123,14 +122,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_HISTORIES_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_HISTORIES_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -139,38 +135,49 @@ export default defineTelemetryCommand({
     const raw = await ctx.client.console(LIST_HISTORIES_API, { reqDTO });
     const page = extractAlertPage<AlertHistoryItem>(raw);
 
-    if (format === "json") {
-      emitResult(page, format);
-      return;
+    let text: string | undefined;
+    if (format === "text") {
+      if (page.list.length === 0) {
+        text = ctx.localize({
+          "en-US": "No alert history found in this range.",
+          "zh-CN": "此时间范围内未找到告警历史。",
+        });
+      } else {
+        const color = ansi(process.stdout);
+        const lines = renderBoxTable({
+          headers: [
+            ctx.localize({ "en-US": "Start Time", "zh-CN": "开始时间" }),
+            ctx.localize({ "en-US": "Rule", "zh-CN": "规则" }),
+            ctx.localize({ "en-US": "Status", "zh-CN": "状态" }),
+            ctx.localize({ "en-US": "Max Level", "zh-CN": "最高级别" }),
+            ctx.localize({ "en-US": "Count", "zh-CN": "次数" }),
+            ctx.localize({ "en-US": "Instance", "zh-CN": "实例" }),
+          ],
+          rows: page.list.map((item) => [
+            item.startTime ? formatDateTime(item.startTime) : "-",
+            item.ruleDisplayName ?? item.alertRuleId,
+            item.status ?? "-",
+            item.maxLevel ?? "-",
+            String(item.count ?? 0),
+            instanceText(item),
+          ]),
+          align: ["left", "left", "left", "left", "right", "left"],
+          cellColor: (_rowIndex, colIndex, value) => {
+            if (colIndex === 2) return value === "ALARM" ? color.red(value) : color.green(value);
+            if (colIndex === 3 && value === "ERROR") return color.red(value);
+            return undefined;
+          },
+        });
+        if (page.nextToken)
+          lines.push(
+            ctx.localize({
+              "en-US": `Next page: --next-token ${page.nextToken}`,
+              "zh-CN": `下一页: --next-token ${page.nextToken}`,
+            }),
+          );
+        text = lines.join("\n");
+      }
     }
-
-    if (page.list.length === 0) {
-      process.stdout.write("No alert history found in this range.\n");
-      return;
-    }
-
-    const color = ansi(process.stdout);
-    const lines = renderBoxTable({
-      headers: ["Start Time", "Rule", "Status", "Max Level", "Count", "Instance"],
-      rows: page.list.map((item) => [
-        item.startTime ? formatDateTime(item.startTime) : "-",
-        item.ruleDisplayName ?? item.alertRuleId,
-        item.status ?? "-",
-        item.maxLevel ?? "-",
-        String(item.count ?? 0),
-        instanceText(item),
-      ]),
-      align: ["left", "left", "left", "left", "right", "left"],
-      cellColor: (_rowIndex, colIndex, value) => {
-        if (colIndex === 2) return value === "ALARM" ? color.red(value) : color.green(value);
-        if (colIndex === 3 && value === "ERROR") return color.red(value);
-        return undefined;
-      },
-    });
-    for (const line of lines) process.stdout.write(line + "\n");
-
-    if (page.nextToken) {
-      process.stdout.write(`Next page: --next-token ${page.nextToken}\n`);
-    }
+    ctx.output.result(page, text === undefined ? undefined : { text });
   },
 });
