@@ -113,8 +113,49 @@ const cases: Scenario[] = [
     name: "usage token-plan",
     command: commands.usageTokenPlan,
     flags: {},
-    want: { per1MonthPercentage: 0.25, per1MonthResetTime: now + 3600000 },
+    want: { per1MonthPercentage: 0.25, per1MonthResetTime: now + 3600000, hasQuotaData: true },
     text: "25% used",
+  },
+  {
+    name: "usage token-plan multiple windows",
+    command: commands.usageTokenPlan,
+    flags: {},
+    response: {
+      per1WeekPercentage: 0.13,
+      per1WeekResetTime: now + 7200000,
+      per5HourPercentage: 0.43,
+    },
+    want: {
+      per5HourPercentage: 0.43,
+      per1WeekPercentage: 0.13,
+      per1WeekResetTime: now + 7200000,
+      hasQuotaData: true,
+    },
+    text: "5-hour quota",
+  },
+  {
+    name: "usage token-plan missing quota data",
+    command: commands.usageTokenPlan,
+    flags: {},
+    response: {},
+    want: { hasQuotaData: false },
+    text: "The monthly limit may be unlimited",
+  },
+  {
+    name: "usage token-plan zero usage",
+    command: commands.usageTokenPlan,
+    flags: {},
+    response: { per5HourPercentage: 0 },
+    want: { per5HourPercentage: 0, hasQuotaData: true },
+    text: "0% used",
+  },
+  {
+    name: "usage token-plan reset without usage",
+    command: commands.usageTokenPlan,
+    flags: {},
+    response: { per1DayResetTime: now + 3600000 },
+    want: { per1DayResetTime: now + 3600000, hasQuotaData: false },
+    text: "The 1-day limit may be unlimited",
   },
   {
     name: "usage coding-plan",
@@ -265,7 +306,9 @@ async function invoke(
       if (api.includes("listModelUsageStatisticData"))
         return { list: structuredClone(modelRows), totalCount: modelRows.length };
       if (api.endsWith("/usage"))
-        return { per1MonthPercentage: 0.25, per1MonthResetTime: now + 3600000 };
+        return scenario.response === undefined
+          ? { per1MonthPercentage: 0.25, per1MonthResetTime: now + 3600000 }
+          : structuredClone(scenario.response);
       if (api.includes("queryCodingPlanInstanceInfoV2"))
         return {
           codingPlanInstanceInfos: [

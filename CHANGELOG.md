@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.7.1] - 2026-10-29
+
+### Fixed
+
+- **Token Plan quota queries**: Display all quota windows returned by the API, and add `hasQuotaData` to JSON output to distinguish missing quota data from a normal result.
+
 ## [2.7.0] - 2026-10-29
 
 ### Added

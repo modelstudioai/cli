@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.7.1] - 2026-10-29
+
+### 修复
+
+- **Token Plan 配额查询**：支持展示接口返回的全部配额窗口，JSON 输出新增 `hasQuotaData`，用于区分无配额数据与正常结果。
+
 ## [2.7.0] - 2026-10-29
 
 ### 新增
