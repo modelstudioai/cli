@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef } from "bailian-cli-core";
 import { deleteSession } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -38,29 +37,28 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const file = flags.file ?? "agents.yaml";
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          would_delete_session: flags.sessionId,
-          provider: "bailian",
-          config_file: file,
-        },
-        format,
-      );
+      ctx.output.result({
+        would_delete_session: flags.sessionId,
+        provider: "bailian",
+        config_file: file,
+      });
       return;
     }
 
     await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         await deleteSession(runtime, flags.sessionId, "bailian");
       }),
     );
 
-    if (format === "json") emitResult({ deleted: flags.sessionId }, format);
-    else emitBare(`Session ${flags.sessionId} deleted.`);
+    ctx.output.result(
+      { deleted: flags.sessionId },
+      { text: ctx.settings.output === "text" ? `Session ${flags.sessionId} deleted.` : undefined },
+    );
   },
 });

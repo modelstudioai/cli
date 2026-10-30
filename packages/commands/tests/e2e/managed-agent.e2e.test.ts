@@ -500,9 +500,14 @@ describe("e2e: managed-agent", () => {
     );
 
     expect(exitCode).toBe(1);
-    for (const diagnosticCode of DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES) {
-      expect(stderr).toContain(`[error] ${diagnosticCode}:`);
-    }
+    const diagnostics = stderr
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(diagnostics.filter((record) => record.error)).toHaveLength(1);
+    expect(
+      diagnostics.filter((record) => record.warning).map((record) => record.warning.details.code),
+    ).toEqual(DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES);
     expect(stderr).toContain(`[${DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES[0]}]`);
     expect(stderr).toContain(`(+${DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES.length - 1} more errors)`);
     expect(stderr).not.toContain("Cannot apply: resolve the errors above first.");

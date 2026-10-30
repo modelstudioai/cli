@@ -1,11 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { destroyPlannedProjectResources, planDestroyProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -50,23 +43,20 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const file = flags.file ?? "agents.yaml";
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          would_destroy: { cascade: Boolean(flags.cascade) },
-          config_file: file,
-          hint: "Run `managed-agent state list` to see the resources tracked in state.",
-        },
-        format,
-      );
+      ctx.output.result({
+        would_destroy: { cascade: Boolean(flags.cascade) },
+        config_file: file,
+        hint: "Run `managed-agent state list` to see the resources tracked in state.",
+      });
       return;
     }
 
     const planned = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         const planned = planDestroyProjectContext(runtime);
         return {
@@ -83,38 +73,59 @@ export default defineCommand({
 
     const resources = planned.resources;
     if (resources.length === 0) {
-      if (format === "json") emitResult({ destroyed: 0, total: 0 }, format);
-      else emitBare("No resources in state. Nothing to destroy.");
+      ctx.output.result(
+        { destroyed: 0, total: 0 },
+        {
+          text:
+            ctx.settings.output === "text"
+              ? "No resources in state. Nothing to destroy."
+              : undefined,
+        },
+      );
       return;
     }
 
-    // In --output json, stdout must stay a single-JSON data channel: the
-    // resource preview is progress info → stderr; text mode keeps stdout.
+    // Resource previews are process hints; the final summary owns stdout.
     for (const resource of resources) {
       const line = `  - ${formatResourceLabel(resource.address)} [${resource.remote_id}]`;
-      if (format === "json") process.stderr.write(`${line}\n`);
-      else emitBare(line);
+      ctx.output.info(line);
     }
 
     const result = await withAgentErrors(() =>
-      withStdoutProtected(() =>
+      withStdoutProtected(ctx, () =>
         destroyPlannedProjectResources(planned, {
           cascade: flags.cascade,
           onCascadeRequired: async () => Boolean(flags.cascade),
           onResourceResult: (item) => {
             const label = formatResourceLabel(item.resource.address);
-            process.stderr.write(`  ${item.status === "success" ? "✓" : "✗"} ${label}\n`);
+            if (item.status === "success") ctx.output.info(`  ✓ ${label}`);
+            else
+              ctx.output.warning({
+                code: "AGENT_DESTROY_RESOURCE_FAILED",
+                message: item.error ?? {
+                  "en-US": `Could not remove ${label}.`,
+                  "zh-CN": `无法移除 ${label}。`,
+                },
+                details: {
+                  status: item.status,
+                  address: item.resource.address,
+                  remote_id: item.resource.remote_id,
+                },
+              });
           },
         }),
       ),
     );
 
-    if (format === "json") {
-      emitResult({ destroyed: result.destroyed, total: result.resources.length }, format);
-    } else {
-      const status = result.partial ? "Destroy incomplete" : "Destroy complete";
-      emitBare(`\n${status}. ${result.destroyed}/${result.resources.length} resources removed.`);
-    }
+    ctx.output.result(
+      { destroyed: result.destroyed, total: result.resources.length },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? `\n${result.partial ? "Destroy incomplete" : "Destroy complete"}. ${result.destroyed}/${result.resources.length} resources removed.`
+            : undefined,
+      },
+    );
 
     if (result.partial) {
       const firstFailure = result.results.find((item) => item.status !== "success");

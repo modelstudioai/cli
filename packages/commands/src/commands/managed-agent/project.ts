@@ -1,13 +1,6 @@
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import {
   commitProjectBuild,
   createDirectoryWorkspaceVersionService,
@@ -37,8 +30,6 @@ const PROJECT_FLAG = {
     },
   },
 } satisfies FlagsDef;
-
-const JSON_FORMAT = "json" as const;
 
 export const managedAgentProjectInit = defineCommand({
   description: {
@@ -74,16 +65,13 @@ export const managedAgentProjectInit = defineCommand({
   async run(ctx) {
     const projectRoot = ctx.flags.project ?? "./managed-agent";
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          would_initialize_project: projectRoot,
-        },
-        detectOutputFormat(ctx.settings.output),
-      );
+      ctx.output.result({
+        would_initialize_project: projectRoot,
+      });
       return;
     }
     const result = await initializeDirectoryProject({ projectRoot });
-    emitResult(result, detectOutputFormat(ctx.settings.output));
+    ctx.output.result(result);
   },
 });
 
@@ -95,16 +83,24 @@ export const managedAgentProjectValidate = defineCommand({
   exampleArgs: ["", "--project ./my-agent"],
   async run(ctx) {
     const result = await validateDirectoryProject(ctx.flags.project ?? ".");
-    const format = detectOutputFormat(ctx.settings.output);
-    if (format === JSON_FORMAT) emitResult(safeInspection(result), format);
-    else {
-      for (const diagnostic of [...result.diagnostics, ...result.warnings]) {
-        emitBare(`${diagnostic.severity}: ${diagnostic.code}: ${diagnostic.message}`);
-      }
-      if (!result.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
-        emitBare(`Project is valid (${result.project_revision.slice(0, 12)}).`);
-      }
-    }
+
+    ctx.output.result(safeInspection(result), {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              {
+                for (const diagnostic of [...result.diagnostics, ...result.warnings]) {
+                  lines.push(`${diagnostic.severity}: ${diagnostic.code}: ${diagnostic.message}`);
+                }
+                if (!result.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
+                  lines.push(`Project is valid (${result.project_revision.slice(0, 12)}).`);
+                }
+              }
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
     if (result.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
       throw new BailianError("Directory project validation failed.", ExitCode.GENERAL);
     }
@@ -148,9 +144,9 @@ export const managedAgentProjectBuild = defineCommand({
   async run(ctx) {
     const root = ctx.flags.project ?? ".";
     const preview = await previewProjectBuild(root);
-    const format = detectOutputFormat(ctx.settings.output);
+
     if (ctx.settings.dryRun) {
-      emitResult(safeInspection(preview), format);
+      ctx.output.result(safeInspection(preview));
       return;
     }
     if (!preview.can_build)
@@ -163,10 +159,7 @@ export const managedAgentProjectBuild = defineCommand({
       projectRoot: root,
       baseRevision: preview.project_revision,
     });
-    emitResult(
-      { manifest: built.manifest, organization_moves: preview.organization_moves },
-      format,
-    );
+    ctx.output.result({ manifest: built.manifest, organization_moves: preview.organization_moves });
   },
 });
 
@@ -206,7 +199,7 @@ export const managedAgentProjectPublish = defineCommand({
   exampleArgs: ["--yes", "--project ./my-agent --yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    installSdkTransport(ctx);
+    installSdkTransport();
     const root = ctx.flags.project ?? ".";
     const resolveBuild: ProjectBuildResolver = async (buildPath, options) =>
       (await resolveAgentProjectConfig(ctx, buildPath, {
@@ -214,34 +207,31 @@ export const managedAgentProjectPublish = defineCommand({
         overrideBailianBaseUrl: true,
       })) as unknown as Awaited<ReturnType<ProjectBuildResolver>>;
     const planned = await withAgentErrors(() =>
-      withStdoutProtected(() =>
+      withStdoutProtected(ctx, () =>
         planProjectPublish(root, {
           provider: "bailian",
           refresh: !ctx.flags.noRefresh,
           quiet: true,
-          onFeedback: renderAgentFeedback,
+          onFeedback: (event) => renderAgentFeedback(ctx.output, event),
           resolveBuild,
         }),
       ),
     );
     const actions = planned.planned.plan.actions.filter((action) => action.action !== "no-op");
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          project_revision: planned.project_revision,
-          build_manifest: planned.build_manifest,
-          plan: planned.planned.plan,
-        },
-        detectOutputFormat(ctx.settings.output),
-      );
+      ctx.output.result({
+        project_revision: planned.project_revision,
+        build_manifest: planned.build_manifest,
+        plan: planned.planned.plan,
+      });
       return;
     }
     for (const action of actions) {
       const marker = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
-      emitBare(`${marker} ${formatResourceLabel(action.address)}`);
+      ctx.output.info(`${marker} ${formatResourceLabel(action.address)}`);
     }
     const result = await withAgentErrors(() =>
-      withStdoutProtected(() =>
+      withStdoutProtected(ctx, () =>
         executeProjectPublish({
           projectRoot: planned.project_root,
           expectedProjectRevision: planned.project_revision,
@@ -251,12 +241,12 @@ export const managedAgentProjectPublish = defineCommand({
           refresh: !ctx.flags.noRefresh,
           concurrency: ctx.flags.concurrency,
           policy: "force",
-          onFeedback: renderAgentFeedback,
+          onFeedback: (event) => renderAgentFeedback(ctx.output, event),
           resolveBuild,
         }),
       ),
     );
-    emitResult(result, detectOutputFormat(ctx.settings.output));
+    ctx.output.result(result);
   },
 });
 
@@ -284,13 +274,16 @@ export const managedAgentProjectWorkbench = defineCommand({
   async run(ctx) {
     const root = ctx.flags.project ?? ".";
     if (ctx.settings.dryRun) {
-      emitResult(
-        { would_launch: "workbench", project_root: root, port: ctx.flags.port ?? 4848 },
-        detectOutputFormat(ctx.settings.output),
-      );
+      ctx.output.result({
+        would_launch: "workbench",
+        project_root: root,
+        port: ctx.flags.port ?? 4848,
+      });
       return;
     }
     await launchManagedAgentPlayground({
+      output: ctx.output,
+      localize: ctx.localize,
       project: root,
       port: ctx.flags.port ?? 4848,
       open: !ctx.flags.noOpen,
@@ -316,16 +309,13 @@ function versionToggleCommand(enabled: boolean) {
     async run(ctx) {
       const service = createDirectoryWorkspaceVersionService(ctx.flags.project ?? ".");
       if (ctx.settings.dryRun) {
-        emitResult(
-          { would_set_enabled: enabled, status: await service.status() },
-          detectOutputFormat(ctx.settings.output),
-        );
+        ctx.output.result({ would_set_enabled: enabled, status: await service.status() });
         return;
       }
       const result = enabled
         ? await service.enable("Enable project versions")
         : await service.disable();
-      emitResult(result, detectOutputFormat(ctx.settings.output));
+      ctx.output.result(result);
     },
   });
 }
@@ -340,9 +330,8 @@ export const managedAgentProjectVersionStatus = defineCommand({
   flags: PROJECT_FLAG,
   exampleArgs: ["", "--project ./my-agent --output json"],
   async run(ctx) {
-    emitResult(
+    ctx.output.result(
       await createDirectoryWorkspaceVersionService(ctx.flags.project ?? ".").status(),
-      detectOutputFormat(ctx.settings.output),
     );
   },
 });
@@ -366,12 +355,11 @@ export const managedAgentProjectVersionList = defineCommand({
   },
   exampleArgs: ["", "--limit 20 --output json"],
   async run(ctx) {
-    emitResult(
+    ctx.output.result(
       await createDirectoryWorkspaceVersionService(ctx.flags.project ?? ".").listVersions({
         limit: ctx.flags.limit,
         cursor: ctx.flags.cursor,
       }),
-      detectOutputFormat(ctx.settings.output),
     );
   },
 });
@@ -392,11 +380,10 @@ export const managedAgentProjectVersionPreview = defineCommand({
   flags: { ...PROJECT_FLAG, ...VERSION_ID_FLAG },
   exampleArgs: ["--version-id <full-version>"],
   async run(ctx) {
-    emitResult(
+    ctx.output.result(
       await createDirectoryWorkspaceVersionService(ctx.flags.project ?? ".").previewVersion(
         ctx.flags.versionId,
       ),
-      detectOutputFormat(ctx.settings.output),
     );
   },
 });
@@ -427,17 +414,14 @@ export const managedAgentProjectVersionRestore = defineCommand({
         ExitCode.GENERAL,
       );
     if (ctx.settings.dryRun) {
-      emitResult(
-        { would_restore: ctx.flags.versionId, preview },
-        detectOutputFormat(ctx.settings.output),
-      );
+      ctx.output.result({ would_restore: ctx.flags.versionId, preview });
       return;
     }
     const restored = await service.restoreVersion(ctx.flags.versionId, {
       headVersion: preview.base_head_version,
       projectRevision: preview.base_project_revision,
     });
-    emitResult(restored, detectOutputFormat(ctx.settings.output));
+    ctx.output.result(restored);
   },
 });
 

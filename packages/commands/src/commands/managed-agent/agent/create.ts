@@ -20,7 +20,6 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { parseDocument } from "yaml";
 import { formatResourceLabel } from "../_engine/address-utils.ts";
 import { CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
@@ -547,7 +546,7 @@ export default defineCommand({
 
     if (settings.dryRun || !flags.yes) {
       const planned = await withAgentErrors(() =>
-        withStdoutProtected(() =>
+        withStdoutProtected(ctx, () =>
           planProjectWithStateBackend(backendInput, {
             provider,
             scope: { roots },
@@ -583,26 +582,38 @@ export default defineCommand({
         actions: planned.plan.actions,
         diagnostics: planned.plan.diagnostics,
       };
-      if (format === "json") {
-        emitResult(result, format);
-      } else {
-        for (const skill of localSkills) {
-          emitBare(`Generated Skill YAML key: ${skill.key}`);
-        }
-        emitBare(`Generated Agent YAML key: ${agentKey}`);
-        for (const diagnostic of planned.plan.diagnostics) {
-          emitBare(`[${diagnostic.severity}] ${diagnostic.code}: ${diagnostic.message}`);
-        }
-        for (const action of planned.plan.actions.filter((entry) => entry.action !== "no-op")) {
-          const icon = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
-          emitBare(`  ${icon} ${formatResourceLabel(action.address)}`);
-        }
-        emitBare(
-          settings.dryRun
-            ? "Dry run: YAML, State, and remote resources were not changed."
-            : "Preview only: re-run with --yes to write YAML and create this Agent.",
-        );
-      }
+      ctx.output.result(result, {
+        text:
+          ctx.settings.output === "text"
+            ? (() => {
+                const lines: string[] = [];
+                {
+                  for (const skill of localSkills) {
+                    lines.push(`Generated Skill YAML key: ${skill.key}`);
+                  }
+                  lines.push(`Generated Agent YAML key: ${agentKey}`);
+                  for (const diagnostic of planned.plan.diagnostics) {
+                    lines.push(
+                      `[${diagnostic.severity}] ${diagnostic.code}: ${diagnostic.message}`,
+                    );
+                  }
+                  for (const action of planned.plan.actions.filter(
+                    (entry) => entry.action !== "no-op",
+                  )) {
+                    const icon =
+                      action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
+                    lines.push(`  ${icon} ${formatResourceLabel(action.address)}`);
+                  }
+                  lines.push(
+                    settings.dryRun
+                      ? "Dry run: YAML, State, and remote resources were not changed."
+                      : "Preview only: re-run with --yes to write YAML and create this Agent.",
+                  );
+                }
+                return lines.join("\n");
+              })()
+            : undefined,
+      });
       return;
     }
 
@@ -610,7 +621,7 @@ export default defineCommand({
     let run: ResourceSyncRun;
     try {
       run = await withAgentErrors(() =>
-        withStdoutProtected(() =>
+        withStdoutProtected(ctx, () =>
           syncProjectResourcesWithStateBackend(backendInput, {
             provider,
             scope: { roots },
@@ -666,14 +677,22 @@ export default defineCommand({
       results,
       error: failed?.error,
     };
-    if (format === "json") emitResult(result, format);
-    else {
-      emitBare(
-        `Wrote ${project.configPath} with Agent key '${agentKey}'${localSkills.length ? ` and ${localSkills.length} local Skill declaration(s)` : ""}.`,
-      );
-      if (status === "completed") emitBare(`Created Agent '${flags.name.trim()}'.`);
-      else emitBare(`Scoped create ${status}: ${failed?.error ?? "unknown error"}`);
-    }
+    ctx.output.result(result, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              {
+                lines.push(
+                  `Wrote ${project.configPath} with Agent key '${agentKey}'${localSkills.length ? ` and ${localSkills.length} local Skill declaration(s)` : ""}.`,
+                );
+                if (status === "completed") lines.push(`Created Agent '${flags.name.trim()}'.`);
+                else lines.push(`Scoped create ${status}: ${failed?.error ?? "unknown error"}`);
+              }
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
     if (failed) {
       throw new BailianError(
         failed.error ?? "Scoped Agent create failed.",

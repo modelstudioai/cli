@@ -4,8 +4,7 @@ import {
   listSessionSummaries,
   updateRemoteSession,
 } from "@openagentpack/sdk";
-import { BailianError, defineCommand, detectOutputFormat, ExitCode } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode } from "bailian-cli-core";
 import {
   API_TARGET_FLAGS,
   CURSOR_FLAGS,
@@ -126,9 +125,8 @@ export const managedAgentSessionSearch = defineCommand({
   notes: CREDENTIALS_NOTE,
   validate: validateLimitAndPageLimit,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return searchCursorPages(
           async (page) => {
@@ -163,8 +161,7 @@ export const managedAgentSessionSearch = defineCommand({
       }),
     );
     const sessions = result.items.map((summary) => summary.session);
-    emitCollection({
-      format,
+    emitCollection(ctx, {
       key: "sessions",
       items: sessions,
       headers: ["ID", "TITLE", "AGENT", "STATUS", "UPDATED"],
@@ -191,22 +188,22 @@ export const managedAgentSessionUpdate = defineCommand({
   validate: (flags) =>
     !flags.title && !flags.metadata ? "Provide --title or --metadata." : undefined,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const input = { title: ctx.flags.title, metadata: await parseMetadata(ctx.flags.metadata) };
     if (ctx.settings.dryRun) {
-      emitResult({ would_update_session: ctx.flags.sessionId, input }, format);
+      ctx.output.result({ would_update_session: ctx.flags.sessionId, input });
       return;
     }
     const session = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return updateRemoteSession(runtime, ctx.flags.sessionId, input, {
           provider: "bailian",
         });
       }),
     );
-    if (format === "json") emitResult(session, format);
-    else emitBare(`Session ${session.id} updated.`);
+    ctx.output.result(session, {
+      text: ctx.settings.output === "text" ? `Session ${session.id} updated.` : undefined,
+    });
   },
 });
 
@@ -225,18 +222,22 @@ export const managedAgentSessionArchive = defineCommand({
   exampleArgs: ["--session-id sess_abc --dry-run", "--session-id sess_abc --yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult({ would_archive_session: ctx.flags.sessionId }, format);
+      ctx.output.result({ would_archive_session: ctx.flags.sessionId });
       return;
     }
     const session = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return archiveRemoteSession(runtime, ctx.flags.sessionId, { provider: "bailian" });
       }),
     );
-    if (format === "json") emitResult({ archived: ctx.flags.sessionId, session }, format);
-    else emitBare(`Session ${ctx.flags.sessionId} archived.`);
+    ctx.output.result(
+      { archived: ctx.flags.sessionId, session },
+      {
+        text:
+          ctx.settings.output === "text" ? `Session ${ctx.flags.sessionId} archived.` : undefined,
+      },
+    );
   },
 });

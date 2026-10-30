@@ -1,6 +1,5 @@
 import { getRemoteDeployment } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import { displayValue } from "../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
@@ -18,21 +17,28 @@ export default defineCommand({
   exampleArgs: ["--deployment-id dep_abc"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const deployment = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getRemoteDeployment(runtime, ctx.flags.deploymentId, {
           provider: "bailian",
         });
       }),
     );
-    if (format === "json") emitResult(deployment, format);
-    else {
-      emitBare(`ID:      ${displayValue(deployment.id)}`);
-      emitBare(`Status:  ${deployment.status}`);
-      emitBare(`Schedule:${displayValue(deployment.schedule?.expression)}`);
-      emitBare(`Paused:  ${displayValue(deployment.paused_reason)}`);
-    }
+    ctx.output.result(deployment, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              {
+                lines.push(`ID:      ${displayValue(deployment.id)}`);
+                lines.push(`Status:  ${deployment.status}`);
+                lines.push(`Schedule:${displayValue(deployment.schedule?.expression)}`);
+                lines.push(`Paused:  ${displayValue(deployment.paused_reason)}`);
+              }
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
   },
 });

@@ -13,8 +13,9 @@ import {
   prepareProviderEnv,
   scrubCredentialEnv,
 } from "./credentials.ts";
+import { withStdoutProtected } from "./console-capture.ts";
 import { loadFileState } from "./file-state-manager.ts";
-import { type HostContext, installSdkTransport } from "./transport.ts";
+import { type HostContext } from "./transport.ts";
 
 export { CREDENTIALS_NOTE, OFFLINE_NOTE } from "./credentials.ts";
 
@@ -51,22 +52,24 @@ interface AgentConfigOptions {
  *      (offline commands pass `credentials: "none"` to skip the check)
  */
 export async function resolveAgentProjectConfig(
-  host: CredentialHost,
+  host: CredentialHost & HostContext,
   filePath: string,
   options: AgentConfigOptions = {},
 ): Promise<LoadedProjectConfig> {
-  prepareProviderEnv();
-  const resolved = await resolveProjectConfig(filePath, options);
-  normalizeInterpolatedProviderBlocks(resolved.config.providers);
-  injectProviderCredentials(resolved.config.providers, host, {
-    overrideBaseUrl: options.overrideBailianBaseUrl,
+  return withStdoutProtected(host, async () => {
+    prepareProviderEnv();
+    const resolved = await resolveProjectConfig(filePath, options);
+    normalizeInterpolatedProviderBlocks(resolved.config.providers);
+    injectProviderCredentials(resolved.config.providers, host, {
+      overrideBaseUrl: options.overrideBailianBaseUrl,
+    });
+    scrubCredentialEnv();
+    assertBailianOnlyProviders(resolved.config.providers);
+    if ((options.credentials ?? "all") !== "none") {
+      assertProviderCredentials(resolved.config.providers);
+    }
+    return resolved;
   });
-  scrubCredentialEnv();
-  assertBailianOnlyProviders(resolved.config.providers);
-  if ((options.credentials ?? "all") !== "none") {
-    assertProviderCredentials(resolved.config.providers);
-  }
-  return resolved;
 }
 
 /**
@@ -82,7 +85,6 @@ export async function buildAgentRuntime(
   filePath: string,
   options: AgentConfigOptions = {},
 ): Promise<ProjectRuntimeContext & { configPath: string }> {
-  installSdkTransport(host);
   const { config, configPath, projectName } = await resolveAgentProjectConfig(
     host,
     filePath,

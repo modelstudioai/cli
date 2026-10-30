@@ -1,29 +1,57 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import * as sdk from "@openagentpack/sdk";
 import {
   createInstrumentedFetch,
+  httpTransport,
+  type CommandOutput,
   type FetchImplementation,
   type Identity,
   type Settings,
 } from "bailian-cli-core";
 
-/** The slice of CommandContext the transport wrapper needs (UA identity + verbose). */
+/** Invocation-owned SDK diagnostics and transport; never retain the first CLI host. */
 export interface HostContext {
   identity: Identity;
   settings: Settings;
+  output: CommandOutput;
 }
 
-let installed = false;
+interface SdkInvocation {
+  output: CommandOutput;
+  fetch: FetchImplementation;
+}
+const invocations = new AsyncLocalStorage<SdkInvocation>();
 
-/**
- * Route the SDK's provider-client requests through the CLI's instrumented
- * fetch (UA, host-gated tracking headers, --verbose logging). Feature-detected:
- * `setDefaultFetch` landed after @openagentpack/sdk 0.1.0 — on older versions
- * this is a silent no-op and the SDK keeps using the global fetch as before.
- */
-export function installSdkTransport(host: HostContext): void {
-  if (installed) return;
-  const setDefaultFetch = (sdk as Record<string, unknown>).setDefaultFetch;
-  if (typeof setDefaultFetch !== "function") return;
-  (setDefaultFetch as (fetchImpl: FetchImplementation) => void)(createInstrumentedFetch(host));
-  installed = true;
+export function sdkOutput(): CommandOutput | undefined {
+  return invocations.getStore()?.output;
+}
+
+/** Third-party diagnostics must never turn a successful SDK operation into a failure. */
+export function writeSdkDiagnostic(write: () => void): void {
+  try {
+    write();
+  } catch {
+    /* The business operation owns success and failure. */
+  }
+}
+
+const routedFetch: FetchImplementation = (input, init) =>
+  (invocations.getStore()?.fetch ?? httpTransport.fetch)(input, init);
+
+export function installSdkTransport(): void {
+  sdk.setDefaultFetch(routedFetch);
+}
+
+export function withSdkInvocation<Result>(
+  host: HostContext,
+  run: () => Promise<Result>,
+): Promise<Result> {
+  installSdkTransport();
+  const output = host.output;
+  const fetch = createInstrumentedFetch({
+    identity: host.identity,
+    settings: host.settings,
+    debug: (message) => writeSdkDiagnostic(() => output.debug(message)),
+  });
+  return invocations.run({ output, fetch }, run);
 }

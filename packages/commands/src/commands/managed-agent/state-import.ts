@@ -1,11 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { importResource, parseStateAddress } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -72,7 +65,7 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const file = flags.file ?? "agents.yaml";
 
     if (settings.dryRun) {
@@ -80,20 +73,17 @@ export default defineCommand({
       await withAgentErrors(async () => {
         parseBailianStateAddress(flags.address);
       });
-      emitResult(
-        {
-          would_import: flags.address,
-          remote_id: flags.remoteId,
-          resource_version: flags.resourceVersion,
-          config_file: file,
-        },
-        format,
-      );
+      ctx.output.result({
+        would_import: flags.address,
+        remote_id: flags.remoteId,
+        resource_version: flags.resourceVersion,
+        config_file: file,
+      });
       return;
     }
 
     await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         // Parse first so a malformed address fails fast, before any config I/O.
         const parsed = parseBailianStateAddress(flags.address);
         const runtime = await buildAgentRuntime(ctx, file);
@@ -103,10 +93,14 @@ export default defineCommand({
       }),
     );
 
-    if (format === "json") {
-      emitResult({ imported: flags.address, remote_id: flags.remoteId }, format);
-    } else {
-      emitBare(`Imported ${flags.address} (remote_id: ${flags.remoteId}) into state.`);
-    }
+    ctx.output.result(
+      { imported: flags.address, remote_id: flags.remoteId },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? `Imported ${flags.address} (remote_id: ${flags.remoteId}) into state.`
+            : undefined,
+      },
+    );
   },
 });
