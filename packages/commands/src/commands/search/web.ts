@@ -4,6 +4,7 @@ import {
   detectOutputFormat,
   mcpWebSearchPath,
   type FlagsDef,
+  type McpConnectedClient,
 } from "bailian-cli-core";
 import { createSpinner, emitResult } from "bailian-cli-runtime";
 import { rethrowWithWebSearchActivateHint } from "./web-activate-hint.ts";
@@ -66,13 +67,18 @@ export default defineCommand({
         return;
       }
 
+      let client: McpConnectedClient | undefined;
       try {
-        const client = ctx.client.mcp(mcpWebSearchPath());
+        client = ctx.client.mcp(mcpWebSearchPath());
         await client.initialize();
         const tools = await client.listTools();
         emitResult({ tools }, format);
       } catch (error) {
         rethrowWithWebSearchActivateHint(error);
+      } finally {
+        // The SDK transport keeps a live SSE stream / pending sockets open;
+        // without closing it the process never exits after emitting results.
+        client?.close?.();
       }
       return;
     }
@@ -152,6 +158,9 @@ export default defineCommand({
     } catch (error) {
       spinner.stop("Failed.");
       rethrowWithWebSearchActivateHint(error);
+    } finally {
+      // Close on both paths: an open transport stream keeps the process alive.
+      client.close?.();
     }
   },
 });

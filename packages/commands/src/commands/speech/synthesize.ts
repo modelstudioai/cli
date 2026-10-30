@@ -18,12 +18,25 @@ import {
   type FlagsDef,
   type ParsedFlags,
   CONCURRENT_FLAG,
+  bailianMcpPath,
+  AIGC_MCP_SERVER,
+  AIGC_MCP_TOOL,
+  buildTtsArgs,
+  parseAigcTtsResult,
 } from "bailian-cli-core";
 
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { VOICE_TTS_PAGE } from "bailian-cli-runtime";
+import {
+  isAutoModel,
+  assertAutoMcpAvailable,
+  assertMcpCompatible,
+  assertMcpTtsVoice,
+  withAigcMcpSession,
+  type Localize,
+} from "../shared/aigc-mcp.ts";
 
 const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
 const QWEN_AUDIO_TTS_VOICE_DOC = `${DOCS_HOSTS.cn}/qwen-audio-tts-voice-list`;
@@ -366,6 +379,14 @@ export default defineCommand({
         '--text "你好" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
     },
   ],
+  notes: [
+    {
+      "en-US":
+        'Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.',
+      "zh-CN":
+        '模型 "auto"（通过 --model auto 或将配置默认模型设为 "auto"）改走百炼官方 MCP，参数面更小；MCP 不支持的参数会直接报用法错误，而不回退 REST。',
+    },
+  ],
   validate: (f) => {
     if (f.listVoices) return undefined;
     if (!f.text && !f.textFile) return "Provide --text or --text-file.";
@@ -375,7 +396,20 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const model = flags.model || settings.defaultSpeechModel || "cosyvoice-v3-flash";
+
+    const resolvedModel = flags.model || settings.defaultSpeechModel;
+    if (isAutoModel(resolvedModel)) {
+      await handleAutoMcpMode(
+        ctx.client,
+        ctx.localize,
+        settings,
+        flags,
+        detectOutputFormat(settings.output),
+      );
+      return;
+    }
+
+    const model = resolvedModel || "cosyvoice-v3-flash";
 
     // --list-voices: print voice list for the model and exit
     if (flags.listVoices) {
@@ -444,6 +478,87 @@ export default defineCommand({
     }
   },
 });
+
+async function handleAutoMcpMode(
+  client: Client,
+  localize: Localize,
+  settings: Settings,
+  flags: SynthesizeFlags,
+  format: OutputFormat,
+): Promise<void> {
+  assertAutoMcpAvailable(client, localize);
+  assertMcpCompatible("tts", flags, localize);
+
+  // Same text precedence as REST: --text, else --text-file.
+  let text = flags.text || "";
+  if (!text && flags.textFile) {
+    const filePath = flags.textFile;
+    try {
+      text = readFileSync(filePath, "utf-8").trim();
+    } catch {
+      throw new BailianError(`Cannot read text file: ${filePath}`, ExitCode.USAGE);
+    }
+  }
+  // Voice must be one of the MCP enum values; REST voice IDs are rejected up
+  // front so dry-run never previews a request the server cannot accept.
+  const voice = flags.voice as string;
+  assertMcpTtsVoice(voice, localize);
+  const args = buildTtsArgs({ text, voice });
+
+  if (settings.dryRun) {
+    emitResult(
+      {
+        server: AIGC_MCP_SERVER.speech,
+        url: client.url(bailianMcpPath(AIGC_MCP_SERVER.speech)),
+        tool: AIGC_MCP_TOOL.tts,
+        arguments: args,
+        mode: "mcp",
+      },
+      format,
+    );
+    return;
+  }
+
+  if (!settings.quiet) {
+    process.stderr.write(`[Model: auto] [Mode: mcp] [Voice: ${voice}]\n`);
+  }
+
+  const concurrent = getConcurrency(flags);
+  // One shared MCP session; --concurrent fans out parallel tools/call on it.
+  const audios = await withAigcMcpSession(
+    client,
+    AIGC_MCP_SERVER.speech,
+    localize,
+    async (callTool) =>
+      runConcurrent(concurrent, settings, async () => {
+        const inner = await callTool(AIGC_MCP_TOOL.tts, args);
+        return parseAigcTtsResult(inner);
+      }),
+  );
+
+  const path = await import("path");
+  const destDir = resolveOutputDir(settings, { subDir: "speech" });
+  const audioUrls = audios.map((audio) => audio.audioUrl);
+  const items = audioUrls.map((audioUrl, index) => {
+    const suffix = audioUrls.length > 1 ? `_${String(index + 1).padStart(3, "0")}` : "";
+    const destPath =
+      flags.out && audioUrls.length === 1
+        ? flags.out
+        : path.join(destDir, `tts_${Date.now()}${suffix}.wav`);
+    return { url: audioUrl, destPath };
+  });
+
+  const saved = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
+
+  // auto output intentionally omits `model` (there is no specific REST model).
+  if (settings.quiet) {
+    emitBare(saved.join("\n"));
+  } else if (saved.length === 1) {
+    emitResult({ saved: saved[0], audio_url: audioUrls[0], voice }, format);
+  } else {
+    emitResult({ saved, audio_urls: audioUrls, total: saved.length, voice }, format);
+  }
+}
 
 async function handleNonStreamMode(
   client: Client,

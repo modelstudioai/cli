@@ -7,6 +7,8 @@ import {
   type DashScopeVideoRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
+  type Settings,
+  type OutputFormat,
   resolveOutputDir,
   BailianError,
   ExitCode,
@@ -15,13 +17,30 @@ import {
   ASYNC_FLAG,
   CONCURRENT_FLAG,
   redactDataUri,
+  bailianMcpPath,
+  AIGC_MCP_SERVER,
+  AIGC_MCP_TOOL,
+  buildTextToVideoArgs,
+  buildImageToVideoArgs,
+  buildVideoFetchArgs,
+  parseAigcVideoTaskId,
+  parseAigcVideoTaskResult,
 } from "bailian-cli-core";
-import { poll } from "bailian-cli-runtime";
+import { poll, createSpinner } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 import { PRIME_FLAGS, resolvePrimeEndpoint, validatePrimeFlags } from "../shared/prime.ts";
+import {
+  isAutoModel,
+  assertAutoMcpAvailable,
+  assertMcpCompatible,
+  withAigcMcpSession,
+  resolveAutoImageInput,
+  type AigcMcpCallTool,
+  type Localize,
+} from "../shared/aigc-mcp.ts";
 
 export default defineCommand({
   description: {
@@ -170,6 +189,12 @@ export default defineCommand({
   ],
   notes: [
     {
+      "en-US":
+        'Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.',
+      "zh-CN":
+        '模型 "auto"（通过 --model auto 或将配置默认模型设为 "auto"）改走百炼官方 MCP，参数面更小；MCP 不支持的参数会直接报用法错误，而不回退 REST。',
+    },
+    {
       "en-US": "Prime mode requires an explicit model.",
       "zh-CN": "Prime 模式必须显式指定模型。",
     },
@@ -185,12 +210,84 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const prompt = flags.prompt;
 
-    const model =
-      flags.model ||
-      (flags.image
-        ? settings.defaultImageToVideoModel || "wan3.0-video"
-        : settings.defaultVideoModel || "wan3.0-video");
+    const resolvedModel =
+      flags.model || (flags.image ? settings.defaultImageToVideoModel : settings.defaultVideoModel);
     const format = detectOutputFormat(settings.output);
+
+    // auto model → official AIGC MCP (VideoGenerate); specific models keep the REST path.
+    if (isAutoModel(resolvedModel)) {
+      assertAutoMcpAvailable(ctx.client, ctx.localize);
+      const imageInput = flags.image;
+      assertMcpCompatible(
+        imageInput !== undefined ? "videoImageToVideo" : "videoTextToVideo",
+        flags,
+        ctx.localize,
+      );
+
+      const duration = flags.duration || undefined;
+      const resolution = flags.resolution || undefined;
+      const firstFrameUrl =
+        imageInput !== undefined ? resolveAutoImageInput(imageInput) : undefined;
+      const submitTool =
+        imageInput !== undefined
+          ? AIGC_MCP_TOOL.imageToVideoSubmit
+          : AIGC_MCP_TOOL.textToVideoSubmit;
+      const submitArgs =
+        imageInput !== undefined
+          ? buildImageToVideoArgs({ firstFrameUrl, prompt, duration, resolution })
+          : buildTextToVideoArgs({ prompt, duration, resolution, ratio: flags.ratio || undefined });
+      const concurrent = getConcurrency(flags);
+
+      if (settings.dryRun) {
+        emitResult(
+          {
+            server: AIGC_MCP_SERVER.video,
+            url: ctx.client.url(bailianMcpPath(AIGC_MCP_SERVER.video)),
+            tool: submitTool,
+            arguments: firstFrameUrl
+              ? { ...submitArgs, first_frame_url: redactDataUri(firstFrameUrl) }
+              : submitArgs,
+            mode: "mcp",
+            concurrent,
+          },
+          format,
+        );
+        return;
+      }
+
+      if (!settings.quiet) {
+        process.stderr.write("[Model: auto] [Mode: mcp]\n");
+      }
+
+      const pollInterval = flags.pollInterval ?? 5;
+      // One shared MCP session: submit N task(s), then poll each via fetch_result.
+      const videos = await withAigcMcpSession(
+        ctx.client,
+        AIGC_MCP_SERVER.video,
+        ctx.localize,
+        async (callTool) => {
+          const taskIds = await runConcurrent(
+            concurrent,
+            settings,
+            async () => {
+              const inner = await callTool(submitTool, submitArgs);
+              return parseAigcVideoTaskId(inner);
+            },
+            "tasks",
+          );
+          return Promise.all(
+            taskIds.map((taskId) =>
+              pollMcpVideoTask(callTool, taskId, settings, pollInterval, ctx.localize),
+            ),
+          );
+        },
+      );
+
+      await saveAutoVideos(videos, flags.download, settings, format);
+      return;
+    }
+
+    const model = resolvedModel || "wan3.0-video";
 
     const imageUrl = flags.image;
     const lastFrameUrl = flags.lastFrame as string | undefined;
@@ -430,3 +527,123 @@ export default defineCommand({
     }
   },
 });
+
+/** Supplementary context for a failed MCP video task (server message is primary). */
+function videoTaskIdHint(localize: Localize, taskId: string): string {
+  return localize({
+    "en-US": `The failed video task id is ${taskId}.`,
+    "zh-CN": `失败的视频任务 ID 为 ${taskId}。`,
+  });
+}
+
+/**
+ * Poll a video task to completion over MCP `bailian_text_to_video_fetch_result`.
+ * Mirrors the REST `poll` UX (spinner + status), but the transport is a repeated
+ * tools/call on the shared session rather than an HTTP GET.
+ */
+async function pollMcpVideoTask(
+  callTool: AigcMcpCallTool,
+  taskId: string,
+  settings: Settings,
+  pollInterval: number,
+  localize: Localize,
+): Promise<{ taskId: string; videoUrl: string }> {
+  const deadline = Date.now() + settings.timeout * 1000;
+  const spinner = createSpinner("Polling...");
+  if (!settings.quiet) spinner.start();
+
+  try {
+    while (Date.now() < deadline) {
+      const inner = await callTool(AIGC_MCP_TOOL.videoFetchResult, buildVideoFetchArgs(taskId));
+      const result = parseAigcVideoTaskResult(inner);
+
+      if (!settings.quiet) spinner.update(`Status: ${result.taskStatus}`);
+
+      if (result.taskStatus === "SUCCEEDED") {
+        spinner.stop("Done.");
+        if (!result.videoUrl) {
+          throw new BailianError(
+            `Video task succeeded but returned no URL: ${taskId}`,
+            ExitCode.GENERAL,
+          );
+        }
+        return { taskId, videoUrl: result.videoUrl };
+      }
+
+      if (result.taskStatus === "FAILED") {
+        spinner.stop("Failed.");
+        // Pass the server's failure reason through verbatim (AGENTS.md §3);
+        // the task id stays as supplementary context in the hint.
+        const serverReason = result.message ?? result.code;
+        if (serverReason) {
+          throw new BailianError(serverReason, ExitCode.GENERAL, videoTaskIdHint(localize, taskId));
+        }
+        throw new BailianError(`Video task failed: ${taskId}`, ExitCode.GENERAL);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
+    }
+  } finally {
+    spinner.stop();
+  }
+
+  throw new BailianError(
+    "Polling timed out.",
+    ExitCode.TIMEOUT,
+    "Try increasing --timeout or check task status manually.",
+  );
+}
+
+/** Download + emit auto/MCP videos, matching the REST output shape (no `model`). */
+async function saveAutoVideos(
+  videos: Array<{ taskId: string; videoUrl: string }>,
+  downloadPath: string | undefined,
+  settings: Settings,
+  format: OutputFormat,
+): Promise<void> {
+  if (videos.length === 0) {
+    throw new BailianError("All tasks completed but no video URLs returned.", ExitCode.GENERAL);
+  }
+
+  // --download: save the first video to the explicit path.
+  if (downloadPath) {
+    const { size } = await downloadFile(videos[0]!.videoUrl, downloadPath, {
+      quiet: settings.quiet,
+    });
+    if (settings.quiet) {
+      emitBare(downloadPath);
+    } else {
+      emitResult(
+        {
+          task_id: videos[0]!.taskId,
+          video_url: videos[0]!.videoUrl,
+          status: "SUCCEEDED",
+          saved: downloadPath,
+          size: formatBytes(size),
+        },
+        format,
+      );
+    }
+    return;
+  }
+
+  // Default: auto-download all to the videos output directory.
+  const destDir = resolveOutputDir(settings, { subDir: "videos" });
+  // eslint-disable-next-line @typescript-eslint/unbound-method
+  const { join } = await import("path");
+
+  const saved: Array<{ task_id: string; video_url: string; saved: string }> = [];
+  await Promise.all(
+    videos.map(async ({ taskId, videoUrl }) => {
+      const destPath = join(destDir, `${taskId}.mp4`);
+      await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+      saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
+    }),
+  );
+
+  if (saved.length === 1) {
+    emitResult(saved[0]!, format);
+  } else {
+    emitResult({ videos: saved, total: saved.length }, format);
+  }
+}

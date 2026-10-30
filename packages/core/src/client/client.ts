@@ -10,11 +10,12 @@ import {
   bailianMcpPath,
   bailianMcpSsePath,
   connectBailianMcpWithFallback,
-  McpClient,
   type McpConnectedClient,
 } from "./mcp.ts";
+import { SdkMcpAdapter } from "./mcp-sdk.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
 import { refreshAccessToken } from "../auth/refresh-token.ts";
+import { getApiKeyLoginKind } from "../config/profile-presets.ts";
 import { maskToken } from "../utils/token.ts";
 import { trackingHeaders } from "./headers.ts";
 
@@ -190,19 +191,41 @@ export class Client {
     }
   }
 
+  /**
+   * True when the effective model-domain connection is a Token Plan one: either
+   * the token-plan endpoint or a plan key (`sk-sp-`). Both shapes are verified
+   * unable to reach Bailian MCP (the plan gateway has no `/api/v1/mcps` route —
+   * bare 404 — and plan keys get 401 InvalidApiKey on the standard MCP path),
+   * so callers routing through MCP (AIGC `auto` mode) reject up front.
+   */
+  usesTokenPlanConnection(): boolean {
+    return (
+      this.usesTokenPlanEndpoint() ||
+      getApiKeyLoginKind(this.deps.apiCred?.token ?? "") === "token-plan"
+    );
+  }
+
   /** Open an MCP client. Accepts a path (prepended with the model baseUrl) or an absolute URL. */
-  mcp(pathOrUrl: string): McpClient {
+  mcp(pathOrUrl: string): McpConnectedClient {
     const url = /^https?:\/\//.test(pathOrUrl) ? pathOrUrl : this.requireApi().baseUrl + pathOrUrl;
-    return new McpClient(this.http, url, this.deps.apiCred?.token);
+    return new SdkMcpAdapter({
+      deps: this.http,
+      url,
+      authToken: this.deps.apiCred?.token,
+      transport: "streamable",
+    });
   }
 
   /**
    * Connect to a Bailian MCP: try Streamable HTTP, then SSE on 405 (except WebSearch).
    * `urlOverride` maps to `--url`: Streamable first, then classic SSE on the same URL (405/404).
+   * `serviceSource` overrides the `X-Dashscope-Service` attribution value (default
+   * `bailian-cli`); AIGC "auto"-mode MCP calls pass `bailian-cli-call`.
    */
   connectBailianMcp(
     serverCode: string,
     urlOverride?: string,
+    serviceSource?: string,
   ): Promise<{ client: McpConnectedClient; url: string }> {
     this.requireApi();
     return connectBailianMcpWithFallback({
@@ -212,6 +235,7 @@ export class Client {
       sseUrl: this.url(bailianMcpSsePath(serverCode)),
       serverCode,
       urlOverride,
+      serviceSource,
     });
   }
 
