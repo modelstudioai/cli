@@ -190,17 +190,13 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   }
 
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
-  function renderHelp(
-    registry: CommandRegistry,
-    path: string[],
-    parsedFlags: Record<string, unknown>,
-  ): void {
+  function renderHelp(registry: CommandRegistry, path: string[], sources: ResolutionSources): void {
     registry.printHelp(path, process.stderr);
     if (path.length > 0) return;
 
     let hasKey = false;
     try {
-      const auth = describeAuthState(buildSources(parsedFlags as Partial<SourceFlags>));
+      const auth = describeAuthState(sources);
       hasKey = !!(auth.apiKey || auth.console);
     } catch {
       /* Credential inspection failure — fall through to welcome. */
@@ -257,7 +253,10 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         return;
 
       case "help":
-        renderHelp(registry, res.path, res.parsedFlags);
+        renderHelp(registry, res.path, {
+          ...initialSources,
+          flags: res.parsedFlags as Partial<SourceFlags>,
+        });
         return;
 
       case "usageError":
