@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import {
+  getCommandPrefix,
   BailianError,
   ExitCode,
   defineCommand,
@@ -76,7 +77,7 @@ function cleanupAction(
 }
 
 function renderAction(binName: string, action: CommandAction): string {
-  return [binName, ...action.path, ...action.args]
+  return [...binName.split(" "), ...action.path, ...action.args]
     .map((word) =>
       /^[a-zA-Z0-9_./:@=-]+$/.test(word) ? word : `'${word.replaceAll("'", "'\\''")}'`,
     )
@@ -178,7 +179,7 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
         else {
           process.stderr.write(`${message}\n`);
           for (const action of cleanup)
-            process.stderr.write(`${renderAction(context.identity.binName, action)}\n`);
+            process.stderr.write(`${renderAction(getCommandPrefix(context.identity), action)}\n`);
         }
       },
     });
@@ -239,7 +240,7 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
         }),
       );
     emitBare(context.localize({ "en-US": `Content: ${excerpt}`, "zh-CN": `内容：${excerpt}` }));
-    if (nextSearch) emitBare(renderAction(context.identity.binName, nextSearch));
+    if (nextSearch) emitBare(renderAction(getCommandPrefix(context.identity), nextSearch));
     emitBare(notices[0]!.message);
     if (cleanup.length)
       emitBare(
@@ -249,6 +250,7 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
           "zh-CN": "本次新建资源的清理命令（删除需另行确认）：",
         }),
       );
-    for (const action of cleanup) emitBare(renderAction(context.identity.binName, action));
+    for (const action of cleanup)
+      emitBare(renderAction(getCommandPrefix(context.identity), action));
   },
 });

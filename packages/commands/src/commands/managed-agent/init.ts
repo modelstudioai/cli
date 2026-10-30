@@ -6,6 +6,7 @@ import {
   defineCommand,
   detectOutputFormat,
   ExitCode,
+  getCommandPrefix,
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
@@ -22,7 +23,7 @@ function buildTemplate(options: { agentName: string }): string {
 
 providers:
   bailian:
-    # bl auth login --api-key <key> sets DASHSCOPE_API_KEY; --base-url <url> sets BAILIAN_BASE_URL
+    # CLI credentials are resolved at runtime / CLI 凭证在运行时解析
     api_key: \${DASHSCOPE_API_KEY}
     base_url: \${BAILIAN_BASE_URL}
 
@@ -130,10 +131,19 @@ export default defineCommand({
       emitResult({ created: file, provider: "bailian", agent: agentName }, format);
     } else {
       emitBare(`Created ${resolve(file)}`);
+      const commandPrefix = getCommandPrefix(ctx.identity);
       emitBare(
-        "Credentials: run `bl auth login --api-key <key> --base-url <url>`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.",
+        ctx.localize({
+          "zh-CN": `凭证：运行 \`${commandPrefix} auth login --api-key <key> --base-url <url>\`，或设置 DASHSCOPE_API_KEY / BAILIAN_BASE_URL。`,
+          "en-US": `Credentials: run \`${commandPrefix} auth login --api-key <key> --base-url <url>\`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.`,
+        }),
       );
-      emitBare("Next: edit agents.yaml, then run `bl managed-agent plan`.");
+      emitBare(
+        ctx.localize({
+          "zh-CN": `下一步：编辑 agents.yaml，然后运行 \`${commandPrefix} managed-agent plan\`。`,
+          "en-US": `Next: edit agents.yaml, then run \`${commandPrefix} managed-agent plan\`.`,
+        }),
+      );
     }
   },
 });

@@ -59,7 +59,7 @@ _No command-specific flags._
 #### Notes
 
 - Fetches the registry index and installs every skill whose name starts with `bailian-`.
-- Equivalent to: `bl skill add --all` (filtered to `bailian-*` skills).
+- Equivalent to the `skill add --all` subcommand (filtered to `bailian-*` skills).
 
 #### Examples
 

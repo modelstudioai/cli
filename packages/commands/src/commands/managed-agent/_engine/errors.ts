@@ -110,8 +110,7 @@ export async function withAgentErrors<T>(fn: () => Promise<T>): Promise<T> {
         throw new BailianError(
           error.message,
           ExitCode.TIMEOUT,
-          // `bl` prefix is safe: agent commands ship on `bl` only.
-          "The session may still be running — check `bl managed-agent session get --session-id <id>` or `session events`.",
+          "The session may still be running — use the `managed-agent session get --session-id <id>` or `managed-agent session events` subcommand. / 会话可能仍在运行，请使用 managed-agent session get --session-id <id> 或 managed-agent session events 子命令查看。",
         );
       }
       throw new BailianError(error.message, ExitCode.USAGE);

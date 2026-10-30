@@ -2,6 +2,7 @@ export type { ConfigFile, Language, Region, Identity, Settings } from "./schema.
 export {
   BAILIAN_HOST,
   CONFIG_FILE_KEYS,
+  getCommandPrefix,
   API_KEY_CAPABILITY_PATTERN,
   DEFAULT_LANGUAGE,
   DOCS_HOSTS,

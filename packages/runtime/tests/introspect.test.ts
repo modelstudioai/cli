@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import { defineCommand, type Identity } from "bailian-cli-core";
+import { defineCommand, sourceConfig, type Identity } from "bailian-cli-core";
 import * as runtime from "../src/index.ts";
 
 const identity: Identity = {
@@ -29,6 +29,17 @@ const command = defineCommand({
 });
 const other = defineCommand({ auth: "none", description: "Other", async run() {} });
 const registry = new runtime.CommandRegistry({ "doc sync": command, "kb list": other }, "kscli");
+
+test("invocation display never changes product identity or channel attribution", () => {
+  const hostedIdentity = { ...identity, binName: "bl", commandPrefix: "aliyun bl" };
+  const hostedRegistry = new runtime.CommandRegistry({ "doc sync": command }, "aliyun bl");
+  const schema = runtime.buildCommandSchema(hostedRegistry, hostedIdentity);
+  expect(schema.bin).toBe("bl");
+  expect(schema.commands[0]?.usage).toBe("aliyun bl doc sync --index-id <id>");
+  expect(schema.commands[0]?.examples[0]).toBe("aliyun bl doc sync --index-id example");
+  expect(JSON.parse(sourceConfig(hostedIdentity)).tags.t2).toBe("bl");
+  expect(hostedIdentity.clientName).toBe("fixture");
+});
 
 describe("introspection routing", () => {
   test.each([[], ["doc"], ["doc", "sync"]])(

@@ -215,6 +215,7 @@ async function syncAgentSkillsAfterUpdate(
   green: string,
   yellow: string,
   reset: string,
+  commandPrefix: string,
 ): Promise<void> {
   try {
     process.stderr.write(`  ${dim}Syncing agent skill...${reset}\n`);
@@ -225,7 +226,9 @@ async function syncAgentSkillsAfterUpdate(
     process.stderr.write(
       `  ${yellow}\u26a0 Agent skill sync failed: ${errorMessage(error)}${reset}\n`,
     );
-    process.stderr.write(`  ${yellow}  Run manually: bl skill update${reset}\n\n`);
+    process.stderr.write(
+      `  ${yellow}  Run manually / 手动运行：${commandPrefix} skill update${reset}\n\n`,
+    );
   }
 }
 
@@ -238,6 +241,7 @@ export async function performAutoUpdate(
   latestVersion: string,
   npmPackage: string = NPM_PACKAGE,
   clientName: string = NPM_PACKAGE,
+  commandPrefix = "bl",
 ): Promise<boolean> {
   const isTTY = process.stderr.isTTY;
   const green = isTTY ? "\x1b[32m" : "";
@@ -275,8 +279,10 @@ export async function performAutoUpdate(
       const newVer = await performBinaryUpdate(latestVersion);
       writeState({ lastChecked: Date.now(), latestVersion: newVer });
       process.stderr.write(`  ${green}✓ Update complete: ${currentVersion} → ${newVer}${reset}\n`);
-      process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
-      await syncAgentSkillsAfterUpdate(dim, green, yellow, reset);
+      process.stderr.write(
+        `  ${dim}Run ${cyan}${commandPrefix} --version${reset}${dim} to verify.${reset}\n\n`,
+      );
+      await syncAgentSkillsAfterUpdate(dim, green, yellow, reset, commandPrefix);
       pendingNotification = null;
       return true;
     } catch (err) {
@@ -316,9 +322,11 @@ export async function performAutoUpdate(
     process.stderr.write(
       `  ${green}✓ Update complete: ${currentVersion} → ${newVer ?? latestVersion}${reset}\n`,
     );
-    process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
+    process.stderr.write(
+      `  ${dim}Run ${cyan}${commandPrefix} --version${reset}${dim} to verify.${reset}\n\n`,
+    );
 
-    await syncAgentSkillsAfterUpdate(dim, green, yellow, reset);
+    await syncAgentSkillsAfterUpdate(dim, green, yellow, reset, commandPrefix);
 
     pendingNotification = null;
     return true;

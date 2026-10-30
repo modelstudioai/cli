@@ -25,6 +25,21 @@ function alignContinuation(text: string): string {
 
 function enhanceHint(err: BailianError): string | undefined {
   if (err.exitCode === ExitCode.AUTH) {
+    if (err.authDomain) {
+      const loginArguments =
+        err.authDomain === "console"
+          ? "--console"
+          : err.authDomain === "openapi"
+            ? "--open-api --access-key-id <id> --access-key-secret <secret>"
+            : "--api-key <your-key>";
+      return [
+        err.hint,
+        `Run / 请运行：${binName} auth login ${loginArguments}`,
+        `${binName} auth status`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
     // Non-model auth domains carry their own credential-specific hints; don't
     // append model API key onboarding lines to Console/OpenAPI errors.
     if (isNonModelAuthHint(err.hint)) {
@@ -209,7 +224,11 @@ export function handleError(err: unknown, cliName: string): never {
     const format = detectErrorOutputFormat();
 
     if (format === "json") {
-      process.stderr.write(JSON.stringify(err.toJSON(), null, 2) + "\n");
+      const payload = err.toJSON();
+      if (err.exitCode === ExitCode.AUTH && err.authDomain) {
+        payload.error.hint = enhanceHint(err);
+      }
+      process.stderr.write(JSON.stringify(payload, null, 2) + "\n");
     } else {
       writeBailianErrorText(err);
     }

@@ -1,3 +1,4 @@
+import { getCommandPrefix } from "bailian-cli-core";
 import type { AnyCommand, CommandPackReport, Identity } from "bailian-cli-core";
 import { readCommandPackPackageJson, readCommandPacksManifest } from "./package-json.ts";
 import { loadAndValidateCommandPack } from "./validate.ts";
@@ -48,7 +49,7 @@ export async function loadCommandPacks(
         source,
         status: "failed",
         commands: [],
-        error: `Command Pack "${name}" is not supported by ${identity.binName}.`,
+        error: `Command Pack "${name}" is not supported by ${getCommandPrefix(identity)}.`,
       });
       continue;
     }

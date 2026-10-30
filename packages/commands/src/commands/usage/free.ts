@@ -1,4 +1,9 @@
-import { defineCommand, detectOutputFormat, findModelByName } from "bailian-cli-core";
+import {
+  getCommandPrefix,
+  defineCommand,
+  detectOutputFormat,
+  findModelByName,
+} from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import {
   FREE_TIER_API,
@@ -207,7 +212,7 @@ export default defineCommand({
       title: `Free Tier Quota · ${quotas.length} models${titleSuffix}`,
       moreHint:
         remaining > 0
-          ? `+ ${remaining} more · ${identity.binName} usage free --all to browse all`
+          ? `+ ${remaining} more · ${getCommandPrefix(identity)} usage free --all to browse all`
           : undefined,
     });
   },

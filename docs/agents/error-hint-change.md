@@ -76,6 +76,10 @@ process.exit(err.exitCode)
 
 ### 4. runtime / 产品层可以使用入口名 + URL
 
+- 有宿主调用前缀时，用 `getCommandPrefix(identity)` 生成用户操作提示；`identity.binName`
+  保持产品身份，用于渠道、安装包和真实可执行文件名。不要全局替换输出或服务端文本。
+- core 本地鉴权错误可通过 `authDomain` 提供结构化上下文，由 runtime 生成带展示前缀的登录引导。
+
 - `packages/runtime/src/error-handler.ts` 通过 `binName` 渲染 `bl` / `kscli` 等入口名,不要硬编码
 - 产品入口 / README / E2E 可以写具体入口命令
 - shared command 实现不写 `bl` / `kscli` 前缀;`usageArgs` / `exampleArgs` 只写参数片段

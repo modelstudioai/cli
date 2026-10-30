@@ -193,7 +193,7 @@ export default defineCommand({
         throw new BailianError(
           `Vault '${ctx.flags.vault}' already declares a different credential named '${rawCredential.name}'.`,
           ExitCode.USAGE,
-          "Modify the existing YAML declaration and run full `bl managed-agent apply`; create never overwrites it.",
+          "Modify the YAML declaration and run the full `managed-agent apply` subcommand; create never overwrites it. / 修改 YAML 声明后运行完整的 managed-agent apply 子命令；create 不会覆盖已有声明。",
         );
       }
       reusedPending = true;

@@ -1,4 +1,10 @@
-import { defineCommand, BailianError, ExitCode, detectOutputFormat } from "bailian-cli-core";
+import {
+  getCommandPrefix,
+  defineCommand,
+  BailianError,
+  ExitCode,
+  detectOutputFormat,
+} from "bailian-cli-core";
 import { ansi, emitResult } from "bailian-cli-runtime";
 import {
   FREE_TIER_API,
@@ -155,7 +161,7 @@ export default defineCommand({
         title: `Free Tier Quota · ${quotas.length} models · sorted by urgency`,
         moreHint:
           remaining > 0
-            ? `+ ${remaining} more · ${identity.binName} usage free to browse all`
+            ? `+ ${remaining} more · ${getCommandPrefix(identity)} usage free to browse all`
             : undefined,
       });
     }
@@ -165,7 +171,7 @@ export default defineCommand({
     if (!workspaceId) {
       process.stdout.write(
         color.dim(
-          `Usage overview skipped · set --workspace-id or \`${identity.binName} config set workspace_id <id>\` to include it.`,
+          `Usage overview skipped · set --workspace-id or \`${getCommandPrefix(identity)} config set workspace_id <id>\` to include it.`,
         ) + "\n",
       );
     } else if (!overview) {

@@ -1,6 +1,7 @@
 import {
   BailianError,
   ExitCode,
+  getCommandPrefix,
   defineCommand,
   getSkillsDir,
   listSkillDirsOnDisk,
@@ -92,7 +93,7 @@ export default defineCommand({
         throw new BailianError(
           `${failed.length}/${results.length} skill(s) failed to remove`,
           ExitCode.GENERAL,
-          "Check the reason for failed skills in the output; use bl skill list to verify local install status",
+          `Check the failed skills in the output; verify local status with ${getCommandPrefix(ctx.identity)} skill list. / 查看输出中的失败原因，运行 ${getCommandPrefix(ctx.identity)} skill list 检查本地安装状态。`,
         );
       }
       return;
@@ -147,7 +148,7 @@ export default defineCommand({
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to remove`,
         ExitCode.GENERAL,
-        "Check the reason for failed skills in the output; use bl skill list to verify local install status",
+        `Check the failed skills in the output; verify local status with ${getCommandPrefix(ctx.identity)} skill list. / 查看输出中的失败原因，运行 ${getCommandPrefix(ctx.identity)} skill list 检查本地安装状态。`,
       );
     }
   },

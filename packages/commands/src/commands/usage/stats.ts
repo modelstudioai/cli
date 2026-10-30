@@ -1,4 +1,10 @@
-import { defineCommand, BailianError, ExitCode, detectOutputFormat } from "bailian-cli-core";
+import {
+  getCommandPrefix,
+  defineCommand,
+  BailianError,
+  ExitCode,
+  detectOutputFormat,
+} from "bailian-cli-core";
 import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 import {
@@ -166,7 +172,7 @@ export default defineCommand({
     const typeFlag = flags.type || undefined;
     const format = detectOutputFormat(settings.output);
 
-    const workspaceId = requireWorkspaceId(settings, identity.binName);
+    const workspaceId = requireWorkspaceId(settings, getCommandPrefix(identity));
 
     const endTime = Date.now();
     const startTime = endTime - daysFlag * 24 * 60 * 60 * 1000;

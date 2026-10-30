@@ -6,6 +6,7 @@ import {
   fanOutSkillToAgents,
   fetchSkillsIndex,
   getSkillRegistryBaseUrl,
+  getCommandPrefix,
   installSkillWithFanout,
   listSkillDirsOnDisk,
   parseSkillNames,
@@ -110,7 +111,7 @@ export default defineCommand({
           results.push({
             name,
             status: "failed",
-            reason: "not installed; run bl skill add --name " + name + " first",
+            reason: `Not installed; run ${getCommandPrefix(ctx.identity)} skill add --name ${name} first. / 尚未安装，请先运行 ${getCommandPrefix(ctx.identity)} skill add --name ${name}。`,
           });
           continue;
         }
@@ -173,7 +174,7 @@ export default defineCommand({
         throw new BailianError(
           `${failed.length} skill(s) failed to update`,
           ExitCode.GENERAL,
-          "Check the reason for failed skills in the output; network failures can be retried with bl skill update",
+          `Check the failed skills in the output; retry network failures with ${getCommandPrefix(ctx.identity)} skill update. / 查看输出中的失败原因，网络失败可运行 ${getCommandPrefix(ctx.identity)} skill update 重试。`,
         );
       }
       return;
@@ -208,7 +209,13 @@ export default defineCommand({
     if (format === "json") {
       emitResult({ registry: getSkillRegistryBaseUrl(), skills: results }, format);
     } else if (results.length === 0) {
-      emitBare("No skills installed locally; run bl skill add first.");
+      const commandPrefix = getCommandPrefix(ctx.identity);
+      emitBare(
+        ctx.localize({
+          "zh-CN": `本地尚未安装 Skill，请先运行 ${commandPrefix} skill add。`,
+          "en-US": `No skills installed locally; run ${commandPrefix} skill add first.`,
+        }),
+      );
     } else {
       const rows = results.map((result) => [
         result.name,
@@ -236,7 +243,7 @@ export default defineCommand({
       throw new BailianError(
         `${failed.length} skill(s) failed to update`,
         ExitCode.GENERAL,
-        "Check the reason for failed skills in the output; network failures can be retried with bl skill update",
+        `Check the failed skills in the output; retry network failures with ${getCommandPrefix(ctx.identity)} skill update. / 查看输出中的失败原因，网络失败可运行 ${getCommandPrefix(ctx.identity)} skill update 重试。`,
       );
     }
   },

@@ -1,4 +1,5 @@
 import {
+  getCommandPrefix,
   defineCommand,
   createDeployment,
   pickPlanStrategy,
@@ -211,7 +212,7 @@ async function runCreate(
     const resolved = await strategy.resolve({
       client: ctx.client,
       dryRun,
-      binName: identity.binName,
+      binName: getCommandPrefix(identity),
       flags,
       model: flags.modelName,
       name: flags.displayName,

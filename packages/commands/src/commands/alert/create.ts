@@ -1,4 +1,4 @@
-import { detectOutputFormat, unwrapResponse } from "bailian-cli-core";
+import { getCommandPrefix, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { emitResult } from "bailian-cli-runtime";
 import {
@@ -54,7 +54,12 @@ export default defineTelemetryCommand({
       return;
     }
 
-    await ensureAlertReady(ctx.client, settings.workspaceId, ctx.identity.binName, settings);
+    await ensureAlertReady(
+      ctx.client,
+      settings.workspaceId,
+      getCommandPrefix(ctx.identity),
+      settings,
+    );
 
     const raw = await ctx.client.console(CREATE_RULE_API, { reqDTO });
     const resp = unwrapResponse(raw as Record<string, unknown>);

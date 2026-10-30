@@ -5,6 +5,12 @@ import pkg from "../../package.json" with { type: "json" };
 import { commands } from "../../src/commands.ts";
 import { runKscli } from "./helpers.ts";
 
+test("Bailian host compatibility does not rename kscli", async () => {
+  const result = await runKscli(["--version"], { ALIBABA_CLOUD_BL_COMPAT_MODE: "aliyun bl" });
+  expect(result.exitCode, result.stderr).toBe(0);
+  expect(result.stdout).toMatch(/^kscli \d+\.\d+\.\d+\n$/);
+});
+
 const commandPaths = Object.keys(commands).sort();
 const groupPaths = deriveGroupPaths(commandPaths);
 const registry = new CommandRegistry(commands, "kscli");

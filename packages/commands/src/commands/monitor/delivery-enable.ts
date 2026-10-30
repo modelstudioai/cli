@@ -1,4 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
+import { getCommandPrefix, detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, emitResult } from "bailian-cli-runtime";
 import {
@@ -150,7 +150,7 @@ export default defineTelemetryCommand({
         emitResult(result, format);
       } else {
         process.stdout.write(
-          `Activation submitted. Run \`${ctx.identity.binName} monitor delivery status\` to check progress.\n`,
+          `Activation submitted. Run \`${getCommandPrefix(ctx.identity)} monitor delivery status\` to check progress.\n`,
         );
       }
       return;
@@ -184,7 +184,7 @@ export default defineTelemetryCommand({
       }
     } else {
       process.stdout.write(
-        `Activation is still in progress. Run \`${ctx.identity.binName} monitor delivery status\` to check later.\n`,
+        `Activation is still in progress. Run \`${getCommandPrefix(ctx.identity)} monitor delivery status\` to check later.\n`,
       );
     }
   },

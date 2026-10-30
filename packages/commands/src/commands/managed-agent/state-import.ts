@@ -52,7 +52,7 @@ function parseBailianStateAddress(address: string) {
   const parsed = parseStateAddress(address, { requireProvider: true });
   if (parsed.provider !== "bailian") {
     throw new BailianError(
-      `bl managed-agent can import only Bailian resources; address provider was '${parsed.provider}'. / bl managed-agent 只能导入百炼资源；地址中的 Provider 为 '${parsed.provider}'。`,
+      `Managed Agent can import only Bailian resources; address provider was '${parsed.provider}'. / 托管 Agent 只能导入百炼资源；地址中的 Provider 为 '${parsed.provider}'。`,
       ExitCode.USAGE,
     );
   }

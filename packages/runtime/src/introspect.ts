@@ -1,4 +1,5 @@
 import {
+  getCommandPrefix,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
   CONSOLE_AUTH_FLAGS,
@@ -89,7 +90,7 @@ export function buildCommandSchema(
     commands: registry
       .entries(path)
       .map(({ path: commandPath, command }): CommandSchemaNode => {
-        const prefix = [identity.binName, ...commandPath].join(" ");
+        const prefix = [getCommandPrefix(identity), ...commandPath].join(" ");
         return {
           path: commandPath,
           description: command.description,

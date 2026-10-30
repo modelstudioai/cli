@@ -136,8 +136,8 @@ Index: [index.md](index.md)
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, previews the generated YAML key and scoped plan. --dry-run stays offline. Unrelated resources are not refreshed or drift-checked.
 - --skill writes an external Skill reference directly into the Agent declaration. --type defaults to custom; use --type official for platform Skills. These Skills are not managed through the top-level skills map.
@@ -188,8 +188,8 @@ bl managed-agent agent create --name researcher --model qwen3.8-max --instructio
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -225,8 +225,8 @@ bl managed-agent agent get --agent-id agent_abc --agent-version 3 --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -266,8 +266,8 @@ bl managed-agent agent list --all --include-archived --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -303,8 +303,8 @@ bl managed-agent agent search --query code --page-limit 20 --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -343,8 +343,8 @@ bl managed-agent agent versions --agent-id agent_abc --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -387,8 +387,8 @@ bl managed-agent apply --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - --environment_variables writes string values to the Deployment YAML declaration when --yes is used. Repeat the flag for multiple variables; empty values and values containing = are allowed. Later apply runs manage these values; removing the field or using {} clears them. YAML stores these values; the key `__proto__` is reserved.
@@ -425,8 +425,8 @@ bl managed-agent deployment create --name Daily --agent assistant --event '{"typ
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -462,8 +462,8 @@ bl managed-agent deployment get --deployment-id dep_abc
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -502,8 +502,8 @@ bl managed-agent deployment list --status active --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -543,8 +543,8 @@ bl managed-agent deployment pause --deployment-id dep_abc --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -578,8 +578,8 @@ bl managed-agent deployment run --deployment-id dep_abc --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -611,8 +611,8 @@ bl managed-agent deployment runs get --run-id run_abc
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -653,8 +653,8 @@ bl managed-agent deployment runs list --deployment-id dep_abc --all --output jso
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Deployment search maps --query to the provider's server-side keyword parameter.
 
@@ -694,8 +694,8 @@ bl managed-agent deployment search --query nightly --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -734,8 +734,8 @@ bl managed-agent deployment unpause --deployment-id dep_abc --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -779,8 +779,8 @@ bl managed-agent destroy --yes --cascade
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - Creates a cloud Environment with unrestricted networking. Without --yes, only previews the generated YAML key and scoped plan.
@@ -815,8 +815,8 @@ bl managed-agent environment create --name Development --pip pandas --npm typesc
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -848,8 +848,8 @@ bl managed-agent environment get --environment-id env_abc
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -885,8 +885,8 @@ bl managed-agent environment list --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -924,8 +924,8 @@ bl managed-agent environment search --query production --page-limit 20 --output 
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -961,8 +961,8 @@ bl managed-agent file delete --file-id file_abc --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -991,8 +991,8 @@ bl managed-agent file download --file-id file_abc --output-file ./artifact.pdf
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1024,8 +1024,8 @@ bl managed-agent file get --file-id file_abc
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1061,8 +1061,8 @@ bl managed-agent file list --scope-id sess_abc --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1097,8 +1097,8 @@ bl managed-agent file search --query pdf --scope-id sess_abc --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1158,8 +1158,8 @@ bl managed-agent init --agent-name assistant
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - Store lifecycle is managed by agents.yaml. Entries initialize new stores; existing content is preserved unless entries_mode: sync is explicitly configured.
@@ -1530,8 +1530,8 @@ bl managed-agent memory-store versions redact --store-id memstore_example --vers
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --no-refresh and --dry-run plan offline from local config and state: no remote requests, no state writes, provider keys are not checked.
 
@@ -1567,8 +1567,8 @@ bl managed-agent plan --no-refresh
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Session Preview requires Node.js 22+ and keeps using an agents.yaml source. Directory Workbench is available under managed-agent project workbench.
 
@@ -1679,8 +1679,8 @@ bl managed-agent project init --project .
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1897,8 +1897,8 @@ bl managed-agent project version status --project ./my-agent --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1936,8 +1936,8 @@ bl managed-agent project workbench --project ./my-agent --no-open
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1977,8 +1977,8 @@ bl managed-agent session archive --session-id sess_abc --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2023,8 +2023,8 @@ bl managed-agent session create --agent assistant --title 'debug run'
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2062,8 +2062,8 @@ bl managed-agent session debug --session-id sess_abc --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2100,8 +2100,8 @@ bl managed-agent session delete --session-id sess_abc123 --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --types is applied client-side to each page returned by the provider.
 
@@ -2136,8 +2136,8 @@ bl managed-agent session event list --session-id sess_abc --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2171,8 +2171,8 @@ bl managed-agent session event send --session-id sess_abc --event @event.json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - When the provider has no native event cursor, --after-id resumes through paginated history polling and event ID de-duplication.
 
@@ -2213,8 +2213,8 @@ bl managed-agent session event stream --session-id sess_abc --after-id evt_123 -
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --types is applied client-side to each page returned by the provider.
 
@@ -2250,8 +2250,8 @@ bl managed-agent session events --session-id sess_abc --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - The ZIP contains metadata only; file bodies and credential-like values are excluded/redacted.
 
@@ -2281,8 +2281,8 @@ bl managed-agent session export --session-id sess_abc --output-file ./session-de
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2317,8 +2317,8 @@ bl managed-agent session get --session-id sess_abc123
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2363,8 +2363,8 @@ bl managed-agent session list --all
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.
 
@@ -2412,8 +2412,8 @@ bl managed-agent session run --agent assistant --prompt "summarize this repo"
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2448,8 +2448,8 @@ bl managed-agent session search --query failed --statuses failed --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2480,8 +2480,8 @@ bl managed-agent session send --session-id sess_abc123 --message "continue"
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2515,8 +2515,8 @@ bl managed-agent session update --session-id sess_abc --metadata @metadata.json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - The YAML key is derived from SKILL.md frontmatter name. Remote URLs remain available through handwritten YAML plus full apply.
@@ -2554,8 +2554,8 @@ bl managed-agent skill create --source ./skill.zip --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2584,8 +2584,8 @@ bl managed-agent skill download --skill-id skill_abc --skill-version 3 --output-
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2617,8 +2617,8 @@ bl managed-agent skill get --skill-id skill_abc
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --source all combines one page from each catalog, or every page with --all; it does not accept --page.
 
@@ -2659,8 +2659,8 @@ bl managed-agent skill list --source all --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2696,8 +2696,8 @@ bl managed-agent skill search --query report --source all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2733,8 +2733,8 @@ bl managed-agent skill versions --skill-id skill_abc --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --source all combines one page from each catalog, or every page with --all; it does not accept --page.
 
@@ -2774,8 +2774,8 @@ bl managed-agent skill-list --source all --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2801,7 +2801,7 @@ bl managed-agent state import --address bailian.agent.assistant --remote-id agen
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
 - Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
@@ -2837,7 +2837,7 @@ bl managed-agent state list --file agents.yaml
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
 - Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
@@ -2865,7 +2865,7 @@ bl managed-agent state rm --address bailian.agent.assistant --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
 - Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
@@ -2891,7 +2891,7 @@ bl managed-agent state show --address bailian.agent.assistant
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
 - Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
@@ -2926,8 +2926,8 @@ bl managed-agent validate --file agents.yaml
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - Creates an empty Vault. Add secrets later with `vault credential create`.
@@ -2967,8 +2967,8 @@ bl managed-agent vault create --name Production --metadata owner=platform --yes
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - --secret-env is an environment variable name, not the secret itself. The CLI auto-loads the nearest .env from the current directory upward; shell exports and CI secret injection also work.
@@ -3004,8 +3004,8 @@ bl managed-agent vault credential create --vault production --name api-token --s
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -3037,8 +3037,8 @@ bl managed-agent vault get --vault-id vault_abc
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -3074,8 +3074,8 @@ bl managed-agent vault list --all --output json
 
 #### Notes
 
-- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Managed Agent commands support the Bailian provider only; configurations containing other providers are rejected.
+- Bailian credentials come from the CLI auth chain: --api-key > DASHSCOPE_API_KEY > saved credentials in the active config profile.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples

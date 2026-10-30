@@ -19,6 +19,7 @@ import type {
   SourceFlags,
 } from "bailian-cli-core";
 import {
+  getCommandPrefix,
   DEFAULT_LANGUAGE,
   GLOBAL_FLAGS,
   UsageError,
@@ -43,6 +44,8 @@ import { createTranslator } from "./i18n.ts";
 export interface CliOptions {
   /** Binary name shown in help/usage/version output (e.g. "bl", "rag"). */
   binName: string;
+  /** Optional display prefix; binName remains the product identity. */
+  commandPrefix?: string;
   /** Product version for `--version` output, telemetry and update checks. */
   version: string;
   /** User-Agent / telemetry client name (e.g. "bailian-cli", "rag-cli")。必填,无默认。 */
@@ -98,11 +101,11 @@ export function registerInterruptHandler(handler: () => void): () => void {
  * 进程级一次性设置：代理初始化、Ctrl+C、stdout EPIPE。
  * 属进程生命周期行为，装一次即可，不进 per-command 中间件。
  */
-function installProcessHandlers(binName: string): void {
+function installProcessHandlers(commandPrefix: string): void {
   try {
     setupProxyFromEnv();
   } catch (err) {
-    handleError(err, binName);
+    handleError(err, commandPrefix);
   }
 
   // 处理 Ctrl+C
@@ -127,12 +130,19 @@ function installProcessHandlers(binName: string): void {
  */
 export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions): Cli {
   const { binName, version, npmPackage, clientName } = opts;
-  const identity: Identity = { binName, version, npmPackage, clientName };
+  const identity: Identity = {
+    binName,
+    version,
+    npmPackage,
+    clientName,
+    commandPrefix: opts.commandPrefix,
+  };
+  const commandPrefix = getCommandPrefix(identity);
   const commandPackPolicy = opts.commandPacks ?? { supported: {} };
   const commandPackManager = createCommandPackManager(identity, commandPackPolicy);
   let loadedCommandPacksPromise: ReturnType<typeof loadCommandPacks> | undefined;
 
-  installProcessHandlers(binName);
+  installProcessHandlers(commandPrefix);
 
   const runMiddleware = compose([
     telemetryStage,
@@ -157,7 +167,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     const translator = createTranslator(localeSources.file.language ?? DEFAULT_LANGUAGE);
     const loaded = await getLoadedCommandPacks();
     return {
-      registry: new CommandRegistry(loaded.commands, binName, translator),
+      registry: new CommandRegistry(loaded.commands, commandPrefix, translator),
       localize: (text) => translator.localize(text),
     };
   }
@@ -199,7 +209,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         );
         return;
       case "version":
-        process.stdout.write(`${binName} ${version}\n`);
+        process.stdout.write(`${commandPrefix} ${version}\n`);
         return;
 
       case "help":
@@ -207,7 +217,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         return;
 
       case "usageError":
-        handleError(res.error, binName);
+        handleError(res.error, commandPrefix);
         return;
 
       case "run": {
@@ -258,7 +268,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             return;
           }
           await flushTelemetry(1000);
-          handleError(err, binName);
+          handleError(err, commandPrefix);
         }
         return;
       }
@@ -271,7 +281,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         .then(() => getRegistry(argv))
         .then(({ registry, localize }) => dispatch(registry, argv, localize))
         .catch(
-          (err) => flushTelemetry(1000).finally(() => handleError(err, binName)) as unknown as void,
+          (err) =>
+            flushTelemetry(1000).finally(() => handleError(err, commandPrefix)) as unknown as void,
         );
     },
   };

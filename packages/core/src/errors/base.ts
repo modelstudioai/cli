@@ -10,6 +10,8 @@ export interface BailianErrorOptions {
   cause?: unknown;
   api?: ApiErrorContext;
   rawResponse?: string;
+  /** Local credential-domain context for runtime-owned login instructions. */
+  authDomain?: "apiKey" | "console" | "openapi";
 }
 
 export class BailianError extends Error {
@@ -17,6 +19,7 @@ export class BailianError extends Error {
   readonly hint?: string;
   readonly api?: ApiErrorContext;
   readonly rawResponse?: string;
+  readonly authDomain?: BailianErrorOptions["authDomain"];
 
   constructor(
     message: string,
@@ -30,6 +33,7 @@ export class BailianError extends Error {
     this.hint = hint;
     this.api = options?.api;
     this.rawResponse = options?.rawResponse;
+    this.authDomain = options?.authDomain;
   }
 
   toJSON() {

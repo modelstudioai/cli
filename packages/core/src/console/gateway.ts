@@ -182,10 +182,8 @@ export async function callConsoleGateway(
         ? "Console session is not logged in or has expired."
         : `Console gateway error: ${errorCode}`,
       notLogined ? ExitCode.AUTH : ExitCode.GENERAL,
-      notLogined
-        ? "Run `bl auth login --console` to sign in or refresh your console session."
-        : undefined,
-      { rawResponse },
+      undefined,
+      { rawResponse, authDomain: notLogined ? "console" : undefined },
     );
   }
 

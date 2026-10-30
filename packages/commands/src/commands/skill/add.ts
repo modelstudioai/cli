@@ -1,6 +1,7 @@
 import {
   BailianError,
   ExitCode,
+  getCommandPrefix,
   defineCommand,
   detectInstalledAgents,
   fetchSkillsIndex,
@@ -97,7 +98,7 @@ export default defineCommand({
         throw new BailianError(
           `${failed.length}/${skills.length} skill(s) failed to install`,
           ExitCode.GENERAL,
-          "Check the reason for failed skills in the output; network failures can be retried with bl skill add",
+          `Check the failed skills in the output; retry network failures with ${getCommandPrefix(ctx.identity)} skill add. / 查看输出中的失败原因，网络失败可运行 ${getCommandPrefix(ctx.identity)} skill add 重试。`,
         );
       }
       return;
@@ -165,7 +166,7 @@ export default defineCommand({
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to install`,
         ExitCode.GENERAL,
-        "Check the reason for failed skills in the output; network failures can be retried with bl skill add",
+        `Check the failed skills in the output; retry network failures with ${getCommandPrefix(ctx.identity)} skill add. / 查看输出中的失败原因，网络失败可运行 ${getCommandPrefix(ctx.identity)} skill add 重试。`,
       );
     }
   },
