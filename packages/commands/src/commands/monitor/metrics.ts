@@ -1,6 +1,5 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { ansi, emitResult } from "bailian-cli-runtime";
+import { ansi } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import { parseCommaList } from "../shared/params.ts";
 import {
@@ -81,28 +80,32 @@ function seriesTitle(series: MonitorSeries): string {
   return labels ? `${base} {${labels}}` : base;
 }
 
-function printSeries(allSeries: MonitorSeries[]): void {
+function renderSeries(allSeries: MonitorSeries[]): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
   if (allSeries.length === 0) {
-    process.stdout.write("No monitor data found.\n");
-    return;
+    textChunks.push("No monitor data found.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   for (const series of allSeries) {
-    process.stdout.write(color.bold(seriesTitle(series)) + "\n");
+    textChunks.push(color.bold(seriesTitle(series)) + "\n");
     const points = series.points ?? [];
     if (points.length === 0) {
-      process.stdout.write(color.dim("  (no data points)") + "\n\n");
+      textChunks.push(color.dim("  (no data points)") + "\n\n");
       continue;
     }
     for (const point of points) {
-      process.stdout.write(
+      textChunks.push(
         `  ${color.dim(formatDateTime(point.timestamp))}  ${formatNumber(point.value)}\n`,
       );
     }
-    process.stdout.write("\n");
+    textChunks.push("\n");
   }
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export default defineTelemetryCommand({
@@ -172,7 +175,7 @@ export default defineTelemetryCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags);
 
     const metricFilters = parseCommaList(flags.metric).map((metricName) => ({
@@ -189,14 +192,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: METRICS_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: METRICS_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -204,25 +204,28 @@ export default defineTelemetryCommand({
     const resp = await pollTelemetryData(ctx.client, METRICS_API, reqDTO);
     const allSeries = (await resolveOssPayload<MonitorSeries[]>(resp)) ?? [];
 
-    if (format === "json") {
-      emitResult(
-        {
-          period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
-          step: reqDTO.step,
-          series: allSeries,
-        },
-        format,
-      );
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printSeries(allSeries);
-    if (parseCommaList(flags.metric).some((metricName) => FAILURE_METRICS.has(metricName))) {
-      process.stdout.write(
-        ansi(process.stdout).dim(
-          `\nFor the error-code breakdown, run \`${ctx.identity.binName} monitor errors\`.\n`,
-        ),
-      );
+      textChunks.push(renderSeries(allSeries) + "\n");
+      if (parseCommaList(flags.metric).some((metricName) => FAILURE_METRICS.has(metricName))) {
+        textChunks.push(
+          ansi(process.stdout).dim(
+            `\nFor the error-code breakdown, run \`${ctx.identity.binName} monitor errors\`.`,
+          ),
+        );
+      }
+
+      text = textChunks.join("").replace(/\n$/, "");
     }
+    ctx.output.result(
+      {
+        period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
+        step: reqDTO.step,
+        series: allSeries,
+      },
+      { text },
+    );
   },
 });

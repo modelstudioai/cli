@@ -1,13 +1,13 @@
 import {
   BailianError,
   ExitCode,
-  detectOutputFormat,
   type Client,
+  type CommandOutput,
   type CommandContext,
   type FlagsDef,
   type LocalizedText,
 } from "bailian-cli-core";
-import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import { parseCommaList } from "../shared/params.ts";
 import {
@@ -144,12 +144,14 @@ export function validateRequestIdLength(requestId: string): string | undefined {
   return undefined;
 }
 
-export function printLogTable(list: ModelLogEntry[]): void {
+export function renderLogTable(list: ModelLogEntry[]): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
   if (list.length === 0) {
-    process.stdout.write("No logs found in this range.\n");
-    return;
+    textChunks.push("No logs found in this range.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   const lines = renderBoxTable({
@@ -181,10 +183,14 @@ export function printLogTable(list: ModelLogEntry[]): void {
       return color.yellow(value);
     },
   });
-  for (const line of lines) process.stdout.write(line + "\n");
+  for (const line of lines) textChunks.push(line + "\n");
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
-export function printLogDetail(entry: ModelLogEntry): void {
+export function renderLogDetail(entry: ModelLogEntry): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
   const usage = parseLogUsage(entry.usage);
 
@@ -210,14 +216,16 @@ export function printLogDetail(entry: ModelLogEntry): void {
   if (entry.errorMessage) rows.push(["Error Message", entry.errorMessage]);
 
   for (const [label, value] of rows) {
-    process.stdout.write(`${color.bold(label)}: ${value}\n`);
+    textChunks.push(`${color.bold(label)}: ${value}\n`);
   }
   if (entry.request) {
-    process.stdout.write(`\n${color.bold("Request:")}\n${entry.request}\n`);
+    textChunks.push(`\n${color.bold("Request:")}\n${entry.request}\n`);
   }
   if (entry.response) {
-    process.stdout.write(`\n${color.bold("Response:")}\n${entry.response}\n`);
+    textChunks.push(`\n${color.bold("Response:")}\n${entry.response}\n`);
   }
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 // ---------------------------------------------------------------------------
@@ -282,10 +290,10 @@ function groupReqDTO(settings: Settings, kind: LogKind): Record<string, unknown>
 // ---------------------------------------------------------------------------
 
 export interface LogEnableContext {
+  output: CommandOutput;
   client: Client;
   settings: Settings;
   binName: string;
-  format: "json" | "text";
   noWait?: boolean;
 }
 
@@ -299,18 +307,15 @@ export async function enableLogDelivery(
   kind: LogKind,
   serviceType: string,
 ): Promise<void> {
-  const { client, settings, format } = ctx;
-  const color = ansi(process.stderr);
+  const { client, settings } = ctx;
+  const format = settings.output;
 
   if (settings.dryRun) {
-    emitResult(
-      {
-        apis: [CREATE_SLR_API, INIT_STORE_API, ENABLE_GROUP_API],
-        data: { reqDTO: groupReqDTO(settings, kind) },
-        ...telemetryGatewayPreview(settings),
-      },
-      format,
-    );
+    ctx.output.result({
+      apis: [CREATE_SLR_API, INIT_STORE_API, ENABLE_GROUP_API],
+      data: { reqDTO: groupReqDTO(settings, kind) },
+      ...telemetryGatewayPreview(settings),
+    });
     return;
   }
 
@@ -319,20 +324,27 @@ export async function enableLogDelivery(
   // Step 1: SLS service-linked role.
   await ensureTelemetrySlrAuthorized(client, "Log", settings.workspaceId, {
     pollRetries: 5,
-    onProgress: (message) => process.stderr.write(color.dim(message + "\n")),
+    onProgress: (message) =>
+      ctx.output.progress({ "en-US": message, "zh-CN": "正在授权服务关联角色……" }),
   });
 
   // Step 2: SLS store instance (async creation, poll until Ready).
   let serviceStatus = await getTelemetryServiceStatus(client, serviceType, settings.workspaceId);
   if (serviceStatus.instanceStatus === "NotExist") {
-    process.stderr.write(color.dim("Initializing the SLS store instance...\n"));
+    ctx.output.info({
+      "en-US": "Initializing the SLS store instance...",
+      "zh-CN": "正在初始化 SLS 存储实例……",
+    });
     await pollTelemetryData(client, INIT_STORE_API, {
       ...(settings.workspaceId ? { workspaceId: settings.workspaceId } : {}),
       serviceType,
     });
 
     if (!ctx.noWait) {
-      process.stderr.write(color.dim("Waiting for the SLS instance to become ready...\n"));
+      ctx.output.info({
+        "en-US": "Waiting for the SLS instance to become ready...",
+        "zh-CN": "正在等待 SLS 实例就绪……",
+      });
       const deadline = Date.now() + WAIT_TIMEOUT_MS;
       while (Date.now() < deadline && serviceStatus.instanceStatus !== "Ready") {
         await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
@@ -344,17 +356,23 @@ export async function enableLogDelivery(
   // Step 3: flip the delivery switch for every model in the workspace.
   await client.console(ENABLE_GROUP_API, { reqDTO: groupReqDTO(settings, kind) });
 
-  if (format === "json") {
-    emitResult({ enabled: true, kind, instanceStatus: serviceStatus.instanceStatus }, format);
-    return;
-  }
+  let text: string | undefined;
+  if (format === "text") {
+    const textChunks: string[] = [];
 
-  process.stdout.write(`${kind === "audit" ? "Audit" : "Inference"} log delivery enabled.\n`);
-  if (ctx.noWait) {
-    process.stdout.write(
-      `The SLS instance may still be initializing; check \`${ctx.binName} log status\` later.\n`,
-    );
+    textChunks.push(`${kind === "audit" ? "Audit" : "Inference"} log delivery enabled.\n`);
+    if (ctx.noWait) {
+      textChunks.push(
+        `The SLS instance may still be initializing; check \`${ctx.binName} log status\` later.\n`,
+      );
+    }
+
+    text = textChunks.join("").replace(/\n$/, "");
   }
+  ctx.output.result(
+    { enabled: true, kind, instanceStatus: serviceStatus.instanceStatus },
+    { text },
+  );
 }
 
 /**
@@ -366,17 +384,15 @@ export async function disableLogDelivery(
   kind: LogKind,
   guardInferenceOn?: boolean,
 ): Promise<void> {
-  const { client, settings, format } = ctx;
+  const { client, settings } = ctx;
+  const format = settings.output;
 
   if (settings.dryRun) {
-    emitResult(
-      {
-        api: DISABLE_GROUP_API,
-        data: { reqDTO: groupReqDTO(settings, kind) },
-        ...telemetryGatewayPreview(settings),
-      },
-      format,
-    );
+    ctx.output.result({
+      api: DISABLE_GROUP_API,
+      data: { reqDTO: groupReqDTO(settings, kind) },
+      ...telemetryGatewayPreview(settings),
+    });
     return;
   }
 
@@ -395,12 +411,15 @@ export async function disableLogDelivery(
 
   await client.console(DISABLE_GROUP_API, { reqDTO: groupReqDTO(settings, kind) });
 
-  if (format === "json") {
-    emitResult({ disabled: true, kind }, format);
-    return;
-  }
+  let text: string | undefined;
+  if (format === "text") {
+    const textChunks: string[] = [];
 
-  process.stdout.write(`${kind === "audit" ? "Audit" : "Inference"} log delivery disabled.\n`);
+    textChunks.push(`${kind === "audit" ? "Audit" : "Inference"} log delivery disabled.\n`);
+
+    text = textChunks.join("").replace(/\n$/, "");
+  }
+  ctx.output.result({ disabled: true, kind }, { text });
 }
 
 /** Shared --no-wait flag used by both enable commands. */
@@ -453,13 +472,13 @@ export function validateInferenceCountFlags(flags: LogCountFlags): LocalizedText
 
 /** 两类日志各用自己的列表 totalCount，避免独立计数接口与列表的口径错配。 */
 export async function countLogs(
-  ctx: Pick<CommandContext, "client" | "settings" | "localize">,
+  ctx: Pick<CommandContext, "client" | "settings" | "localize" | "output">,
   kind: LogKind,
   flags: LogCountFlags,
   resolveRange: () => { startTime: number; endTime: number },
 ): Promise<void> {
   const { settings } = ctx;
-  const format = detectOutputFormat(settings.output);
+  const format = settings.output;
   const { startTime, endTime } = resolveRange();
   const api = kind === "audit" ? LIST_AUDIT_LOGS_API : LIST_INFERENCE_LOGS_API;
   const baseReqDTO: Record<string, unknown> = {
@@ -497,14 +516,11 @@ export async function countLogs(
   }
 
   if (settings.dryRun) {
-    emitResult(
-      {
-        api,
-        data: reqDTOs.length === 1 ? { reqDTO: reqDTOs[0] } : { reqDTOs },
-        ...telemetryGatewayPreview(settings),
-      },
-      format,
-    );
+    ctx.output.result({
+      api,
+      data: reqDTOs.length === 1 ? { reqDTO: reqDTOs[0] } : { reqDTOs },
+      ...telemetryGatewayPreview(settings),
+    });
     return;
   }
 
@@ -535,19 +551,22 @@ export async function countLogs(
     count += totalCount;
   }
 
-  if (format === "json") {
-    emitResult(
-      {
-        kind,
-        period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
-        count,
-      },
-      format,
-    );
-    return;
-  }
+  let text: string | undefined;
+  if (format === "text") {
+    const textChunks: string[] = [];
 
-  process.stdout.write(
-    `${kind === "audit" ? "Audit" : "Inference"} logs: ${formatNumber(count)}  (${formatDateTime(startTime)} ~ ${formatDateTime(endTime)})\n`,
+    textChunks.push(
+      `${kind === "audit" ? "Audit" : "Inference"} logs: ${formatNumber(count)}  (${formatDateTime(startTime)} ~ ${formatDateTime(endTime)})\n`,
+    );
+
+    text = textChunks.join("").replace(/\n$/, "");
+  }
+  ctx.output.result(
+    {
+      kind,
+      period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
+      count,
+    },
+    { text },
   );
 }

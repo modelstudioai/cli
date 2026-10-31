@@ -1,4 +1,4 @@
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { BailianError, ExitCode, buildSettings } from "bailian-cli-core";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 
 const sdkMocks = vi.hoisted(() => ({
@@ -21,6 +21,7 @@ vi.mock("../src/commands/managed-agent/_engine/config-loader.ts", async (importO
   return { ...actual, ...configLoaderMocks };
 });
 
+import { withCommandOutput } from "./output/command-context.ts";
 import destroyCommand from "../src/commands/managed-agent/destroy.ts";
 
 const resources = [
@@ -76,10 +77,18 @@ afterEach(() => {
 test("destroy 部分失败时输出汇总并以首个原始错误抛 GENERAL", async () => {
   let thrown: unknown;
   try {
-    await destroyCommand.run({
-      settings: { output: "json", dryRun: false },
-      flags: { yes: true },
-    } as never);
+    await destroyCommand.run(
+      withCommandOutput({
+        identity: {
+          binName: "bl",
+          version: "fixture",
+          clientName: "fixture",
+          npmPackage: "fixture",
+        },
+        settings: buildSettings({ flags: { output: "json" }, file: {}, env: {} }),
+        flags: {},
+      }) as never,
+    );
   } catch (error) {
     thrown = error;
   }

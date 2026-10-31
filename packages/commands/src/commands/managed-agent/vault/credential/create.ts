@@ -13,7 +13,6 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { parseDocument } from "yaml";
 import { CREDENTIALS_NOTE } from "../../_engine/config-loader.ts";
 import { withStdoutProtected } from "../../_engine/console-capture.ts";
@@ -232,7 +231,7 @@ export default defineCommand({
 
     if (ctx.settings.dryRun || !ctx.flags.yes) {
       const planned = await withAgentErrors(() =>
-        withStdoutProtected(() =>
+        withStdoutProtected(ctx, () =>
           planVaultCredentialCreateWithStateBackend(
             backendInput,
             ctx.flags.vault,
@@ -261,16 +260,26 @@ export default defineCommand({
         remote_checked: planned.remoteChecked,
         reuse_remote: planned.reuseRemote,
       };
-      if (format === "json") emitResult(result, format);
-      else {
-        emitBare(`Vault: ${ctx.flags.vault}`);
-        emitBare(`Credential: ${ctx.flags.name.trim()} (secret from ${ctx.flags.secretEnv})`);
-        emitBare(
-          ctx.settings.dryRun
-            ? "Dry run: YAML, State, and remote resources were not changed."
-            : "Preview only: re-run with --yes to append YAML and create this Credential.",
-        );
-      }
+      ctx.output.result(result, {
+        text:
+          ctx.settings.output === "text"
+            ? (() => {
+                const lines: string[] = [];
+                {
+                  lines.push(`Vault: ${ctx.flags.vault}`);
+                  lines.push(
+                    `Credential: ${ctx.flags.name.trim()} (secret from ${ctx.flags.secretEnv})`,
+                  );
+                  lines.push(
+                    ctx.settings.dryRun
+                      ? "Dry run: YAML, State, and remote resources were not changed."
+                      : "Preview only: re-run with --yes to append YAML and create this Credential.",
+                  );
+                }
+                return lines.join("\n");
+              })()
+            : undefined,
+      });
       return;
     }
 
@@ -278,7 +287,7 @@ export default defineCommand({
     let created;
     try {
       created = await withAgentErrors(() =>
-        withStdoutProtected(() =>
+        withStdoutProtected(ctx, () =>
           createVaultCredentialWithStateBackend(
             backendInput,
             ctx.flags.vault,
@@ -308,10 +317,12 @@ export default defineCommand({
       adopted: created.adopted,
       status: "completed",
     };
-    if (format === "json") emitResult(result, format);
-    else {
-      emitBare(`Wrote ${project.configPath} and created Credential '${ctx.flags.name.trim()}'.`);
-    }
+    ctx.output.result(result, {
+      text:
+        ctx.settings.output === "text"
+          ? `Wrote ${project.configPath} and created Credential '${ctx.flags.name.trim()}'.`
+          : undefined,
+    });
   },
 });
 

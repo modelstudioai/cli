@@ -1,5 +1,5 @@
 import { defineCommand, listDeployments, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { validatePagination } from "./query-shared.ts";
 
 const LIST_FLAGS = {
@@ -35,6 +35,7 @@ const LIST_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "List model deployments and throughput reservations",
     "zh-CN": "列出模型部署及吞吐预留",
@@ -72,16 +73,17 @@ export default defineCommand({
     const plan = flags.plan?.trim();
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.list",
-          page,
-          page_size: pageSize,
-          plan,
-          status,
-          ...(status ? { filter_scope: "page" } : {}),
-        },
-        "json",
+      const resultData1 = {
+        action: "deploy.list",
+        page,
+        page_size: pageSize,
+        plan,
+        status,
+        ...(status ? { filter_scope: "page" } : {}),
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -100,25 +102,26 @@ export default defineCommand({
       created_at: item.gmt_create ?? "",
     }));
 
-    emitResult(
-      {
-        items,
-        total: payload?.total,
-        page_no: payload?.page_no ?? page,
-        page_size: payload?.page_size ?? pageSize,
-        ...(status
-          ? {
-              local_filter: {
-                status,
-                scope: "page",
-                matched_count: items.length,
-                unfiltered_page_count: deployments.length,
-              },
-            }
-          : {}),
-        request_id: response.request_id,
-      },
-      "json",
+    const resultData2 = {
+      items,
+      total: payload?.total,
+      page_no: payload?.page_no ?? page,
+      page_size: payload?.page_size ?? pageSize,
+      ...(status
+        ? {
+            local_filter: {
+              status,
+              scope: "page",
+              matched_count: items.length,
+              unfiltered_page_count: deployments.length,
+            },
+          }
+        : {}),
+      request_id: response.request_id,
+    };
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
     );
   },
 });

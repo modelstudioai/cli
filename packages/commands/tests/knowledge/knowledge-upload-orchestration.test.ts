@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,6 +19,8 @@ function context(
   return {
     flags: { file: [source], workspaceId: "ws_test", indexId: "index-test", wait },
     settings: { output: "json", quiet: true, timeout: 1 },
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     client: { requestJson },
     localize: (text: string | { "en-US": string }) =>
       typeof text === "string" ? text : text["en-US"],

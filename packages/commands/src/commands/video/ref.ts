@@ -2,7 +2,6 @@ import {
   defineCommand,
   videoGeneratePath,
   taskPath,
-  detectOutputFormat,
   type DashScopeVideoRefRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
@@ -18,7 +17,6 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -173,8 +171,9 @@ export default defineCommand({
       "zh-CN": '--prompt "图片 1 中的人物喝水" --image person.jpg --watermark false',
     },
   ],
-  validate: (f) =>
-    !(f.image as string[] | undefined)?.length && !(f.refVideo as string[] | undefined)?.length
+  validate: (flags) =>
+    !(flags.image as string[] | undefined)?.length &&
+    !(flags.refVideo as string[] | undefined)?.length
       ? "Provide at least one --image or --ref-video."
       : undefined,
   async run(ctx) {
@@ -188,7 +187,6 @@ export default defineCommand({
     const videoVoices = flags.videoVoice || [];
 
     const model = flags.model || settings.defaultReferenceToVideoModel || "wan3.0-video";
-    const format = detectOutputFormat(settings.output);
 
     // wan3.0-video emits voice as standalone reference_audio entries (referenced as Audio 1, Audio 2 in prompt);
     // other models (wan2.7-r2v / happyhorse-1.1-r2v, etc.) keep the legacy reference_voice field attached to each asset.
@@ -279,14 +277,14 @@ export default defineCommand({
           })),
         },
       };
-      emitResult({ request: previewBody }, format);
+      ctx.output.result({ request: previewBody });
       return;
     }
 
     const concurrent = getConcurrency(flags);
     const responses = await runConcurrent(
       concurrent,
-      settings,
+      ctx.output,
       () =>
         ctx.client.requestJson<DashScopeAsyncResponse>({
           path: videoGeneratePath(),
@@ -297,18 +295,17 @@ export default defineCommand({
       "tasks",
     );
 
-    const taskIds = responses.map((r) => r.output.task_id);
+    const taskIds = responses.map((response) => response.output.task_id);
 
-    if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}]\n`);
-      process.stderr.write(
-        `Note: Reference-to-video typically takes 5-10 minutes. Please be patient.\n`,
-      );
-    }
+    ctx.output.info({ "en-US": `[Model: ${model}]`, "zh-CN": `[模型：${model}]` });
+    ctx.output.info({
+      "en-US": "Note: Reference-to-video typically takes 5-10 minutes. Please be patient.",
+      "zh-CN": "提示：参考生视频通常需要 5–10 分钟，请耐心等待。",
+    });
 
     // --async: return task ID(s) immediately
     if (flags.async) {
-      emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
+      ctx.output.result(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds });
       return;
     }
 
@@ -318,16 +315,17 @@ export default defineCommand({
 
     const results = await Promise.all(
       taskIds.map((taskId) =>
-        poll<DashScopeTaskResponse>(ctx.client, settings, {
+        poll<DashScopeTaskResponse>(ctx.client, {
+          output: ctx.output,
           url: ctx.client.url(taskPath(taskId)),
           intervalSec: pollInterval,
           timeoutSec: refTimeout,
-          isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-          isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
-          getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
-          getErrorMessage: (d) => {
-            const o = (d as DashScopeTaskResponse).output;
-            return o.message || o.code || undefined;
+          isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+          isFailed: (data) => (data as DashScopeTaskResponse).output.task_status === "FAILED",
+          getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
+          getErrorMessage: (data) => {
+            const output = (data as DashScopeTaskResponse).output;
+            return output.message || output.code || undefined;
           },
         }),
       ),
@@ -348,22 +346,17 @@ export default defineCommand({
     // --download: save to file
     if (flags.download) {
       const destPath = flags.download;
-      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, { quiet: settings.quiet });
+      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, {
+        quiet: settings.quiet || settings.output === "json",
+      });
 
-      if (settings.quiet) {
-        emitBare(destPath);
-      } else {
-        emitResult(
-          {
-            task_id: videos[0]!.taskId,
-            video_url: videos[0]!.videoUrl,
-            status: "SUCCEEDED",
-            saved: destPath,
-            size: formatBytes(size),
-          },
-          format,
-        );
-      }
+      ctx.output.result({
+        task_id: videos[0]!.taskId,
+        video_url: videos[0]!.videoUrl,
+        status: "SUCCEEDED",
+        saved: destPath,
+        size: formatBytes(size),
+      });
       return;
     }
 
@@ -375,15 +368,17 @@ export default defineCommand({
     await Promise.all(
       videos.map(async ({ taskId, videoUrl }) => {
         const destPath = join(destDir, `${taskId}.mp4`);
-        await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+        await downloadFile(videoUrl, destPath, {
+          quiet: settings.quiet || settings.output === "json",
+        });
         saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
       }),
     );
 
     if (saved.length === 1) {
-      emitResult(saved[0]!, format);
+      ctx.output.result(saved[0]!);
     } else {
-      emitResult({ videos: saved, total: saved.length }, format);
+      ctx.output.result({ videos: saved, total: saved.length });
     }
   },
 });

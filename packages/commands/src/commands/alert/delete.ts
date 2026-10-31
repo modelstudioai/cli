@@ -1,6 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { emitResult } from "bailian-cli-runtime";
 import { parseCommaList } from "../shared/params.ts";
 import { ensureAlertReady } from "./shared.ts";
 
@@ -40,19 +38,16 @@ export default defineTelemetryCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const reqDTO = { ruleIds: parseCommaList(flags.ruleId) };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: DELETE_RULES_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: DELETE_RULES_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -60,11 +55,16 @@ export default defineTelemetryCommand({
 
     await ctx.client.console(DELETE_RULES_API, { reqDTO });
 
-    if (format === "json") {
-      emitResult({ deleted: reqDTO.ruleIds }, format);
-      return;
-    }
-
-    process.stdout.write(`Deleted ${reqDTO.ruleIds.length} alert rule(s).\n`);
+    ctx.output.result(
+      { deleted: reqDTO.ruleIds },
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Deleted ${reqDTO.ruleIds.length} alert rule(s).`,
+              "zh-CN": `已删除 ${reqDTO.ruleIds.length} 个告警规则。`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

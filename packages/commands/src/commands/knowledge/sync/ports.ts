@@ -3,6 +3,7 @@ import {
   BailianError,
   ExitCode,
   type Client,
+  type CommandOutput,
   type LocalizedText,
   type Settings,
 } from "bailian-cli-core";
@@ -19,6 +20,7 @@ export function createSyncExecutionPorts(options: {
   target: { workspaceId: string; indexId: string; categoryId: string; scopeTag: string };
   settings: Settings;
   pollInterval: number;
+  output: CommandOutput;
   localize: (text: LocalizedText) => string;
   verify: () => Promise<void>;
 }): SyncExecutionPorts {
@@ -65,6 +67,7 @@ export function createSyncExecutionPorts(options: {
     },
     async waitReady(fileId, ingestionId, tags) {
       const job = await pollImportJob(client, settings, {
+        output: options.output,
         statusUrl: importJobStatusUrl(target.workspaceId, target.indexId, ingestionId).toString(),
         intervalSec: options.pollInterval,
       });

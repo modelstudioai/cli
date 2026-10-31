@@ -2,11 +2,9 @@ import {
   defineCommand,
   memoryEndpoint,
   memoryListPath,
-  detectOutputFormat,
   type FlagsDef,
   type MemoryNodeListResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
 import {
   MEMORY_LIBRARY_FLAG,
@@ -72,7 +70,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), memoryListPath()) +
       buildQuery({
@@ -84,7 +82,7 @@ export default defineCommand({
       });
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+      ctx.output.result({ endpoint: url, method: "GET" });
       return;
     }
 
@@ -93,23 +91,32 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (settings.quiet || format === "text") {
+    ctx.output.result(response, format === "text" ? { text: renderText0() } : undefined);
+    function renderText0(): string {
+      const lines: string[] = [];
       if (!response.memory_nodes || response.memory_nodes.length === 0) {
-        emitBare("No memory nodes found.");
+        lines.push(
+          ctx.localize({ "en-US": "No memory nodes found.", "zh-CN": "未找到记忆节点。" }),
+        );
       } else {
         for (const node of response.memory_nodes) {
           const typePrefix = node.memory_type ? `[${node.memory_type}] ` : "";
-          emitBare(`${typePrefix}[${node.memory_node_id}] ${node.content}`);
+          lines.push(`${typePrefix}[${node.memory_node_id}] ${node.content}`);
           if (node.meta_data && Object.keys(node.meta_data).length > 0) {
-            emitBare(`  meta: ${JSON.stringify(node.meta_data)}`);
+            lines.push(`  meta: ${JSON.stringify(node.meta_data)}`);
           }
         }
         if (response.total !== undefined) {
-          emitBare(`\nTotal: ${response.total}`);
+          lines.push(
+            ctx.localize({
+              "en-US": `\nTotal: ${response.total}`,
+              "zh-CN": `\n总计：${response.total}`,
+            }),
+          );
         }
       }
-    } else {
-      emitResult(response, format);
+
+      return lines.join("\n");
     }
   },
 });

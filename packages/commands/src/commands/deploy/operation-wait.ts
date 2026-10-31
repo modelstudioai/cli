@@ -9,7 +9,7 @@ import {
   type FlagsDef,
   type GetCapacityOperationResponse,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { CAPACITY_OPERATION_FLAGS, validateQueryIds } from "./query-shared.ts";
 
 const DEFAULT_INTERVAL = 2;
@@ -150,6 +150,7 @@ const FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Wait for a capacity operation and refresh confirmed capacity",
     "zh-CN": "等待容量操作完成并刷新已确认容量",
@@ -200,15 +201,16 @@ export default defineCommand({
     const interval = flags.interval ?? DEFAULT_INTERVAL;
     const pollTimeout = flags.pollTimeout ?? DEFAULT_POLL_TIMEOUT;
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.operation.wait",
-          deployed_model: flags.deployedModel,
-          operation_id: flags.operationId,
-          interval,
-          poll_timeout: pollTimeout,
-        },
-        "json",
+      const resultData1 = {
+        action: "deploy.operation.wait",
+        deployed_model: flags.deployedModel,
+        operation_id: flags.operationId,
+        interval,
+        poll_timeout: pollTimeout,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -222,7 +224,10 @@ export default defineCommand({
         flags.operationId,
         { interval, pollTimeout, signal: controller.signal },
       );
-      emitResult(result, "json");
+      ctx.output.result(
+        result,
+        ctx.settings.output === "text" ? { text: JSON.stringify(result, null, 2) } : undefined,
+      );
     } catch (error) {
       // The CLI runtime owns SIGINT's exit status (130). Do not emit success on interruption.
       if (!controller.signal.aborted) throw error;

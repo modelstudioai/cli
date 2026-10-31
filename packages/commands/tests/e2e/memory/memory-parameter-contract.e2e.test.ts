@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { FlagsDef } from "bailian-cli-core";
-import { parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { parseStdoutJson, runCommandE2e, runCommandInProcess } from "../helpers.ts";
 import add from "../../../src/commands/memory/add.ts";
 import search from "../../../src/commands/memory/search.ts";
 import list from "../../../src/commands/memory/list.ts";
@@ -312,10 +312,31 @@ function argv(flags: Contract["flags"]): string[] {
   });
 }
 
+// These cases preview requests and reject input before business I/O. Keep the
+// real CLI pipeline, without restarting Node for every parameter combination.
+const offlineEnvironment: NodeJS.ProcessEnv = {
+  NODE_OPTIONS: "",
+  NODE_USE_ENV_PROXY: "0",
+  HTTP_PROXY: "",
+  HTTPS_PROXY: "",
+  ALL_PROXY: "",
+  NO_PROXY: "",
+  http_proxy: "",
+  https_proxy: "",
+  all_proxy: "",
+  no_proxy: "",
+  DASHSCOPE_QUIET: "0",
+  DASHSCOPE_VERBOSE: "0",
+};
+
+function runContract(routes: Record<string, string>, args: string[]) {
+  return runCommandInProcess(routes, args, offlineEnvironment);
+}
+
 describe("memory complete positive parameter contract", () => {
   for (const contract of contracts) {
     test(`${contract.path}: ${Object.keys(contract.flags).join(", ")}`, async () => {
-      const result = await runCommandE2e({ [contract.path]: contract.exportName }, [
+      const result = await runContract({ [contract.path]: contract.exportName }, [
         ...contract.path.split(" "),
         ...argv(contract.flags),
         "--dry-run",
@@ -355,7 +376,7 @@ for (const path of new Set(contracts.map((contract) => contract.path))) {
       test(`${path}: required ${flag} cannot be omitted`, async () => {
         const flags = { ...contract.flags };
         delete flags[flag];
-        const result = await runCommandE2e({ [path]: contract.exportName }, [
+        const result = await runContract({ [path]: contract.exportName }, [
           ...path.split(" "),
           ...argv(flags),
           "--dry-run",
@@ -378,7 +399,7 @@ for (const path of new Set(contracts.map((contract) => contract.path))) {
             flags.extractScene = "efficient";
           if (flag === "memoryType") delete flags.memoryTypes;
           if (flag === "extractMode") delete flags.content;
-          const result = await runCommandE2e({ [path]: contract.exportName }, [
+          const result = await runContract({ [path]: contract.exportName }, [
             ...path.split(" "),
             ...argv(flags),
             "--dry-run",
@@ -400,7 +421,7 @@ for (const path of new Set(contracts.map((contract) => contract.path))) {
         });
       }
       test(`${path}: ${flag} rejects invalid enum`, async () => {
-        const result = await runCommandE2e({ [path]: contract.exportName }, [
+        const result = await runContract({ [path]: contract.exportName }, [
           ...path.split(" "),
           ...argv({ ...contract.flags, [flag]: "invalid-enum" }),
           "--dry-run",
@@ -422,7 +443,7 @@ for (const path of new Set(contracts.map((contract) => contract.path))) {
   ] as const) {
     if (!(flag in (contract.command.flags ?? {}))) continue;
     test(`${path}: validate rejects ${flag} above ${limit}`, async () => {
-      const result = await runCommandE2e({ [path]: contract.exportName }, [
+      const result = await runContract({ [path]: contract.exportName }, [
         ...path.split(" "),
         ...argv({ ...contract.flags, [flag]: "x".repeat(limit + 1) }),
         "--dry-run",
@@ -497,7 +518,7 @@ for (const [index, scenario] of guardCases.entries()) {
     const contract = contracts.find((candidate) => candidate.path === scenario.path)!;
     const flags = { ...contract.flags, ...scenario.patch };
     for (const flag of scenario.omit ?? []) delete flags[flag];
-    const result = await runCommandE2e({ [contract.path]: contract.exportName }, [
+    const result = await runContract({ [contract.path]: contract.exportName }, [
       ...contract.path.split(" "),
       ...argv(flags),
       "--dry-run",
@@ -508,3 +529,36 @@ for (const [index, scenario] of guardCases.entries()) {
     expect(result.stderr).toContain(scenario.error);
   });
 }
+
+const subprocessCases: Array<{
+  label: string;
+  path: string;
+  patch?: Contract["flags"];
+  omit?: string[];
+  exitCode: number;
+}> = [
+  { label: "complex memory payload", path: "memory add", exitCode: 0 },
+  { label: "nested profile command", path: "memory profile create", exitCode: 0 },
+  { label: "missing required user", path: "memory add", omit: ["userId"], exitCode: 2 },
+  {
+    label: "invalid enum",
+    path: "memory profile create",
+    patch: { planVersion: "invalid-enum" },
+    exitCode: 2,
+  },
+];
+
+test.each(subprocessCases)(
+  "$label keeps identical subprocess output and exit status",
+  async (scenario) => {
+    const contract = contracts.find((candidate) => candidate.path === scenario.path)!;
+    const flags = { ...contract.flags, ...scenario.patch };
+    for (const flag of scenario.omit ?? []) delete flags[flag];
+    const routes = { [contract.path]: contract.exportName };
+    const args = [...contract.path.split(" "), ...argv(flags), "--dry-run", "--output", "json"];
+    const inProcess = await runContract(routes, args);
+    const subprocess = await runCommandE2e(routes, args, offlineEnvironment);
+    expect(subprocess.exitCode, subprocess.stderr).toBe(scenario.exitCode);
+    expect(subprocess).toEqual(inProcess);
+  },
+);

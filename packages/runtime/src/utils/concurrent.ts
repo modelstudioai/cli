@@ -5,10 +5,10 @@
  * Used by commands that declare `--concurrent <N>`.
  *
  * @example
- *   const results = await runConcurrent(3, config, () => callApi());
+ *   const results = await runConcurrent(3, output, () => callApi());
  */
 
-import type { Settings } from "bailian-cli-core";
+import type { CommandOutput } from "bailian-cli-core";
 
 /** Resolve concurrency from parsed command flags(`--concurrent`,defaults to 1). */
 export function getConcurrency(flags: { concurrent?: number }): number {
@@ -20,27 +20,28 @@ export function getConcurrency(flags: { concurrent?: number }): number {
  * Returns all resolved results in order.
  * If any single task fails, the error propagates (Promise.all semantics).
  *
- * @param n        Number of concurrent executions
- * @param settings  Resolved settings (for logging)
+ * @param count    Number of concurrent executions
+ * @param output   Invocation output for process information
  * @param task     Async factory to execute
  * @param label    Optional label for status output (e.g. "requests", "tasks")
  */
 export async function runConcurrent<T>(
-  n: number,
-  settings: Settings,
+  count: number,
+  output: Pick<CommandOutput, "info">,
   task: (index: number) => Promise<T>,
-  label = "requests",
+  label: "requests" | "tasks" = "requests",
 ): Promise<T[]> {
-  if (n <= 1) {
+  if (count <= 1) {
     const result = await task(0);
     return [result];
   }
 
-  if (!settings.quiet) {
-    process.stderr.write(`[Concurrent: ${n} ${label}]\n`);
-  }
+  output.info({
+    "en-US": `[Concurrent: ${count} ${label}]`,
+    "zh-CN": `[并发：${count} ${label === "tasks" ? "个任务" : "个请求"}]`,
+  });
 
-  const tasks = Array.from({ length: n }, (_, i) => task(i));
+  const tasks = Array.from({ length: count }, (_entry, index) => task(index));
   return Promise.all(tasks);
 }
 

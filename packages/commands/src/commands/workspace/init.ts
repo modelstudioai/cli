@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   generateCLIAccessToken,
@@ -11,8 +10,8 @@ import {
   resetBailianControlPolicies4Agent,
   type ConsoleGatewayTarget,
   type FlagsDef,
+  type CommandContext,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const API = {
   loginInfo: "zeldaEasy.cornerstone-portal.cs-console.loginInfo",
@@ -87,61 +86,57 @@ export default defineCommand({
   exampleArgs: ["--access-key-id LTAIxxxxx --access-key-secret xxxxx"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          apis: [
-            {
-              step: 0,
-              api: "GenerateCLIAccessToken",
-              description: "Generate CLI access token from AK/SK",
-            },
-            {
-              step: 1,
-              api: API.loginInfo,
-              description: "Check login & workspace status",
-            },
-            {
-              step: 2,
-              api: API.initSpace,
-              description: "Initialize workspace (if needed)",
-            },
-            {
-              step: 3,
-              api: "CreateUser",
-              description: "Create console user via BailianControl OpenAPI (CreateUser)",
-            },
-            {
-              step: 4,
-              api: "ListWorkspaces",
-              description: "List workspaces to resolve agentId",
-            },
-            {
-              step: 5,
-              api: "ResetPolicies4Agent",
-              description: "Authorize user permissions",
-            },
-            {
-              step: 6,
-              api: API.queryBuyResult,
-              description: "Query postpaid order status",
-            },
-            {
-              step: 7,
-              api: API.commodityOrderInfo,
-              description: "Query commodity activation status",
-            },
-            {
-              step: 8,
-              api: API.buyCommodity,
-              description: "Activate postpaid commodities (if needed)",
-            },
-          ],
-        },
-        format,
-      );
+      ctx.output.result({
+        apis: [
+          {
+            step: 0,
+            api: "GenerateCLIAccessToken",
+            description: "Generate CLI access token from AK/SK",
+          },
+          {
+            step: 1,
+            api: API.loginInfo,
+            description: "Check login & workspace status",
+          },
+          {
+            step: 2,
+            api: API.initSpace,
+            description: "Initialize workspace (if needed)",
+          },
+          {
+            step: 3,
+            api: "CreateUser",
+            description: "Create console user via BailianControl OpenAPI (CreateUser)",
+          },
+          {
+            step: 4,
+            api: "ListWorkspaces",
+            description: "List workspaces to resolve agentId",
+          },
+          {
+            step: 5,
+            api: "ResetPolicies4Agent",
+            description: "Authorize user permissions",
+          },
+          {
+            step: 6,
+            api: API.queryBuyResult,
+            description: "Query postpaid order status",
+          },
+          {
+            step: 7,
+            api: API.commodityOrderInfo,
+            description: "Query commodity activation status",
+          },
+          {
+            step: 8,
+            api: API.buyCommodity,
+            description: "Activate postpaid commodities (if needed)",
+          },
+        ],
+      });
       return;
     }
 
@@ -159,6 +154,7 @@ export default defineCommand({
     const tokenResp = await generateCLIAccessToken({
       identity: ctx.identity,
       settings: { ...settings, consoleRegion: gateway.consoleRegion },
+      debug: (diagnostic) => ctx.output.debug(diagnostic),
       baseUrl: ctx.client.baseUrl,
       accessKeyId,
       accessKeySecret,
@@ -176,36 +172,30 @@ export default defineCommand({
       token: accessToken,
     };
 
-    const verbose = settings.verbose;
-    const callApi = async (api: string, data: Record<string, unknown> = {}) => {
-      if (verbose) process.stderr.write(`> ${api}\n`);
-      try {
-        const resp = await callConsoleGateway(target, settings.timeout, { api, data }, settings);
-        if (verbose) process.stderr.write(`< ${JSON.stringify(resp)}\n`);
-        return resp;
-      } catch (err) {
-        if (verbose) {
-          const message =
-            err instanceof BailianError ? (err.rawResponse ?? err.message) : String(err);
-          process.stderr.write(`< ERROR: ${message}\n`);
-        }
-        throw err;
-      }
-    };
+    const callApi = (api: string, data: Record<string, unknown> = {}) =>
+      callConsoleGateway(
+        target,
+        settings.timeout,
+        { api, data },
+        { debug: (diagnostic) => ctx.output.debug(diagnostic) },
+      );
 
     // Step 1: Check login info
-    emitBare("Checking workspace status...");
+    ctx.output.info({
+      "en-US": "Checking workspace status...",
+      "zh-CN": "正在检查工作空间状态...",
+    });
     const loginResp = await callApi(API.loginInfo);
     const loginData = extractData(loginResp);
     const spaceInited = loginData?.spaceInited === true;
 
     // Step 2: Init space if needed
     if (!spaceInited) {
-      emitBare("Initializing workspace...");
+      ctx.output.info({ "en-US": "Initializing workspace...", "zh-CN": "正在初始化工作空间..." });
       await callApi(API.initSpace);
-      emitBare("Workspace initialized.");
+      ctx.output.info({ "en-US": "Workspace initialized.", "zh-CN": "工作空间已初始化。" });
     } else {
-      emitBare("Workspace already initialized.");
+      ctx.output.info({ "en-US": "Workspace already initialized.", "zh-CN": "工作空间已初始化。" });
     }
 
     // Step 3: Create console user via BailianControl OpenAPI (AK/SK signed)
@@ -216,6 +206,7 @@ export default defineCommand({
     const bailianControlAuth = {
       identity: ctx.identity,
       settings,
+      debug: (diagnostic: Parameters<typeof ctx.output.debug>[0]) => ctx.output.debug(diagnostic),
       baseUrl: ctx.client.baseUrl,
       regionId: gateway.consoleRegion,
       accessKeyId,
@@ -232,28 +223,38 @@ export default defineCommand({
           userName: uid,
         },
       });
-    } catch (err) {
+    } catch (error) {
       // Re-running workspace init is idempotent: an already-existing user is
       // not fatal, so swallow it and continue with the remaining steps.
-      if (!(err instanceof BailianError) || !/already exists/i.test(err.message)) {
-        throw err;
+      if (!(error instanceof BailianError) || !/already exists/i.test(error.message)) {
+        throw error;
       }
-      emitBare("Console user already exists, continuing.");
+      ctx.output.info({
+        "en-US": "Console user already exists, continuing.",
+        "zh-CN": "控制台用户已存在，继续执行。",
+      });
     }
 
     // Step 4-5: Resolve the workspace agent id, then authorize user permissions.
-    emitBare("Resolving workspace agent...");
+    ctx.output.info({
+      "en-US": "Resolving workspace agent...",
+      "zh-CN": "正在解析工作空间身份...",
+    });
     const workspacesResp = await listBailianControlWorkspaces(bailianControlAuth);
     const agentId = extractAgentId(workspacesResp);
     if (agentId == null) {
       throw new BailianError(
         "Could not resolve agentId from ListWorkspaces response.",
         ExitCode.GENERAL,
-        "Re-run with --verbose to inspect the ListWorkspaces response body.",
+        ctx.localize({
+          "en-US":
+            "Check that the workspace is accessible and has a tenantId. Use --verbose for request diagnostics.",
+          "zh-CN": "请检查工作空间访问权限及其 tenantId，使用 --verbose 查看请求诊断。",
+        }),
       );
     }
 
-    emitBare("Authorizing user permissions...");
+    ctx.output.info({ "en-US": "Authorizing user permissions...", "zh-CN": "正在配置用户权限..." });
     await resetBailianControlPolicies4Agent({
       ...bailianControlAuth,
       outerKey: uid,
@@ -262,34 +263,45 @@ export default defineCommand({
     });
 
     // Step 6-8: Order & commodity flow
-    await ensureCommoditiesActive(callApi, format);
+    ctx.output.result(await ensureCommoditiesActive(callApi, ctx));
   },
 });
 
 type ApiCall = (api: string, data?: Record<string, unknown>) => Promise<any>;
+type OutputContext = Pick<CommandContext, "output" | "localize" | "settings">;
+interface ReadyResult {
+  status: "ready";
+  activeServices: (string | undefined)[];
+}
 
-async function ensureCommoditiesActive(call: ApiCall, format: "text" | "json"): Promise<void> {
-  emitBare("Checking service activation status...");
+async function ensureCommoditiesActive(
+  call: ApiCall,
+  context: OutputContext,
+): Promise<ReadyResult> {
+  context.output.info({
+    "en-US": "Checking service activation status...",
+    "zh-CN": "正在检查服务开通状态...",
+  });
   let buyResult: string | undefined;
-  for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
+  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     const resp = await call(API.queryBuyResult);
     const data = extractData(resp);
     buyResult = typeof data === "string" ? data : data?.result;
     if (buyResult !== "buying") break;
-    if (i === 0) emitBare("Service activation in progress, polling...");
+    if (attempt === 0)
+      context.output.info({
+        "en-US": "Service activation in progress, polling...",
+        "zh-CN": "服务正在开通，继续轮询...",
+      });
     await sleep(POLL_INTERVAL_MS);
   }
-
-  if (buyResult === "fail") {
-    throw new BailianError("Service activation failed.", ExitCode.GENERAL);
-  }
-
-  if (buyResult === "success") {
-    await pollCommoditiesUntilActive(call, format);
-    return;
-  }
-
-  await checkAndActivateCommodities(call, format);
+  if (buyResult === "fail")
+    throw new BailianError(
+      context.localize({ "en-US": "Service activation failed.", "zh-CN": "服务开通失败。" }),
+      ExitCode.GENERAL,
+    );
+  if (buyResult === "success") return pollCommoditiesUntilActive(call, context);
+  return checkAndActivateCommodities(call, context);
 }
 
 function extractCommodities(resp: any): CommodityItem[] {
@@ -297,47 +309,72 @@ function extractCommodities(resp: any): CommodityItem[] {
   return Array.isArray(data) ? data : [];
 }
 
-async function checkAndActivateCommodities(call: ApiCall, format: "text" | "json"): Promise<void> {
-  const resp = await call(API.commodityOrderInfo);
-  const items = extractCommodities(resp);
-
-  const overdue = items.filter((c) => c.status === 11);
-  if (overdue.length > 0) {
-    emitBare("Warning: Some services are overdue:");
-    for (const c of overdue) emitBare(`  - ${c.commodityCode}`);
-  }
-
-  const notActivated = items.filter((c) => c.status === 1);
-  if (notActivated.length > 0) {
-    emitBare(`Activating ${notActivated.length} postpaid services...`);
-    await call(API.buyCommodity);
-    await pollCommoditiesUntilActive(call, format);
-    return;
-  }
-
-  const active = items.filter((c) => c.status === 10);
-  emitResult({ status: "ready", activeServices: active.map((c) => c.commodityCode) }, format);
+function warnOverdue(items: CommodityItem[], context: OutputContext): void {
+  const services = items
+    .filter((commodity) => commodity.status === 11)
+    .map((commodity) => commodity.commodityCode);
+  if (services.length === 0) return;
+  const label = context.localize({
+    "en-US": "Some services are overdue:",
+    "zh-CN": "部分服务已欠费：",
+  });
+  context.output.warning({
+    code: "WORKSPACE_SERVICES_OVERDUE",
+    message:
+      context.settings.output === "json"
+        ? label
+        : [label, ...services.map((commodity) => `  - ${commodity}`)].join("\n"),
+    ...(context.settings.output === "json" ? { details: { services } } : {}),
+  });
 }
 
-async function pollCommoditiesUntilActive(call: ApiCall, format: "text" | "json"): Promise<void> {
-  emitBare("Waiting for services to activate...");
-  for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
+async function checkAndActivateCommodities(
+  call: ApiCall,
+  context: OutputContext,
+): Promise<ReadyResult> {
+  const resp = await call(API.commodityOrderInfo);
+  const items = extractCommodities(resp);
+  warnOverdue(items, context);
+  const notActivated = items.filter((commodity) => commodity.status === 1);
+  if (notActivated.length > 0) {
+    context.output.info({
+      "en-US": `Activating ${notActivated.length} postpaid services...`,
+      "zh-CN": `正在开通 ${notActivated.length} 个后付费服务...`,
+    });
+    await call(API.buyCommodity);
+    return pollCommoditiesUntilActive(call, context);
+  }
+  const active = items.filter((commodity) => commodity.status === 10);
+  return { status: "ready", activeServices: active.map((commodity) => commodity.commodityCode) };
+}
+
+async function pollCommoditiesUntilActive(
+  call: ApiCall,
+  context: OutputContext,
+): Promise<ReadyResult> {
+  context.output.info({
+    "en-US": "Waiting for services to activate...",
+    "zh-CN": "正在等待服务开通...",
+  });
+  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     const resp = await call(API.commodityOrderInfo);
     const items = extractCommodities(resp);
-
-    const pending = items.filter((c) => c.status !== 10 && c.status !== 11);
+    const pending = items.filter((commodity) => commodity.status !== 10 && commodity.status !== 11);
     if (pending.length === 0) {
-      const overdue = items.filter((c) => c.status === 11);
-      if (overdue.length > 0) {
-        emitBare("Warning: Some services are overdue:");
-        for (const c of overdue) emitBare(`  - ${c.commodityCode}`);
-      }
-      const active = items.filter((c) => c.status === 10);
-      emitResult({ status: "ready", activeServices: active.map((c) => c.commodityCode) }, format);
-      return;
+      warnOverdue(items, context);
+      const active = items.filter((commodity) => commodity.status === 10);
+      return {
+        status: "ready",
+        activeServices: active.map((commodity) => commodity.commodityCode),
+      };
     }
     await sleep(POLL_INTERVAL_MS);
   }
-
-  throw new BailianError("Timed out waiting for services to activate.", ExitCode.TIMEOUT);
+  throw new BailianError(
+    context.localize({
+      "en-US": "Timed out waiting for services to activate.",
+      "zh-CN": "等待服务开通超时。",
+    }),
+    ExitCode.TIMEOUT,
+  );
 }

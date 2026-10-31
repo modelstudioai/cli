@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { BailianError, ExitCode, type LocalizedText } from "bailian-cli-core";
 import create from "../../src/commands/knowledge/kb-create.ts";
@@ -7,7 +8,13 @@ import { reportCreatedKnowledgeBase } from "../../src/commands/knowledge/billing
 afterEach(() => vi.restoreAllMocks());
 
 function fixture(
-  options: { dryRun?: boolean; wait?: boolean; quiet?: boolean; locale?: "en-US" | "zh-CN" } = {},
+  options: {
+    dryRun?: boolean;
+    wait?: boolean;
+    quiet?: boolean;
+    locale?: "en-US" | "zh-CN";
+    format?: "text" | "json";
+  } = {},
 ) {
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -22,6 +29,13 @@ function fixture(
   const requestJson = vi
     .fn()
     .mockResolvedValue({ data: { pipelineId: "idx-billed", ingestionId: "job-import" } });
+  const settings = {
+    dryRun: options.dryRun ?? false,
+    quiet: options.quiet ?? false,
+    output: options.format ?? "json",
+    timeout: 10,
+    verbose: false,
+  };
   const context = {
     flags: {
       name: "fixture",
@@ -30,7 +44,8 @@ function fixture(
       workspaceId: "ws-test",
       wait: options.wait,
     },
-    settings: { dryRun: options.dryRun, quiet: options.quiet, output: "json", timeout: 10 },
+    settings,
+    output: createOutputReporter({ settings }).output,
     localize: (text: LocalizedText) =>
       typeof text === "string" ? text : text[options.locale ?? "en-US"],
     client: { requestJson },
@@ -110,18 +125,17 @@ test.each([
       .split(/\n+/)
       .map((line) => JSON.parse(line))
       .find((value) => value.warning?.code === "KNOWLEDGE_RESOURCE_CREATED");
-    expect(record.warning.resource.cleanup.command).toEqual({
+    expect(record.warning.details.resource.cleanup.command).toEqual({
       bin: binName,
       path,
       args: ["--index-id", "idx-billed", "--workspace-id", "ws-test"],
     });
-    expect(JSON.stringify(record.warning.resource.cleanup.command)).not.toContain("--yes");
+    expect(JSON.stringify(record.warning.details.resource.cleanup.command)).not.toContain("--yes");
   },
 );
 
 test("human cleanup instructions quote IDs safely and do not guess a missing route", () => {
-  const { context, stderr } = fixture();
-  context.settings.output = "text";
+  const { context, stderr } = fixture({ format: "text" });
   context.identity = {
     binName: "custom-cli",
     version: "test",

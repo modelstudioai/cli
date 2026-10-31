@@ -1,3 +1,5 @@
+import { buildSettings } from "bailian-cli-core";
+import { withCommandOutput } from "./output/command-context.ts";
 import { BailianError, ExitCode } from "bailian-cli-core";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import chatCommand from "../src/commands/text/chat.ts";
@@ -19,17 +21,19 @@ async function runResponsesStream(events: unknown[]): Promise<BailianError | und
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
   try {
-    await chatCommand.run({
-      settings: { output: "json" },
-      flags: {
-        api: "responses",
-        message: ["hello"],
-        stream: true,
-      },
-      client: {
-        request: async () => responsesStreamResponse(events),
-      },
-    } as never);
+    await chatCommand.run(
+      withCommandOutput({
+        settings: buildSettings({ flags: { output: "json" }, env: {}, file: {} }),
+        flags: {
+          api: "responses",
+          message: ["hello"],
+          stream: true,
+        },
+        client: {
+          request: async () => responsesStreamResponse(events),
+        },
+      }) as never,
+    );
     return undefined;
   } catch (error) {
     expect(error).toBeInstanceOf(BailianError);

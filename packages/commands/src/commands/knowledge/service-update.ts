@@ -4,14 +4,13 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type Client,
+  type CommandOutput,
   type FlagsDef,
   type RagAgentConfig,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const BOOL_CHOICES = ["true", "false"];
@@ -160,7 +159,10 @@ function collectScalarConfig(flags: UpdateFlags): Partial<RagAgentConfig> {
 }
 
 /** --config-file: read JSON + structural/enum/range validation; unknown fields warn but pass through */
-export function parseConfigFile(filePath: string): RagAgentConfig {
+export function parseConfigFile(
+  filePath: string,
+  output: Pick<CommandOutput, "warning">,
+): RagAgentConfig {
   let raw: string;
   try {
     raw = readFileSync(filePath, "utf-8");
@@ -182,7 +184,7 @@ export function parseConfigFile(filePath: string): RagAgentConfig {
     throw new BailianError("--config-file must contain a JSON object.", ExitCode.USAGE);
   }
   const config = parsed as RagAgentConfig;
-  validateConfigValues(config);
+  validateConfigValues(config, output);
   return config;
 }
 
@@ -215,7 +217,10 @@ const KNOWN_CONFIG_KEYS = new Set([
 ]);
 
 /** Enum/range validation + behavioral warnings, per the agent_config contract */
-export function validateConfigValues(config: RagAgentConfig): void {
+export function validateConfigValues(
+  config: RagAgentConfig,
+  output: Pick<CommandOutput, "warning">,
+): void {
   if (config.agent_policy !== undefined && !["turbo", "agentic"].includes(config.agent_policy)) {
     throw new BailianError("agent_policy must be turbo or agentic", ExitCode.USAGE);
   }
@@ -237,15 +242,27 @@ export function validateConfigValues(config: RagAgentConfig): void {
       | { rerank_mode?: string; rerank_instruct?: string }
       | undefined;
     if (rerank?.rerank_instruct && rerank.rerank_mode !== "custom") {
-      process.stderr.write(
-        "Warning: rerank_instruct is only effective with rerank_mode=custom; the server clears it otherwise.\n",
-      );
+      output.warning({
+        code: "KNOWLEDGE_SERVICE_RERANK_INSTRUCT_IGNORED",
+        message: {
+          "en-US":
+            "rerank_instruct is only effective with rerank_mode=custom; the server clears it otherwise.",
+          "zh-CN": "rerank_instruct 仅在 rerank_mode=custom 时生效；否则服务端会将其清空。",
+        },
+      });
     }
   }
   // Unknown fields: warn but pass through (the server is the source of truth)
   for (const key of Object.keys(config)) {
     if (!KNOWN_CONFIG_KEYS.has(key)) {
-      process.stderr.write(`Warning: unknown agent_config field passed through: ${key}\n`);
+      output.warning({
+        code: "KNOWLEDGE_SERVICE_UNKNOWN_CONFIG_FIELD",
+        message: {
+          "en-US": `unknown agent_config field passed through: ${key}`,
+          "zh-CN": `未知 agent_config 字段已原样传递: ${key}`,
+        },
+        details: { field: key },
+      });
     }
   }
 }
@@ -368,7 +385,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const scalarConfig = collectScalarConfig(flags);
     const hasConfigChange = flags.configFile !== undefined || Object.keys(scalarConfig).length > 0;
@@ -376,7 +393,7 @@ export default defineCommand({
     let agentConfig: RagAgentConfig | undefined;
     if (flags.configFile !== undefined) {
       // dry-run also reads the file and validates (rehearsal semantics)
-      agentConfig = parseConfigFile(flags.configFile);
+      agentConfig = parseConfigFile(flags.configFile, ctx.output);
     } else if (Object.keys(scalarConfig).length > 0) {
       if (settings.dryRun) {
         // dry-run does not issue the read-merge request; show the scalar delta with a placeholder note
@@ -386,7 +403,7 @@ export default defineCommand({
         // then merge (hidden from the user)
         const currentConfig = await fetchBetaConfig(ctx.client, workspaceId, flags.agentId);
         agentConfig = { ...currentConfig, ...scalarConfig };
-        validateConfigValues(agentConfig);
+        validateConfigValues(agentConfig, ctx.output);
       }
     }
 
@@ -401,29 +418,39 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentUpdate);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          endpoint,
-          request: body,
-          ...(hasConfigChange && flags.configFile === undefined
-            ? { note: "scalar config flags are merged into the current beta config at run time" }
-            : {}),
-        },
-        format,
-      );
+      ctx.output.result({
+        endpoint,
+        request: body,
+        ...(hasConfigChange && flags.configFile === undefined
+          ? { note: "scalar config flags are merged into the current beta config at run time" }
+          : {}),
+      });
       return;
     }
 
     const response = await updateKnowledgeService(ctx.client, workspaceId, body);
 
-    if (settings.quiet) return;
-    if (format === "text") {
-      emitBare(`updated: ${flags.agentId}`);
-      if (hasConfigChange) {
-        emitBare("Draft config changed — verify with --agent-version beta, then deploy.");
-      }
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: [
+              ctx.localize({
+                "en-US": `updated: ${flags.agentId}`,
+                "zh-CN": `已更新: ${flags.agentId}`,
+              }),
+              ...(hasConfigChange
+                ? [
+                    ctx.localize({
+                      "en-US":
+                        "Draft config changed — verify with --agent-version beta, then deploy.",
+                      "zh-CN": "草稿配置已更改，请使用 --agent-version beta 验证，然后部署。",
+                    }),
+                  ]
+                : []),
+            ].join("\n"),
+          }
+        : undefined,
+    );
   },
 });

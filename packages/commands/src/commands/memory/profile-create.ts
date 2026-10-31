@@ -3,14 +3,12 @@ import {
   UsageError,
   memoryEndpoint,
   profileSchemaPath,
-  detectOutputFormat,
   type FlagsDef,
   type MemoryPlanVersion,
   type ProfileAttribute,
   type ProfileSchemaCreateRequest,
   type ProfileSchemaCreateResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
@@ -108,11 +106,11 @@ export default defineCommand({
     if (flags.extractScene) body.extract_scene = flags.extractScene;
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url = memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaPath());
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "POST", request: body }, format);
+      ctx.output.result({ endpoint: url, method: "POST", request: body });
       return;
     }
 
@@ -122,10 +120,16 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Profile schema created: ${response.profile_schema_id}`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Profile schema created: ${response.profile_schema_id}`,
+              "zh-CN": `画像 Schema 已创建：${response.profile_schema_id}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

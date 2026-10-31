@@ -5,7 +5,7 @@ test("collects created resources from failure diagnostics without final stdout",
   expect(
     initCreatedResources(
       "",
-      `progress\n${JSON.stringify({ code: "KNOWLEDGE_INIT_RESOURCE", resource: { kind: "knowledge-base", id: "index", created: true } })}\n{"truncated"`,
+      `progress\n${JSON.stringify({ warning: { code: "KNOWLEDGE_INIT_RESOURCE", details: { resource: { kind: "knowledge-base", id: "index", created: true } } } })}\n{"truncated"`,
     ),
   ).toEqual([{ kind: "knowledge-base", id: "index", created: true }]);
 });
@@ -17,7 +17,9 @@ test("deduplicates final results and diagnostics, retaining separate resource ty
   expect(
     initCreatedResources(
       JSON.stringify({ resources }),
-      JSON.stringify({ code: "KNOWLEDGE_INIT_RESOURCE", resource: resources[0] }),
+      JSON.stringify({
+        warning: { code: "KNOWLEDGE_INIT_RESOURCE", details: { resource: resources[0] } },
+      }),
     ),
   ).toEqual(resources);
 });

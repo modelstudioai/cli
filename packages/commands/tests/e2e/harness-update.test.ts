@@ -17,9 +17,11 @@ test("the harness receives a local 404 for its unpublished package and delegates
   try {
     await withHarnessUpdateFixture(async () => {
       expect(await fetchLatestVersion(100, E2E_HARNESS_IDENTITY.npmPackage)).toBeNull();
-      const response = await fetch(`${NPM_REGISTRY}/${E2E_HARNESS_IDENTITY.npmPackage}/latest`);
+      const response = await httpTransport.fetch(
+        `${NPM_REGISTRY}/${E2E_HARNESS_IDENTITY.npmPackage}/latest`,
+      );
       expect(response.status).toBe(404);
-      expect(await (await fetch(`http://127.0.0.1:${address.port}`)).json()).toEqual({
+      expect(await (await httpTransport.fetch(`http://127.0.0.1:${address.port}`)).json()).toEqual({
         business: "unchanged",
       });
     });

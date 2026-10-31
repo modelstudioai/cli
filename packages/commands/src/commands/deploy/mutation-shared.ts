@@ -5,11 +5,12 @@ import {
   type CapacityInstance,
   type CapacityOperation,
   type Client,
+  type CommandContext,
   type Deployment,
   type FlagsDef,
   type LocalizedText,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { waitForCapacityOperation } from "./operation-wait.ts";
 
 export const CAPACITY_FLAGS = {
@@ -230,7 +231,7 @@ export async function submitCapacityWrite<T>(
 }
 
 export async function finishMutation(
-  client: Client,
+  ctx: Pick<CommandContext, "client" | "output" | "settings" | "localize">,
   code: string | undefined,
   response: MutationResponse,
   flags: MutationOptions,
@@ -238,6 +239,7 @@ export async function finishMutation(
   requireOperationStatus = false,
   releasedInstanceId?: string,
 ): Promise<void> {
+  const { client } = ctx;
   const operation = response.output ?? response.data;
   const result = {
     ...response,
@@ -272,7 +274,10 @@ export async function finishMutation(
     );
   }
   if (!flags.wait) {
-    emitResult(result, "json");
+    ctx.output.result(
+      result,
+      ctx.settings.output === "text" ? { text: JSON.stringify(result, null, 2) } : undefined,
+    );
     return;
   }
   const returnedCode =
@@ -287,9 +292,19 @@ export async function finishMutation(
     );
   }
   // stderr survives a later polling failure or Ctrl-C without producing two stdout JSON objects.
-  process.stderr.write(
-    `${JSON.stringify({ submitted: true, deployed_model: returnedCode, operation_id: operationId, client_request_id: requestId })}\n`,
-  );
+  ctx.output.warning({
+    code: "DEPLOYMENT_OPERATION_SUBMITTED",
+    message: {
+      "en-US": "Deployment operation submitted; keep these identifiers if waiting fails.",
+      "zh-CN": "部署操作已提交；若等待失败，请保留这些标识用于查询。",
+    },
+    details: {
+      submitted: true,
+      deployed_model: returnedCode,
+      operation_id: operationId,
+      client_request_id: requestId,
+    },
+  });
   const controller = new AbortController();
   const onInterrupt = () => controller.abort(new Error("Interrupted. / 已中断。"));
   process.once("SIGINT", onInterrupt);
@@ -326,7 +341,10 @@ export async function finishMutation(
         { cause: finalResult },
       );
     }
-    emitResult(finalResult, "json");
+    ctx.output.result(
+      finalResult,
+      ctx.settings.output === "text" ? { text: JSON.stringify(finalResult, null, 2) } : undefined,
+    );
   } catch (error) {
     if (!controller.signal.aborted) throw error;
   } finally {

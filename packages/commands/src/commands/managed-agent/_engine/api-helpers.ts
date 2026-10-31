@@ -1,5 +1,5 @@
-import type { FlagsDef } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import type { CommandContext, FlagsDef } from "bailian-cli-core";
+import { formatTable } from "bailian-cli-runtime";
 import type { PagedResult } from "./pagination.ts";
 
 export const API_TARGET_FLAGS = {
@@ -141,20 +141,21 @@ export async function searchCursorPages<T>(
   };
 }
 
-export function emitCollection<T>(options: {
-  format: "json" | "text";
-  key: string;
-  items: T[];
-  headers: string[];
-  rows: string[][];
-  hasMore?: boolean;
-  nextPage?: string;
-  truncated?: boolean;
-  scannedPages?: number;
-  emptyMessage?: string;
-}): void {
+export function emitCollection<T>(
+  ctx: Pick<CommandContext, "output" | "localize">,
+  options: {
+    key: string;
+    items: T[];
+    headers: string[];
+    rows: string[][];
+    hasMore?: boolean;
+    nextPage?: string;
+    truncated?: boolean;
+    scannedPages?: number;
+    emptyMessage?: string;
+  },
+): void {
   const {
-    format,
     key,
     items,
     headers,
@@ -163,30 +164,38 @@ export function emitCollection<T>(options: {
     nextPage,
     truncated,
     scannedPages,
-    emptyMessage = "No resources found.",
+    emptyMessage = ctx.localize({ "en-US": "No resources found.", "zh-CN": "没有找到资源。" }),
   } = options;
-  if (format === "json") {
-    emitResult(
-      {
-        [key]: items,
-        has_more: hasMore,
-        next_page: nextPage,
-        ...(truncated === undefined ? {} : { truncated }),
-        ...(scannedPages === undefined ? {} : { scanned_pages: scannedPages }),
-      },
-      format,
-    );
-    return;
-  }
-  if (items.length === 0) {
-    emitBare(emptyMessage);
-    return;
-  }
-  for (const line of formatTable(headers, rows)) emitBare(line);
-  emitBare(`\nTotal: ${items.length}`);
-  if (truncated) emitBare("Search stopped at --page-limit; more pages remain.");
-  else if (hasMore)
-    emitBare(`More results are available.${nextPage ? ` Next page: ${nextPage}` : ""}`);
+  const data = {
+    [key]: items,
+    has_more: hasMore,
+    next_page: nextPage,
+    ...(truncated === undefined ? {} : { truncated }),
+    ...(scannedPages === undefined ? {} : { scanned_pages: scannedPages }),
+  };
+  const lines =
+    items.length === 0
+      ? [emptyMessage]
+      : [
+          ...formatTable(headers, rows),
+          ctx.localize({ "en-US": `\nTotal: ${items.length}`, "zh-CN": `\n总计：${items.length}` }),
+          ...(truncated
+            ? [
+                ctx.localize({
+                  "en-US": "Search stopped at --page-limit; more pages remain.",
+                  "zh-CN": "搜索已在 --page-limit 处停止，仍有更多分页。",
+                }),
+              ]
+            : hasMore
+              ? [
+                  ctx.localize({
+                    "en-US": `More results are available.${nextPage ? ` Next page: ${nextPage}` : ""}`,
+                    "zh-CN": `还有更多结果。${nextPage ? ` 下一页：${nextPage}` : ""}`,
+                  }),
+                ]
+              : []),
+        ];
+  ctx.output.result(data, { text: lines.join("\n") });
 }
 
 export function displayValue(value: unknown, maxLength = 40): string {

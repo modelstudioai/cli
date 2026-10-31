@@ -1,13 +1,11 @@
 import {
   defineCommand,
-  detectOutputFormat,
   speechVocabularyPath,
   buildVocabularyRequest,
   listVocabularies,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   prefix: {
@@ -65,7 +63,6 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
 
     const pageIndex = flags.page !== undefined ? flags.page - 1 : undefined;
     const input: Record<string, unknown> = {};
@@ -74,13 +71,10 @@ export default defineCommand({
     if (flags.pageSize !== undefined) input.page_size = flags.pageSize;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          endpoint: ctx.client.url(speechVocabularyPath()),
-          request: buildVocabularyRequest("list_vocabulary", input),
-        },
-        format,
-      );
+      ctx.output.result({
+        endpoint: ctx.client.url(speechVocabularyPath()),
+        request: buildVocabularyRequest("list_vocabulary", input),
+      });
       return;
     }
 
@@ -90,10 +84,17 @@ export default defineCommand({
       pageSize: flags.pageSize,
     });
 
-    if (settings.quiet || format === "text") {
+    let text: string | undefined;
+    if (settings.output === "text") {
       const items = response.output?.vocabulary_list ?? [];
+      const lines: string[] = [];
       if (items.length === 0) {
-        emitBare("No vocabularies found.");
+        lines.push(
+          ctx.localize({
+            "en-US": "No vocabularies found.",
+            "zh-CN": "未找到热词表。",
+          }),
+        );
       } else {
         let hasUndeployed = false;
         for (const item of items) {
@@ -101,16 +102,21 @@ export default defineCommand({
           const status = item.status ?? "";
           const modified = item.gmt_modified ?? "";
           if (status === "UNDEPLOYED") hasUndeployed = true;
-          emitBare(`[${id}] ${status} ${modified}`.trimEnd());
+          lines.push(`[${id}] ${status} ${modified}`.trimEnd());
         }
         if (hasUndeployed) {
-          emitBare(
-            "Note: UNDEPLOYED vocabularies are silently ignored by ASR. Use `speech vocabulary get` to inspect them.",
+          lines.push(
+            ctx.localize({
+              "en-US":
+                "Note: UNDEPLOYED vocabularies are silently ignored by ASR. Use `speech vocabulary get` to inspect them.",
+              "zh-CN":
+                "提示：ASR 会静默忽略 UNDEPLOYED 状态的热词表。请使用 `speech vocabulary get` 查看详情。",
+            }),
           );
         }
       }
-    } else {
-      emitResult(response, format);
+      text = lines.join("\n");
     }
+    ctx.output.result(response, { text });
   },
 });

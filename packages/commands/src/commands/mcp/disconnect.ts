@@ -3,11 +3,9 @@ import {
   BailianError,
   ExitCode,
   defineCommand,
-  detectOutputFormat,
   getConfigDir,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 import {
   MCP_AGENT_IDS,
   disconnectMcpAgents,
@@ -67,9 +65,8 @@ export default defineCommand({
         ExitCode.USAGE,
       );
     }
-    const format = detectOutputFormat(settings.output);
     if (settings.dryRun) {
-      emitResult({ server: flags.server, agents, action: "disconnect" }, format);
+      ctx.output.result({ server: flags.server, agents, action: "disconnect" });
       return;
     }
     const results = disconnectMcpAgents({
@@ -78,6 +75,6 @@ export default defineCommand({
       home: homedir(),
       configDir: getConfigDir(),
     });
-    emitResult({ server: flags.server, results }, format);
+    ctx.output.result({ server: flags.server, results });
   },
 });

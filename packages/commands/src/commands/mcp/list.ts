@@ -1,11 +1,9 @@
 import {
   defineCommand,
   effectiveConsoleGatewayConfig,
-  detectOutputFormat,
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 
 const MCP_LIST_API = "zeldaEasy.broadscope-bailian.mcp-server.PageList";
 
@@ -65,7 +63,6 @@ export default defineCommand({
     const type = flags.type || "OFFICIAL";
     const pageNo = flags.page || 1;
     const pageSize = flags.pageSize || 30;
-    const format = detectOutputFormat(settings.output);
 
     const data = {
       reqDTO: {
@@ -79,7 +76,7 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult({ api: MCP_LIST_API, data, ...effectiveConsoleGatewayConfig(settings) }, format);
+      ctx.output.result({ api: MCP_LIST_API, data, ...effectiveConsoleGatewayConfig(settings) });
       return;
     }
 
@@ -113,6 +110,6 @@ export default defineCommand({
       streamable: item.streamable === true,
     }));
 
-    emitResult({ total, servers }, format);
+    ctx.output.result({ total, servers });
   },
 });

@@ -31,7 +31,7 @@ export type Resolution =
       rest: string[];
       parsedFlags: Record<string, unknown>;
     }
-  | { kind: "usageError"; error: UsageError };
+  | { kind: "usageError"; error: UsageError; command?: AnyCommand };
 
 /**
  * Classify argv into a {@link Resolution}. Pure over (argv, registry).
@@ -43,12 +43,14 @@ export function resolve(
   registry: CommandRegistry,
   localize: Translator["localize"] = (text) => createTranslator(DEFAULT_LANGUAGE).localize(text),
 ): Resolution {
+  let matchedCommand: AnyCommand | undefined;
   try {
     const { path, rest, hasHelpFlag, hasVersionFlag, hasIntrospectFlag } = parsePath(
       argv,
       localize,
     );
     const target = registry.locate(path);
+    if (target.kind === "leaf") matchedCommand = target.command;
 
     if (target.kind === "unknown" && !hasVersionFlag && !hasHelpFlag) {
       return { kind: "usageError", error: target.error };
@@ -98,7 +100,13 @@ export function resolve(
         return { kind: "usageError", error: target.error };
     }
   } catch (error) {
-    if (error instanceof UsageError) return { kind: "usageError", error };
+    if (error instanceof UsageError) {
+      return {
+        kind: "usageError",
+        error,
+        ...(matchedCommand ? { command: matchedCommand } : {}),
+      };
+    }
     throw error;
   }
 }

@@ -1,6 +1,5 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { renderBoxTable } from "bailian-cli-runtime";
 import { ensureAlertReady, extractAlertPage } from "./shared.ts";
 
 const LIST_TEMPLATES_API = "zeldaEasy.bailian-telemetry.alertTemplate.listAlertTemplates";
@@ -82,7 +81,7 @@ export default defineTelemetryCommand({
   exampleArgs: ["", "--source Official", "--name 失败率", "--template-id 123 --output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const reqDTO = {
       resourceType: "model",
@@ -94,14 +93,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_TEMPLATES_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_TEMPLATES_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -110,28 +106,37 @@ export default defineTelemetryCommand({
     const raw = await ctx.client.console(LIST_TEMPLATES_API, { reqDTO });
     const page = extractAlertPage<AlertTemplate>(raw);
 
-    if (format === "json") {
-      emitResult(page, format);
-      return;
+    let text: string | undefined;
+    if (format === "text") {
+      if (page.list.length === 0) {
+        text = ctx.localize({ "en-US": "No alert templates found.", "zh-CN": "未找到告警模板。" });
+      } else {
+        const lines = renderBoxTable({
+          headers: [
+            ctx.localize({ "en-US": "Template ID", "zh-CN": "模板 ID" }),
+            ctx.localize({ "en-US": "Name", "zh-CN": "名称" }),
+            ctx.localize({ "en-US": "Source", "zh-CN": "来源" }),
+            ctx.localize({ "en-US": "Conditions", "zh-CN": "条件" }),
+          ],
+          rows: page.list.map((template) => [
+            template.templateId,
+            template.templateName,
+            template.source === "Official"
+              ? ctx.localize({ "en-US": "Official", "zh-CN": "官方" })
+              : ctx.localize({ "en-US": "Custom", "zh-CN": "自定义" }),
+            (template.conditions ?? [])
+              .map(formatCondition)
+              .join(
+                template.logicalOperator === "and"
+                  ? ctx.localize({ "en-US": " AND ", "zh-CN": " 且 " })
+                  : ctx.localize({ "en-US": " OR ", "zh-CN": " 或 " }),
+              ) || "-",
+          ]),
+          align: ["left", "left", "left", "left"],
+        });
+        text = lines.join("\n");
+      }
     }
-
-    if (page.list.length === 0) {
-      process.stdout.write("No alert templates found.\n");
-      return;
-    }
-
-    const lines = renderBoxTable({
-      headers: ["Template ID", "Name", "Source", "Conditions"],
-      rows: page.list.map((template) => [
-        template.templateId,
-        template.templateName,
-        template.source === "Official" ? "Official" : "Custom",
-        (template.conditions ?? [])
-          .map(formatCondition)
-          .join(template.logicalOperator === "and" ? " AND " : " OR ") || "-",
-      ]),
-      align: ["left", "left", "left", "left"],
-    });
-    for (const line of lines) process.stdout.write(line + "\n");
+    ctx.output.result(page, text === undefined ? undefined : { text });
   },
 });

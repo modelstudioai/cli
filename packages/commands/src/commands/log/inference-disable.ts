@@ -1,4 +1,3 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand } from "../shared/telemetry.ts";
 import { disableLogDelivery } from "./shared.ts";
 
@@ -18,13 +17,12 @@ export default defineTelemetryCommand({
   ],
   exampleArgs: ["", "--dry-run", "--output json"],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     await disableLogDelivery(
       {
         client: ctx.client,
+        output: ctx.output,
         settings: ctx.settings,
         binName: ctx.identity.binName,
-        format,
       },
       "inference",
     );

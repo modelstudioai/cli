@@ -187,7 +187,7 @@ bl sandbox delete --sandbox-id sbx-xxx --yes
 
 - POST /api/v1/agentstudio/files with multipart fields file and source=sandbox_template. Uses a Bailian Bearer API Key, not Console authentication or an E2B key; no agents.yaml is needed.
 - Base URL follows Sandbox: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. Without one, --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id selects the cn-beijing origin. The upload path has no /sandbox prefix.
-- Returns the upload response immediately; --quiet prints only its id. Upload does not wait for security review: status=checking is not ready to mount. Use an available file's id as mntConfig[].originFileId in template create/update --body, together with mountPath and optional originFileName, in the same workspace. This does not transfer files into a running instance.
+- Returns the complete upload response immediately, including with --quiet. Upload does not wait for security review: status=checking is not ready to mount. Use an available file's id as mntConfig[].originFileId in template create/update --body, together with mountPath and optional originFileName, in the same workspace. This does not transfer files into a running instance.
 - --dry-run previews the endpoint, source, and local path without reading or uploading the file. The service detects the MIME type and enforces upload limits.
 
 #### Examples

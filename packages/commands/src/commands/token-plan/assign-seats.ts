@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  type FlagsDef,
-  type ParsedFlags,
-} from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef, type ParsedFlags } from "bailian-cli-core";
 import type { BatchAssignSeatsResponse } from "./types.ts";
 import {
   TOKEN_PLAN_COMMON_QUERY_FLAGS,
@@ -63,7 +57,6 @@ export default defineCommand({
     f.accountId && f.accountId.length > 0 ? undefined : "Missing required flag: --account-id",
   async run(ctx) {
     const { identity, settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
 
     const workspaceId = requireWorkspaceId(settings, flags, identity.binName);
     const queryParams = buildQueryParams(flags, workspaceId);
@@ -74,7 +67,7 @@ export default defineCommand({
         API_PATH,
         queryParams,
       );
-      emitResult({ endpoint, query }, format);
+      ctx.output.result({ endpoint, query });
       return;
     }
 
@@ -87,11 +80,9 @@ export default defineCommand({
       queryParams,
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare("Seats assigned successfully.");
-    } else {
-      emitResult(data, format);
-    }
+    ctx.output.result(data, {
+      text: ctx.localize({ "en-US": "Seats assigned successfully.", "zh-CN": "席位分配成功。" }),
+    });
   },
 });
 

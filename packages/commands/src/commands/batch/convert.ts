@@ -1,5 +1,4 @@
 import { defineCommand, prepareBatch, batchDataNotes, type FlagsDef } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { ENDPOINT_FLAGS, FORCE_FLAGS, DRY_RUN_NOTE } from "./shared.ts";
 const CONVERT_FLAGS = {
   file: {
@@ -74,8 +73,8 @@ export default defineCommand({
   ],
   async run(ctx) {
     const report = await prepareBatch({ ...ctx.flags, dryRun: ctx.settings.dryRun });
-    for (const warning of report.warnings) console.error(warning);
-    if (ctx.settings.quiet) emitBare(report.output_file);
-    else emitResult(report, ctx.settings.output === "text" ? "text" : "json");
+    for (const warning of report.warnings)
+      ctx.output.warning({ code: "BATCH_VALIDATION_WARNING", message: warning });
+    ctx.output.result(report);
   },
 });

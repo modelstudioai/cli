@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { expect, test, vi } from "vite-plus/test";
 import command from "../../src/commands/knowledge/kb-list.ts";
 
@@ -7,6 +8,8 @@ test("text output uses the observed total_count rather than the current page len
     await command.run({
       flags: { workspaceId: "ws" },
       settings: { output: "text" },
+      output: createOutputReporter({ settings: { output: "text", quiet: false, verbose: false } })
+        .output,
       client: {
         requestJson: async () => ({
           data: { rows: [{ id: "index", name: "test" }], total_count: 42 },

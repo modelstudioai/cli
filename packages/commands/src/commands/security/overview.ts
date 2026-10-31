@@ -1,13 +1,11 @@
 import {
   defineCommand,
-  detectOutputFormat,
   securityGet,
   securityOverviewEndpoint,
   type FlagsDef,
   type SecurityOverview,
   type SecurityScanStat,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   CAPABILITY_LABELS,
   PROTECTION_LABELS,
@@ -60,23 +58,22 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, localize } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const endpoint = securityOverviewEndpoint(resolveSecurityHost(ctx));
 
     if (settings.dryRun) {
-      emitResult({ endpoint, method: "GET" }, format);
+      ctx.output.result({ endpoint, method: "GET" });
       return;
     }
 
     const data = await securityGet<SecurityOverview>(ctx.client, endpoint);
     if (!data) {
-      if (format === "json") emitResult({}, format);
-      else emitBare(localize(SECURITY_UI.overviewUnavailable));
+      ctx.output.result({}, { text: localize(SECURITY_UI.overviewUnavailable) });
       return;
     }
 
     if (format === "json") {
-      emitResult(data, format);
+      ctx.output.result(data);
       return;
     }
 
@@ -91,24 +88,30 @@ export default defineCommand({
     const sum = (pick: (stat: SecurityScanStat) => number | null): number =>
       cards.reduce((total, card) => total + (card.stat ? (pick(card.stat) ?? 0) : 0), 0);
 
-    emitBare(
+    const lines: string[] = [];
+    lines.push(
       `${localize(SECURITY_UI.scannedLabel)}: ${sum((stat) => stat.scanned)}    ` +
         `${localize(SECURITY_UI.risksLabel)}: ${sum((stat) => stat.hit)}`,
     );
 
-    renderToggles(localize, SECURITY_UI.capabilities, data.capabilities, CAPABILITY_LABELS);
-    renderToggles(localize, SECURITY_UI.protection, data.protection, PROTECTION_LABELS);
+    lines.push(
+      ...renderToggles(localize, SECURITY_UI.capabilities, data.capabilities, CAPABILITY_LABELS),
+    );
+    lines.push(
+      ...renderToggles(localize, SECURITY_UI.protection, data.protection, PROTECTION_LABELS),
+    );
 
-    emitBare(`\n${localize(SECURITY_UI.detections)}`);
+    lines.push(`\n${localize(SECURITY_UI.detections)}`);
     for (const { label, stat } of cards) {
       if (!stat) {
-        emitBare(`  ${label}  ${localize(SECURITY_UI.unavailable)}`);
+        lines.push(`  ${label}  ${localize(SECURITY_UI.unavailable)}`);
       } else {
-        emitBare(
+        lines.push(
           `  ${label}  ${localize(SECURITY_UI.hit)} ${stat.hit ?? "-"} / ` +
             `${localize(SECURITY_UI.scanned)} ${stat.scanned ?? "-"}`,
         );
       }
     }
+    ctx.output.result(data, { text: lines.join("\n") });
   },
 });

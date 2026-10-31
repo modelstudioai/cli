@@ -1,3 +1,4 @@
+import { createOutputReporter } from "../src/output/reporter.ts";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,6 +55,7 @@ function makeContext(
       npmPackage: "bailian-cli",
       clientName: "bailian-cli-test",
     },
+    output: createOutputReporter({ settings }).output,
     path,
     command,
     flags: {},
@@ -78,6 +80,13 @@ function makeContext(
 }
 
 async function runAuth(context: RunContext): Promise<void> {
+  Object.assign(context, {
+    output: createOutputReporter({
+      settings: context.settings,
+      localize: (text) =>
+        typeof text === "string" ? text : text[context.sources.file.language ?? "en-US"],
+    }).output,
+  });
   await authStage(context, async () => {});
 }
 
@@ -211,7 +220,7 @@ test("authStage 在 --api-key 覆盖 Profile API Key 时跳过 capability fallba
   });
 });
 
-test("authStage fallback 准确描述 Profile 文件层降级，--quiet 可抑制提示", async () => {
+test("authStage fallback 准确描述 Profile 文件层降级，--quiet 保留警告", async () => {
   useTempConfigDir();
   await writeConfigFile({ api_key: "sk-default" });
   await writeConfigFile(
@@ -234,10 +243,10 @@ test("authStage fallback 准确描述 Profile 文件层降级，--quiet 可抑�
   const quietContext = makeContext(["text", "chat"]);
   const quiet = await captureStderr(() => runAuth(quietContext));
   expect(quiet.error).toBeUndefined();
-  expect(quiet.output).toBe("");
+  expect(quiet.output).toContain("company-plan");
 });
 
-test("authStage 在 JSON 模式输出多行结构化 fallback warning", async () => {
+test("authStage 在 JSON 模式输出单行结构化 fallback warning", async () => {
   useTempConfigDir();
   await writeConfigFile({ api_key: "sk-default" });
   await writeConfigFile(
@@ -255,16 +264,18 @@ test("authStage 在 JSON 模式输出多行结构化 fallback warning", async ()
   const captured = await captureStderr(() => runAuth(context));
 
   expect(captured.error).toBeUndefined();
-  expect(captured.output).toMatch(/^\{\n {2}"warning": \{\n/);
+  expect(captured.output.trim().split("\n")).toHaveLength(1);
   expect(JSON.parse(captured.output.trim())).toEqual({
     warning: {
       code: "PROFILE_API_KEY_FALLBACK",
       message:
         'Profile "company-plan" 不支持命令 "text chat"，本次将从 Profile "default" 读取 API Key 配置。',
-      profile: "company-plan",
-      command_path: ["text", "chat"],
-      fallback_profile: "default",
-      credential_fields: ["api_key", "base_url"],
+      details: {
+        profile: "company-plan",
+        command_path: ["text", "chat"],
+        fallback_profile: "default",
+        credential_fields: ["api_key", "base_url"],
+      },
     },
   });
 });
@@ -340,7 +351,7 @@ test.each([
   });
 });
 
-test("authStage 在 api_key 与 base_url 跨源时输出告警，quiet 可抑制", async () => {
+test("authStage 在 api_key 与 base_url 跨源时输出告警，quiet 保留警告", async () => {
   useTempConfigDir();
   await writeConfigFile({
     language: "zh-CN",
@@ -351,9 +362,8 @@ test("authStage 在 api_key 与 base_url 跨源时输出告警，quiet 可抑制
   visibleContext.settings.quiet = false;
   const visible = await captureStderr(() => runAuth(visibleContext));
   expect(visible.error).toBeUndefined();
-  expect(visible.output).toContain("┌ 警告 ");
+  expect(visible.output).toContain("警告:");
   expect(visible.output).toContain("api_key 和 base_url 来自不同配置源。");
-  expect(visible.output).toContain("└");
   expect(visible.output).toContain("api_key ← 环境变量 (DASHSCOPE_API_KEY)");
   expect(visible.output).toContain("base_url ← 配置文件 (");
   expect(visible.output).toContain("bl config show");
@@ -361,10 +371,10 @@ test("authStage 在 api_key 与 base_url 跨源时输出告警，quiet 可抑制
   const quietContext = makeContext([], {}, { DASHSCOPE_API_KEY: "sk-env-key" });
   const quiet = await captureStderr(() => runAuth(quietContext));
   expect(quiet.error).toBeUndefined();
-  expect(quiet.output).toBe("");
+  expect(quiet.output).toContain("api_key 和 base_url 来自不同配置源。");
 });
 
-test("authStage 在 JSON 模式输出跨源结构化 warning", async () => {
+test.each([false, true])("authStage 在 JSON 模式输出跨源结构化 warning quiet=%s", async (quiet) => {
   useTempConfigDir();
   await writeConfigFile({
     language: "en-US",
@@ -373,23 +383,22 @@ test("authStage 在 JSON 模式输出跨源结构化 warning", async () => {
   });
   const context = makeContext([], {}, { DASHSCOPE_API_KEY: "sk-env-key" });
   context.settings.output = "json";
-  context.settings.quiet = false;
+  context.settings.quiet = quiet;
 
   const captured = await captureStderr(() => runAuth(context));
 
   expect(captured.error).toBeUndefined();
-  expect(captured.output).toMatch(/^\{\n {2}"warning": \{\n/);
+  expect(captured.output.trim().split("\n")).toHaveLength(1);
   const parsed = JSON.parse(captured.output.trim()) as {
     warning: {
       code: string;
-      api_key_source: string;
-      base_url_source: string;
+      details: { api_key_source: string; base_url_source: string };
       message: string;
     };
   };
   expect(parsed.warning.code).toBe("API_KEY_BASE_URL_SOURCE_MISMATCH");
-  expect(parsed.warning.api_key_source).toBe("env");
-  expect(parsed.warning.base_url_source).toBe("config");
+  expect(parsed.warning.details.api_key_source).toBe("env");
+  expect(parsed.warning.details.base_url_source).toBe("config");
   expect(parsed.warning.message).toContain("different sources");
   expect(parsed.warning.message).toContain("bl config show");
 });

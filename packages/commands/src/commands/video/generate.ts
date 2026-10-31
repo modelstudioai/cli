@@ -3,12 +3,11 @@ import {
   videoGeneratePath,
   image2videoPath,
   taskPath,
-  detectOutputFormat,
   type DashScopeVideoRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
   type Settings,
-  type OutputFormat,
+  type CommandOutput,
   resolveOutputDir,
   BailianError,
   ExitCode,
@@ -26,10 +25,9 @@ import {
   parseAigcVideoTaskId,
   parseAigcVideoTaskResult,
 } from "bailian-cli-core";
-import { poll, createSpinner } from "bailian-cli-runtime";
+import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 import { PRIME_FLAGS, resolvePrimeEndpoint, validatePrimeFlags } from "../shared/prime.ts";
 import {
@@ -212,7 +210,6 @@ export default defineCommand({
 
     const resolvedModel =
       flags.model || (flags.image ? settings.defaultImageToVideoModel : settings.defaultVideoModel);
-    const format = detectOutputFormat(settings.output);
 
     // auto model → official AIGC MCP (VideoGenerate); specific models keep the REST path.
     if (isAutoModel(resolvedModel)) {
@@ -239,25 +236,23 @@ export default defineCommand({
       const concurrent = getConcurrency(flags);
 
       if (settings.dryRun) {
-        emitResult(
-          {
-            server: AIGC_MCP_SERVER.video,
-            url: ctx.client.url(bailianMcpPath(AIGC_MCP_SERVER.video)),
-            tool: submitTool,
-            arguments: firstFrameUrl
-              ? { ...submitArgs, first_frame_url: redactDataUri(firstFrameUrl) }
-              : submitArgs,
-            mode: "mcp",
-            concurrent,
-          },
-          format,
-        );
+        ctx.output.result({
+          server: AIGC_MCP_SERVER.video,
+          url: ctx.client.url(bailianMcpPath(AIGC_MCP_SERVER.video)),
+          tool: submitTool,
+          arguments: firstFrameUrl
+            ? { ...submitArgs, first_frame_url: redactDataUri(firstFrameUrl) }
+            : submitArgs,
+          mode: "mcp",
+          concurrent,
+        });
         return;
       }
 
-      if (!settings.quiet) {
-        process.stderr.write("[Model: auto] [Mode: mcp]\n");
-      }
+      ctx.output.info({
+        "en-US": "[Model: auto] [Mode: mcp]",
+        "zh-CN": "[模型：auto] [模式：mcp]",
+      });
 
       const pollInterval = flags.pollInterval ?? 5;
       // One shared MCP session: submit N task(s), then poll each via fetch_result.
@@ -268,7 +263,7 @@ export default defineCommand({
         async (callTool) => {
           const taskIds = await runConcurrent(
             concurrent,
-            settings,
+            ctx.output,
             async () => {
               const inner = await callTool(submitTool, submitArgs);
               return parseAigcVideoTaskId(inner);
@@ -277,13 +272,13 @@ export default defineCommand({
           );
           return Promise.all(
             taskIds.map((taskId) =>
-              pollMcpVideoTask(callTool, taskId, settings, pollInterval, ctx.localize),
+              pollMcpVideoTask(callTool, taskId, settings, ctx.output, pollInterval, ctx.localize),
             ),
           );
         },
       );
 
-      await saveAutoVideos(videos, flags.download, settings, format);
+      await saveAutoVideos(videos, flags.download, settings, ctx.output);
       return;
     }
 
@@ -410,9 +405,8 @@ export default defineCommand({
           },
         };
       }
-      emitResult(
+      ctx.output.result(
         flags.prime ? { endpoint: submitPath, request: previewBody } : { request: previewBody },
-        format,
       );
       return;
     }
@@ -422,7 +416,7 @@ export default defineCommand({
 
     const responses = await runConcurrent(
       concurrent,
-      settings,
+      ctx.output,
       () =>
         ctx.client.requestJson<DashScopeAsyncResponse>({
           path: submitPath,
@@ -435,13 +429,11 @@ export default defineCommand({
 
     const taskIds = responses.map((response) => response.output.task_id);
 
-    if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}]\n`);
-    }
+    ctx.output.info({ "en-US": `[Model: ${model}]`, "zh-CN": `[模型：${model}]` });
 
     // --async: return task ID(s) immediately
     if (flags.async) {
-      emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
+      ctx.output.result(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds });
       return;
     }
 
@@ -452,7 +444,8 @@ export default defineCommand({
       const pollUrl = flags.prime
         ? resolvePrimeEndpoint(ctx, taskPath(taskId))
         : ctx.client.url(taskPath(taskId));
-      return poll<DashScopeTaskResponse>(ctx.client, settings, {
+      return poll<DashScopeTaskResponse>(ctx.client, {
+        output: ctx.output,
         url: pollUrl,
         intervalSec: pollInterval,
         timeoutSec: settings.timeout,
@@ -486,23 +479,16 @@ export default defineCommand({
     if (flags.download) {
       const destPath = flags.download;
       const { size } = await downloadFile(videos[0]!.videoUrl, destPath, {
-        quiet: settings.quiet,
+        quiet: settings.quiet || settings.output === "json",
       });
 
-      if (settings.quiet) {
-        emitBare(destPath);
-      } else {
-        emitResult(
-          {
-            task_id: videos[0]!.taskId,
-            video_url: videos[0]!.videoUrl,
-            status: "SUCCEEDED",
-            saved: destPath,
-            size: formatBytes(size),
-          },
-          format,
-        );
-      }
+      ctx.output.result({
+        task_id: videos[0]!.taskId,
+        video_url: videos[0]!.videoUrl,
+        status: "SUCCEEDED",
+        saved: destPath,
+        size: formatBytes(size),
+      });
       return;
     }
 
@@ -515,15 +501,17 @@ export default defineCommand({
     await Promise.all(
       videos.map(async ({ taskId, videoUrl }) => {
         const destPath = join(destDir, `${taskId}.mp4`);
-        await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+        await downloadFile(videoUrl, destPath, {
+          quiet: settings.quiet || settings.output === "json",
+        });
         saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
       }),
     );
 
     if (saved.length === 1) {
-      emitResult(saved[0]!, format);
+      ctx.output.result(saved[0]!);
     } else {
-      emitResult({ videos: saved, total: saved.length }, format);
+      ctx.output.result({ videos: saved, total: saved.length });
     }
   },
 });
@@ -538,53 +526,52 @@ function videoTaskIdHint(localize: Localize, taskId: string): string {
 
 /**
  * Poll a video task to completion over MCP `bailian_text_to_video_fetch_result`.
- * Mirrors the REST `poll` UX (spinner + status), but the transport is a repeated
+ * Mirrors the REST `poll` progress output, but the transport is a repeated
  * tools/call on the shared session rather than an HTTP GET.
  */
 async function pollMcpVideoTask(
   callTool: AigcMcpCallTool,
   taskId: string,
   settings: Settings,
+  commandOutput: CommandOutput,
   pollInterval: number,
   localize: Localize,
 ): Promise<{ taskId: string; videoUrl: string }> {
   const deadline = Date.now() + settings.timeout * 1000;
-  const spinner = createSpinner("Polling...");
-  if (!settings.quiet) spinner.start();
+  commandOutput.progress({ "en-US": "Polling...", "zh-CN": "正在查询任务状态……" });
 
-  try {
-    while (Date.now() < deadline) {
-      const inner = await callTool(AIGC_MCP_TOOL.videoFetchResult, buildVideoFetchArgs(taskId));
-      const result = parseAigcVideoTaskResult(inner);
+  while (Date.now() < deadline) {
+    const inner = await callTool(AIGC_MCP_TOOL.videoFetchResult, buildVideoFetchArgs(taskId));
+    const result = parseAigcVideoTaskResult(inner);
 
-      if (!settings.quiet) spinner.update(`Status: ${result.taskStatus}`);
+    commandOutput.progress({
+      "en-US": `Status: ${result.taskStatus}`,
+      "zh-CN": `状态：${result.taskStatus}`,
+    });
 
-      if (result.taskStatus === "SUCCEEDED") {
-        spinner.stop("Done.");
-        if (!result.videoUrl) {
-          throw new BailianError(
-            `Video task succeeded but returned no URL: ${taskId}`,
-            ExitCode.GENERAL,
-          );
-        }
-        return { taskId, videoUrl: result.videoUrl };
+    if (result.taskStatus === "SUCCEEDED") {
+      commandOutput.progress({ "en-US": "Done.", "zh-CN": "已完成。" });
+      if (!result.videoUrl) {
+        throw new BailianError(
+          `Video task succeeded but returned no URL: ${taskId}`,
+          ExitCode.GENERAL,
+        );
       }
-
-      if (result.taskStatus === "FAILED") {
-        spinner.stop("Failed.");
-        // Pass the server's failure reason through verbatim (AGENTS.md §3);
-        // the task id stays as supplementary context in the hint.
-        const serverReason = result.message ?? result.code;
-        if (serverReason) {
-          throw new BailianError(serverReason, ExitCode.GENERAL, videoTaskIdHint(localize, taskId));
-        }
-        throw new BailianError(`Video task failed: ${taskId}`, ExitCode.GENERAL);
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
+      return { taskId, videoUrl: result.videoUrl };
     }
-  } finally {
-    spinner.stop();
+
+    if (result.taskStatus === "FAILED") {
+      commandOutput.progress({ "en-US": "Failed.", "zh-CN": "任务失败。" });
+      // Pass the server's failure reason through verbatim (AGENTS.md §3);
+      // the task id stays as supplementary context in the hint.
+      const serverReason = result.message ?? result.code;
+      if (serverReason) {
+        throw new BailianError(serverReason, ExitCode.GENERAL, videoTaskIdHint(localize, taskId));
+      }
+      throw new BailianError(`Video task failed: ${taskId}`, ExitCode.GENERAL);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
   }
 
   throw new BailianError(
@@ -599,7 +586,7 @@ async function saveAutoVideos(
   videos: Array<{ taskId: string; videoUrl: string }>,
   downloadPath: string | undefined,
   settings: Settings,
-  format: OutputFormat,
+  commandOutput: CommandOutput,
 ): Promise<void> {
   if (videos.length === 0) {
     throw new BailianError("All tasks completed but no video URLs returned.", ExitCode.GENERAL);
@@ -608,22 +595,15 @@ async function saveAutoVideos(
   // --download: save the first video to the explicit path.
   if (downloadPath) {
     const { size } = await downloadFile(videos[0]!.videoUrl, downloadPath, {
-      quiet: settings.quiet,
+      quiet: settings.quiet || settings.output === "json",
     });
-    if (settings.quiet) {
-      emitBare(downloadPath);
-    } else {
-      emitResult(
-        {
-          task_id: videos[0]!.taskId,
-          video_url: videos[0]!.videoUrl,
-          status: "SUCCEEDED",
-          saved: downloadPath,
-          size: formatBytes(size),
-        },
-        format,
-      );
-    }
+    commandOutput.result({
+      task_id: videos[0]!.taskId,
+      video_url: videos[0]!.videoUrl,
+      status: "SUCCEEDED",
+      saved: downloadPath,
+      size: formatBytes(size),
+    });
     return;
   }
 
@@ -636,14 +616,16 @@ async function saveAutoVideos(
   await Promise.all(
     videos.map(async ({ taskId, videoUrl }) => {
       const destPath = join(destDir, `${taskId}.mp4`);
-      await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+      await downloadFile(videoUrl, destPath, {
+        quiet: settings.quiet || settings.output === "json",
+      });
       saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
     }),
   );
 
   if (saved.length === 1) {
-    emitResult(saved[0]!, format);
+    commandOutput.result(saved[0]!);
   } else {
-    emitResult({ videos: saved, total: saved.length }, format);
+    commandOutput.result({ videos: saved, total: saved.length });
   }
 }

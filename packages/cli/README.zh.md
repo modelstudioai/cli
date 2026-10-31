@@ -140,7 +140,7 @@ bl knowledge init --workspace-id <workspace-id> --dry-run
 
 ### RAG 音视频接入
 
-`bl knowledge doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 仅输出最终回答。参阅 [命令指南](docs/knowledge/knowledge-cli-guide.md)。
+`bl knowledge doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 只隐藏进度和过程提示，保留最终结果及完整 JSON 字段。参阅 [命令指南](docs/knowledge/knowledge-cli-guide.md)。
 
 ## ParseX
 

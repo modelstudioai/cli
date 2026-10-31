@@ -3,11 +3,9 @@ import {
   BailianError,
   ExitCode,
   defineCommand,
-  detectOutputFormat,
   type CommandContext,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { knowledgeCreationRisk, localizedKnowledgeBillingNotice } from "./billing.ts";
 import { prepareKnowledgeInit, type InitPrepared } from "./init-prepare.ts";
 import { runKnowledgeInit, type InitResource } from "./init-workflow.ts";
@@ -149,8 +147,9 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
         ExitCode.GENERAL,
       );
     const workspaceId = resolveWorkspaceId(context);
-    const format = detectOutputFormat(context.settings.output);
+    const format = context.settings.output;
     const result = await runKnowledgeInit({
+      output: context.output,
       client: context.client,
       workspaceId,
       name: context.flags.name ?? "cli-demo",
@@ -171,15 +170,17 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
                 "en-US": `${resource.created ? "Created" : "Reused"} ${resource.kind}: ${resource.id}`,
                 "zh-CN": `${resource.created ? "已创建" : "已复用"} ${resource.kind}：${resource.id}`,
               });
-        if (format === "json")
-          process.stderr.write(
-            `${JSON.stringify({ code: "KNOWLEDGE_INIT_RESOURCE", message, resource, cleanup })}\n`,
-          );
-        else {
-          process.stderr.write(`${message}\n`);
-          for (const action of cleanup)
-            process.stderr.write(`${renderAction(context.identity.binName, action)}\n`);
-        }
+        context.output.warning({
+          code: "KNOWLEDGE_INIT_RESOURCE",
+          message:
+            format === "text"
+              ? [
+                  message,
+                  ...cleanup.map((action) => renderAction(context.identity.binName, action)),
+                ].join("\n")
+              : message,
+          ...(format === "json" ? { details: { resource, cleanup } } : {}),
+        });
       },
     });
     const cleanup = [...result.resources]
@@ -206,49 +207,54 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
         }
       : undefined;
     const notices = [localizedKnowledgeBillingNotice(context)];
-    if (format === "json") {
-      emitResult({ ...result, cleanup, nextSearch, notices }, format);
-      return;
+    let text: string | undefined;
+    if (format === "text") {
+      const lines: string[] = [];
+      lines.push(
+        context.localize({
+          "en-US": "Initialization succeeded: the sample was retrieved.",
+          "zh-CN": "初始化成功：已检索到样例内容。",
+        }),
+      );
+      lines.push(
+        `indexId: ${result.indexId}\nagentId: ${result.agentId}\nstateFile: ${result.stateFile}`,
+      );
+      const sampleNode = result.sampleSearch.response.data.nodes.find((node) =>
+        matchesInitSample({ data: { nodes: [node] } }),
+      );
+      const content = sampleNode?.metadata?.content || sampleNode?.text || "";
+      const excerpt = content.length > 400 ? `${content.slice(0, 400)}…` : content;
+      lines.push(context.localize({ "en-US": "Sample search", "zh-CN": "样例检索" }));
+      lines.push(
+        context.localize({
+          "en-US": `Query: ${result.sampleSearch.query}`,
+          "zh-CN": `查询：${result.sampleSearch.query}`,
+        }),
+      );
+      if (sampleNode?.metadata?.doc_name)
+        lines.push(
+          context.localize({
+            "en-US": `Document: ${sampleNode.metadata.doc_name}`,
+            "zh-CN": `文档：${sampleNode.metadata.doc_name}`,
+          }),
+        );
+      lines.push(context.localize({ "en-US": `Content: ${excerpt}`, "zh-CN": `内容：${excerpt}` }));
+      if (nextSearch) lines.push(renderAction(context.identity.binName, nextSearch));
+      lines.push(notices[0]!.message);
+      if (cleanup.length)
+        lines.push(
+          context.localize({
+            "en-US":
+              "Cleanup commands for resources created in this run (confirm deletion separately):",
+            "zh-CN": "本次新建资源的清理命令（删除需另行确认）：",
+          }),
+        );
+      for (const action of cleanup) lines.push(renderAction(context.identity.binName, action));
+      text = lines.join("\n");
     }
-    emitBare(
-      context.localize({
-        "en-US": "Initialization succeeded: the sample was retrieved.",
-        "zh-CN": "初始化成功：已检索到样例内容。",
-      }),
+    context.output.result(
+      { ...result, cleanup, nextSearch, notices },
+      text === undefined ? undefined : { text },
     );
-    emitBare(
-      `indexId: ${result.indexId}\nagentId: ${result.agentId}\nstateFile: ${result.stateFile}`,
-    );
-    const sampleNode = result.sampleSearch.response.data.nodes.find((node) =>
-      matchesInitSample({ data: { nodes: [node] } }),
-    );
-    const content = sampleNode?.metadata?.content || sampleNode?.text || "";
-    const excerpt = content.length > 400 ? `${content.slice(0, 400)}…` : content;
-    emitBare(context.localize({ "en-US": "Sample search", "zh-CN": "样例检索" }));
-    emitBare(
-      context.localize({
-        "en-US": `Query: ${result.sampleSearch.query}`,
-        "zh-CN": `查询：${result.sampleSearch.query}`,
-      }),
-    );
-    if (sampleNode?.metadata?.doc_name)
-      emitBare(
-        context.localize({
-          "en-US": `Document: ${sampleNode.metadata.doc_name}`,
-          "zh-CN": `文档：${sampleNode.metadata.doc_name}`,
-        }),
-      );
-    emitBare(context.localize({ "en-US": `Content: ${excerpt}`, "zh-CN": `内容：${excerpt}` }));
-    if (nextSearch) emitBare(renderAction(context.identity.binName, nextSearch));
-    emitBare(notices[0]!.message);
-    if (cleanup.length)
-      emitBare(
-        context.localize({
-          "en-US":
-            "Cleanup commands for resources created in this run (confirm deletion separately):",
-          "zh-CN": "本次新建资源的清理命令（删除需另行确认）：",
-        }),
-      );
-    for (const action of cleanup) emitBare(renderAction(context.identity.binName, action));
   },
 });

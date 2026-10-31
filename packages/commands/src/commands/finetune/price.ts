@@ -7,7 +7,6 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 
 const PRICE_FLAGS = {
   baseModel: {
@@ -56,6 +55,7 @@ const ESTIMATE_MAX_LENGTH = 8192;
 const DEFAULT_N_EPOCHS = 3;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Estimate the training cost for a fine-tune job (token billing)",
     "zh-CN": "估算微调任务的训练费用（按 Token 计费）",
@@ -106,9 +106,16 @@ export default defineCommand({
     }
 
     if (settings.dryRun) {
-      emitResult(
-        { action: "finetune.price", model, datasets: datasetIds, trainingType, nEpochs },
-        "json",
+      const resultData1 = {
+        action: "finetune.price",
+        model,
+        datasets: datasetIds,
+        trainingType,
+        nEpochs,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -146,21 +153,22 @@ export default defineCommand({
     const minFee = (minTokens / 1000) * unitPrice;
     const maxFee = (maxTokens / 1000) * unitPrice;
 
-    emitResult(
-      {
-        model,
-        training_type: trainingType,
-        n_epochs: nEpochs,
-        unit_price: unitPrice,
-        price_unit: priceInfo.priceUnit ?? "千Token",
-        estimated_tokens: { min: minTokens, max: maxTokens },
-        estimated_fee_yuan: {
-          min: Number(minFee.toFixed(4)),
-          max: Number(maxFee.toFixed(4)),
-        },
-        disclaimer: "Server-side estimate; final cost is subject to the bill.",
+    const resultData2 = {
+      model,
+      training_type: trainingType,
+      n_epochs: nEpochs,
+      unit_price: unitPrice,
+      price_unit: priceInfo.priceUnit ?? "千Token",
+      estimated_tokens: { min: minTokens, max: maxTokens },
+      estimated_fee_yuan: {
+        min: Number(minFee.toFixed(4)),
+        max: Number(maxFee.toFixed(4)),
       },
-      "json",
+      disclaimer: "Server-side estimate; final cost is subject to the bill.",
+    };
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
     );
   },
 });

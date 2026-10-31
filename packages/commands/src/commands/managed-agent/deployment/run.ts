@@ -1,6 +1,5 @@
 import { runRemoteDeployment } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
 import { withAgentErrors } from "../_engine/errors.ts";
@@ -30,19 +29,15 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   validate: validateDeploymentActionTarget,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          would_run_deployment: ctx.flags.deploymentId ?? ctx.flags.deployment,
-          target_kind: ctx.flags.deploymentId ? "id" : "state_name",
-        },
-        format,
-      );
+      ctx.output.result({
+        would_run_deployment: ctx.flags.deploymentId ?? ctx.flags.deployment,
+        target_kind: ctx.flags.deploymentId ? "id" : "state_name",
+      });
       return;
     }
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         const deploymentId = await resolveDeploymentTarget(runtime, ctx.flags);
         return {
@@ -51,8 +46,14 @@ export default defineCommand({
         };
       }),
     );
-    if (format === "json")
-      emitResult({ deployment_id: result.deploymentId, ...result.run }, format);
-    else emitBare(`Deployment ${result.deploymentId} started. Run: ${result.run.run_id ?? "-"}`);
+    ctx.output.result(
+      { deployment_id: result.deploymentId, ...result.run },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? `Deployment ${result.deploymentId} started. Run: ${result.run.run_id ?? "-"}`
+            : undefined,
+      },
+    );
   },
 });

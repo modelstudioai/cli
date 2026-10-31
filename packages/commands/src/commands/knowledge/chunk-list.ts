@@ -4,11 +4,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagChunkListResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, PAGE_FLAGS, WORKSPACE_FLAG } from "./shared.ts";
 
 const CHUNK_LIST_FLAGS = {
@@ -66,7 +64,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // Gotcha: this endpoint's pagination keys are pageNum/pageSize (camelCase, in the body)
     const body = {
@@ -78,7 +76,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.chunkList);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -88,38 +86,50 @@ export default defineCommand({
       body,
     });
 
-    const nodes = response.data?.nodes ?? [];
-    if (settings.quiet) {
-      // chunk ids only, for piping into chunk update/delete
-      for (const node of nodes) emitBare(node.metadata?._id ?? "");
-      return;
-    }
+    let text: string | undefined;
     if (format === "text") {
+      const nodes = response.data?.nodes ?? [];
+      const lines: string[] = [];
       if (nodes.length === 0) {
-        emitBare("No chunks found.");
+        lines.push(ctx.localize({ "en-US": "No chunks found.", "zh-CN": "未找到切片。" }));
       } else {
         for (const node of nodes) {
           const metadata = node.metadata ?? {};
           const statusPart = metadata._chunk_status_message
-            ? `  status: ${metadata._chunk_status_message}`
+            ? ctx.localize({
+                "en-US": `  status: ${metadata._chunk_status_message}`,
+                "zh-CN": `  状态: ${metadata._chunk_status_message}`,
+              })
             : "";
           const excludedPart =
-            metadata.is_displayed_chunk_content === false ? "  [excluded from retrieval]" : "";
-          emitBare(
-            `[chunk] ${metadata._id ?? "?"}  (doc: ${metadata.doc_name ?? "?"}, doc_id: ${metadata.doc_id ?? "?"})${statusPart}${excludedPart}`,
+            metadata.is_displayed_chunk_content === false
+              ? ctx.localize({ "en-US": "  [excluded from retrieval]", "zh-CN": "  [不参与检索]" })
+              : "";
+          lines.push(
+            ctx.localize({
+              "en-US": `[chunk] ${metadata._id ?? "?"}  (doc: ${metadata.doc_name ?? "?"}, doc_id: ${metadata.doc_id ?? "?"})${statusPart}${excludedPart}`,
+              "zh-CN": `[切片] ${metadata._id ?? "?"}  (文档: ${metadata.doc_name ?? "?"}, doc_id: ${metadata.doc_id ?? "?"})${statusPart}${excludedPart}`,
+            }),
           );
           const contentText = firstNonEmptyText(
             metadata.content,
             node.text,
             metadata.clip_description,
           );
-          emitBare(`  ${contentText.length > 200 ? `${contentText.slice(0, 200)}…` : contentText}`);
-          for (const line of mediaSummary(metadata)) emitBare(`  ${line}`);
+          lines.push(
+            `  ${contentText.length > 200 ? `${contentText.slice(0, 200)}…` : contentText}`,
+          );
+          for (const line of mediaSummary(metadata)) lines.push(`  ${line}`);
         }
       }
-      emitBare(`total: ${response.data?.total ?? nodes.length}`);
-    } else {
-      emitResult(response, format);
+      lines.push(
+        ctx.localize({
+          "en-US": `total: ${response.data?.total ?? nodes.length}`,
+          "zh-CN": `总数: ${response.data?.total ?? nodes.length}`,
+        }),
+      );
+      text = lines.join("\n");
     }
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

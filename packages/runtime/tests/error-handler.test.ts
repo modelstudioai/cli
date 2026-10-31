@@ -1,126 +1,68 @@
-import { ExitCode } from "bailian-cli-core";
-import { expect, test } from "vite-plus/test";
+import { BailianError, ExitCode } from "bailian-cli-core";
+import { expect, test, vi } from "vite-plus/test";
 import { handleError } from "../src/error-handler.ts";
+import { createOutputReporter } from "../src/output/reporter.ts";
 import { ConfirmationRequiredError } from "../src/confirm.ts";
 
-test("handleError: fetch failed JSON includes cause.code from errno", () => {
-  const previousOutput = process.env.DASHSCOPE_OUTPUT;
-  process.env.DASHSCOPE_OUTPUT = "json";
-
+function render(error: unknown, output: "text" | "json" = "json") {
   let stderr = "";
-  const originalWrite = process.stderr.write.bind(process.stderr);
-  const originalExit = process.exit.bind(process);
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += String(chunk);
-    return true;
-  }) as typeof process.stderr.write;
-  process.exit = ((code?: number) => {
+  const reporter = createOutputReporter({
+    settings: { output, quiet: true, verbose: false },
+    binName: "kscli",
+    stderr: {
+      write: (chunk) => {
+        stderr += chunk;
+      },
+    },
+  });
+  const exit = vi.spyOn(process, "exit").mockImplementation((code) => {
     throw new Error(`process.exit:${code ?? 0}`);
-  }) as typeof process.exit;
+  });
+  try {
+    expect(() => handleError(error, reporter)).toThrow(/process.exit:/);
+  } finally {
+    exit.mockRestore();
+  }
+  return stderr;
+}
 
-  const root = Object.assign(new Error("getaddrinfo ENOTFOUND example.invalid"), {
+test("handleError: fetch failed JSON includes cause.code from errno", () => {
+  const cause = Object.assign(new Error("getaddrinfo ENOTFOUND example.invalid"), {
     code: "ENOTFOUND",
   });
-  const fetchFailed = new TypeError("fetch failed", { cause: root });
-
-  try {
-    expect(() => handleError(fetchFailed, "bl")).toThrow(
-      new RegExp(`process\\.exit:${ExitCode.NETWORK}`),
-    );
-    expect(stderr).toMatch(/^\{\n {2}"error": \{\n/);
-    const payload = JSON.parse(stderr.trim()) as {
-      error: { code: number; message: string; cause?: { message: string; code?: string } };
-    };
-    expect(payload.error.code).toBe(ExitCode.NETWORK);
-    expect(payload.error.message).toMatch(/ENOTFOUND/);
-    expect(payload.error.cause).toEqual({
-      message: root.message,
-      code: "ENOTFOUND",
-    });
-  } finally {
-    process.stderr.write = originalWrite;
-    process.exit = originalExit;
-    if (previousOutput === undefined) {
-      delete process.env.DASHSCOPE_OUTPUT;
-    } else {
-      process.env.DASHSCOPE_OUTPUT = previousOutput;
-    }
-  }
-});
-
-test("handleError: fetch failed without nested cause still maps to NETWORK", () => {
-  const previousOutput = process.env.DASHSCOPE_OUTPUT;
-  process.env.DASHSCOPE_OUTPUT = "json";
-
-  let stderr = "";
-  const originalWrite = process.stderr.write.bind(process.stderr);
-  const originalExit = process.exit.bind(process);
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += String(chunk);
-    return true;
-  }) as typeof process.stderr.write;
-  process.exit = ((code?: number) => {
-    throw new Error(`process.exit:${code ?? 0}`);
-  }) as typeof process.exit;
-
-  const fetchFailed = new TypeError("fetch failed");
-
-  try {
-    expect(() => handleError(fetchFailed, "bl")).toThrow(
-      new RegExp(`process\\.exit:${ExitCode.NETWORK}`),
-    );
-    const payload = JSON.parse(stderr.trim()) as {
-      error: { code: number; message: string; cause?: { message: string; code?: string } };
-    };
-    expect(payload.error.code).toBe(ExitCode.NETWORK);
-    expect(payload.error.message).toMatch(/unknown cause/);
-    expect(payload.error.cause).toEqual({ message: "fetch failed" });
-  } finally {
-    process.stderr.write = originalWrite;
-    process.exit = originalExit;
-    if (previousOutput === undefined) {
-      delete process.env.DASHSCOPE_OUTPUT;
-    } else {
-      process.env.DASHSCOPE_OUTPUT = previousOutput;
-    }
-  }
-});
-
-test("handleError: confirmation text uses the standard message and hint layout", () => {
-  const previousOutput = process.env.DASHSCOPE_OUTPUT;
-  delete process.env.DASHSCOPE_OUTPUT;
-
-  let stderr = "";
-  const originalWrite = process.stderr.write.bind(process.stderr);
-  const originalExit = process.exit.bind(process);
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += String(chunk);
-    return true;
-  }) as typeof process.stderr.write;
-  process.exit = ((code?: number) => {
-    throw new Error(`process.exit:${code ?? 0}`);
-  }) as typeof process.exit;
-
-  const confirmation = new ConfirmationRequiredError({
-    message: "This permanently deletes the selected documents and all of their chunks.",
-    hint: "This command performs a high-risk operation. To continue, add --yes to the original command and re-run it.",
+  const stderr = render(new TypeError("fetch failed", { cause }));
+  expect(stderr.trim().split("\n")).toHaveLength(1);
+  expect(JSON.parse(stderr).error).toMatchObject({
+    code: ExitCode.NETWORK,
+    cause: { message: cause.message, code: "ENOTFOUND" },
   });
+});
 
-  try {
-    expect(() => handleError(confirmation, "bl")).toThrow(
-      new RegExp(`process\\.exit:${ExitCode.CONFIRMATION_REQUIRED}`),
-    );
-    expect(stderr).toContain(
-      "This command performs a high-risk operation. To continue, add --yes to the original command and re-run it.",
-    );
-    expect(stderr).not.toContain("bl knowledge doc delete");
-    expect(stderr).not.toContain("Risk:");
-    expect(stderr).not.toContain("Action:");
-    expect(stderr).not.toContain("Note:");
-  } finally {
-    process.stderr.write = originalWrite;
-    process.exit = originalExit;
-    if (previousOutput === undefined) delete process.env.DASHSCOPE_OUTPUT;
-    else process.env.DASHSCOPE_OUTPUT = previousOutput;
-  }
+test("handleError: fetch without nested cause still maps to NETWORK", () => {
+  const payload = JSON.parse(render(new TypeError("fetch failed"))).error;
+  expect(payload.code).toBe(ExitCode.NETWORK);
+  expect(payload.message).toContain("unknown cause");
+  expect(payload.cause).toEqual({ message: "fetch failed" });
+});
+
+test("handleError: confirmation preserves its structured subtype and guidance", () => {
+  const confirmation = new ConfirmationRequiredError({
+    message: "Permanent deletion.",
+    hint: "Add --yes to continue.",
+  });
+  expect(JSON.parse(render(confirmation))).toEqual(confirmation.toJSON());
+  const text = render(confirmation, "text");
+  expect(text).toContain("Add --yes to continue.");
+  expect(text).not.toContain("Risk:");
+});
+
+test("model-auth guidance uses the invocation binary and does not leak into console errors", () => {
+  const auth = JSON.parse(render(new BailianError("No key", ExitCode.AUTH))).error;
+  expect(auth.hint).toContain("kscli auth status");
+  const consoleError = new BailianError(
+    "No console token",
+    ExitCode.AUTH,
+    "Run kscli auth login --console",
+  );
+  expect(JSON.parse(render(consoleError))).toEqual(consoleError.toJSON());
 });

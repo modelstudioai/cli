@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { mkdtemp, realpath, writeFile, readFile, rm, stat } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -12,6 +13,8 @@ function fixture() {
   const requestJson = vi.fn();
   const verify = vi.fn(async () => {});
   const ports = createSyncExecutionPorts({
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     client: { requestJson } as unknown as Client,
     target: { workspaceId: "ws", indexId: "index", categoryId: "category", scopeTag: tags[0] },
     settings: { timeout: 1, quiet: true } as Settings,

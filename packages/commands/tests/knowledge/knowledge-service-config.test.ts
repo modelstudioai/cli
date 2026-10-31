@@ -1,3 +1,5 @@
+import { createOutputReporter } from "bailian-cli-runtime";
+import type { LocalizedText } from "bailian-cli-core";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import update from "../../src/commands/knowledge/service-update.ts";
 import get from "../../src/commands/knowledge/service-get.ts";
@@ -32,6 +34,9 @@ test.each(["chat", "search"])(
     await update.run({
       flags: { agentId: "agent-test", temperature: 0.5, workspaceId: "ws_test" },
       settings: { output: "json" },
+      output: createOutputReporter({ settings: { output: "json", quiet: false, verbose: false } })
+        .output,
+      localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
       client: { requestJson },
     } as unknown as Parameters<typeof update.run>[0]);
     expect(requestJson.mock.calls[1]![0].body.agent_config).toEqual({
@@ -52,6 +57,9 @@ test("service text surfaces per-index and hybrid rerank config", async () => {
   await get.run({
     flags: { agentId: "agent-test", workspaceId: "ws_test" },
     settings: { output: "text" },
+    output: createOutputReporter({ settings: { output: "text", quiet: false, verbose: false } })
+      .output,
+    localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
     client: { requestJson },
   } as unknown as Parameters<typeof get.run>[0]);
   expect(writes.join("")).toContain("qwen3-vl-rerank");

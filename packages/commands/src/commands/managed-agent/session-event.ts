@@ -7,8 +7,7 @@ import {
   streamSessionEvents,
 } from "@openagentpack/sdk";
 import { sanitizeSessionEvents } from "@openagentpack/sdk/session-events";
-import { BailianError, defineCommand, detectOutputFormat, ExitCode } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode } from "bailian-cli-core";
 import {
   API_TARGET_FLAGS,
   CURSOR_FLAGS,
@@ -144,9 +143,8 @@ export const managedAgentSessionEventList = defineCommand({
   ],
   validate: validateLimitAndPageLimit,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return fetchAllPages(
           async (page) => {
@@ -170,8 +168,7 @@ export const managedAgentSessionEventList = defineCommand({
         );
       }),
     );
-    emitCollection({
-      format,
+    emitCollection(ctx, {
       key: "events",
       items: sanitizeSessionEvents(result.items),
       headers: ["ID", "TYPE", "THREAD", "CONTENT"],
@@ -197,22 +194,28 @@ export const managedAgentSessionEventSend = defineCommand({
   ],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const events = normalizeEventInput(await readJsonInput(ctx.flags.event));
     if (ctx.settings.dryRun) {
-      emitResult({ would_send_events: events, session_id: ctx.flags.sessionId }, format);
+      ctx.output.result({ would_send_events: events, session_id: ctx.flags.sessionId });
       return;
     }
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return sendRemoteSessionEvents(runtime, ctx.flags.sessionId, events, {
           provider: "bailian",
         });
       }),
     );
-    if (format === "json") emitResult({ session_id: ctx.flags.sessionId, ...result }, format);
-    else emitBare(`Sent ${events.length} event(s): ${result.event_ids.join(", ")}`);
+    ctx.output.result(
+      { session_id: ctx.flags.sessionId, ...result },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? `Sent ${events.length} event(s): ${result.event_ids.join(", ")}`
+            : undefined,
+      },
+    );
   },
 });
 
@@ -235,9 +238,8 @@ export const managedAgentSessionEventStream = defineCommand({
     },
   ],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         const events: ProviderSessionEvent[] = [];
         for await (const event of streamSessionEvents(runtime, ctx.flags.sessionId, {
@@ -245,15 +247,15 @@ export const managedAgentSessionEventStream = defineCommand({
           after_id: ctx.flags.afterId,
         })) {
           events.push(event);
-          if (format !== "json") emitBare(JSON.stringify(sanitizeSessionEvents([event])[0]));
+          // Native text event stream; JSON is collected for one final envelope.
+          if (ctx.settings.output === "text")
+            process.stdout.write(JSON.stringify(sanitizeSessionEvents([event])[0]) + "\n");
           if (event.type === "status" && isTerminalSessionStatus(event.status)) break;
         }
-        if (format === "json") {
-          emitResult(
-            { session_id: ctx.flags.sessionId, events: sanitizeSessionEvents(events) },
-            format,
-          );
-        }
+        ctx.output.result(
+          { session_id: ctx.flags.sessionId, events: sanitizeSessionEvents(events) },
+          { text: "" },
+        );
       }),
     );
   },

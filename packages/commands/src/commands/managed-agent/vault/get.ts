@@ -1,6 +1,5 @@
 import { getRemoteVault } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import { displayValue } from "../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
@@ -15,21 +14,25 @@ export default defineCommand({
   exampleArgs: ["--vault-id vault_abc"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const vault = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getRemoteVault(runtime, ctx.flags.vaultId, { provider: "bailian" });
       }),
     );
-    if (format === "json") {
-      emitResult(vault, format);
-      return;
-    }
-    emitBare(`ID:      ${vault.id}`);
-    emitBare(`Name:    ${displayValue(vault.display_name)}`);
-    emitBare(`Type:    ${displayValue(vault.type)}`);
-    emitBare(`Created: ${displayValue(vault.created_at)}`);
-    emitBare(`Updated: ${displayValue(vault.updated_at)}`);
+    ctx.output.result(vault, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              lines.push(`ID:      ${vault.id}`);
+              lines.push(`Name:    ${displayValue(vault.display_name)}`);
+              lines.push(`Type:    ${displayValue(vault.type)}`);
+              lines.push(`Created: ${displayValue(vault.created_at)}`);
+              lines.push(`Updated: ${displayValue(vault.updated_at)}`);
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
   },
 });

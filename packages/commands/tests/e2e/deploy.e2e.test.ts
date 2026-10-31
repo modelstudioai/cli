@@ -238,14 +238,18 @@ describe("e2e: deploy capacity unsubscribe (offline, no credentials)", () => {
     expect(stderr).not.toContain("Network disabled");
   });
 
-  test("--quiet emits only the bare refund URL", async () => {
+  test("--quiet retains the complete refund-link result", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(
       DEPLOY_ROUTES,
       ["deploy", "capacity", "unsubscribe", "--instance-id", INSTANCE_ID, "--quiet"],
       READ_ONLY_ENV,
     );
     expect(exitCode, stderr).toBe(0);
-    expect(stdout.trim()).toBe(REFUND_URL);
+    expect(JSON.parse(stdout)).toEqual({
+      action: "deploy.capacity.unsubscribe",
+      instance_id: INSTANCE_ID,
+      refund_url: REFUND_URL,
+    });
   });
 
   test("URL-encodes unusual instance IDs", async () => {

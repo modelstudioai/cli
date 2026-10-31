@@ -897,3 +897,19 @@ describe("e2e: config", () => {
     }
   });
 });
+
+test("config UI JSON fails once before opening a browser or server", async () => {
+  const result = await runCommandE2e(CONFIG_ROUTES, [
+    "config",
+    "ui",
+    "--output",
+    "json",
+    "--quiet",
+  ]);
+  expect(result.exitCode, result.stderr).toBe(2);
+  expect(result.stdout).toBe("");
+  expect(result.stderr.trim().split("\n")).toHaveLength(1);
+  expect(JSON.parse(result.stderr)).toMatchObject({
+    error: { code: 2, message: expect.stringContaining("requires --output text") },
+  });
+});

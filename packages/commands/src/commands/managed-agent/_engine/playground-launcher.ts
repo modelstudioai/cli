@@ -5,8 +5,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
-import { BailianError, type Client, ExitCode, type Settings } from "bailian-cli-core";
-import { emitBare } from "bailian-cli-runtime";
+import {
+  BailianError,
+  type Client,
+  ExitCode,
+  UsageError,
+  type CommandOutput,
+  type LocalizedText,
+  type Settings,
+} from "bailian-cli-core";
 
 const PLAYGROUND_PACKAGE = "@openagentpack/playground";
 const execFileAsync = promisify(execFile);
@@ -22,6 +29,8 @@ export interface PlaygroundLaunchOptions {
   surface: "preview" | "workbench";
   client: Client;
   settings: Settings;
+  output: CommandOutput;
+  localize: (message: LocalizedText) => string;
 }
 
 interface Launcher {
@@ -50,6 +59,18 @@ export interface PlaygroundBrowserTarget {
 export async function launchManagedAgentPlayground(
   options: PlaygroundLaunchOptions,
 ): Promise<void> {
+  if (options.settings.output === "json") {
+    throw new UsageError(
+      options.localize({
+        "en-US": "Managed Agent Workbench requires text output for its interactive process.",
+        "zh-CN": "托管 Agent Workbench 的交互进程需要 text 输出模式。",
+      }),
+      options.localize({
+        "en-US": "Use --output text to launch Workbench, or --dry-run for a JSON preview.",
+        "zh-CN": "使用 --output text 启动 Workbench，或使用 --dry-run 获取 JSON 预览。",
+      }),
+    );
+  }
   assertSupportedNodeVersion();
   const port = options.port ?? DEFAULT_PORT;
   if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
@@ -66,11 +87,19 @@ export async function launchManagedAgentPlayground(
       existing.projectId === projectId &&
       (launcher.version === undefined || existing.version === launcher.version);
     if (reusable) {
-      emitBare(`Workbench already running at http://localhost:${port} (pid ${existing.pid}).`);
-      await openPlaygroundSurface(port, options.surface, options.agent, options.open);
+      options.output.result(
+        { url: `http://localhost:${port}`, port, surface: options.surface, pid: existing.pid },
+        {
+          text: options.localize({
+            "en-US": `Workbench already running at http://localhost:${port} (pid ${existing.pid}).`,
+            "zh-CN": `Workbench 已在 http://localhost:${port} 运行（pid ${existing.pid}）。`,
+          }),
+        },
+      );
+      await openPlaygroundSurface(port, options.surface, options.agent, options.open, options);
       return;
     }
-    const released = await replaceExistingPlayground(existing, port);
+    const released = await replaceExistingPlayground(existing, port, options);
     if (!released) {
       throw new BailianError(
         `Could not stop the existing Workbench process (pid ${existing.pid}) on port ${port}.`,
@@ -82,8 +111,13 @@ export async function launchManagedAgentPlayground(
 
   const environment = buildPlaygroundEnvironment(options, port, sourcePath);
   if (launcher.fetched) {
-    emitBare(`Fetching ${PLAYGROUND_PACKAGE} (first run may take a moment)...`);
+    options.output.info({
+      "en-US": `Fetching ${PLAYGROUND_PACKAGE} (first run may take a moment)...`,
+      "zh-CN": `正在获取 ${PLAYGROUND_PACKAGE}（首次运行可能需要片刻）...`,
+    });
   }
+  // This native interactive sidecar keeps its terminal protocol in text mode.
+  // JSON was rejected before launcher resolution or any process/browser action.
   const child = spawn(launcher.command, launcher.args, {
     env: environment,
     stdio: ["inherit", "pipe", "inherit"],
@@ -97,8 +131,16 @@ export async function launchManagedAgentPlayground(
         ExitCode.GENERAL,
       );
     }
-    emitBare(`Workbench ready at http://localhost:${readyPort}`);
-    await openPlaygroundSurface(readyPort, options.surface, options.agent, options.open);
+    options.output.result(
+      { url: `http://localhost:${readyPort}`, port: readyPort, surface: options.surface },
+      {
+        text: options.localize({
+          "en-US": `Workbench ready at http://localhost:${readyPort}`,
+          "zh-CN": `Workbench 已就绪：http://localhost:${readyPort}`,
+        }),
+      },
+    );
+    await openPlaygroundSurface(readyPort, options.surface, options.agent, options.open, options);
     const exitCode = await waitForChildExit(child);
     if (exitCode !== 0) {
       throw new BailianError(`Workbench exited with code ${exitCode}.`, ExitCode.GENERAL);
@@ -349,8 +391,12 @@ async function probeExistingPlayground(port: number): Promise<ExistingPlayground
 async function replaceExistingPlayground(
   existing: ExistingPlayground,
   port: number,
+  options: Pick<PlaygroundLaunchOptions, "output">,
 ): Promise<boolean> {
-  emitBare(`Replacing Workbench v${existing.version} (pid ${existing.pid}) on port ${port}...`);
+  options.output.info({
+    "en-US": `Replacing Workbench v${existing.version} (pid ${existing.pid}) on port ${port}...`,
+    "zh-CN": `正在替换端口 ${port} 上的 Workbench v${existing.version}（pid ${existing.pid}）...`,
+  });
   try {
     process.kill(existing.pid, "SIGTERM");
   } catch {
@@ -368,14 +414,23 @@ async function openPlaygroundSurface(
   surface: "preview" | "workbench",
   requestedAgent: string | undefined,
   shouldOpen: boolean,
+  options: Pick<PlaygroundLaunchOptions, "output">,
 ): Promise<void> {
   if (!shouldOpen) return;
   const target =
     surface === "workbench"
       ? { url: `http://localhost:${port}` }
       : await resolvePlaygroundBrowserTarget(port, requestedAgent);
-  if (target.warning) emitBare(`Warning: ${target.warning}`);
-  openBrowser(target.url);
+  if (target.warning)
+    options.output.warning({
+      message: {
+        "en-US": target.warning,
+        "zh-CN": requestedAgent?.trim()
+          ? `未找到 Agent '${requestedAgent.trim()}'。将打开项目 Workbench。`
+          : "此项目声明了多个 Agent。将打开 Workbench；使用 --agent <id> 重新运行以打开 Preview。",
+      },
+    });
+  openBrowser(target.url, options);
 }
 
 async function resolvePlaygroundBrowserTarget(
@@ -398,7 +453,7 @@ async function resolvePlaygroundBrowserTarget(
   }
 }
 
-function openBrowser(url: string): void {
+function openBrowser(url: string, options: Pick<PlaygroundLaunchOptions, "output">): void {
   const command =
     process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
   const args = process.platform === "win32" ? ["", url] : [url];
@@ -409,7 +464,12 @@ function openBrowser(url: string): void {
       shell: process.platform === "win32",
     }).unref();
   } catch {
-    emitBare(`Could not open a browser automatically. Visit ${url}`);
+    options.output.warning({
+      message: {
+        "en-US": `Could not open a browser automatically. Visit ${url}`,
+        "zh-CN": `无法自动打开浏览器。请访问 ${url}`,
+      },
+    });
   }
 }
 

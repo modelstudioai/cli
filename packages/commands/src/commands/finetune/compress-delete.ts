@@ -1,8 +1,9 @@
 import { defineCommand, deleteCompressJob } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+
 import { COMPRESS_JOB_ID_FLAGS } from "./compress-shared.ts";
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "Delete a compression job record", "zh-CN": "删除压缩任务记录" },
   auth: "apiKey",
   risk: {
@@ -25,11 +26,17 @@ export default defineCommand({
   async run(ctx) {
     const jobId = ctx.flags.jobId;
     if (ctx.settings.dryRun) {
-      emitResult({ action: "finetune.compress.delete", job_id: jobId }, "json");
+      const resultData1 = { action: "finetune.compress.delete", job_id: jobId };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
     const response = await deleteCompressJob(ctx.client, jobId);
-    if (ctx.settings.quiet) emitBare(jobId);
-    else emitResult(response, "json");
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

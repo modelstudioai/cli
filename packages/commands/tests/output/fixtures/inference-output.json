@@ -1,0 +1,2066 @@
+{
+  "text chat:text:false": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_tokens": 4096,
+          "stream": false
+        }
+      }
+    ]
+  },
+  "text chat:json:false": {
+    "stdout": "{\n  \"id\": \"chat-fixture\",\n  \"object\": \"chat.completion\",\n  \"model\": \"qwen-fixture\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Hello fixture\"\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2,\n    \"completion_tokens\": 3,\n    \"total_tokens\": 5\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "id": "chat-fixture",
+      "object": "chat.completion",
+      "model": "qwen-fixture",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Hello fixture"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2,
+        "completion_tokens": 3,
+        "total_tokens": 5
+      },
+      "future": {
+        "values": [false, 0, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_tokens": 4096,
+          "stream": false
+        }
+      }
+    ]
+  },
+  "text chat:text:true": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "text chat:json:true": {
+    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "data": {
+      "content": "Hello fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "text stream:text:false": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "text stream:json:false": {
+    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "data": {
+      "content": "Hello fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "text stream:text:true": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "text stream:json:true": {
+    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "data": {
+      "content": "Hello fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "responses:text:false": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/responses",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "input": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_output_tokens": 4096,
+          "stream": false
+        }
+      }
+    ]
+  },
+  "responses:json:false": {
+    "stdout": "{\n  \"id\": \"response-fixture\",\n  \"status\": \"completed\",\n  \"output\": [\n    {\n      \"type\": \"message\",\n      \"role\": \"assistant\",\n      \"content\": [\n        {\n          \"type\": \"output_text\",\n          \"text\": \"Hello fixture\"\n        }\n      ]\n    }\n  ],\n  \"usage\": {\n    \"input_tokens\": 2,\n    \"output_tokens\": 3\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "id": "response-fixture",
+      "status": "completed",
+      "output": [
+        {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "Hello fixture"
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "input_tokens": 2,
+        "output_tokens": 3
+      },
+      "future": {
+        "values": [false, 0, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/responses",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "input": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_output_tokens": 4096,
+          "stream": false
+        }
+      }
+    ]
+  },
+  "responses:text:true": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/responses",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "input": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_output_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "responses:json:true": {
+    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "data": {
+      "content": "Hello fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/responses",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "input": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_output_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "responses stream:text:false": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/responses",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "input": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_output_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "responses stream:json:false": {
+    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "data": {
+      "content": "Hello fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/responses",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "input": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_output_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "responses stream:text:true": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/responses",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "input": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_output_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "responses stream:json:true": {
+    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "data": {
+      "content": "Hello fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/responses",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "input": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "max_output_tokens": 4096,
+          "stream": true
+        }
+      }
+    ]
+  },
+  "vision:text:false": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "https://example.com/fixture.png"
+                  }
+                },
+                {
+                  "type": "text",
+                  "text": "fixture prompt"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "vision:json:false": {
+    "stdout": "{\n  \"id\": \"chat-fixture\",\n  \"object\": \"chat.completion\",\n  \"model\": \"qwen-fixture\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Hello fixture\"\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2,\n    \"completion_tokens\": 3,\n    \"total_tokens\": 5\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "id": "chat-fixture",
+      "object": "chat.completion",
+      "model": "qwen-fixture",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Hello fixture"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2,
+        "completion_tokens": 3,
+        "total_tokens": 5
+      },
+      "future": {
+        "values": [false, 0, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "https://example.com/fixture.png"
+                  }
+                },
+                {
+                  "type": "text",
+                  "text": "fixture prompt"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "vision:text:true": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "https://example.com/fixture.png"
+                  }
+                },
+                {
+                  "type": "text",
+                  "text": "fixture prompt"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "vision:json:true": {
+    "stdout": "{\n  \"id\": \"chat-fixture\",\n  \"object\": \"chat.completion\",\n  \"model\": \"qwen-fixture\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Hello fixture\"\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2,\n    \"completion_tokens\": 3,\n    \"total_tokens\": 5\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "id": "chat-fixture",
+      "object": "chat.completion",
+      "model": "qwen-fixture",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Hello fixture"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2,
+        "completion_tokens": 3,
+        "total_tokens": 5
+      },
+      "future": {
+        "values": [false, 0, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "https://example.com/fixture.png"
+                  }
+                },
+                {
+                  "type": "text",
+                  "text": "fixture prompt"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "app call:text:false": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/apps/app-fixture/completion",
+        "method": "POST",
+        "body": {
+          "input": {
+            "prompt": "fixture prompt",
+            "session_id": "session-input"
+          },
+          "parameters": {
+            "incremental_output": false
+          }
+        }
+      }
+    ]
+  },
+  "app call:json:false": {
+    "stdout": "{\n  \"request_id\": \"app-request\",\n  \"output\": {\n    \"text\": \"Hello fixture\",\n    \"session_id\": \"session-fixture\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  },\n  \"usage\": {\n    \"models\": [\n      {\n        \"input_tokens\": 2,\n        \"output_tokens\": 3\n      }\n    ]\n  }\n}\n",
+    "data": {
+      "request_id": "app-request",
+      "output": {
+        "text": "Hello fixture",
+        "session_id": "session-fixture",
+        "future": {
+          "values": [false, 0, null, []]
+        }
+      },
+      "usage": {
+        "models": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 3
+          }
+        ]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/apps/app-fixture/completion",
+        "method": "POST",
+        "body": {
+          "input": {
+            "prompt": "fixture prompt",
+            "session_id": "session-input"
+          },
+          "parameters": {
+            "incremental_output": false
+          }
+        }
+      }
+    ]
+  },
+  "app call:text:true": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/apps/app-fixture/completion",
+        "method": "POST",
+        "body": {
+          "input": {
+            "prompt": "fixture prompt",
+            "session_id": "session-input"
+          },
+          "parameters": {
+            "incremental_output": true
+          }
+        }
+      }
+    ]
+  },
+  "app call:json:true": {
+    "stdout": "{\n  \"text\": \"Hello fixture\",\n  \"session_id\": \"session-fixture\"\n}\n",
+    "data": {
+      "text": "Hello fixture",
+      "session_id": "session-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/apps/app-fixture/completion",
+        "method": "POST",
+        "body": {
+          "input": {
+            "prompt": "fixture prompt",
+            "session_id": "session-input"
+          },
+          "parameters": {
+            "incremental_output": true
+          }
+        }
+      }
+    ]
+  },
+  "app stream:text:false": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/apps/app-fixture/completion",
+        "method": "POST",
+        "body": {
+          "input": {
+            "prompt": "fixture prompt"
+          },
+          "parameters": {
+            "incremental_output": true,
+            "has_thoughts": true
+          }
+        }
+      }
+    ]
+  },
+  "app stream:json:false": {
+    "stdout": "{\n  \"text\": \"Hello fixture\",\n  \"session_id\": \"session-fixture\"\n}\n",
+    "data": {
+      "text": "Hello fixture",
+      "session_id": "session-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/apps/app-fixture/completion",
+        "method": "POST",
+        "body": {
+          "input": {
+            "prompt": "fixture prompt"
+          },
+          "parameters": {
+            "incremental_output": true,
+            "has_thoughts": true
+          }
+        }
+      }
+    ]
+  },
+  "app stream:text:true": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/apps/app-fixture/completion",
+        "method": "POST",
+        "body": {
+          "input": {
+            "prompt": "fixture prompt"
+          },
+          "parameters": {
+            "incremental_output": true,
+            "has_thoughts": true
+          }
+        }
+      }
+    ]
+  },
+  "app stream:json:true": {
+    "stdout": "{\n  \"text\": \"Hello fixture\",\n  \"session_id\": \"session-fixture\"\n}\n",
+    "data": {
+      "text": "Hello fixture",
+      "session_id": "session-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/apps/app-fixture/completion",
+        "method": "POST",
+        "body": {
+          "input": {
+            "prompt": "fixture prompt"
+          },
+          "parameters": {
+            "incremental_output": true,
+            "has_thoughts": true
+          }
+        }
+      }
+    ]
+  },
+  "omni:text:false": {
+    "stdout": "content: Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      }
+    ]
+  },
+  "omni:json:false": {
+    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "data": {
+      "content": "Hello fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      }
+    ]
+  },
+  "omni:text:true": {
+    "stdout": "Hello fixture\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      }
+    ]
+  },
+  "omni:json:true": {
+    "stdout": "Hello fixture\n{\n  \"content\": \"Hello fixture\"\n}\n",
+    "data": {
+      "content": "Hello fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "qwen-fixture",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture prompt"
+            }
+          ],
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      }
+    ]
+  },
+  "knowledge chat:text:false": {
+    "stdout": "最终答案\n",
+    "requests": [
+      {
+        "url": "https://ws-fixture.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat",
+        "method": "POST",
+        "body": {
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": "fixture prompt"
+              }
+            ]
+          },
+          "parameters": {
+            "agent_options": {
+              "agent_id": "agent-fixture"
+            }
+          },
+          "stream": true
+        }
+      }
+    ]
+  },
+  "knowledge chat:json:false": {
+    "stdout": "{\n  \"answer\": \"最终答案\",\n  \"request_id\": \"request-fixture\",\n  \"phases\": [\n    {\n      \"stage\": \"planning\",\n      \"content\": \"规划内容\"\n    },\n    {\n      \"stage\": \"tool_calling\",\n      \"content\": \"工具摘要\"\n    },\n    {\n      \"stage\": \"generating\",\n      \"content\": \"最终\"\n    },\n    {\n      \"stage\": \"generating\",\n      \"content\": \"答案\"\n    }\n  ],\n  \"tools\": [\n    {\n      \"role\": \"assistant\",\n      \"content\": \"\",\n      \"extra\": {\n        \"step\": \"tool_calling\",\n        \"step_change\": \"tool_calling\"\n      },\n      \"tool_calls\": [\n        {\n          \"id\": \"tool-fixture\",\n          \"function\": {\n            \"name\": \"semantic_search\",\n            \"arguments\": \"{}\"\n          }\n        }\n      ]\n    },\n    {\n      \"role\": \"tool\",\n      \"content\": \"工具摘要\",\n      \"extra\": {\n        \"step\": \"tool_calling\",\n        \"step_change\": \"tool_return\"\n      },\n      \"additional_kwargs\": {\n        \"extra_json\": {\n          \"docs\": [\n            {\n              \"doc_id\": \"file-fixture\",\n              \"_citation_index\": 1,\n              \"content\": \"\",\n              \"clip_description\": \"画面描述\",\n              \"clip_start_time\": 0,\n              \"clip_end_time\": 28000,\n              \"video_url\": [\n                \"https://example.com/video.mp4\"\n              ],\n              \"image_url\": [\n                \"https://example.com/frame.png\"\n              ],\n              \"audio_url\": [],\n              \"audio_segments\": [\n                {\n                  \"start_time\": 10760,\n                  \"end_time\": 75480,\n                  \"content\": \"音频转写\",\n                  \"speaker\": {\n                    \"name\": \"speaker-fixture\"\n                  }\n                }\n              ],\n              \"future\": {\n                \"preserved\": true\n              }\n            }\n          ]\n        }\n      }\n    }\n  ],\n  \"docs\": [\n    {\n      \"doc_id\": \"file-fixture\",\n      \"_citation_index\": 1,\n      \"content\": \"\",\n      \"clip_description\": \"画面描述\",\n      \"clip_start_time\": 0,\n      \"clip_end_time\": 28000,\n      \"video_url\": [\n        \"https://example.com/video.mp4\"\n      ],\n      \"image_url\": [\n        \"https://example.com/frame.png\"\n      ],\n      \"audio_url\": [],\n      \"audio_segments\": [\n        {\n          \"start_time\": 10760,\n          \"end_time\": 75480,\n          \"content\": \"音频转写\",\n          \"speaker\": {\n            \"name\": \"speaker-fixture\"\n          }\n        }\n      ],\n      \"future\": {\n        \"preserved\": true\n      }\n    }\n  ],\n  \"usage\": {\n    \"input_tokens\": 10,\n    \"output_tokens\": 2,\n    \"total_tokens\": 12,\n    \"cached_tokens\": 0\n  },\n  \"events\": [\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": \\\"规划内容\\\", \\\"extra\\\": {\\\"step\\\": \\\"planning\\\", \\\"step_change\\\": \\\"plan_start\\\"}}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": \\\"\\\", \\\"extra\\\": {\\\"step\\\": \\\"tool_calling\\\", \\\"step_change\\\": \\\"tool_calling\\\"}, \\\"tool_calls\\\": [{\\\"id\\\": \\\"tool-fixture\\\", \\\"function\\\": {\\\"name\\\": \\\"semantic_search\\\", \\\"arguments\\\": \\\"{}\\\"}}]}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}, \\\"usage\\\": {\\\"input_tokens\\\": 10, \\\"output_tokens\\\": 2, \\\"total_tokens\\\": 12, \\\"cached_tokens\\\": 0}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"tool\\\", \\\"content\\\": \\\"工具摘要\\\", \\\"extra\\\": {\\\"step\\\": \\\"tool_calling\\\", \\\"step_change\\\": \\\"tool_return\\\"}, \\\"additional_kwargs\\\": {\\\"extra_json\\\": {\\\"docs\\\": [{\\\"doc_id\\\": \\\"file-fixture\\\", \\\"_citation_index\\\": 1, \\\"content\\\": \\\"\\\", \\\"clip_description\\\": \\\"画面描述\\\", \\\"clip_start_time\\\": 0, \\\"clip_end_time\\\": 28000, \\\"video_url\\\": [\\\"https://example.com/video.mp4\\\"], \\\"image_url\\\": [\\\"https://example.com/frame.png\\\"], \\\"audio_url\\\": [], \\\"audio_segments\\\": [{\\\"start_time\\\": 10760, \\\"end_time\\\": 75480, \\\"content\\\": \\\"音频转写\\\", \\\"speaker\\\": {\\\"name\\\": \\\"speaker-fixture\\\"}}], \\\"future\\\": {\\\"preserved\\\": true}}]}}}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": \\\"最终\\\", \\\"extra\\\": {\\\"step\\\": \\\"generating\\\", \\\"step_change\\\": \\\"generation_start\\\"}}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": [{\\\"type\\\": \\\"text\\\", \\\"text\\\": \\\"答案\\\"}], \\\"extra\\\": {\\\"step\\\": \\\"generating\\\"}}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": \\\"\\\", \\\"extra\\\": {\\\"step\\\": \\\"generating\\\", \\\"step_change\\\": \\\"generation_end\\\"}}, \\\"finish_reason\\\": \\\"stop\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}, \\\"usage\\\": {\\\"input_tokens\\\": 10, \\\"output_tokens\\\": 2, \\\"total_tokens\\\": 12, \\\"cached_tokens\\\": 0}}\"\n    },\n    {\n      \"data\": \"[DONE]\"\n    }\n  ]\n}\n",
+    "data": {
+      "answer": "最终答案",
+      "request_id": "request-fixture",
+      "phases": [
+        {
+          "stage": "planning",
+          "content": "规划内容"
+        },
+        {
+          "stage": "tool_calling",
+          "content": "工具摘要"
+        },
+        {
+          "stage": "generating",
+          "content": "最终"
+        },
+        {
+          "stage": "generating",
+          "content": "答案"
+        }
+      ],
+      "tools": [
+        {
+          "role": "assistant",
+          "content": "",
+          "extra": {
+            "step": "tool_calling",
+            "step_change": "tool_calling"
+          },
+          "tool_calls": [
+            {
+              "id": "tool-fixture",
+              "function": {
+                "name": "semantic_search",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "工具摘要",
+          "extra": {
+            "step": "tool_calling",
+            "step_change": "tool_return"
+          },
+          "additional_kwargs": {
+            "extra_json": {
+              "docs": [
+                {
+                  "doc_id": "file-fixture",
+                  "_citation_index": 1,
+                  "content": "",
+                  "clip_description": "画面描述",
+                  "clip_start_time": 0,
+                  "clip_end_time": 28000,
+                  "video_url": ["https://example.com/video.mp4"],
+                  "image_url": ["https://example.com/frame.png"],
+                  "audio_url": [],
+                  "audio_segments": [
+                    {
+                      "start_time": 10760,
+                      "end_time": 75480,
+                      "content": "音频转写",
+                      "speaker": {
+                        "name": "speaker-fixture"
+                      }
+                    }
+                  ],
+                  "future": {
+                    "preserved": true
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "docs": [
+        {
+          "doc_id": "file-fixture",
+          "_citation_index": 1,
+          "content": "",
+          "clip_description": "画面描述",
+          "clip_start_time": 0,
+          "clip_end_time": 28000,
+          "video_url": ["https://example.com/video.mp4"],
+          "image_url": ["https://example.com/frame.png"],
+          "audio_url": [],
+          "audio_segments": [
+            {
+              "start_time": 10760,
+              "end_time": 75480,
+              "content": "音频转写",
+              "speaker": {
+                "name": "speaker-fixture"
+              }
+            }
+          ],
+          "future": {
+            "preserved": true
+          }
+        }
+      ],
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 2,
+        "total_tokens": 12,
+        "cached_tokens": 0
+      },
+      "events": [
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"规划内容\", \"extra\": {\"step\": \"planning\", \"step_change\": \"plan_start\"}}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"\", \"extra\": {\"step\": \"tool_calling\", \"step_change\": \"tool_calling\"}, \"tool_calls\": [{\"id\": \"tool-fixture\", \"function\": {\"name\": \"semantic_search\", \"arguments\": \"{}\"}}]}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}, \"usage\": {\"input_tokens\": 10, \"output_tokens\": 2, \"total_tokens\": 12, \"cached_tokens\": 0}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"tool\", \"content\": \"工具摘要\", \"extra\": {\"step\": \"tool_calling\", \"step_change\": \"tool_return\"}, \"additional_kwargs\": {\"extra_json\": {\"docs\": [{\"doc_id\": \"file-fixture\", \"_citation_index\": 1, \"content\": \"\", \"clip_description\": \"画面描述\", \"clip_start_time\": 0, \"clip_end_time\": 28000, \"video_url\": [\"https://example.com/video.mp4\"], \"image_url\": [\"https://example.com/frame.png\"], \"audio_url\": [], \"audio_segments\": [{\"start_time\": 10760, \"end_time\": 75480, \"content\": \"音频转写\", \"speaker\": {\"name\": \"speaker-fixture\"}}], \"future\": {\"preserved\": true}}]}}}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"最终\", \"extra\": {\"step\": \"generating\", \"step_change\": \"generation_start\"}}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"答案\"}], \"extra\": {\"step\": \"generating\"}}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"\", \"extra\": {\"step\": \"generating\", \"step_change\": \"generation_end\"}}, \"finish_reason\": \"stop\"}]}, \"unknown_extension\": {\"preserved\": true}, \"usage\": {\"input_tokens\": 10, \"output_tokens\": 2, \"total_tokens\": 12, \"cached_tokens\": 0}}"
+        },
+        {
+          "data": "[DONE]"
+        }
+      ]
+    },
+    "requests": [
+      {
+        "url": "https://ws-fixture.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat",
+        "method": "POST",
+        "body": {
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": "fixture prompt"
+              }
+            ]
+          },
+          "parameters": {
+            "agent_options": {
+              "agent_id": "agent-fixture"
+            }
+          },
+          "stream": true
+        }
+      }
+    ]
+  },
+  "knowledge chat:text:true": {
+    "stdout": "[Planning]\n规划内容\n[Tools]\n工具摘要\n[Answer]\n最终答案\nSources:\n{\"doc_id\":\"file-fixture\",\"citation\":1}\nclip: 00:00.000–00:28.000\nclip_description: 画面描述\nvideo_url: https://example.com/video.mp4\nimage_url: https://example.com/frame.png\naudio_segment: {\"start_time\":10760,\"end_time\":75480,\"content\":\"音频转写\",\"speaker\":{\"name\":\"speaker-fixture\"}}\n",
+    "requests": [
+      {
+        "url": "https://ws-fixture.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat",
+        "method": "POST",
+        "body": {
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": "fixture prompt"
+              }
+            ]
+          },
+          "parameters": {
+            "agent_options": {
+              "agent_id": "agent-fixture"
+            }
+          },
+          "stream": true
+        }
+      }
+    ]
+  },
+  "knowledge chat:json:true": {
+    "stdout": "{\n  \"answer\": \"最终答案\",\n  \"request_id\": \"request-fixture\",\n  \"phases\": [\n    {\n      \"stage\": \"planning\",\n      \"content\": \"规划内容\"\n    },\n    {\n      \"stage\": \"tool_calling\",\n      \"content\": \"工具摘要\"\n    },\n    {\n      \"stage\": \"generating\",\n      \"content\": \"最终\"\n    },\n    {\n      \"stage\": \"generating\",\n      \"content\": \"答案\"\n    }\n  ],\n  \"tools\": [\n    {\n      \"role\": \"assistant\",\n      \"content\": \"\",\n      \"extra\": {\n        \"step\": \"tool_calling\",\n        \"step_change\": \"tool_calling\"\n      },\n      \"tool_calls\": [\n        {\n          \"id\": \"tool-fixture\",\n          \"function\": {\n            \"name\": \"semantic_search\",\n            \"arguments\": \"{}\"\n          }\n        }\n      ]\n    },\n    {\n      \"role\": \"tool\",\n      \"content\": \"工具摘要\",\n      \"extra\": {\n        \"step\": \"tool_calling\",\n        \"step_change\": \"tool_return\"\n      },\n      \"additional_kwargs\": {\n        \"extra_json\": {\n          \"docs\": [\n            {\n              \"doc_id\": \"file-fixture\",\n              \"_citation_index\": 1,\n              \"content\": \"\",\n              \"clip_description\": \"画面描述\",\n              \"clip_start_time\": 0,\n              \"clip_end_time\": 28000,\n              \"video_url\": [\n                \"https://example.com/video.mp4\"\n              ],\n              \"image_url\": [\n                \"https://example.com/frame.png\"\n              ],\n              \"audio_url\": [],\n              \"audio_segments\": [\n                {\n                  \"start_time\": 10760,\n                  \"end_time\": 75480,\n                  \"content\": \"音频转写\",\n                  \"speaker\": {\n                    \"name\": \"speaker-fixture\"\n                  }\n                }\n              ],\n              \"future\": {\n                \"preserved\": true\n              }\n            }\n          ]\n        }\n      }\n    }\n  ],\n  \"docs\": [\n    {\n      \"doc_id\": \"file-fixture\",\n      \"_citation_index\": 1,\n      \"content\": \"\",\n      \"clip_description\": \"画面描述\",\n      \"clip_start_time\": 0,\n      \"clip_end_time\": 28000,\n      \"video_url\": [\n        \"https://example.com/video.mp4\"\n      ],\n      \"image_url\": [\n        \"https://example.com/frame.png\"\n      ],\n      \"audio_url\": [],\n      \"audio_segments\": [\n        {\n          \"start_time\": 10760,\n          \"end_time\": 75480,\n          \"content\": \"音频转写\",\n          \"speaker\": {\n            \"name\": \"speaker-fixture\"\n          }\n        }\n      ],\n      \"future\": {\n        \"preserved\": true\n      }\n    }\n  ],\n  \"usage\": {\n    \"input_tokens\": 10,\n    \"output_tokens\": 2,\n    \"total_tokens\": 12,\n    \"cached_tokens\": 0\n  },\n  \"events\": [\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": \\\"规划内容\\\", \\\"extra\\\": {\\\"step\\\": \\\"planning\\\", \\\"step_change\\\": \\\"plan_start\\\"}}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": \\\"\\\", \\\"extra\\\": {\\\"step\\\": \\\"tool_calling\\\", \\\"step_change\\\": \\\"tool_calling\\\"}, \\\"tool_calls\\\": [{\\\"id\\\": \\\"tool-fixture\\\", \\\"function\\\": {\\\"name\\\": \\\"semantic_search\\\", \\\"arguments\\\": \\\"{}\\\"}}]}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}, \\\"usage\\\": {\\\"input_tokens\\\": 10, \\\"output_tokens\\\": 2, \\\"total_tokens\\\": 12, \\\"cached_tokens\\\": 0}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"tool\\\", \\\"content\\\": \\\"工具摘要\\\", \\\"extra\\\": {\\\"step\\\": \\\"tool_calling\\\", \\\"step_change\\\": \\\"tool_return\\\"}, \\\"additional_kwargs\\\": {\\\"extra_json\\\": {\\\"docs\\\": [{\\\"doc_id\\\": \\\"file-fixture\\\", \\\"_citation_index\\\": 1, \\\"content\\\": \\\"\\\", \\\"clip_description\\\": \\\"画面描述\\\", \\\"clip_start_time\\\": 0, \\\"clip_end_time\\\": 28000, \\\"video_url\\\": [\\\"https://example.com/video.mp4\\\"], \\\"image_url\\\": [\\\"https://example.com/frame.png\\\"], \\\"audio_url\\\": [], \\\"audio_segments\\\": [{\\\"start_time\\\": 10760, \\\"end_time\\\": 75480, \\\"content\\\": \\\"音频转写\\\", \\\"speaker\\\": {\\\"name\\\": \\\"speaker-fixture\\\"}}], \\\"future\\\": {\\\"preserved\\\": true}}]}}}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": \\\"最终\\\", \\\"extra\\\": {\\\"step\\\": \\\"generating\\\", \\\"step_change\\\": \\\"generation_start\\\"}}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": [{\\\"type\\\": \\\"text\\\", \\\"text\\\": \\\"答案\\\"}], \\\"extra\\\": {\\\"step\\\": \\\"generating\\\"}}, \\\"finish_reason\\\": \\\"\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}}\"\n    },\n    {\n      \"data\": \"{\\\"request_id\\\": \\\"request-fixture\\\", \\\"code\\\": \\\"200\\\", \\\"output\\\": {\\\"choices\\\": [{\\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"content\\\": \\\"\\\", \\\"extra\\\": {\\\"step\\\": \\\"generating\\\", \\\"step_change\\\": \\\"generation_end\\\"}}, \\\"finish_reason\\\": \\\"stop\\\"}]}, \\\"unknown_extension\\\": {\\\"preserved\\\": true}, \\\"usage\\\": {\\\"input_tokens\\\": 10, \\\"output_tokens\\\": 2, \\\"total_tokens\\\": 12, \\\"cached_tokens\\\": 0}}\"\n    },\n    {\n      \"data\": \"[DONE]\"\n    }\n  ]\n}\n",
+    "data": {
+      "answer": "最终答案",
+      "request_id": "request-fixture",
+      "phases": [
+        {
+          "stage": "planning",
+          "content": "规划内容"
+        },
+        {
+          "stage": "tool_calling",
+          "content": "工具摘要"
+        },
+        {
+          "stage": "generating",
+          "content": "最终"
+        },
+        {
+          "stage": "generating",
+          "content": "答案"
+        }
+      ],
+      "tools": [
+        {
+          "role": "assistant",
+          "content": "",
+          "extra": {
+            "step": "tool_calling",
+            "step_change": "tool_calling"
+          },
+          "tool_calls": [
+            {
+              "id": "tool-fixture",
+              "function": {
+                "name": "semantic_search",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "工具摘要",
+          "extra": {
+            "step": "tool_calling",
+            "step_change": "tool_return"
+          },
+          "additional_kwargs": {
+            "extra_json": {
+              "docs": [
+                {
+                  "doc_id": "file-fixture",
+                  "_citation_index": 1,
+                  "content": "",
+                  "clip_description": "画面描述",
+                  "clip_start_time": 0,
+                  "clip_end_time": 28000,
+                  "video_url": ["https://example.com/video.mp4"],
+                  "image_url": ["https://example.com/frame.png"],
+                  "audio_url": [],
+                  "audio_segments": [
+                    {
+                      "start_time": 10760,
+                      "end_time": 75480,
+                      "content": "音频转写",
+                      "speaker": {
+                        "name": "speaker-fixture"
+                      }
+                    }
+                  ],
+                  "future": {
+                    "preserved": true
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "docs": [
+        {
+          "doc_id": "file-fixture",
+          "_citation_index": 1,
+          "content": "",
+          "clip_description": "画面描述",
+          "clip_start_time": 0,
+          "clip_end_time": 28000,
+          "video_url": ["https://example.com/video.mp4"],
+          "image_url": ["https://example.com/frame.png"],
+          "audio_url": [],
+          "audio_segments": [
+            {
+              "start_time": 10760,
+              "end_time": 75480,
+              "content": "音频转写",
+              "speaker": {
+                "name": "speaker-fixture"
+              }
+            }
+          ],
+          "future": {
+            "preserved": true
+          }
+        }
+      ],
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 2,
+        "total_tokens": 12,
+        "cached_tokens": 0
+      },
+      "events": [
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"规划内容\", \"extra\": {\"step\": \"planning\", \"step_change\": \"plan_start\"}}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"\", \"extra\": {\"step\": \"tool_calling\", \"step_change\": \"tool_calling\"}, \"tool_calls\": [{\"id\": \"tool-fixture\", \"function\": {\"name\": \"semantic_search\", \"arguments\": \"{}\"}}]}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}, \"usage\": {\"input_tokens\": 10, \"output_tokens\": 2, \"total_tokens\": 12, \"cached_tokens\": 0}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"tool\", \"content\": \"工具摘要\", \"extra\": {\"step\": \"tool_calling\", \"step_change\": \"tool_return\"}, \"additional_kwargs\": {\"extra_json\": {\"docs\": [{\"doc_id\": \"file-fixture\", \"_citation_index\": 1, \"content\": \"\", \"clip_description\": \"画面描述\", \"clip_start_time\": 0, \"clip_end_time\": 28000, \"video_url\": [\"https://example.com/video.mp4\"], \"image_url\": [\"https://example.com/frame.png\"], \"audio_url\": [], \"audio_segments\": [{\"start_time\": 10760, \"end_time\": 75480, \"content\": \"音频转写\", \"speaker\": {\"name\": \"speaker-fixture\"}}], \"future\": {\"preserved\": true}}]}}}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"最终\", \"extra\": {\"step\": \"generating\", \"step_change\": \"generation_start\"}}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"答案\"}], \"extra\": {\"step\": \"generating\"}}, \"finish_reason\": \"\"}]}, \"unknown_extension\": {\"preserved\": true}}"
+        },
+        {
+          "data": "{\"request_id\": \"request-fixture\", \"code\": \"200\", \"output\": {\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"\", \"extra\": {\"step\": \"generating\", \"step_change\": \"generation_end\"}}, \"finish_reason\": \"stop\"}]}, \"unknown_extension\": {\"preserved\": true}, \"usage\": {\"input_tokens\": 10, \"output_tokens\": 2, \"total_tokens\": 12, \"cached_tokens\": 0}}"
+        },
+        {
+          "data": "[DONE]"
+        }
+      ]
+    },
+    "requests": [
+      {
+        "url": "https://ws-fixture.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat",
+        "method": "POST",
+        "body": {
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": "fixture prompt"
+              }
+            ]
+          },
+          "parameters": {
+            "agent_options": {
+              "agent_id": "agent-fixture"
+            }
+          },
+          "stream": true
+        }
+      }
+    ]
+  },
+  "console call:text:false": {
+    "stdout": "data:\n  DataV2:\n    data:\n      data:\n        value: false\n        future:\n          values:\n            - false\n            - 0\n            - null\n            - []\n",
+    "requests": [
+      {
+        "url": "https://bailian-cs.console.aliyun.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=fixture.api",
+        "method": "POST",
+        "body": {
+          "Api": "fixture.api",
+          "V": "1.0",
+          "Data": {
+            "fixture": false,
+            "cornerstoneParam": {
+              "protocol": "V2",
+              "console": "ONE_CONSOLE",
+              "productCode": "p_efm",
+              "switchUserType": 3,
+              "consoleSite": "BAILIAN_ALIYUN"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "console call:json:false": {
+    "stdout": "{\n  \"data\": {\n    \"DataV2\": {\n      \"data\": {\n        \"data\": {\n          \"value\": false,\n          \"future\": {\n            \"values\": [\n              false,\n              0,\n              null,\n              []\n            ]\n          }\n        }\n      }\n    }\n  }\n}\n",
+    "data": {
+      "data": {
+        "DataV2": {
+          "data": {
+            "data": {
+              "value": false,
+              "future": {
+                "values": [false, 0, null, []]
+              }
+            }
+          }
+        }
+      }
+    },
+    "requests": [
+      {
+        "url": "https://bailian-cs.console.aliyun.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=fixture.api",
+        "method": "POST",
+        "body": {
+          "Api": "fixture.api",
+          "V": "1.0",
+          "Data": {
+            "fixture": false,
+            "cornerstoneParam": {
+              "protocol": "V2",
+              "console": "ONE_CONSOLE",
+              "productCode": "p_efm",
+              "switchUserType": 3,
+              "consoleSite": "BAILIAN_ALIYUN"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "console call:text:true": {
+    "stdout": "data:\n  DataV2:\n    data:\n      data:\n        value: false\n        future:\n          values:\n            - false\n            - 0\n            - null\n            - []\n",
+    "requests": [
+      {
+        "url": "https://bailian-cs.console.aliyun.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=fixture.api",
+        "method": "POST",
+        "body": {
+          "Api": "fixture.api",
+          "V": "1.0",
+          "Data": {
+            "fixture": false,
+            "cornerstoneParam": {
+              "protocol": "V2",
+              "console": "ONE_CONSOLE",
+              "productCode": "p_efm",
+              "switchUserType": 3,
+              "consoleSite": "BAILIAN_ALIYUN"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "console call:json:true": {
+    "stdout": "{\n  \"data\": {\n    \"DataV2\": {\n      \"data\": {\n        \"data\": {\n          \"value\": false,\n          \"future\": {\n            \"values\": [\n              false,\n              0,\n              null,\n              []\n            ]\n          }\n        }\n      }\n    }\n  }\n}\n",
+    "data": {
+      "data": {
+        "DataV2": {
+          "data": {
+            "data": {
+              "value": false,
+              "future": {
+                "values": [false, 0, null, []]
+              }
+            }
+          }
+        }
+      }
+    },
+    "requests": [
+      {
+        "url": "https://bailian-cs.console.aliyun.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=fixture.api",
+        "method": "POST",
+        "body": {
+          "Api": "fixture.api",
+          "V": "1.0",
+          "Data": {
+            "fixture": false,
+            "cornerstoneParam": {
+              "protocol": "V2",
+              "console": "ONE_CONSOLE",
+              "productCode": "p_efm",
+              "switchUserType": 3,
+              "consoleSite": "BAILIAN_ALIYUN"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "app list:text:false": {
+    "stdout": "total: 7\napps:\n  - code: app-fixture\n    name: Fixture app\n    user_prompt_params: []\n",
+    "requests": [
+      {
+        "url": "https://bailian-cs.console.aliyun.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=zeldaEasy.broadscope-bailian.app-control.list",
+        "method": "POST",
+        "body": {
+          "Api": "zeldaEasy.broadscope-bailian.app-control.list",
+          "V": "1.0",
+          "Data": {
+            "reqDTO": {
+              "name": "",
+              "notInTypes": [10],
+              "type": 5,
+              "statuses": [1, 4],
+              "page_no": 2,
+              "page_size": 5
+            },
+            "cornerstoneParam": {
+              "protocol": "V2",
+              "console": "ONE_CONSOLE",
+              "productCode": "p_efm",
+              "switchUserType": 3,
+              "consoleSite": "BAILIAN_ALIYUN"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "app list:json:false": {
+    "stdout": "{\n  \"total\": 7,\n  \"apps\": [\n    {\n      \"code\": \"app-fixture\",\n      \"name\": \"Fixture app\",\n      \"user_prompt_params\": []\n    }\n  ]\n}\n",
+    "data": {
+      "total": 7,
+      "apps": [
+        {
+          "code": "app-fixture",
+          "name": "Fixture app",
+          "user_prompt_params": []
+        }
+      ]
+    },
+    "requests": [
+      {
+        "url": "https://bailian-cs.console.aliyun.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=zeldaEasy.broadscope-bailian.app-control.list",
+        "method": "POST",
+        "body": {
+          "Api": "zeldaEasy.broadscope-bailian.app-control.list",
+          "V": "1.0",
+          "Data": {
+            "reqDTO": {
+              "name": "",
+              "notInTypes": [10],
+              "type": 5,
+              "statuses": [1, 4],
+              "page_no": 2,
+              "page_size": 5
+            },
+            "cornerstoneParam": {
+              "protocol": "V2",
+              "console": "ONE_CONSOLE",
+              "productCode": "p_efm",
+              "switchUserType": 3,
+              "consoleSite": "BAILIAN_ALIYUN"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "app list:text:true": {
+    "stdout": "total: 7\napps:\n  - code: app-fixture\n    name: Fixture app\n    user_prompt_params: []\n",
+    "requests": [
+      {
+        "url": "https://bailian-cs.console.aliyun.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=zeldaEasy.broadscope-bailian.app-control.list",
+        "method": "POST",
+        "body": {
+          "Api": "zeldaEasy.broadscope-bailian.app-control.list",
+          "V": "1.0",
+          "Data": {
+            "reqDTO": {
+              "name": "",
+              "notInTypes": [10],
+              "type": 5,
+              "statuses": [1, 4],
+              "page_no": 2,
+              "page_size": 5
+            },
+            "cornerstoneParam": {
+              "protocol": "V2",
+              "console": "ONE_CONSOLE",
+              "productCode": "p_efm",
+              "switchUserType": 3,
+              "consoleSite": "BAILIAN_ALIYUN"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "app list:json:true": {
+    "stdout": "{\n  \"total\": 7,\n  \"apps\": [\n    {\n      \"code\": \"app-fixture\",\n      \"name\": \"Fixture app\",\n      \"user_prompt_params\": []\n    }\n  ]\n}\n",
+    "data": {
+      "total": 7,
+      "apps": [
+        {
+          "code": "app-fixture",
+          "name": "Fixture app",
+          "user_prompt_params": []
+        }
+      ]
+    },
+    "requests": [
+      {
+        "url": "https://bailian-cs.console.aliyun.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=zeldaEasy.broadscope-bailian.app-control.list",
+        "method": "POST",
+        "body": {
+          "Api": "zeldaEasy.broadscope-bailian.app-control.list",
+          "V": "1.0",
+          "Data": {
+            "reqDTO": {
+              "name": "",
+              "notInTypes": [10],
+              "type": 5,
+              "statuses": [1, 4],
+              "page_no": 2,
+              "page_size": 5
+            },
+            "cornerstoneParam": {
+              "protocol": "V2",
+              "console": "ONE_CONSOLE",
+              "productCode": "p_efm",
+              "switchUserType": 3,
+              "consoleSite": "BAILIAN_ALIYUN"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "decision:text:false": {
+    "stdout": "answer  {\"value\":false,\"confidence\":0}\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/systemone",
+        "method": "POST",
+        "body": {
+          "model": "decision-model-preview",
+          "state": "{\"content\":\"fixture state\"}",
+          "questions": {
+            "answer": {
+              "type": "noul"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "decision:json:false": {
+    "stdout": "{\n  \"answers\": {\n    \"answer\": {\n      \"value\": false,\n      \"confidence\": 0\n    }\n  },\n  \"usage\": {\n    \"input_tokens\": 0\n  },\n  \"latency_ms\": 0,\n  \"request_id\": \"decision-request\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "answers": {
+        "answer": {
+          "value": false,
+          "confidence": 0
+        }
+      },
+      "usage": {
+        "input_tokens": 0
+      },
+      "latency_ms": 0,
+      "request_id": "decision-request",
+      "future": {
+        "values": [false, 0, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/systemone",
+        "method": "POST",
+        "body": {
+          "model": "decision-model-preview",
+          "state": "{\"content\":\"fixture state\"}",
+          "questions": {
+            "answer": {
+              "type": "noul"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "decision:text:true": {
+    "stdout": "answer  {\"value\":false,\"confidence\":0}\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/systemone",
+        "method": "POST",
+        "body": {
+          "model": "decision-model-preview",
+          "state": "{\"content\":\"fixture state\"}",
+          "questions": {
+            "answer": {
+              "type": "noul"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "decision:json:true": {
+    "stdout": "{\n  \"answers\": {\n    \"answer\": {\n      \"value\": false,\n      \"confidence\": 0\n    }\n  },\n  \"usage\": {\n    \"input_tokens\": 0\n  },\n  \"latency_ms\": 0,\n  \"request_id\": \"decision-request\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "answers": {
+        "answer": {
+          "value": false,
+          "confidence": 0
+        }
+      },
+      "usage": {
+        "input_tokens": 0
+      },
+      "latency_ms": 0,
+      "request_id": "decision-request",
+      "future": {
+        "values": [false, 0, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/compatible-mode/v1/systemone",
+        "method": "POST",
+        "body": {
+          "model": "decision-model-preview",
+          "state": "{\"content\":\"fixture state\"}",
+          "questions": {
+            "answer": {
+              "type": "noul"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "file upload:text:false": {
+    "stdout": "url: oss://fixture/inference-input.txt\nmodel: qwen-fixture\nexpires_in: 48 hours\nnote: \"When using this URL in API calls, add header:\n  X-DashScope-OssResourceResolve: enable\"\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/uploads?action=getPolicy&model=qwen-fixture",
+        "method": "GET",
+        "body": null
+      },
+      {
+        "url": "https://storage.fixture.invalid",
+        "method": "POST",
+        "body": {
+          "OSSAccessKeyId": "fixture-access",
+          "Signature": "fixture-signature",
+          "policy": "fixture-policy",
+          "x-oss-object-acl": "private",
+          "x-oss-forbid-overwrite": "true",
+          "key": "fixture/inference-input.txt",
+          "success_action_status": "200",
+          "file": {
+            "name": "inference-input.txt",
+            "text": "inference fixture"
+          }
+        }
+      }
+    ]
+  },
+  "file upload:json:false": {
+    "stdout": "{\n  \"url\": \"oss://fixture/inference-input.txt\",\n  \"model\": \"qwen-fixture\",\n  \"expires_in\": \"48 hours\",\n  \"note\": \"When using this URL in API calls, add header: X-DashScope-OssResourceResolve: enable\"\n}\n",
+    "data": {
+      "url": "oss://fixture/inference-input.txt",
+      "model": "qwen-fixture",
+      "expires_in": "48 hours",
+      "note": "When using this URL in API calls, add header: X-DashScope-OssResourceResolve: enable"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/uploads?action=getPolicy&model=qwen-fixture",
+        "method": "GET",
+        "body": null
+      },
+      {
+        "url": "https://storage.fixture.invalid",
+        "method": "POST",
+        "body": {
+          "OSSAccessKeyId": "fixture-access",
+          "Signature": "fixture-signature",
+          "policy": "fixture-policy",
+          "x-oss-object-acl": "private",
+          "x-oss-forbid-overwrite": "true",
+          "key": "fixture/inference-input.txt",
+          "success_action_status": "200",
+          "file": {
+            "name": "inference-input.txt",
+            "text": "inference fixture"
+          }
+        }
+      }
+    ]
+  },
+  "file upload:text:true": {
+    "stdout": "url: oss://fixture/inference-input.txt\nmodel: qwen-fixture\nexpires_in: 48 hours\nnote: \"When using this URL in API calls, add header:\n  X-DashScope-OssResourceResolve: enable\"\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/uploads?action=getPolicy&model=qwen-fixture",
+        "method": "GET",
+        "body": null
+      },
+      {
+        "url": "https://storage.fixture.invalid",
+        "method": "POST",
+        "body": {
+          "OSSAccessKeyId": "fixture-access",
+          "Signature": "fixture-signature",
+          "policy": "fixture-policy",
+          "x-oss-object-acl": "private",
+          "x-oss-forbid-overwrite": "true",
+          "key": "fixture/inference-input.txt",
+          "success_action_status": "200",
+          "file": {
+            "name": "inference-input.txt",
+            "text": "inference fixture"
+          }
+        }
+      }
+    ]
+  },
+  "file upload:json:true": {
+    "stdout": "{\n  \"url\": \"oss://fixture/inference-input.txt\",\n  \"model\": \"qwen-fixture\",\n  \"expires_in\": \"48 hours\",\n  \"note\": \"When using this URL in API calls, add header: X-DashScope-OssResourceResolve: enable\"\n}\n",
+    "data": {
+      "url": "oss://fixture/inference-input.txt",
+      "model": "qwen-fixture",
+      "expires_in": "48 hours",
+      "note": "When using this URL in API calls, add header: X-DashScope-OssResourceResolve: enable"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/uploads?action=getPolicy&model=qwen-fixture",
+        "method": "GET",
+        "body": null
+      },
+      {
+        "url": "https://storage.fixture.invalid",
+        "method": "POST",
+        "body": {
+          "OSSAccessKeyId": "fixture-access",
+          "Signature": "fixture-signature",
+          "policy": "fixture-policy",
+          "x-oss-object-acl": "private",
+          "x-oss-forbid-overwrite": "true",
+          "key": "fixture/inference-input.txt",
+          "success_action_status": "200",
+          "file": {
+            "name": "inference-input.txt",
+            "text": "inference fixture"
+          }
+        }
+      }
+    ]
+  },
+  "search:text:false": {
+    "stdout": "pages:\n  - title: Fixture\n    url: https://example.com/fixture\n    snippet: fixture snippet\n    hostname: example.com\ntotal: 1\ntext: extra result\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 0,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "test",
+              "version": "0.0.0"
+            }
+          }
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized"
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "name": "bailian_web_search",
+            "arguments": {
+              "query": "fixture query",
+              "count": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  "search:json:false": {
+    "stdout": "{\n  \"isError\": false,\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{\\\"pages\\\":[{\\\"title\\\":\\\"Fixture\\\",\\\"url\\\":\\\"https://example.com/fixture\\\",\\\"snippet\\\":\\\"fixture snippet\\\",\\\"hostname\\\":\\\"example.com\\\"}]}\"\n    },\n    {\n      \"type\": \"text\",\n      \"text\": \"extra result\"\n    }\n  ],\n  \"structuredContent\": {\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+    "data": {
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"pages\":[{\"title\":\"Fixture\",\"url\":\"https://example.com/fixture\",\"snippet\":\"fixture snippet\",\"hostname\":\"example.com\"}]}"
+        },
+        {
+          "type": "text",
+          "text": "extra result"
+        }
+      ],
+      "structuredContent": {
+        "future": {
+          "values": [false, 0, null, []]
+        }
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 0,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "test",
+              "version": "0.0.0"
+            }
+          }
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized"
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "name": "bailian_web_search",
+            "arguments": {
+              "query": "fixture query",
+              "count": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  "search:text:true": {
+    "stdout": "pages:\n  - title: Fixture\n    url: https://example.com/fixture\n    snippet: fixture snippet\n    hostname: example.com\ntotal: 1\ntext: extra result\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 0,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "test",
+              "version": "0.0.0"
+            }
+          }
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized"
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "name": "bailian_web_search",
+            "arguments": {
+              "query": "fixture query",
+              "count": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  "search:json:true": {
+    "stdout": "{\n  \"isError\": false,\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{\\\"pages\\\":[{\\\"title\\\":\\\"Fixture\\\",\\\"url\\\":\\\"https://example.com/fixture\\\",\\\"snippet\\\":\\\"fixture snippet\\\",\\\"hostname\\\":\\\"example.com\\\"}]}\"\n    },\n    {\n      \"type\": \"text\",\n      \"text\": \"extra result\"\n    }\n  ],\n  \"structuredContent\": {\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+    "data": {
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"pages\":[{\"title\":\"Fixture\",\"url\":\"https://example.com/fixture\",\"snippet\":\"fixture snippet\",\"hostname\":\"example.com\"}]}"
+        },
+        {
+          "type": "text",
+          "text": "extra result"
+        }
+      ],
+      "structuredContent": {
+        "future": {
+          "values": [false, 0, null, []]
+        }
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 0,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "test",
+              "version": "0.0.0"
+            }
+          }
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized"
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "name": "bailian_web_search",
+            "arguments": {
+              "query": "fixture query",
+              "count": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  "search list tools:text:false": {
+    "stdout": "tools:\n  - name: bailian_web_search\n    description: fixture\n    inputSchema:\n      type: object\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 0,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "test",
+              "version": "0.0.0"
+            }
+          }
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized"
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list"
+        }
+      }
+    ]
+  },
+  "search list tools:json:false": {
+    "stdout": "{\n  \"tools\": [\n    {\n      \"name\": \"bailian_web_search\",\n      \"description\": \"fixture\",\n      \"inputSchema\": {\n        \"type\": \"object\"\n      }\n    }\n  ]\n}\n",
+    "data": {
+      "tools": [
+        {
+          "name": "bailian_web_search",
+          "description": "fixture",
+          "inputSchema": {
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 0,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "test",
+              "version": "0.0.0"
+            }
+          }
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized"
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list"
+        }
+      }
+    ]
+  },
+  "search list tools:text:true": {
+    "stdout": "tools:\n  - name: bailian_web_search\n    description: fixture\n    inputSchema:\n      type: object\n",
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 0,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "test",
+              "version": "0.0.0"
+            }
+          }
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized"
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list"
+        }
+      }
+    ]
+  },
+  "search list tools:json:true": {
+    "stdout": "{\n  \"tools\": [\n    {\n      \"name\": \"bailian_web_search\",\n      \"description\": \"fixture\",\n      \"inputSchema\": {\n        \"type\": \"object\"\n      }\n    }\n  ]\n}\n",
+    "data": {
+      "tools": [
+        {
+          "name": "bailian_web_search",
+          "description": "fixture",
+          "inputSchema": {
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 0,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "test",
+              "version": "0.0.0"
+            }
+          }
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized"
+        }
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "method": "POST",
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list"
+        }
+      }
+    ]
+  }
+}

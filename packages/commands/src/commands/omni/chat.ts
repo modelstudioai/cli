@@ -1,18 +1,19 @@
+import { parseModelStreamEvent } from "../shared/model-stream.ts";
 import { writeFileSync } from "fs";
 import { extname } from "path";
 import {
   defineCommand,
   chatPath,
   parseSSE,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type ChatMessage,
   type ChatMessageContent,
   type ChatRequest,
   type StreamChunk,
+  type LocalizedText,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { resolveOutputDir } from "bailian-cli-core";
 
 interface VoiceEntry {
@@ -39,17 +40,24 @@ const OMNI_VOICES: VoiceEntry[] = [
   { voice: "Ethan", name: "晨煦", desc: "北方口音男", lang: "中文/英文" },
 ];
 
-function printVoiceList(): void {
-  const col = (s: string, w: number) => s.padEnd(w);
-  process.stdout.write("\nOmni output voices:\n");
-  process.stdout.write(
-    `${col("VOICE ID", 12)} ${col("NAME", 14)} ${col("DESCRIPTION", 14)} LANGUAGE\n`,
-  );
-  process.stdout.write(`${"-".repeat(12)} ${"-".repeat(14)} ${"-".repeat(14)} ${"-".repeat(12)}\n`);
-  for (const v of OMNI_VOICES) {
-    process.stdout.write(`${col(v.voice, 12)} ${col(v.name, 14)} ${col(v.desc, 14)} ${v.lang}\n`);
-  }
-  process.stdout.write(`\nTotal: ${OMNI_VOICES.length} voices\n`);
+function formatVoiceList(localize: (message: LocalizedText) => string): string {
+  const column = (value: string, width: number) => value.padEnd(width);
+  const lines = [
+    "",
+    localize({ "en-US": "Omni output voices:", "zh-CN": "Omni 输出音色：" }),
+    `${column(localize({ "en-US": "VOICE ID", "zh-CN": "音色 ID" }), 12)} ${column(localize({ "en-US": "NAME", "zh-CN": "名称" }), 14)} ${column(localize({ "en-US": "DESCRIPTION", "zh-CN": "描述" }), 14)} ${localize({ "en-US": "LANGUAGE", "zh-CN": "语言" })}`,
+    `${"-".repeat(12)} ${"-".repeat(14)} ${"-".repeat(14)} ${"-".repeat(12)}`,
+    ...OMNI_VOICES.map(
+      (voice) =>
+        `${column(voice.voice, 12)} ${column(voice.name, 14)} ${column(voice.desc, 14)} ${voice.lang}`,
+    ),
+    "",
+    localize({
+      "en-US": `Total: ${OMNI_VOICES.length} voices`,
+      "zh-CN": `共 ${OMNI_VOICES.length} 个音色`,
+    }),
+  ];
+  return lines.join("\n");
 }
 
 /**
@@ -257,7 +265,10 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     if (flags.listVoices) {
-      printVoiceList();
+      ctx.output.result(
+        { voices: OMNI_VOICES, total: OMNI_VOICES.length },
+        ctx.settings.output === "text" ? { text: formatVoiceList(ctx.localize) } : undefined,
+      );
       return;
     }
 
@@ -268,7 +279,7 @@ export default defineCommand({
     const voice = flags.voice || "Tina";
     const audioFormat = flags.audioFormat || "wav";
     const textOnly = flags.textOnly === true;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // --- Build messages array ---
     const allMessages: ChatMessage[] = [];
@@ -395,14 +406,15 @@ export default defineCommand({
     if (flags.temperature !== undefined) body.temperature = flags.temperature;
 
     if (settings.dryRun) {
-      emitResult({ request: body }, format);
+      ctx.output.result({ request: body });
       return;
     }
 
-    if (!settings.quiet) {
-      const modeLabel = textOnly ? "text-only" : `text+audio, voice: ${voice}`;
-      process.stderr.write(`[Model: ${model}] [${modeLabel}]\n`);
-    }
+    const modeLabel = textOnly ? "text-only" : `text+audio, voice: ${voice}`;
+    ctx.output.info({
+      "en-US": `[Model: ${model}] [${modeLabel}]`,
+      "zh-CN": `[模型: ${model}] [${textOnly ? "仅文本" : `文本及音频，音色: ${voice}`}]`,
+    });
 
     // --- Stream request ---
     const res = await ctx.client.request({
@@ -414,37 +426,30 @@ export default defineCommand({
 
     let textContent = "";
     let audioBase64 = "";
-    const isTTY = process.stdout.isTTY;
+    const streamText = format === "text" && !!process.stdout.isTTY;
     const resultOut = process.stdout;
 
     for await (const event of parseSSE(res)) {
       if (event.data === "[DONE]") break;
-      try {
-        const parsed = JSON.parse(event.data) as StreamChunk;
+      const parsed = parseModelStreamEvent(event) as unknown as StreamChunk | undefined;
+      if (!parsed) continue;
 
-        for (const choice of parsed.choices) {
-          const delta = choice.delta;
+      for (const choice of parsed.choices ?? []) {
+        const delta = choice.delta;
 
-          // Collect text content
-          if (delta.content) {
-            textContent += delta.content;
-            if (isTTY) {
-              resultOut.write(delta.content);
-            }
-          }
-
-          // Collect audio data
-          if (delta.audio?.data) {
-            audioBase64 += delta.audio.data;
+        // Collect text content
+        if (delta.content) {
+          textContent += delta.content;
+          if (streamText) {
+            resultOut.write(delta.content);
           }
         }
-      } catch {
-        // Skip unparseable chunks
-      }
-    }
 
-    if (isTTY && textContent) {
-      resultOut.write("\n");
+        // Collect audio data
+        if (delta.audio?.data) {
+          audioBase64 += delta.audio.data;
+        }
+      }
     }
 
     // --- Save audio ---
@@ -466,19 +471,14 @@ export default defineCommand({
       writeFileSync(destPath, wavBuffer);
       audioSaved = destPath;
 
-      if (!settings.quiet) {
-        process.stderr.write(`Audio saved: ${destPath}\n`);
-      }
+      ctx.output.info({ "en-US": `Audio saved: ${destPath}`, "zh-CN": `音频已保存: ${destPath}` });
     }
 
-    // --- Emit structured result ---
-    if (!isTTY || format === "json") {
-      const result: Record<string, unknown> = { content: textContent };
-      if (audioSaved) {
-        result.audio_saved = audioSaved;
-        result.voice = voice;
-      }
-      emitResult(result, format);
+    const result: Record<string, unknown> = { content: textContent };
+    if (audioSaved) {
+      result.audio_saved = audioSaved;
+      result.voice = voice;
     }
+    ctx.output.result(result, streamText ? { text: "" } : undefined);
   },
 });

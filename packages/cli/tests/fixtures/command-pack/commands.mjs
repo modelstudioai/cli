@@ -15,7 +15,7 @@ const ping = {
   usageArgs: "--message <text>",
   exampleArgs: ['--message "hello"'],
   async run(ctx) {
-    process.stdout.write(`command-pack:${ctx.flags.message}\n`);
+    ctx.output.line(`command-pack:${ctx.flags.message}`);
   },
 };
 
@@ -44,9 +44,7 @@ const credential = {
   auth: "apiKey",
   async run(ctx) {
     const apiKey = ctx.credentials.apiKey();
-    process.stdout.write(
-      `credential-source:${apiKey.source} credential-base-url:${apiKey.baseUrl}\n`,
-    );
+    ctx.output.line(`credential-source:${apiKey.source} credential-base-url:${apiKey.baseUrl}`);
   },
 };
 

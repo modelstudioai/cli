@@ -1,13 +1,11 @@
 import {
   defineCommand,
   taskPath,
-  detectOutputFormat,
   type DashScopeTaskResponse,
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: {
@@ -40,10 +38,8 @@ export default defineCommand({
 
     const outPath = flags.out;
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult({ task_id: taskId, action: "download", out: outPath }, format);
+      ctx.output.result({ task_id: taskId, action: "download", out: outPath });
       return;
     }
 
@@ -72,13 +68,10 @@ export default defineCommand({
       throw new BailianError("No download URL available for this task.", ExitCode.GENERAL);
     }
 
-    const { size } = await downloadFile(downloadUrl, outPath, { quiet: settings.quiet });
+    const { size } = await downloadFile(downloadUrl, outPath, {
+      quiet: settings.quiet || settings.output === "json",
+    });
 
-    if (settings.quiet) {
-      emitBare(outPath);
-      return;
-    }
-
-    emitResult({ saved: outPath, size: formatBytes(size) }, format);
+    ctx.output.result({ saved: outPath, size: formatBytes(size) });
   },
 });

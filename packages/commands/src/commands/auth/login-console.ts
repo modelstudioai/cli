@@ -6,6 +6,7 @@ import {
   ExitCode,
   validateConsoleAccessToken,
   type ConsoleGatewayTarget,
+  type CommandOutput,
   type AuthPersistPatch,
   type AuthStore,
   type ConfigFile,
@@ -21,6 +22,7 @@ export interface LoginDeps {
   identity: Identity;
   settings: Settings;
   authStore: AuthStore;
+  output: Pick<CommandOutput, "info" | "warning" | "debug">;
   /** 缺省时用户可见新文案回退到 en-US。 */
   localize?: (text: LocalizedText) => string;
 }
@@ -418,18 +420,14 @@ export async function runConsoleTokenLogin(
       ExitCode.USAGE,
     );
   }
-  await validateConsoleAccessToken({ ...target, token }, deps.settings);
+  await validateConsoleAccessToken({ ...target, token }, deps.settings, {
+    debug: deps.output.debug,
+  });
   await deps.authStore.login({
     access_token: token,
     console_site: target.site,
     console_region: target.region,
   });
-  process.stderr.write(
-    `${localizeLogin(deps, {
-      "en-US": `Console token validated and saved to ${deps.authStore.path}`,
-      "zh-CN": `控制台 token 已校验并保存至 ${deps.authStore.path}`,
-    })}\n`,
-  );
 }
 
 export async function runConsoleLogin(
@@ -525,24 +523,12 @@ export async function runConsoleLogin(
             persistBaseUrl: baseUrl || undefined,
             persistPatch: callbackPatch,
           });
-          process.stderr.write(
-            `${localizeLogin(deps, {
-              "en-US": `Config saved to ${deps.authStore.path}`,
-              "zh-CN": `配置已保存至 ${deps.authStore.path}`,
-            })}\n`,
-          );
         } else {
           await deps.authStore.login({
             ...callbackPatch,
             base_url: baseUrl || undefined,
           });
           savedSessionWithoutApiKey = true;
-          process.stderr.write(
-            `${localizeLogin(deps, {
-              "en-US": `Config saved to ${deps.authStore.path}`,
-              "zh-CN": `配置已保存至 ${deps.authStore.path}`,
-            })}\n`,
-          );
         }
         savedCredentials = true;
       } catch (error: unknown) {
@@ -613,36 +599,26 @@ export async function runConsoleLogin(
       server.closeAllConnections();
     }, CONSOLE_LOGIN_TIMEOUT_MS);
   });
+  // Native login prompt: the URL must remain visible in quiet text sessions.
+  // The command rejects browser login in JSON before starting this server.
   process.stderr.write(
-    `${localizeLogin(deps, {
-      "en-US": "Open this login URL in a browser on this machine:",
-      "zh-CN": "请在本机浏览器中打开以下登录地址：",
-    })}\n${loginUrl}\n${localizeLogin(deps, {
-      "en-US":
-        "Waiting up to 15 minutes for credentials. If blocked, check local network permission or open the same URL in Firefox. Press Ctrl+C to cancel.",
-      "zh-CN":
-        "最多等待 15 分钟接收凭证。如被拦截，请检查本地网络权限或在 Firefox 打开同一地址。按 Ctrl+C 取消。",
-    })}\n`,
+    `${localizeLogin(deps, { "en-US": "Open this login URL in a browser on this machine:", "zh-CN": "请在本机浏览器中打开以下登录地址：" })}\n${loginUrl}\n${localizeLogin(deps, { "en-US": "Waiting up to 15 minutes for credentials. If blocked, check local network permission or open the same URL in Firefox. Press Ctrl+C to cancel.", "zh-CN": "最多等待 15 分钟接收凭证。如被拦截，请检查本地网络权限或在 Firefox 打开同一地址。按 Ctrl+C 取消。" })}\n`,
   );
   if (!opts?.noBrowser) {
     void openInBrowser(loginUrl).then(
       () => {
         if (!finished)
-          process.stderr.write(
-            `${localizeLogin(deps, {
-              "en-US": "Opened the login page in your default browser.",
-              "zh-CN": "已在默认浏览器打开登录页面。",
-            })}\n`,
-          );
+          deps.output.info({
+            "en-US": "Opened the login page in your default browser.",
+            "zh-CN": "已在默认浏览器打开登录页面。",
+          });
       },
       () => {
         if (!finished)
-          process.stderr.write(
-            `${localizeLogin(deps, {
-              "en-US": "Could not open the default browser. Open the URL above manually.",
-              "zh-CN": "无法打开默认浏览器，请手动打开上方地址。",
-            })}\n`,
-          );
+          deps.output.info({
+            "en-US": "Could not open the default browser. Open the URL above manually.",
+            "zh-CN": "无法打开默认浏览器，请手动打开上方地址。",
+          });
       },
     );
   }
@@ -667,11 +643,12 @@ export async function runConsoleLogin(
 
   if (opts?.needApiKey && savedSessionWithoutApiKey) {
     const binName = deps.identity.binName;
-    process.stderr.write(
-      `${localizeLogin(deps, {
+    deps.output.warning({
+      message: {
         "en-US": `Saved the console session only. Model commands still need an API key: ${binName} auth login --console, or ${binName} auth login --api-key <key>`,
         "zh-CN": `仅保存了控制台会话。模型命令仍需要 API Key：${binName} auth login --console，或 ${binName} auth login --api-key <key>`,
-      })}\n`,
-    );
+      },
+      code: "MODEL_API_KEY_MISSING",
+    });
   }
 }

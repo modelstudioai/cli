@@ -1,0 +1,828 @@
+{
+  "dataset list": {
+    "stdout": "{\n  \"items\": [\n    {\n      \"file_id\": \"file-fixture\",\n      \"name\": \"fixture.jsonl\",\n      \"size\": \"1.0 KB\",\n      \"purpose\": \"fine-tune\"\n    }\n  ],\n  \"total\": 7,\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "items": [
+        {
+          "file_id": "file-fixture",
+          "name": "fixture.jsonl",
+          "size": "1.0 KB",
+          "purpose": "fine-tune"
+        }
+      ],
+      "total": 7,
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/files?page_no=2&page_size=5&purpose=fine-tune",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "dataset get": {
+    "stdout": "{\n  \"file_id\": \"file-fixture\",\n  \"name\": \"fixture.jsonl\",\n  \"size\": \"1.0 KB\",\n  \"md5\": \"fixture-md5\",\n  \"purpose\": \"fine-tune\",\n  \"created_at\": \"2026-01-01\",\n  \"description\": \"fixture\",\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "file_id": "file-fixture",
+      "name": "fixture.jsonl",
+      "size": "1.0 KB",
+      "md5": "fixture-md5",
+      "purpose": "fine-tune",
+      "created_at": "2026-01-01",
+      "description": "fixture",
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/files/file-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "dataset delete": {
+    "stdout": "{\n  \"deleted\": true,\n  \"request_id\": \"request-fixture\",\n  \"future\": {\n    \"values\": [\n      0,\n      false,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "deleted": true,
+      "request_id": "request-fixture",
+      "future": {
+        "values": [0, false, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/files/file-fixture",
+        "method": "DELETE",
+        "body": null
+      }
+    ]
+  },
+  "finetune list": {
+    "stdout": "{\n  \"items\": [\n    {\n      \"job_id\": \"ft-fixture\",\n      \"base_model\": \"qwen-fixture\",\n      \"status\": \"SUCCEEDED\",\n      \"training_type\": \"sft\",\n      \"output_model\": \"\",\n      \"created_at\": \"\"\n    }\n  ],\n  \"total\": 7,\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "items": [
+        {
+          "job_id": "ft-fixture",
+          "base_model": "qwen-fixture",
+          "status": "SUCCEEDED",
+          "training_type": "sft",
+          "output_model": "",
+          "created_at": ""
+        }
+      ],
+      "total": 7,
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes?page_no=2&page_size=5",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "finetune get": {
+    "stdout": "{\n  \"job_id\": \"ft-fixture\",\n  \"job_name\": \"\",\n  \"priority\": \"\",\n  \"hyper_parameters\": {},\n  \"max_output_cnt\": null,\n  \"base_model\": \"qwen-fixture\",\n  \"status\": \"SUCCEEDED\",\n  \"training_type\": \"sft\",\n  \"training_files\": [],\n  \"validation_files\": [],\n  \"hyper_params\": \"\",\n  \"output_model\": \"\",\n  \"model_name\": \"\",\n  \"created_at\": \"\",\n  \"updated_at\": \"\",\n  \"usage_tokens\": 0,\n  \"charge_type\": \"\",\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "job_id": "ft-fixture",
+      "job_name": "",
+      "priority": "",
+      "hyper_parameters": {},
+      "max_output_cnt": null,
+      "base_model": "qwen-fixture",
+      "status": "SUCCEEDED",
+      "training_type": "sft",
+      "training_files": [],
+      "validation_files": [],
+      "hyper_params": "",
+      "output_model": "",
+      "model_name": "",
+      "created_at": "",
+      "updated_at": "",
+      "usage_tokens": 0,
+      "charge_type": "",
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "finetune cancel": {
+    "stdout": "{\n  \"request_id\": \"request-fixture\",\n  \"output\": {\n    \"job_id\": \"ft-fixture\",\n    \"model\": \"qwen-fixture\",\n    \"status\": \"SUCCEEDED\",\n    \"training_type\": \"sft\",\n    \"usage\": 0,\n    \"output_model\": \"trained-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"future\": {\n    \"values\": [\n      0,\n      false,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "request_id": "request-fixture",
+      "output": {
+        "job_id": "ft-fixture",
+        "model": "qwen-fixture",
+        "status": "SUCCEEDED",
+        "training_type": "sft",
+        "usage": 0,
+        "output_model": "trained-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "future": {
+        "values": [0, false, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-fixture/cancel",
+        "method": "POST",
+        "body": null
+      }
+    ]
+  },
+  "finetune delete": {
+    "stdout": "{\n  \"request_id\": \"request-fixture\",\n  \"output\": {\n    \"job_id\": \"ft-fixture\",\n    \"model\": \"qwen-fixture\",\n    \"status\": \"SUCCEEDED\",\n    \"training_type\": \"sft\",\n    \"usage\": 0,\n    \"output_model\": \"trained-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"future\": {\n    \"values\": [\n      0,\n      false,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "request_id": "request-fixture",
+      "output": {
+        "job_id": "ft-fixture",
+        "model": "qwen-fixture",
+        "status": "SUCCEEDED",
+        "training_type": "sft",
+        "usage": 0,
+        "output_model": "trained-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "future": {
+        "values": [0, false, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-fixture",
+        "method": "DELETE",
+        "body": null
+      }
+    ]
+  },
+  "finetune export": {
+    "stdout": "{\n  \"output\": {\n    \"model_name\": \"trained-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "output": {
+        "model_name": "trained-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-fixture/export/ckpt-fixture?model_name=trained-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "finetune checkpoints": {
+    "stdout": "{\n  \"items\": [\n    {\n      \"checkpoint\": \"ckpt-fixture\",\n      \"step\": \"0\",\n      \"status\": \"READY\",\n      \"model_name\": \"\",\n      \"expire_time\": \"2026-01-02T12:00:00Z\"\n    }\n  ],\n  \"total\": 1,\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "items": [
+        {
+          "checkpoint": "ckpt-fixture",
+          "step": "0",
+          "status": "READY",
+          "model_name": "",
+          "expire_time": "2026-01-02T12:00:00Z"
+        }
+      ],
+      "total": 1,
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-fixture/checkpoints",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "finetune watch": {
+    "stdout": "{\n  \"job_id\": \"ft-fixture\",\n  \"status\": \"SUCCEEDED\",\n  \"terminal\": true,\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "job_id": "ft-fixture",
+      "status": "SUCCEEDED",
+      "terminal": true,
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "compress get": {
+    "stdout": "{\n  \"request_id\": \"request-fixture\",\n  \"output\": {\n    \"job_id\": \"ft-fixture\",\n    \"model\": \"qwen-fixture\",\n    \"status\": \"SUCCEEDED\",\n    \"training_type\": \"sft\",\n    \"usage\": 0,\n    \"output_model\": \"trained-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"future\": {\n    \"values\": [\n      0,\n      false,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "request_id": "request-fixture",
+      "output": {
+        "job_id": "ft-fixture",
+        "model": "qwen-fixture",
+        "status": "SUCCEEDED",
+        "training_type": "sft",
+        "usage": 0,
+        "output_model": "trained-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "future": {
+        "values": [0, false, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/compress/jobs/quant-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "compress list": {
+    "stdout": "{\n  \"items\": [\n    {\n      \"job_id\": \"ft-fixture\",\n      \"job_name\": \"\",\n      \"status\": \"SUCCEEDED\",\n      \"model\": \"qwen-fixture\",\n      \"template_name\": \"\",\n      \"quantized_output\": \"\",\n      \"create_time\": \"\"\n    }\n  ],\n  \"total\": 7,\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "items": [
+        {
+          "job_id": "ft-fixture",
+          "job_name": "",
+          "status": "SUCCEEDED",
+          "model": "qwen-fixture",
+          "template_name": "",
+          "quantized_output": "",
+          "create_time": ""
+        }
+      ],
+      "total": 7,
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/compress/jobs?page_no=2&page_size=5",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "compress logs": {
+    "stdout": "{\n  \"output\": {\n    \"logs\": [\n      \"line one\",\n      \"line two\"\n    ],\n    \"total\": 2\n  },\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "output": {
+        "logs": ["line one", "line two"],
+        "total": 2
+      },
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/compress/jobs/quant-fixture/logs?offset=0&line=5",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "compress cancel": {
+    "stdout": "{\n  \"request_id\": \"request-fixture\",\n  \"output\": {\n    \"job_id\": \"ft-fixture\",\n    \"model\": \"qwen-fixture\",\n    \"status\": \"SUCCEEDED\",\n    \"training_type\": \"sft\",\n    \"usage\": 0,\n    \"output_model\": \"trained-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"future\": {\n    \"values\": [\n      0,\n      false,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "request_id": "request-fixture",
+      "output": {
+        "job_id": "ft-fixture",
+        "model": "qwen-fixture",
+        "status": "SUCCEEDED",
+        "training_type": "sft",
+        "usage": 0,
+        "output_model": "trained-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "future": {
+        "values": [0, false, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/compress/jobs/quant-fixture/cancel",
+        "method": "POST",
+        "body": null
+      }
+    ]
+  },
+  "compress delete": {
+    "stdout": "{\n  \"request_id\": \"request-fixture\",\n  \"output\": {\n    \"job_id\": \"ft-fixture\",\n    \"model\": \"qwen-fixture\",\n    \"status\": \"SUCCEEDED\",\n    \"training_type\": \"sft\",\n    \"usage\": 0,\n    \"output_model\": \"trained-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"future\": {\n    \"values\": [\n      0,\n      false,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "request_id": "request-fixture",
+      "output": {
+        "job_id": "ft-fixture",
+        "model": "qwen-fixture",
+        "status": "SUCCEEDED",
+        "training_type": "sft",
+        "usage": 0,
+        "output_model": "trained-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "future": {
+        "values": [0, false, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/compress/jobs/quant-fixture",
+        "method": "DELETE",
+        "body": null
+      }
+    ]
+  },
+  "compress watch": {
+    "stdout": "{\n  \"job_id\": \"quant-fixture\",\n  \"status\": \"SUCCEEDED\",\n  \"terminal\": true,\n  \"quantized_output\": \"quantized-fixture\",\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "job_id": "quant-fixture",
+      "status": "SUCCEEDED",
+      "terminal": true,
+      "quantized_output": "quantized-fixture",
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/compress/jobs/quant-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "compress watch follow": {
+    "stdout": "{\n  \"output\": {\n    \"status\": \"SUCCEEDED\",\n    \"quantized_output\": \"quantized-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "output": {
+        "status": "SUCCEEDED",
+        "quantized_output": "quantized-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/compress/jobs/quant-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "finetune watch follow": {
+    "stdout": "{\n  \"request_id\": \"request-fixture\",\n  \"output\": {\n    \"job_id\": \"ft-fixture\",\n    \"model\": \"qwen-fixture\",\n    \"status\": \"SUCCEEDED\",\n    \"training_type\": \"sft\",\n    \"usage\": 0,\n    \"output_model\": \"trained-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"future\": {\n    \"values\": [\n      0,\n      false,\n      null,\n      []\n    ]\n  }\n}\n",
+    "data": {
+      "request_id": "request-fixture",
+      "output": {
+        "job_id": "ft-fixture",
+        "model": "qwen-fixture",
+        "status": "SUCCEEDED",
+        "training_type": "sft",
+        "usage": 0,
+        "output_model": "trained-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "future": {
+        "values": [0, false, null, []]
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "deploy list": {
+    "stdout": "{\n  \"items\": [\n    {\n      \"deployed_model\": \"deploy-fixture\",\n      \"status\": \"RUNNING\",\n      \"model_name\": \"trained-fixture\",\n      \"model_code\": \"deploy-fixture\",\n      \"future\": {\n        \"values\": [\n          0,\n          false,\n          null,\n          []\n        ]\n      },\n      \"plan\": \"\",\n      \"capacity\": \"\",\n      \"created_at\": \"\"\n    }\n  ],\n  \"total\": 7,\n  \"page_no\": 2,\n  \"page_size\": 5,\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "items": [
+        {
+          "deployed_model": "deploy-fixture",
+          "status": "RUNNING",
+          "model_name": "trained-fixture",
+          "model_code": "deploy-fixture",
+          "future": {
+            "values": [0, false, null, []]
+          },
+          "plan": "",
+          "capacity": "",
+          "created_at": ""
+        }
+      ],
+      "total": 7,
+      "page_no": 2,
+      "page_size": 5,
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/deployments?page_no=2&page_size=5",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "deploy get": {
+    "stdout": "{\n  \"deployed_model\": \"deploy-fixture\",\n  \"status\": \"RUNNING\",\n  \"model_name\": \"trained-fixture\",\n  \"model_code\": \"deploy-fixture\",\n  \"future\": {\n    \"values\": [\n      0,\n      false,\n      null,\n      []\n    ]\n  },\n  \"deployed_name\": \"\",\n  \"base_model\": \"\",\n  \"plan\": \"\",\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "deployed_model": "deploy-fixture",
+      "status": "RUNNING",
+      "model_name": "trained-fixture",
+      "model_code": "deploy-fixture",
+      "future": {
+        "values": [0, false, null, []]
+      },
+      "deployed_name": "",
+      "base_model": "",
+      "plan": "",
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/deployments/deploy-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "deploy models": {
+    "stdout": "{\n  \"items\": [\n    {\n      \"model_name\": \"qwen-fixture\",\n      \"model_source\": \"base\",\n      \"supported_plans\": [\n        \"ptu\"\n      ]\n    }\n  ],\n  \"total\": 1,\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "items": [
+        {
+          "model_name": "qwen-fixture",
+          "model_source": "base",
+          "supported_plans": ["ptu"]
+        }
+      ],
+      "total": 1,
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/deployments/models?version=v1.0",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "capacity get": {
+    "stdout": "{\n  \"output\": {\n    \"instance_id\": \"capacity-fixture\",\n    \"deleted\": false,\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "output": {
+        "instance_id": "capacity-fixture",
+        "deleted": false,
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/deployments/deploy-fixture/capacity-instances/capacity-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "capacity list": {
+    "stdout": "{\n  \"output\": {\n    \"instances\": [\n      {\n        \"instance_id\": \"capacity-fixture\",\n        \"future\": {\n          \"values\": [\n            0,\n            false,\n            null,\n            []\n          ]\n        }\n      }\n    ],\n    \"total\": 1\n  },\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "output": {
+        "instances": [
+          {
+            "instance_id": "capacity-fixture",
+            "future": {
+              "values": [0, false, null, []]
+            }
+          }
+        ],
+        "total": 1
+      },
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/deployments/deploy-fixture/capacity-instances?page_no=1&page_size=20&include_deleted=true",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "operation get": {
+    "stdout": "{\n  \"output\": {\n    \"operation_id\": \"operation-fixture\",\n    \"operation_status\": \"SUCCEEDED\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "output": {
+        "operation_id": "operation-fixture",
+        "operation_status": "SUCCEEDED",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/deployments/deploy-fixture/capacity-operations/operation-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "operation wait": {
+    "stdout": "{\n  \"output\": {\n    \"operation_id\": \"operation-fixture\",\n    \"operation_status\": \"SUCCEEDED\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"request_id\": \"request-fixture\",\n  \"deployment\": {\n    \"output\": {\n      \"operation_id\": \"operation-fixture\",\n      \"operation_status\": \"SUCCEEDED\",\n      \"future\": {\n        \"values\": [\n          0,\n          false,\n          null,\n          []\n        ]\n      }\n    },\n    \"request_id\": \"request-fixture\"\n  }\n}\n",
+    "data": {
+      "output": {
+        "operation_id": "operation-fixture",
+        "operation_status": "SUCCEEDED",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "request_id": "request-fixture",
+      "deployment": {
+        "output": {
+          "operation_id": "operation-fixture",
+          "operation_status": "SUCCEEDED",
+          "future": {
+            "values": [0, false, null, []]
+          }
+        },
+        "request_id": "request-fixture"
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/deployments/deploy-fixture/capacity-operations/operation-fixture",
+        "method": "GET",
+        "body": null
+      },
+      {
+        "url": "https://fixture.invalid/api/v1/deployments/deploy-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "capacity unsubscribe": {
+    "stdout": "{\n  \"action\": \"deploy.capacity.unsubscribe\",\n  \"instance_id\": \"capacity-fixture\",\n  \"refund_url\": \"https://billing-cost.console.aliyun.com/refund/refund?instanceId=capacity-fixture\"\n}\n",
+    "data": {
+      "action": "deploy.capacity.unsubscribe",
+      "instance_id": "capacity-fixture",
+      "refund_url": "https://billing-cost.console.aliyun.com/refund/refund?instanceId=capacity-fixture"
+    },
+    "requests": []
+  },
+  "deploy update": {
+    "stdout": "{\n  \"output\": {\n    \"deployed_model\": \"deploy-fixture\",\n    \"status\": \"RUNNING\",\n    \"model_name\": \"trained-fixture\",\n    \"model_code\": \"deploy-fixture\",\n    \"future\": {\n      \"values\": [\n        0,\n        false,\n        null,\n        []\n      ]\n    }\n  },\n  \"request_id\": \"request-fixture\"\n}\n",
+    "data": {
+      "output": {
+        "deployed_model": "deploy-fixture",
+        "status": "RUNNING",
+        "model_name": "trained-fixture",
+        "model_code": "deploy-fixture",
+        "future": {
+          "values": [0, false, null, []]
+        }
+      },
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/deployments/deploy-fixture/update",
+        "method": "PUT",
+        "body": "{}"
+      }
+    ]
+  },
+  "dataset upload preview": {
+    "stdout": "{\n  \"action\": \"dataset.upload\",\n  \"file\": \"/tmp/output-training-fixture.jsonl\",\n  \"purpose\": \"fine-tune\",\n  \"max_bytes\": 209715200,\n  \"validate\": false,\n  \"schema\": \"auto\"\n}\n",
+    "data": {
+      "action": "dataset.upload",
+      "file": "/tmp/output-training-fixture.jsonl",
+      "purpose": "fine-tune",
+      "max_bytes": 209715200,
+      "validate": false,
+      "schema": "auto"
+    },
+    "requests": []
+  },
+  "dataset validate preview": {
+    "stdout": "{\n  \"action\": \"dataset.validate\",\n  \"file\": \"/tmp/output-training-fixture.jsonl\",\n  \"schema\": \"auto\"\n}\n",
+    "data": {
+      "action": "dataset.validate",
+      "file": "/tmp/output-training-fixture.jsonl",
+      "schema": "auto"
+    },
+    "requests": []
+  },
+  "training price preview": {
+    "stdout": "{\n  \"action\": \"finetune.price\",\n  \"model\": \"qwen-fixture\",\n  \"datasets\": [\n    \"file-fixture\"\n  ],\n  \"trainingType\": \"sft\",\n  \"nEpochs\": 3\n}\n",
+    "data": {
+      "action": "finetune.price",
+      "model": "qwen-fixture",
+      "datasets": ["file-fixture"],
+      "trainingType": "sft",
+      "nEpochs": 3
+    },
+    "requests": []
+  },
+  "training capability preview": {
+    "stdout": "{\n  \"action\": \"finetune.capability\",\n  \"model\": \"qwen-fixture\"\n}\n",
+    "data": {
+      "action": "finetune.capability",
+      "model": "qwen-fixture"
+    },
+    "requests": []
+  },
+  "training logs preview": {
+    "stdout": "{\n  \"action\": \"finetune.logs\",\n  \"job_id\": \"ft-fixture\"\n}\n",
+    "data": {
+      "action": "finetune.logs",
+      "job_id": "ft-fixture"
+    },
+    "requests": []
+  },
+  "compression create preview": {
+    "stdout": "{\n  \"action\": \"finetune.compress.create\",\n  \"request\": {\n    \"model\": \"qwen-fixture\",\n    \"template_id\": \"template-fixture\"\n  }\n}\n",
+    "data": {
+      "action": "finetune.compress.create",
+      "request": {
+        "model": "qwen-fixture",
+        "template_id": "template-fixture"
+      }
+    },
+    "requests": []
+  },
+  "compression templates preview": {
+    "stdout": "{\n  \"action\": \"finetune.compress.templates\",\n  \"lang\": \"en-US\"\n}\n",
+    "data": {
+      "action": "finetune.compress.templates",
+      "lang": "en-US"
+    },
+    "requests": []
+  },
+  "capacity create preview": {
+    "stdout": "{\n  \"action\": \"deploy.capacity.create\",\n  \"deployed_model\": \"deploy-fixture\",\n  \"body\": {\n    \"ptu_capacity\": {\n      \"input_tpm\": 0,\n      \"output_tpm\": 100\n    }\n  },\n  \"client_request_id\": \"<generated UUID>\"\n}\n",
+    "data": {
+      "action": "deploy.capacity.create",
+      "deployed_model": "deploy-fixture",
+      "body": {
+        "ptu_capacity": {
+          "input_tpm": 0,
+          "output_tpm": 100
+        }
+      },
+      "client_request_id": "<generated UUID>"
+    },
+    "requests": []
+  },
+  "capacity scale preview": {
+    "stdout": "{\n  \"action\": \"deploy.capacity.scale\",\n  \"deployed_model\": \"deploy-fixture\",\n  \"instance_id\": \"capacity-fixture\",\n  \"body\": {\n    \"ptu_capacity\": {\n      \"input_tpm\": 0,\n      \"output_tpm\": 100\n    }\n  },\n  \"client_request_id\": \"<generated UUID>\",\n  \"precheck\": \"can_scale\"\n}\n",
+    "data": {
+      "action": "deploy.capacity.scale",
+      "deployed_model": "deploy-fixture",
+      "instance_id": "capacity-fixture",
+      "body": {
+        "ptu_capacity": {
+          "input_tpm": 0,
+          "output_tpm": 100
+        }
+      },
+      "client_request_id": "<generated UUID>",
+      "precheck": "can_scale"
+    },
+    "requests": []
+  },
+  "capacity renew preview": {
+    "stdout": "{\n  \"action\": \"deploy.capacity.renew\",\n  \"deployed_model\": \"deploy-fixture\",\n  \"instance_id\": \"capacity-fixture\",\n  \"body\": {\n    \"pre_paid_info\": {\n      \"duration\": 1\n    },\n    \"is_change\": false\n  },\n  \"client_request_id\": \"<generated UUID>\",\n  \"precheck\": \"can_renew/pre_paid/configured_capacity\"\n}\n",
+    "data": {
+      "action": "deploy.capacity.renew",
+      "deployed_model": "deploy-fixture",
+      "instance_id": "capacity-fixture",
+      "body": {
+        "pre_paid_info": {
+          "duration": 1
+        },
+        "is_change": false
+      },
+      "client_request_id": "<generated UUID>",
+      "precheck": "can_renew/pre_paid/configured_capacity"
+    },
+    "requests": []
+  },
+  "capacity delete preview": {
+    "stdout": "{\n  \"action\": \"deploy.capacity.delete\",\n  \"deployed_model\": \"deploy-fixture\",\n  \"instance_id\": \"capacity-fixture\",\n  \"query\": {},\n  \"client_request_id\": \"<generated UUID>\",\n  \"precheck\": \"can_delete/prepaid_unsubscribe\"\n}\n",
+    "data": {
+      "action": "deploy.capacity.delete",
+      "deployed_model": "deploy-fixture",
+      "instance_id": "capacity-fixture",
+      "query": {},
+      "client_request_id": "<generated UUID>",
+      "precheck": "can_delete/prepaid_unsubscribe"
+    },
+    "requests": []
+  },
+  "text training create preview": {
+    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"qwen2.5-7b-instruct\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"n_epochs\": 3,\n      \"batch_size\": 8\n    }\n  }\n}\n",
+    "data": {
+      "action": "finetune.create",
+      "body": {
+        "model": "qwen2.5-7b-instruct",
+        "training_file_ids": ["file-fixture"],
+        "training_type": "efficient_sft",
+        "hyper_parameters": {
+          "n_epochs": 3,
+          "batch_size": 8
+        }
+      }
+    },
+    "requests": []
+  },
+  "audio training create preview": {
+    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"cosyvoice-v3.5\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"sft\",\n    \"hyper_parameters\": {\n      \"n_epochs\": 3,\n      \"batch_size\": 8\n    }\n  }\n}\n",
+    "data": {
+      "action": "finetune.create",
+      "body": {
+        "model": "cosyvoice-v3.5",
+        "training_file_ids": ["file-fixture"],
+        "training_type": "sft",
+        "hyper_parameters": {
+          "n_epochs": 3,
+          "batch_size": 8
+        }
+      }
+    },
+    "requests": []
+  },
+  "image training create preview": {
+    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"wan2.7\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"learning_rate\": \"3e-5\",\n      \"max_steps\": 800,\n      \"eval_steps\": 200,\n      \"max_token_length\": \"1k\",\n      \"gradient_clip\": 0.5,\n      \"weight_decay\": 0.02,\n      \"max_pixels\": \"2k\",\n      \"val_img_size\": \"2k\",\n      \"generation_type\": \"t2i\",\n      \"lora_rank\": 32,\n      \"save_total_limit\": 10,\n      \"split\": 0.9\n    }\n  }\n}\n",
+    "data": {
+      "action": "finetune.create",
+      "body": {
+        "model": "wan2.7",
+        "training_file_ids": ["file-fixture"],
+        "training_type": "efficient_sft",
+        "hyper_parameters": {
+          "learning_rate": "3e-5",
+          "max_steps": 800,
+          "eval_steps": 200,
+          "max_token_length": "1k",
+          "gradient_clip": 0.5,
+          "weight_decay": 0.02,
+          "max_pixels": "2k",
+          "val_img_size": "2k",
+          "generation_type": "t2i",
+          "lora_rank": 32,
+          "save_total_limit": 10,
+          "split": 0.9
+        }
+      }
+    },
+    "requests": []
+  },
+  "video training create preview": {
+    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"wan2.6-i2v\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"n_epochs\": 50,\n      \"learning_rate\": \"2e-5\",\n      \"split\": 0.5,\n      \"max_split_val_dataset_sample\": 5,\n      \"eval_epochs\": 20,\n      \"save_total_limit\": 10,\n      \"lora_rank\": 32,\n      \"lora_alpha\": 32,\n      \"batch_size\": 4,\n      \"max_pixels\": 262144\n    }\n  }\n}\n",
+    "data": {
+      "action": "finetune.create",
+      "body": {
+        "model": "wan2.6-i2v",
+        "training_file_ids": ["file-fixture"],
+        "training_type": "efficient_sft",
+        "hyper_parameters": {
+          "n_epochs": 50,
+          "learning_rate": "2e-5",
+          "split": 0.5,
+          "max_split_val_dataset_sample": 5,
+          "eval_epochs": 20,
+          "save_total_limit": 10,
+          "lora_rank": 32,
+          "lora_alpha": 32,
+          "batch_size": 4,
+          "max_pixels": 262144
+        }
+      }
+    },
+    "requests": []
+  }
+}

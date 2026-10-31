@@ -47,17 +47,23 @@ function formatRemainingTime(resetTime: number, now: number): string {
   return parts.join(" ");
 }
 
-/** Print a bordered quota box with a title line and one gauge per section. */
-export function printQuotaBox(title: string, sections: QuotaSection[], generatedAt: number): void {
+/** Render a bordered quota box with a title line and one gauge per section. */
+export function renderQuotaBox(
+  title: string,
+  sections: QuotaSection[],
+  generatedAt: number,
+): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
   const writeLine = (text = "", style?: TextStyle) => {
     const padding = Math.max(0, BOX_WIDTH - displayWidth(` ${text}`));
-    process.stdout.write(`│ ${style ? style(text) : text}${" ".repeat(padding)}│\n`);
+    textChunks.push(`│ ${style ? style(text) : text}${" ".repeat(padding)}│\n`);
   };
   // Pre-colored gauge cell: pad from the plain variant so ANSI escapes never shift the border.
   const writeGaugeLine = (cell: GaugeCell) => {
     const padding = Math.max(0, BOX_WIDTH - displayWidth(` ${cell.plain}`));
-    process.stdout.write(`│ ${cell.colored}${" ".repeat(padding)}│\n`);
+    textChunks.push(`│ ${cell.colored}${" ".repeat(padding)}│\n`);
   };
   const writeQuota = (section: QuotaSection) => {
     writeLine(section.label, color.bold);
@@ -80,12 +86,14 @@ export function printQuotaBox(title: string, sections: QuotaSection[], generated
     writeLine(resetText, color.dim);
   };
 
-  process.stdout.write(`┌${"─".repeat(BOX_WIDTH)}┐\n`);
+  textChunks.push(`┌${"─".repeat(BOX_WIDTH)}┐\n`);
   writeLine(title, color.cyan);
   writeLine(`Generated at: ${formatDateTime(generatedAt)} (local time)`, color.dim);
   for (const section of sections) {
-    process.stdout.write(`├${"─".repeat(BOX_WIDTH)}┤\n`);
+    textChunks.push(`├${"─".repeat(BOX_WIDTH)}┤\n`);
     writeQuota(section);
   }
-  process.stdout.write(`└${"─".repeat(BOX_WIDTH)}┘\n`);
+  textChunks.push(`└${"─".repeat(BOX_WIDTH)}┘\n`);
+
+  return textChunks.join("").replace(/\n$/, "");
 }

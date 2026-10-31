@@ -5,7 +5,6 @@ import { extname } from "node:path";
 
 import {
   defineCommand,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   normalizeConfigName,
@@ -18,7 +17,6 @@ import {
   type FlagsDef,
   type Language,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { listenLocalServer, openInBrowser, openPath } from "../shared/local-server.ts";
 import { renderConfigUiHtml } from "./ui-html.ts";
 import {
@@ -177,6 +175,7 @@ export function createConfigUiServer(
   configStore: ConfigStore,
   outputBase: string = defaultOutputBase(),
   authBridge?: AuthUiBridge,
+  onError?: (error: unknown) => void,
 ): http.Server {
   let activatedUiProfile: string | null = null;
   const uiLanguage = (): Language => {
@@ -667,7 +666,7 @@ export function createConfigUiServer(
     } catch (err) {
       // Log server-side so failures are diagnosable, and return a JSON error
       // instead of an empty 500 body.
-      console.error("[config ui] request failed:", err);
+      onError?.(err);
       if (res.headersSent) {
         res.end();
         return;
@@ -688,50 +687,66 @@ export default defineCommand({
   exampleArgs: ["", "--port 8787", "--no-open"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          host: "127.0.0.1",
-          port: flags.port ?? "random free port",
-          config_file: ctx.configStore.path,
-          routes: [
-            "GET /              -> web UI",
-            "GET /api/config    -> read all profiles",
-            "GET /api/skills    -> list installed agent skills",
-            "GET /api/skill     -> read one skill's SKILL.md detail",
-            "POST /api/skill/install -> install a skill from an uploaded .zip into a skills root",
-            "GET /api/mcp       -> list local MCP servers",
-            "POST /api/mcp      -> create or update one MCP server (writes its source config)",
-            "DELETE /api/mcp    -> remove one MCP server from its source config",
-            "GET /api/health    -> runtime environment info (node, platform, cwd)",
-            "GET /api/agents    -> list coding agent frameworks",
-            "GET /api/agent     -> one agent's config detail (secrets masked)",
-            "POST /api/agent/open -> open one agent's config file with the OS default app",
-            "GET /api/auth/status -> current auth state",
-            "POST /api/auth/login -> start console login (opens browser)",
-            "POST /api/auth/logout -> clear all stored credentials",
-            "GET /api/assets   -> list generated assets",
-            "GET /api/asset/file -> stream one asset file",
-            "POST /api/asset/open -> open one asset with the OS default app",
-            "POST /api/agent/launch -> launch a coding agent CLI in a new terminal",
-            "GET /api/scenarios -> list Playground scenarios and dispatchable agents",
-            "POST /api/agent/dispatch -> dispatch a scenario prompt to a connected agent",
-            "POST /api/profile  -> save a profile",
-            "POST /api/active   -> activate a profile",
-            "DELETE /api/profile -> delete a named profile",
-            "DELETE /api/asset  -> delete one asset file",
-          ],
-        },
-        format,
-      );
+      ctx.output.result({
+        host: "127.0.0.1",
+        port: flags.port ?? "random free port",
+        config_file: ctx.configStore.path,
+        routes: [
+          "GET /              -> web UI",
+          "GET /api/config    -> read all profiles",
+          "GET /api/skills    -> list installed agent skills",
+          "GET /api/skill     -> read one skill's SKILL.md detail",
+          "POST /api/skill/install -> install a skill from an uploaded .zip into a skills root",
+          "GET /api/mcp       -> list local MCP servers",
+          "POST /api/mcp      -> create or update one MCP server (writes its source config)",
+          "DELETE /api/mcp    -> remove one MCP server from its source config",
+          "GET /api/health    -> runtime environment info (node, platform, cwd)",
+          "GET /api/agents    -> list coding agent frameworks",
+          "GET /api/agent     -> one agent's config detail (secrets masked)",
+          "POST /api/agent/open -> open one agent's config file with the OS default app",
+          "GET /api/auth/status -> current auth state",
+          "POST /api/auth/login -> start console login (opens browser)",
+          "POST /api/auth/logout -> clear all stored credentials",
+          "GET /api/assets   -> list generated assets",
+          "GET /api/asset/file -> stream one asset file",
+          "POST /api/asset/open -> open one asset with the OS default app",
+          "POST /api/agent/launch -> launch a coding agent CLI in a new terminal",
+          "GET /api/scenarios -> list Playground scenarios and dispatchable agents",
+          "POST /api/agent/dispatch -> dispatch a scenario prompt to a connected agent",
+          "POST /api/profile  -> save a profile",
+          "POST /api/active   -> activate a profile",
+          "DELETE /api/profile -> delete a named profile",
+          "DELETE /api/asset  -> delete one asset file",
+        ],
+      });
       return;
     }
 
+    if (settings.output === "json")
+      throw new BailianError(
+        ctx.localize({
+          "en-US":
+            "The interactive config UI requires --output text. Use --dry-run for a JSON preview.",
+          "zh-CN": "交互式配置 UI 需要 --output text。可使用 --dry-run 查看 JSON 预览。",
+        }),
+        ExitCode.USAGE,
+      );
     const token = randomBytes(16).toString("hex");
     const outputBase = settings.outputDir || defaultOutputBase();
-    const server = createConfigUiServer(token, ctx.configStore, outputBase, makeAuthUiBridge(ctx));
+    const server = createConfigUiServer(
+      token,
+      ctx.configStore,
+      outputBase,
+      makeAuthUiBridge(ctx),
+      (error) =>
+        ctx.output.debug({
+          message: { "en-US": "Config UI request failed.", "zh-CN": "配置 UI 请求失败。" },
+          code: "CONFIG_UI_REQUEST_FAILED",
+          details: { error },
+        }),
+    );
 
     let port: number;
     try {
@@ -748,14 +763,37 @@ export default defineCommand({
     if (!flags.noOpen) {
       try {
         await openInBrowser(url);
-        emitBare("Opened the config UI in your default browser.");
+        ctx.output.info({
+          "en-US": "Opened the config UI in your default browser.",
+          "zh-CN": "已在默认浏览器中打开配置 UI。",
+        });
       } catch {
-        emitBare("Could not open the browser automatically. Open the URL below manually.");
+        ctx.output.warning({
+          message: {
+            "en-US": "Could not open the browser automatically. Open the URL below manually.",
+            "zh-CN": "无法自动打开浏览器，请手动打开以下地址。",
+          },
+          code: "BROWSER_OPEN_FAILED",
+        });
       }
     }
-    emitBare(`Config UI running at ${url}`);
-    emitBare("Note: credentials are shown in cleartext in the browser (localhost only).");
-    emitBare("Press Ctrl+C to stop.");
+    // Long-running native UI: publish the listening address once, then await shutdown.
+    ctx.output.result(
+      { url, config_file: ctx.configStore.path },
+      {
+        text: [
+          ctx.localize({
+            "en-US": `Config UI running at ${url}`,
+            "zh-CN": `配置 UI 运行于 ${url}`,
+          }),
+          ctx.localize({
+            "en-US": "Note: credentials are shown in cleartext in the browser (localhost only).",
+            "zh-CN": "注意：凭证将在浏览器中以明文显示（仅限 localhost）。",
+          }),
+          ctx.localize({ "en-US": "Press Ctrl+C to stop.", "zh-CN": "按 Ctrl+C 停止。" }),
+        ].join("\n"),
+      },
+    );
 
     await new Promise<void>((resolve) => {
       const shutdown = () => server.close(() => resolve());

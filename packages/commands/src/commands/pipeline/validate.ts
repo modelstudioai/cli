@@ -1,6 +1,5 @@
 import { resolve } from "node:path";
-import { defineCommand } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand } from "bailian-cli-core";
 import { initPipelineSteps } from "bailian-cli-runtime";
 import { collectPipelineIssues, collectPipelineHints } from "bailian-cli-runtime";
 import { loadPipelineFile } from "./load-file.ts";
@@ -25,7 +24,7 @@ export default defineCommand({
   },
   exampleArgs: ["--file workflow.yaml", "--file workflow.json --output json"],
   async run(ctx) {
-    const { settings, flags } = ctx;
+    const { flags } = ctx;
     const file = flags.file;
 
     initPipelineSteps();
@@ -35,23 +34,28 @@ export default defineCommand({
     const issues = collectPipelineIssues(pipeline);
     const hints = issues.length === 0 ? collectPipelineHints(pipeline) : [];
 
-    if (settings.output === "json") {
-      emitResult(
-        { valid: issues.length === 0, issues, ...(hints.length > 0 ? { hints } : {}) },
-        "json",
+    ctx.output.result(
+      { valid: issues.length === 0, issues, ...(hints.length > 0 ? { hints } : {}) },
+      {
+        text:
+          issues.length === 0
+            ? ctx.localize({
+                "en-US": "Pipeline definition is valid.",
+                "zh-CN": "Pipeline 定义有效。",
+              })
+            : ctx.localize({
+                "en-US": "Pipeline validation failed:",
+                "zh-CN": "Pipeline 校验失败：",
+              }) +
+              "\n" +
+              issues.map((issue) => `  - ${issue}`).join("\n"),
+      },
+    );
+    for (const hint of hints) ctx.output.info(`  hint: ${hint}`);
+    if (issues.length > 0) {
+      throw new BailianError(
+        ctx.localize({ "en-US": "Pipeline validation failed.", "zh-CN": "Pipeline 校验失败。" }),
       );
-      if (issues.length > 0) process.exitCode = 1;
-    } else if (issues.length === 0) {
-      process.stdout.write("Pipeline definition is valid.\n");
-      for (const hint of hints) {
-        process.stderr.write(`  hint: ${hint}\n`);
-      }
-    } else {
-      process.stderr.write("Pipeline validation failed:\n");
-      for (const issue of issues) {
-        process.stderr.write(`  - ${issue}\n`);
-      }
-      process.exitCode = 1;
     }
   },
 });

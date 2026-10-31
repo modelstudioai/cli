@@ -5,7 +5,7 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+
 import { computeActualFee } from "./fee.ts";
 
 const DEFAULT_INTERVAL_SEC = 10;
@@ -83,6 +83,7 @@ const WATCH_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US":
       "Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.",
@@ -139,15 +140,16 @@ export default defineCommand({
     const pollTimeoutSec = flags.pollTimeout;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "finetune.watch",
-          job_id: jobId,
-          follow,
-          interval: intervalSec,
-          timeout: pollTimeoutSec,
-        },
-        "json",
+      const resultData1 = {
+        action: "finetune.watch",
+        job_id: jobId,
+        follow,
+        interval: intervalSec,
+        timeout: pollTimeoutSec,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -162,10 +164,7 @@ export default defineCommand({
       const status = String(job?.status ?? "").toUpperCase();
       const terminal = TERMINAL_STATUSES.has(status);
 
-      if (settings.quiet) {
-        // Just the status word — ideal for `status=$(... finetune watch ... --quiet)`.
-        emitBare(status || "UNKNOWN");
-      } else {
+      {
         const output: Record<string, unknown> = {
           job_id: jobId,
           status: status || "UNKNOWN",
@@ -182,7 +181,10 @@ export default defineCommand({
             output.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;
           }
         }
-        emitResult(output, "json");
+        ctx.output.result(
+          output,
+          ctx.settings.output === "text" ? { text: JSON.stringify(output, null, 2) } : undefined,
+        );
       }
 
       if (terminal && status !== "SUCCEEDED") {
@@ -209,16 +211,17 @@ export default defineCommand({
         const job = response.output ?? response.data;
         const status = String(job?.status ?? "").toUpperCase();
 
-        if (!settings.quiet && status !== lastStatus) {
-          process.stderr.write(`${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}\n`);
+        if (status !== lastStatus) {
+          ctx.output.progress({
+            "en-US": `${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}`,
+            "zh-CN": `${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}`,
+          });
           lastStatus = status;
         }
 
         if (TERMINAL_STATUSES.has(status)) {
           const elapsed = Date.now() - startedAt;
-          if (settings.quiet) {
-            emitBare(status || "UNKNOWN");
-          } else {
+          {
             // Enrich the raw response with actual fee when usage is available.
             const usageTokens = typeof job?.usage === "number" ? job.usage : undefined;
             const enriched: Record<string, unknown> = { ...response };
@@ -230,7 +233,12 @@ export default defineCommand({
                 enriched.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;
               }
             }
-            emitResult(enriched, "json");
+            ctx.output.result(
+              enriched,
+              ctx.settings.output === "text"
+                ? { text: JSON.stringify(enriched, null, 2) }
+                : undefined,
+            );
           }
           if (status !== "SUCCEEDED") {
             throw new BailianError(
@@ -256,7 +264,7 @@ export default defineCommand({
       // Any other error (including the BailianError thrown above) propagates to
       // the central handler.
       if (controller.signal.aborted) {
-        process.stderr.write("\nInterrupted.\n");
+        ctx.output.info({ "en-US": "Interrupted.", "zh-CN": "已中断。" });
         return;
       }
       throw error;

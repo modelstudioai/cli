@@ -1,6 +1,7 @@
 import {
   maskToken,
   type AuthStore,
+  type CommandOutput,
   type Identity,
   type LocalizedText,
   type Settings,
@@ -38,9 +39,10 @@ export function makeAuthUiBridge(ctx: {
   identity: Identity;
   settings: Settings;
   authStore: AuthStore;
+  output: Pick<CommandOutput, "info" | "warning" | "debug">;
   localize?: (text: LocalizedText) => string;
 }): AuthUiBridge {
-  const { identity, settings, authStore, localize } = ctx;
+  const { identity, settings, authStore, localize, output } = ctx;
   return {
     status() {
       const a = authStore.describe();
@@ -70,13 +72,16 @@ export function makeAuthUiBridge(ctx: {
       // endpoint to detect completion. Errors are logged, not surfaced.
       void runConsoleLogin(
         origin,
-        { identity, settings, authStore, localize },
+        { identity, settings, authStore, localize, output },
         {
           needApiKey: !hasApiKey,
         },
       ).catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        process.stderr.write(`console login failed: ${msg}\n`);
+        output.warning({
+          message: { "en-US": `Console login failed: ${msg}`, "zh-CN": `控制台登录失败：${msg}` },
+          code: "CONSOLE_LOGIN_FAILED",
+        });
       });
     },
     logout() {

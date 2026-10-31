@@ -2,12 +2,11 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagIndexFilesResponse,
   type RagIndexFileDetailsResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare, ansi } from "bailian-cli-runtime";
+import { ansi } from "bailian-cli-runtime";
 import { resolveWorkspaceId, truncateLine, PAGE_FLAGS, WORKSPACE_FLAG } from "./shared.ts";
 
 const DOC_LIST_FLAGS = {
@@ -73,7 +72,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // Gotcha: this endpoint's page parameter is page_num (not page_number)
     const url = new URL(ragEndpoint(workspaceId, RAG_PATHS.indexFiles));
@@ -92,7 +91,7 @@ export default defineCommand({
       : null;
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request }, format);
+      ctx.output.result({ endpoint, request });
       return;
     }
 
@@ -104,21 +103,19 @@ export default defineCommand({
       ...(request ? { body: request } : {}),
     });
 
-    const rows = response.data?.rows ?? [];
-    if (settings.quiet) {
-      for (const row of rows) emitBare(row.doc_id ?? "");
-      return;
-    }
+    let text: string | undefined;
     if (format === "text") {
+      const rows = response.data?.rows ?? [];
       const styles = ansi(process.stdout);
+      const lines: string[] = [];
       if (rows.length === 0) {
-        emitBare("No documents found.");
+        lines.push(ctx.localize({ "en-US": "No documents found.", "zh-CN": "未找到文档。" }));
       } else {
         for (const row of rows) {
           const line = truncateLine(
             [row.doc_id, row.status, row.doc_name, row.doc_type ?? "-", row.size ?? "-"].join("  "),
           );
-          emitBare(row.status === "FAILED" ? styles.red(line) : line);
+          lines.push(row.status === "FAILED" ? styles.red(line) : line);
           if (flags.details) {
             for (const key of [
               "chunkSize",
@@ -127,16 +124,21 @@ export default defineCommand({
               "chunkMode",
               "enableHeaders",
             ]) {
-              emitBare(
+              lines.push(
                 `  ${key}: ${row[key] === undefined || row[key] === null ? "-" : JSON.stringify(row[key])}`,
               );
             }
           }
         }
       }
-      emitBare(`total: ${response.data?.total_count ?? rows.length}`);
-    } else {
-      emitResult(response, format);
+      lines.push(
+        ctx.localize({
+          "en-US": `total: ${response.data?.total_count ?? rows.length}`,
+          "zh-CN": `总数: ${response.data?.total_count ?? rows.length}`,
+        }),
+      );
+      text = lines.join("\n");
     }
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

@@ -3,7 +3,7 @@
 ## 触发条件
 
 - 修改 `BailianError` 的 message 或 hint
-- 调整 runtime 的 hint 增强逻辑(`enhanceHint`)
+- 调整 runtime 的 hint 增强逻辑(`errorHint`)
 - 改 auth stage / resolver 的鉴权失败文案
 - 改任何抛错位置的分类(exitCode)
 
@@ -39,14 +39,15 @@
 ```
 core 抛出 BailianError(message, exitCode, hint, cause?)
   ↓ 沿调用栈冒泡
-runtime/create-cli.ts: dispatch().catch(handleError)
+runtime/create-cli.ts: 每次调用创建 reporter，统一捕获初始化/解析/业务异常
   ↓
 runtime/error-handler.ts:
   - 服务端错误(BailianError(GENERAL)) → text 直接打 message
-  - 内部 AUTH/USAGE/NETWORK/TIMEOUT → 走 enhanceHint(只 AUTH 还有增强)
+  - 内部 AUTH/USAGE/NETWORK/TIMEOUT → 走 errorHint(只 AUTH 还有增强)
   - TypeError("fetch failed") → 读 err.cause.code 翻成 NETWORK
   - Node fs errno → 翻成 GENERAL + errno hint
-  - `--output json` → stderr 输出两空格缩进的多行 error JSON；前面已有结构化 warning 时，两个 diagnostics 以空行分隔
+  - reporter：JSON 错误、warning、debug 各占 stderr 一行，无空行；stdout 仅保留最终业务结果
+  - 早期错误使用只读 CLI/env/Profile 格式来源，不在渲染时重新初始化配置
   - 其它 Error → 默认走 cause 链
   ↓
 process.exit(err.exitCode)
@@ -72,11 +73,11 @@ process.exit(err.exitCode)
 - ❌ 新增/改动时不写控制台 URL 或 region
 - ❌ 新增/改动时不写渠道追踪参数(`source_channel=xxx`)
 - ✅ 只描述抽象做法(如 `"Set DASHSCOPE_API_KEY environment variable, or pass --api-key."`)
-- 当前遗留:`packages/core/src/auth/resolver.ts` 仍含 `bl auth login` hint;触碰鉴权错误时迁到 runtime `enhanceHint`
+- 当前遗留:`packages/core/src/auth/resolver.ts` 仍含 `bl auth login` hint;触碰鉴权错误时迁到 runtime `errorHint`
 
 ### 4. runtime / 产品层可以使用入口名 + URL
 
-- `packages/runtime/src/error-handler.ts` 通过 `binName` 渲染 `bl` / `kscli` 等入口名,不要硬编码
+- `packages/runtime/src/error-handler.ts` 通过本次调用的 `binName` 渲染 `bl` / `kscli` 等入口名,不要硬编码
 - 产品入口 / README / E2E 可以写具体入口命令
 - shared command 实现不写 `bl` / `kscli` 前缀;`usageArgs` / `exampleArgs` 只写参数片段
 - URL 必须从 `packages/runtime/src/urls.ts` import,不能硬编码
@@ -89,9 +90,9 @@ process.exit(err.exitCode)
 - [ ] `packages/core/src/auth/resolver.ts` 新增/改 throw 语句时:hint 不含 cli 关切;已有 `bl auth login` 遗留点被触碰时要收敛
 - [ ] 任何 core 文件新增/改 BailianError:同上
 
-### B. runtime 增强(`enhanceHint`)
+### B. runtime 增强(`errorHint`)
 
-- [ ] `packages/runtime/src/error-handler.ts:enhanceHint`:**当前只为 internal AUTH 增强**(因为 resolver / authStage 等内部位置会发 AUTH)
+- [ ] `packages/runtime/src/error-handler.ts:errorHint`:**当前只为 internal AUTH 增强**(因为 resolver / authStage 等内部位置会发 AUTH)
 - [ ] 命令名使用 `binName`,不要硬编码 `bl`
 - [ ] URL 必须是 `import { API_KEY_PAGE } from "./urls.ts"`
 

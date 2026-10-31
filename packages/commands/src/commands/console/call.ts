@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  UsageError,
-  effectiveConsoleGatewayConfig,
-  detectOutputFormat,
-} from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, UsageError, effectiveConsoleGatewayConfig } from "bailian-cli-core";
 
 export default defineCommand({
   description: {
@@ -46,22 +40,17 @@ export default defineCommand({
       throw new UsageError("--data must be valid JSON");
     }
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult(
-        {
-          api,
-          data,
-          ...effectiveConsoleGatewayConfig(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api,
+        data,
+        ...effectiveConsoleGatewayConfig(settings),
+      });
       return;
     }
 
     const result = await ctx.client.console(api, data);
 
-    emitResult(result, format);
+    ctx.output.result(result);
   },
 });

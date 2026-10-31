@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const KB_UPDATE_FLAGS = {
@@ -84,7 +82,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // Gotcha: this endpoint names the knowledge base ID parameter `id` (not index_id/indexId)
     const body = {
@@ -96,7 +94,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.indexUpdate);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -106,11 +104,9 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet) return;
-    if (format === "text") {
-      emitBare(`updated: ${flags.indexId}`);
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text" ? { text: `updated: ${flags.indexId}` } : undefined,
+    );
   },
 });

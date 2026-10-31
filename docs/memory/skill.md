@@ -27,7 +27,7 @@ bl memory skill export --node-id <id> [flags]
 
 **输出**
 
-text / quiet输出服务导出的正文，不含frontmatter；json保留 `memory_node` 下的正文和技能元数据。命令不直接写文件，可用shell重定向。
+text输出服务导出的正文，不含frontmatter；json保留 `memory_node` 下的正文和技能元数据。命令不直接写文件，可用shell重定向。
 
 **注意事项**
 
@@ -60,3 +60,5 @@ bl memory update --node-id '<skill-node-id>' --content '按议题、决策和待
 ```
 
 完整参数见[写入手册](add.md)、[检索手册](search.md)、[节点管理手册](node.md)。默认检索只包含observation，查询skill必须显式指定类型。
+
+`--quiet` 仅隐藏过程提示，不改变最终结果；与 `--output json` 组合时仍返回完整 JSON，与 text 组合时保留完整文本结果。

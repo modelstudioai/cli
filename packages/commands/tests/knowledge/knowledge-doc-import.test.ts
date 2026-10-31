@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { BailianError, ExitCode } from "bailian-cli-core";
 import command from "../../src/commands/knowledge/doc-import.ts";
@@ -14,13 +15,15 @@ function setup(wait: boolean) {
   const context = {
     flags: { workspaceId: "ws_test", indexId: "index-test", docId: ["file-test"], wait },
     settings: { quiet: true, timeout: 1, output: "json" },
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     client: { requestJson },
     localize: (text: string | { "en-US": string }) =>
       typeof text === "string" ? text : text["en-US"],
   } as unknown as Parameters<typeof command.run>[0];
   return { context, requestJson, output: () => writes.join("") };
 }
-test("import existing IDs makes only the import request and emits ingestionId", async () => {
+test("import existing IDs makes only the import request and emits the full JSON response", async () => {
   const run = setup(false);
   await command.run(run.context);
   expect(run.requestJson).toHaveBeenCalledTimes(1);
@@ -28,7 +31,7 @@ test("import existing IDs makes only the import request and emits ingestionId", 
     method: "POST",
     body: { indexId: "index-test", sourceType: "DATA_CENTER_FILE", docIds: ["file-test"] },
   });
-  expect(run.output().trim()).toBe("job-test");
+  expect(JSON.parse(run.output())).toEqual({ data: { ingestionId: "job-test" }, future: true });
 });
 test("wait polls the created job without uploading or registering files", async () => {
   const run = setup(true);
@@ -44,7 +47,17 @@ test("wait polls the created job without uploading or registering files", async 
   const statusUrl = new URL(run.requestJson.mock.calls[1]?.[0].path);
   expect(statusUrl.searchParams.get("job_id")).toBe("job-test");
   expect(statusUrl.searchParams.get("index_id")).toBe("index-test");
-  expect(run.output().trim()).toBe("job-test");
+  expect(JSON.parse(run.output())).toEqual({
+    data: { ingestionId: "job-test" },
+    future: true,
+    status: {
+      data: {
+        ingestion_status: "COMPLETED",
+        total_count: 1,
+        rows: [{ doc_id: "file-test", code: "FINISH" }],
+      },
+    },
+  });
 });
 test("wait error preserves backend message and appends IDs for resuming", async () => {
   const run = setup(true);

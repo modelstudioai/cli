@@ -7,6 +7,7 @@ export default defineCommand({
     "zh-CN": "授予模型权限（推理 / 微调 / 部署）",
   },
   auth: "apiKey",
+  defaultOutput: "json",
   usageArgs: "--model <models> [--action <actions>] | --all",
   flags: {
     model: {

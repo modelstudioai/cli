@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, modelsLimitsPath } from "bailian-cli-core";
-import { emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { defineCommand, modelsLimitsPath } from "bailian-cli-core";
+import { renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber } from "../shared/format.ts";
 import { buildQuery, parseCommaList } from "../shared/params.ts";
 
@@ -71,10 +71,9 @@ function formatAsync(spec: LimitSpec | null | undefined): string {
   return `${queue}/${concurrency}`;
 }
 
-function printTable(quotas: ModelQuota[], total: number): void {
+function renderTable(quotas: ModelQuota[], total: number): string {
   if (quotas.length === 0) {
-    process.stdout.write("No rate limits found.\n");
-    return;
+    return "No rate limits found.";
   }
   const headers = ["Model", "Req Limit", "Usage Limit", "WS Req", "WS Usage", "Async Q/C"];
   const rows = quotas.map((quota) => [
@@ -90,8 +89,7 @@ function printTable(quotas: ModelQuota[], total: number): void {
     rows,
     align: ["left", "right", "right", "right", "right", "right"],
   });
-  for (const line of lines) process.stdout.write(line + "\n");
-  process.stdout.write(`\nTotal: ${total}\n`);
+  return [...lines, `\nTotal: ${total}`].join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -150,7 +148,7 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const nameFlag = flags.name || undefined;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const endpoint = ctx.client.url(modelsLimitsPath());
 
     if (settings.dryRun) {
@@ -161,20 +159,17 @@ export default defineCommand({
           method: "GET",
           query: { model, page_size: 100 },
         }));
-        emitResult({ requests }, format);
+        ctx.output.result({ requests });
       } else {
-        emitResult(
-          {
-            endpoint,
-            method: "GET",
-            query: {
-              name: nameFlag,
-              page_no: flags.page || 1,
-              page_size: flags.pageSize || 20,
-            },
+        ctx.output.result({
+          endpoint,
+          method: "GET",
+          query: {
+            name: nameFlag,
+            page_no: flags.page || 1,
+            page_size: flags.pageSize || 20,
           },
-          format,
-        );
+        });
       }
       return;
     }
@@ -207,11 +202,9 @@ export default defineCommand({
       total = resp.output?.total ?? quotas.length;
     }
 
-    if (format === "json") {
-      emitResult({ items: quotas, total }, format);
-      return;
-    }
-
-    printTable(quotas, total);
+    ctx.output.result(
+      { items: quotas, total },
+      format === "text" ? { text: renderTable(quotas, total) } : undefined,
+    );
   },
 });

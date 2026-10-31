@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import command from "../../src/commands/knowledge/doc-sync.ts";
 import * as execution from "../../src/commands/knowledge/sync/execute.ts";
@@ -13,6 +14,8 @@ function fixture() {
   const context = {
     flags: { dir: "docs", indexId: "index" },
     settings: { output: "json", quiet: true },
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     prepared: {
       stateFile: "state.json",
       stateRevision: null,

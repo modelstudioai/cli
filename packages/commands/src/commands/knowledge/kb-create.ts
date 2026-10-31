@@ -3,12 +3,10 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   knowledgeBillingNotice,
   localizedKnowledgeBillingNotice,
@@ -240,7 +238,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // Fixed values, not exposed as flags in this version: structureType unstructured, sinkType BUILT_IN.
     // Note: the public docs' example uses sinkType DEFAULT, but BUILT_IN is what works against the live API.
@@ -280,10 +278,11 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.indexCreateV2);
 
     if (settings.dryRun) {
-      emitResult(
-        { endpoint, request: body, notices: [localizedKnowledgeBillingNotice(ctx)] },
-        format,
-      );
+      ctx.output.result({
+        endpoint,
+        request: body,
+        notices: [localizedKnowledgeBillingNotice(ctx)],
+      });
       return;
     }
 
@@ -296,6 +295,7 @@ export default defineCommand({
     let finalStatus: string | undefined;
     if (flags.wait && pipelineId && ingestionId) {
       const statusResponse = await pollImportJob(ctx.client, settings, {
+        output: ctx.output,
         statusUrl: importJobStatusUrl(workspaceId, pipelineId, ingestionId).toString(),
         intervalSec: flags.pollInterval ?? 5,
       });
@@ -312,25 +312,23 @@ export default defineCommand({
       }
     }
 
-    if (settings.quiet) {
-      emitBare(pipelineId ?? "");
-      return;
-    }
-    if (format === "text") {
-      emitBare(`index_id: ${pipelineId ?? "-"}`);
-      if (ingestionId) emitBare(`ingestion_id: ${ingestionId}`);
-      if (finalStatus) emitBare(`status: ${finalStatus}`);
-      emitBare("Next: check the import job status, then search against this knowledge base.");
-      return;
-    }
-    emitResult(
+    ctx.output.result(
       {
         ...response,
         ...(finalStatus ? { final_status: finalStatus } : {}),
         resources,
         notices: [localizedKnowledgeBillingNotice(ctx)],
       },
-      format,
+      format === "text" ? { text: renderText() } : undefined,
     );
+    function renderText(): string {
+      const lines: string[] = [];
+
+      lines.push(`index_id: ${pipelineId ?? "-"}`);
+      if (ingestionId) lines.push(`ingestion_id: ${ingestionId}`);
+      if (finalStatus) lines.push(`status: ${finalStatus}`);
+      lines.push("Next: check the import job status, then search against this knowledge base.");
+      return lines.join("\n");
+    }
   },
 });

@@ -652,7 +652,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 Removes documents from the knowledge base index only; the source files remain in the data center.
 
-Use the doc_id from `knowledge doc list --quiet`, not the fileId from `knowledge doc upload`. For documents created via `knowledge create --doc-id`, the doc_id equals the fileId; for documents imported via `knowledge doc upload --index-id`, the doc_id may include a workspace suffix.
+Use doc_id from the document-list JSON response (--output json), not fileId from document upload. For documents created via `knowledge create --doc-id`, the doc_id equals the fileId; for documents imported via `knowledge doc upload --index-id`, the doc_id may include a workspace suffix.
 
 Deletion may take up to ~30s to propagate — the document may still appear in the doc list briefly.
 

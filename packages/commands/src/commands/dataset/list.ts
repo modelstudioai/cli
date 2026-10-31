@@ -1,5 +1,4 @@
 import { defineCommand, listDatasets, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   page: {
@@ -26,6 +25,7 @@ const LIST_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "List uploaded dataset files", "zh-CN": "列出已上传的数据集文件" },
   auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--purpose <name>]",
@@ -35,14 +35,15 @@ export default defineCommand({
     const { settings, flags } = ctx;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "dataset.list",
-          page: flags.page,
-          page_size: flags.pageSize,
-          purpose: flags.purpose,
-        },
-        "json",
+      const resultData1 = {
+        action: "dataset.list",
+        page: flags.page,
+        page_size: flags.pageSize,
+        purpose: flags.purpose,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -62,10 +63,12 @@ export default defineCommand({
       purpose: item.purpose ?? "",
     }));
 
-    if (settings.quiet) {
-      for (const item of items) emitBare(item.file_id);
-    } else {
-      emitResult({ items, total, request_id: response.request_id }, "json");
+    {
+      const resultData2 = { items, total, request_id: response.request_id };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+      );
     }
   },
 });

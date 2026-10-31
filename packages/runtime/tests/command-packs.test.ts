@@ -4,6 +4,7 @@ import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vite-plus/test";
 import type { Identity } from "bailian-cli-core";
+import { createOutputReporter } from "../src/output/reporter.ts";
 import { installCommandPack, parseCommandPackSpec } from "../src/command-packs/manager.ts";
 import { getCommandPacksDir } from "../src/command-packs/paths.ts";
 import { loadAndValidateCommandPack } from "../src/command-packs/validate.ts";
@@ -63,6 +64,13 @@ if (args[0] === "--version") {
   process.exit(0);
 }
 
+process.stdout.write("fixture install info\\n");
+process.stderr.write("npm warn fixture retained warning\\n");
+
+if (args[1]?.endsWith("@failed")) {
+  process.stderr.write("npm error fixture child failure\\n");
+  process.exit(7);
+}
 const manifestPath = path.join(cwd, "package.json");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 manifest.dependencies ??= {};
@@ -221,87 +229,135 @@ test("rejects incompatible protocol versions and invalid command prefixes", asyn
   ).rejects.toThrow(/outside the allowed prefixes/);
 });
 
-test("installs once on success and restores the previous version after validation failure", async () => {
-  const root = await mkdtemp(join(tmpdir(), "command-pack-install-test-"));
-  const binDir = join(root, "bin");
-  const logPath = join(root, "npm.log");
-  const npmPath = join(binDir, "npm");
-  const previousConfigDir = process.env.BAILIAN_CONFIG_DIR;
-  const previousPath = process.env.PATH;
-  const previousTmpdir = process.env.TMPDIR;
-  const previousRegistry = process.env.NPM_CONFIG_REGISTRY;
-  const previousCatalog = process.env.npm_config_catalog;
-  const previousRecursive = process.env.npm_config_recursive;
-  const previousOverrides = process.env.npm_config_overrides;
+const outputMatrix = (["text", "json"] as const).flatMap((output) =>
+  [false, true].flatMap((quiet) => [false, true].map((verbose) => ({ output, quiet, verbose }))),
+);
+test.each(outputMatrix)(
+  "installs/restores with npm diagnostics $output quiet=$quiet verbose=$verbose",
+  async (display) => {
+    const root = await mkdtemp(join(tmpdir(), "command-pack-install-test-"));
+    const binDir = join(root, "bin");
+    const logPath = join(root, "npm.log");
+    const npmPath = join(binDir, "npm");
+    const previousConfigDir = process.env.BAILIAN_CONFIG_DIR;
+    const previousPath = process.env.PATH;
+    const previousTmpdir = process.env.TMPDIR;
+    const previousRegistry = process.env.NPM_CONFIG_REGISTRY;
+    const previousCatalog = process.env.npm_config_catalog;
+    const previousRecursive = process.env.npm_config_recursive;
+    const previousOverrides = process.env.npm_config_overrides;
 
-  try {
-    await mkdir(binDir, { recursive: true });
-    await writeFile(npmPath, fakeNpmSource);
-    await chmod(npmPath, 0o755);
-    await writeFile(logPath, "");
-    process.env.BAILIAN_CONFIG_DIR = join(root, "config");
-    process.env.PATH = `${binDir}${delimiter}${previousPath ?? ""}`;
-    process.env.TMPDIR = root;
-    process.env.NPM_CONFIG_REGISTRY = "https://registry.example.test";
-    process.env.npm_config_catalog = "prefer";
-    process.env.npm_config_recursive = "true";
-    process.env.npm_config_overrides = "true";
+    try {
+      await mkdir(binDir, { recursive: true });
+      await writeFile(npmPath, fakeNpmSource);
+      await chmod(npmPath, 0o755);
+      await writeFile(logPath, "");
+      process.env.BAILIAN_CONFIG_DIR = join(root, "config");
+      process.env.PATH = `${binDir}${delimiter}${previousPath ?? ""}`;
+      process.env.TMPDIR = root;
+      process.env.NPM_CONFIG_REGISTRY = "https://registry.example.test";
+      process.env.npm_config_catalog = "prefer";
+      process.env.npm_config_recursive = "true";
+      process.env.npm_config_overrides = "true";
 
-    const installed = await installCommandPack("@ali/bailian-plugin-agent@1.0.0", identity, policy);
-    expect(installed.version).toBe("1.0.0");
-    const successfulCalls = (await readFile(logPath, "utf8"))
-      .trim()
-      .split("\n")
-      .map(
-        (line) =>
-          JSON.parse(line) as {
-            args: string[];
-            env: Record<string, string | null>;
+      let diagnostics = "";
+      const reporter = createOutputReporter({
+        settings: display,
+        stderr: {
+          write: (chunk) => {
+            diagnostics += chunk;
           },
+        },
+      });
+      const installed = await installCommandPack(
+        "@ali/bailian-plugin-agent@1.0.0",
+        identity,
+        policy,
+        reporter.output,
       );
-    // runNpm probes `npm --version` before each install/uninstall.
-    expect(successfulCalls.map((call) => call.args[0])).toEqual(["--version", "install"]);
-    expect(successfulCalls[1]?.env).toEqual({
-      registry: "https://registry.example.test",
-      catalog: null,
-      recursive: null,
-      overrides: null,
-    });
+      if (display.output === "json") {
+        expect(
+          diagnostics
+            .trim()
+            .split("\n")
+            .map((line) => JSON.parse(line)),
+        ).toEqual([
+          { warning: { code: "COMMAND_PACK_NPM", message: "npm warn fixture retained warning" } },
+        ]);
+      } else {
+        expect(diagnostics).toContain("npm warn fixture retained warning");
+        expect(diagnostics.includes("fixture install info")).toBe(!display.quiet);
+      }
+      expect(installed.version).toBe("1.0.0");
+      const successfulCalls = (await readFile(logPath, "utf8"))
+        .trim()
+        .split("\n")
+        .map(
+          (line) =>
+            JSON.parse(line) as {
+              args: string[];
+              env: Record<string, string | null>;
+            },
+        );
+      // runNpm probes `npm --version` before each install/uninstall.
+      expect(successfulCalls.map((call) => call.args[0])).toEqual(["--version", "install"]);
+      expect(successfulCalls[1]?.env).toEqual({
+        registry: "https://registry.example.test",
+        catalog: null,
+        recursive: null,
+        overrides: null,
+      });
 
-    await writeFile(logPath, "");
-    await expect(
-      installCommandPack("@ali/bailian-plugin-agent@broken", identity, policy),
-    ).rejects.toThrow(/Command Pack API 2 is not supported/);
+      await writeFile(logPath, "");
+      await expect(
+        installCommandPack("@ali/bailian-plugin-agent@broken", identity, policy, reporter.output),
+      ).rejects.toThrow(/Command Pack API 2 is not supported/);
 
-    const rollbackCalls = (await readFile(logPath, "utf8"))
-      .trim()
-      .split("\n")
-      .map(
-        (line) =>
-          JSON.parse(line) as {
-            args: string[];
-            env: Record<string, string | null>;
-          },
-      );
-    expect(rollbackCalls.map((call) => call.args.slice(0, 2))).toEqual([
-      ["--version"],
-      ["install", "@ali/bailian-plugin-agent@broken"],
-      ["--version"],
-      ["install", "@ali/bailian-plugin-agent@1.0.0"],
-    ]);
+      const rollbackCalls = (await readFile(logPath, "utf8"))
+        .trim()
+        .split("\n")
+        .map(
+          (line) =>
+            JSON.parse(line) as {
+              args: string[];
+              env: Record<string, string | null>;
+            },
+        );
+      expect(rollbackCalls.map((call) => call.args.slice(0, 2))).toEqual([
+        ["--version"],
+        ["install", "@ali/bailian-plugin-agent@broken"],
+        ["--version"],
+        ["install", "@ali/bailian-plugin-agent@1.0.0"],
+      ]);
 
-    const manifest = JSON.parse(
-      await readFile(join(root, "config", "plugins", "bailian-cli", "package.json"), "utf8"),
-    ) as { dependencies?: Record<string, string> };
-    expect(manifest.dependencies?.["@ali/bailian-plugin-agent"]).toBe("1.0.0");
-  } finally {
-    restoreEnv("BAILIAN_CONFIG_DIR", previousConfigDir);
-    restoreEnv("PATH", previousPath);
-    restoreEnv("TMPDIR", previousTmpdir);
-    restoreEnv("NPM_CONFIG_REGISTRY", previousRegistry);
-    restoreEnv("npm_config_catalog", previousCatalog);
-    restoreEnv("npm_config_recursive", previousRecursive);
-    restoreEnv("npm_config_overrides", previousOverrides);
-    await rm(root, { recursive: true, force: true });
-  }
-});
+      diagnostics = "";
+      await expect(
+        installCommandPack("@ali/bailian-plugin-agent@failed", identity, policy, reporter.output),
+      ).rejects.toMatchObject({ exitCode: 1, message: "npm install failed with exit code 7." });
+      expect(diagnostics).toContain("fixture child failure");
+      if (display.output === "json") {
+        const records = diagnostics
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line));
+        expect(records).toContainEqual({
+          warning: { code: "COMMAND_PACK_NPM", message: "npm error fixture child failure" },
+        });
+        expect(records.every((record) => !!record.warning)).toBe(true);
+      }
+      const manifest = JSON.parse(
+        await readFile(join(root, "config", "plugins", "bailian-cli", "package.json"), "utf8"),
+      ) as { dependencies?: Record<string, string> };
+      expect(manifest.dependencies?.["@ali/bailian-plugin-agent"]).toBe("1.0.0");
+    } finally {
+      restoreEnv("BAILIAN_CONFIG_DIR", previousConfigDir);
+      restoreEnv("PATH", previousPath);
+      restoreEnv("TMPDIR", previousTmpdir);
+      restoreEnv("NPM_CONFIG_REGISTRY", previousRegistry);
+      restoreEnv("npm_config_catalog", previousCatalog);
+      restoreEnv("npm_config_recursive", previousRecursive);
+      restoreEnv("npm_config_overrides", previousOverrides);
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);

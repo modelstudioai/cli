@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { BailianError, ExitCode, type Client, type Settings } from "bailian-cli-core";
 import {
@@ -27,6 +28,8 @@ test("COMPLETED first page cannot conceal second-page document failures", async 
     };
   });
   const response = await pollImportJob({ requestJson } as unknown as Client, settings, {
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     statusUrl,
     intervalSec: 0.01,
   });
@@ -46,6 +49,8 @@ test("duplicate pages never satisfy total_count even with top-level COMPLETED", 
     },
   }));
   const pending = pollImportJob({ requestJson } as unknown as Client, settings, {
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     statusUrl,
     intervalSec: 0.1,
   });
@@ -63,6 +68,8 @@ test("RUNNING finishes when all pages contain terminal documents", async () => {
     },
   }));
   const response = await pollImportJob({ requestJson } as unknown as Client, settings, {
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     statusUrl,
     intervalSec: 0.01,
   });
@@ -73,7 +80,12 @@ test("backend failures remain the same error object", async () => {
   const failure = new Error("raw backend failure");
   const requestJson = vi.fn().mockRejectedValue(failure);
   await expect(
-    pollImportJob({ requestJson } as unknown as Client, settings, { statusUrl, intervalSec: 0.01 }),
+    pollImportJob({ requestJson } as unknown as Client, settings, {
+      output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+        .output,
+      statusUrl,
+      intervalSec: 0.01,
+    }),
   ).rejects.toBe(failure);
 });
 
@@ -90,6 +102,8 @@ test("changing page totals cannot prove a complete snapshot", async () => {
     };
   });
   const pending = pollImportJob({ requestJson } as unknown as Client, settings, {
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     statusUrl,
     intervalSec: 0.1,
   });

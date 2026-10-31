@@ -1,11 +1,11 @@
 import {
   anonymousConsoleCall,
   defineCommand,
-  detectOutputFormat,
   fetchModelGroupsAll,
+  type LocalizedText,
   type ModelGroupItem,
 } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 import {
   MODEL_FILTER_FLAGS,
   filterModelsLocally,
@@ -128,15 +128,32 @@ interface RankedModel {
   score: number;
 }
 
-function printSearchText(ranked: RankedModel[], keyword: string, hiddenOffline: number): void {
+function searchText(
+  ranked: RankedModel[],
+  keyword: string,
+  hiddenOffline: number,
+  localize: (text: LocalizedText) => string,
+): string {
+  const lines: string[] = [];
   if (ranked.length === 0) {
-    emitBare(`No models matched "${keyword}".`);
-    return;
+    lines.push(
+      localize({
+        "en-US": `No models matched "${keyword}".`,
+        "zh-CN": `没有模型匹配 "${keyword}"。`,
+      }),
+    );
+    return lines.join("\n");
   }
 
   const showStatus = ranked.some(({ item }) => formatOfflineMarker(modelLifecycle(item)) !== "");
-  const headers = ["MODEL", "PROVIDER", "CAPABILITIES", "CONTEXT", "PRICE"];
-  if (showStatus) headers.push("STATUS");
+  const headers = [
+    localize({ "en-US": "MODEL", "zh-CN": "模型" }),
+    localize({ "en-US": "PROVIDER", "zh-CN": "提供商" }),
+    localize({ "en-US": "CAPABILITIES", "zh-CN": "能力" }),
+    localize({ "en-US": "CONTEXT", "zh-CN": "上下文" }),
+    localize({ "en-US": "PRICE", "zh-CN": "价格" }),
+  ];
+  if (showStatus) headers.push(localize({ "en-US": "STATUS", "zh-CN": "状态" }));
 
   const rows = ranked.map(({ item }) => {
     const row = [
@@ -150,11 +167,19 @@ function printSearchText(ranked: RankedModel[], keyword: string, hiddenOffline: 
     return row;
   });
 
-  for (const line of formatTable(headers, rows)) emitBare(line);
-  emitBare(`\nMatches: ${ranked.length}`);
+  for (const line of formatTable(headers, rows)) lines.push(line);
+  lines.push(
+    localize({ "en-US": `\nMatches: ${ranked.length}`, "zh-CN": `\n匹配: ${ranked.length}` }),
+  );
   if (hiddenOffline > 0) {
-    emitBare(`${hiddenOffline} offline models hidden — use --include-deprecated to include them.`);
+    lines.push(
+      localize({
+        "en-US": `${hiddenOffline} offline models hidden — use --include-deprecated to include them.`,
+        "zh-CN": `已隐藏 ${hiddenOffline} 个下线模型，使用 --include-deprecated 可包含它们。`,
+      }),
+    );
   }
+  return lines.join("\n");
 }
 
 function formatSearchJson(ranked: RankedModel[], keyword: string, hiddenOffline: number) {
@@ -191,6 +216,7 @@ export default defineCommand({
     "zh-CN": "按关键词搜索模型目录，并按相关度排序",
   },
   auth: "none",
+  defaultOutput: "json",
   usageArgs: "--keyword <kw> [--limit <n>] [--input-modality <m>] [--output-modality <m>] [flags]",
   flags: {
     keyword: {
@@ -239,22 +265,21 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+    const format = settings.output;
     const limit = flags.limit ?? DEFAULT_LIMIT;
     const params = modelFilterParams(flags);
-    const call = anonymousConsoleCall(settings);
+    const call = anonymousConsoleCall(settings, {
+      debug: (diagnostic) => ctx.output.debug(diagnostic),
+    });
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "model.search",
-          keyword: flags.keyword,
-          limit,
-          includeDeprecated: Boolean(flags.includeDeprecated),
-          ...params,
-        },
-        format,
-      );
+      ctx.output.result({
+        action: "model.search",
+        keyword: flags.keyword,
+        limit,
+        includeDeprecated: Boolean(flags.includeDeprecated),
+        ...params,
+      });
       return;
     }
 
@@ -274,11 +299,11 @@ export default defineCommand({
       )
       .slice(0, limit);
 
-    if (format === "json") {
-      emitResult(formatSearchJson(ranked, flags.keyword, hiddenOffline), format);
-      return;
-    }
-
-    printSearchText(ranked, flags.keyword, hiddenOffline);
+    ctx.output.result(
+      formatSearchJson(ranked, flags.keyword, hiddenOffline),
+      format === "text"
+        ? { text: searchText(ranked, flags.keyword, hiddenOffline, ctx.localize) }
+        : undefined,
+    );
   },
 });

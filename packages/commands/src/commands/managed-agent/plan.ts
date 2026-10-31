@@ -1,11 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -58,7 +51,6 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
     // Offline mode never talks to a provider and never saves refreshed state:
     // --no-refresh by explicit request, --dry-run by contract (read-only run).
@@ -67,15 +59,16 @@ export default defineCommand({
     const offline = Boolean(flags.noRefresh) || settings.dryRun;
 
     const planned = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file, {
           credentials: offline ? "none" : "all",
         });
         return planProjectContext(runtime, {
           provider: "bailian",
           refresh: !offline,
-          quiet: format === "json",
-          onFeedback: format === "json" ? undefined : renderAgentFeedback,
+          // SDK quiet also drops warnings before onFeedback; the reporter owns filtering.
+          quiet: false,
+          onFeedback: (event) => renderAgentFeedback(ctx.output, event),
         });
       }),
     );
@@ -84,37 +77,37 @@ export default defineCommand({
     const hasErrors = plan.diagnostics.some((diag) => diag.severity === "error");
     const failureMessage = formatAgentDiagnosticFailure(plan.diagnostics, "Plan contains errors.");
 
-    if (format === "json") {
-      emitResult(plan, format);
-      if (hasErrors) throw new BailianError(failureMessage, ExitCode.GENERAL);
-      return;
-    }
-
+    const lines: string[] = [];
     for (const diag of plan.diagnostics) {
-      emitBare(`[${diag.severity}] ${diag.code}: ${diag.message}`);
+      lines.push(`[${diag.severity}] ${diag.code}: ${diag.message}`);
     }
-    if (hasErrors) throw new BailianError(failureMessage, ExitCode.GENERAL);
+    if (hasErrors) {
+      ctx.output.result(plan, { text: lines.join("\n") });
+      throw new BailianError(failureMessage, ExitCode.GENERAL);
+    }
 
     const creates = plan.actions.filter((action) => action.action === "create");
     const updates = plan.actions.filter((action) => action.action === "update");
     const deletes = plan.actions.filter((action) => action.action === "delete");
 
     if (creates.length + updates.length + deletes.length === 0) {
-      emitBare("No changes. Infrastructure is up-to-date.");
-      if (flags.refreshOnly) emitBare("Refresh-only mode: no remote mutations were performed.");
+      lines.push("No changes. Infrastructure is up-to-date.");
+      if (flags.refreshOnly) lines.push("Refresh-only mode: no remote mutations were performed.");
+      ctx.output.result(plan, { text: lines.join("\n") });
       return;
     }
 
-    emitBare("\nPlanned actions:\n");
-    for (const action of creates) emitBare(`  + ${formatResourceLabel(action.address)}`);
+    lines.push("\nPlanned actions:\n");
+    for (const action of creates) lines.push(`  + ${formatResourceLabel(action.address)}`);
     for (const action of updates) {
-      emitBare(`  ~ ${formatResourceLabel(action.address)}`);
-      if (action.reason) emitBare(`    ${action.reason}`);
+      lines.push(`  ~ ${formatResourceLabel(action.address)}`);
+      if (action.reason) lines.push(`    ${action.reason}`);
     }
-    for (const action of deletes) emitBare(`  - ${formatResourceLabel(action.address)}`);
-    emitBare(
+    for (const action of deletes) lines.push(`  - ${formatResourceLabel(action.address)}`);
+    lines.push(
       `\nPlan: ${creates.length} to create, ${updates.length} to update, ${deletes.length} to destroy.`,
     );
-    if (flags.refreshOnly) emitBare("Refresh-only mode: no remote mutations will be performed.");
+    if (flags.refreshOnly) lines.push("Refresh-only mode: no remote mutations will be performed.");
+    ctx.output.result(plan, { text: lines.join("\n") });
   },
 });

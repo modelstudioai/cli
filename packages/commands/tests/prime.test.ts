@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -118,7 +119,7 @@ describe("Prime video upload origins", () => {
     rmSync(fixtureDir, { recursive: true, force: true });
   });
 
-  function runVideo(
+  async function runVideo(
     flags: Record<string, unknown>,
     options: {
       baseUrl?: string;
@@ -128,9 +129,25 @@ describe("Prime video upload origins", () => {
   ) {
     const baseUrl = options.baseUrl ?? REGIONS.cn;
     const commandSettings = { ...settings, workspaceId: options.settingsWorkspaceId };
-    return videoGenerate.run({
+    let stdout = "";
+    let stderr = "";
+    const reporter = createOutputReporter({
+      settings: commandSettings,
+      stdout: {
+        write: (chunk) => {
+          stdout += chunk;
+        },
+      },
+      stderr: {
+        write: (chunk) => {
+          stderr += chunk;
+        },
+      },
+    });
+    await videoGenerate.run({
       identity,
       settings: commandSettings,
+      output: reporter.output,
       flags: {
         prime: true,
         model: "wan3.0-video",
@@ -150,6 +167,8 @@ describe("Prime video upload origins", () => {
         },
       }),
     } as never);
+    expect(JSON.parse(stdout)).toEqual({ task_id: "synthetic-task" });
+    expect(stderr).toBe("");
   }
 
   function expectRequestOrigins(options: {

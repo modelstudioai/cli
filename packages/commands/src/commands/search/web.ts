@@ -1,12 +1,12 @@
 import {
   defineCommand,
+  formatOutput,
   BailianError,
-  detectOutputFormat,
   mcpWebSearchPath,
   type FlagsDef,
   type McpConnectedClient,
 } from "bailian-cli-core";
-import { createSpinner, emitResult } from "bailian-cli-runtime";
+
 import { rethrowWithWebSearchActivateHint } from "./web-activate-hint.ts";
 
 const WEB_SEARCH_FLAGS = {
@@ -58,12 +58,12 @@ export default defineCommand({
   validate: (f) => (!f.listTools && !f.query ? "Missing required flag: --query" : undefined),
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // --- List tools mode ---
     if (flags.listTools) {
       if (settings.dryRun) {
-        emitResult({ endpoint: ctx.client.url(mcpWebSearchPath()), action: "tools/list" }, format);
+        ctx.output.result({ endpoint: ctx.client.url(mcpWebSearchPath()), action: "tools/list" });
         return;
       }
 
@@ -72,7 +72,7 @@ export default defineCommand({
         client = ctx.client.mcp(mcpWebSearchPath());
         await client.initialize();
         const tools = await client.listTools();
-        emitResult({ tools }, format);
+        ctx.output.result({ tools });
       } catch (error) {
         rethrowWithWebSearchActivateHint(error);
       } finally {
@@ -87,31 +87,26 @@ export default defineCommand({
     const query = flags.query;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          endpoint: ctx.client.url(mcpWebSearchPath()),
-          action: "tools/call",
-          tool: "bailian_web_search",
-          arguments: {
-            query: query!,
-            count: flags.count || undefined,
-          },
+      ctx.output.result({
+        endpoint: ctx.client.url(mcpWebSearchPath()),
+        action: "tools/call",
+        tool: "bailian_web_search",
+        arguments: {
+          query: query!,
+          count: flags.count || undefined,
         },
-        format,
-      );
+      });
       return;
     }
 
     // Initialize MCP client
     const client = ctx.client.mcp(mcpWebSearchPath());
-    const spinner = createSpinner("Initializing search...");
-
-    if (!settings.quiet) spinner.start();
+    ctx.output.progress({ "en-US": "Initializing search...", "zh-CN": "正在初始化搜索……" });
 
     try {
       await client.initialize();
 
-      if (!settings.quiet) spinner.update("Searching...");
+      ctx.output.progress({ "en-US": "Searching...", "zh-CN": "正在搜索……" });
 
       // Build tool arguments
       const toolArgs: Record<string, unknown> = { query: query! };
@@ -126,37 +121,32 @@ export default defineCommand({
         throw new BailianError(`Search error: ${errText}`);
       }
 
-      if (!settings.quiet) spinner.stop("Done.");
+      ctx.output.progress({ "en-US": "Done.", "zh-CN": "已完成。" });
 
-      // Output results — always structured to stdout
-      if (format === "json") {
-        emitResult(result, format);
-      } else {
-        // Text mode: try to extract pages for human-friendly display
+      let text: string | undefined;
+      if (format === "text") {
+        const parts: string[] = [];
         for (const item of result.content) {
-          if (item.type === "text" && item.text) {
-            try {
-              const data = JSON.parse(item.text) as {
-                pages?: Array<{
-                  title?: string;
-                  url?: string;
-                  snippet?: string;
-                  hostname?: string;
-                }>;
-              };
-              if (data.pages && Array.isArray(data.pages)) {
-                emitResult({ pages: data.pages, total: data.pages.length }, format);
-              } else {
-                emitResult(data, format);
-              }
-            } catch {
-              emitResult({ text: item.text }, format);
-            }
+          if (item.type !== "text" || !item.text) continue;
+          let data: unknown;
+          try {
+            data = JSON.parse(item.text);
+          } catch {
+            data = { text: item.text };
           }
+          const pages =
+            data !== null && typeof data === "object" && "pages" in data
+              ? (data as { pages: unknown }).pages
+              : undefined;
+          parts.push(
+            formatOutput(Array.isArray(pages) ? { pages, total: pages.length } : data, "text"),
+          );
         }
+        text = parts.join("\n");
       }
+      ctx.output.result(result, text === undefined ? undefined : { text });
     } catch (error) {
-      spinner.stop("Failed.");
+      ctx.output.progress({ "en-US": "Failed.", "zh-CN": "失败。" });
       rethrowWithWebSearchActivateHint(error);
     } finally {
       // Close on both paths: an open transport stream keeps the process alive.

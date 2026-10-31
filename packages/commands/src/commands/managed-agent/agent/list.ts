@@ -1,5 +1,5 @@
 import { listRemoteAgents } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { emitCollection, validateLimitAndPageLimit } from "../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
@@ -16,9 +16,8 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   validate: validateLimitAndPageLimit,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return fetchAllPages(
           async (page) => {
@@ -39,8 +38,7 @@ export default defineCommand({
         );
       }),
     );
-    emitCollection({
-      format,
+    emitCollection(ctx, {
       key: "agents",
       items: result.items,
       headers: ["ID", "NAME", "VERSION", "TYPE", "UPDATED"],

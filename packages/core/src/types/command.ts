@@ -1,3 +1,4 @@
+import type { CommandOutput } from "./output.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import type { ConfigStore } from "../config/store.ts";
 import type { AuthStore } from "../auth/store.ts";
@@ -249,6 +250,8 @@ export interface CommandContext<F extends FlagsDef = FlagsDef, Prepared = undefi
   prepared?: Prepared;
   /** 静态产品身份(binName/version/npmPackage/clientName)。 */
   identity: Identity;
+  /** Unified per-invocation result and diagnostic output. */
+  output: CommandOutput;
   /**
    * Locale selector for user-facing output: picks the `en-US` / `zh-CN` variant
    * of a {@link LocalizedText} per the resolved language. Supplied by the runtime
@@ -299,6 +302,14 @@ export interface CommandPreparation<Prepared> {
 }
 
 export interface Command<F extends FlagsDef = FlagsDef, Prepared = undefined> {
+  /** Fallback when no output format is configured by flag, environment or Profile. */
+  defaultOutput?: Settings["output"];
+  /** Native terminal presentation when no flag, environment or Profile selects a format. */
+  defaultInteractiveOutput?: Settings["output"];
+  /** Existing command switches that explicitly request diagnostic output (for example --trace). */
+  verboseFlags?: readonly (keyof F & string)[];
+  /** Apply defaultOutput over a Profile preference; flag/env still take precedence. */
+  defaultOutputOverridesProfile?: boolean;
   description: LocalizedText;
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;

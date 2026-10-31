@@ -1,6 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { emitResult } from "bailian-cli-runtime";
 import {
   buildGroupSwitchReqDTO,
   DISABLE_GROUP_API,
@@ -28,17 +26,14 @@ export default defineTelemetryCommand({
   exampleArgs: ["", "--dry-run", "--output json"],
   async run(ctx) {
     const { settings } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: DISABLE_GROUP_API,
-          data: { reqDTO: buildGroupSwitchReqDTO(settings, MONITOR_GROUP_TYPE) },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: DISABLE_GROUP_API,
+        data: { reqDTO: buildGroupSwitchReqDTO(settings, MONITOR_GROUP_TYPE) },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -48,11 +43,14 @@ export default defineTelemetryCommand({
       reqDTO: buildGroupSwitchReqDTO(settings, MONITOR_GROUP_TYPE),
     });
 
-    if (format === "json") {
-      emitResult({ disabled: true }, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    process.stdout.write("Monitor delivery disabled.\n");
+      textChunks.push("Monitor delivery disabled.\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
+    ctx.output.result({ disabled: true }, { text });
   },
 });

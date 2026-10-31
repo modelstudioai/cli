@@ -1,5 +1,3 @@
-import { detectOutputFormat } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 import { parseCommaList } from "../shared/params.ts";
 import {
   defineTelemetryCommand,
@@ -16,7 +14,7 @@ import {
   LIST_AUDIT_LOGS_API,
   normalizeAuditLog,
   assertAuditWorkspace,
-  printLogTable,
+  renderLogTable,
   validateHoursFlag,
   validateStatusCodeTypes,
 } from "./shared.ts";
@@ -99,7 +97,7 @@ export default defineTelemetryCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags, 1 / 24);
 
     const reqDTO: Record<string, unknown> = {
@@ -116,14 +114,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_AUDIT_LOGS_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_AUDIT_LOGS_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -133,21 +128,24 @@ export default defineTelemetryCommand({
     assertAuditWorkspace(list, ctx);
     const nextToken = resp.nextToken as string | undefined;
 
-    if (format === "json") {
-      emitResult(
-        {
-          totalCount: resp.totalCount ?? 0,
-          nextToken,
-          list,
-        },
-        format,
-      );
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printLogTable(list);
-    if (nextToken) {
-      process.stdout.write(`Next page: --next-token ${nextToken}\n`);
+      textChunks.push(renderLogTable(list) + "\n");
+      if (nextToken) {
+        textChunks.push(`Next page: --next-token ${nextToken}\n`);
+      }
+
+      text = textChunks.join("").replace(/\n$/, "");
     }
+    ctx.output.result(
+      {
+        totalCount: resp.totalCount ?? 0,
+        nextToken,
+        list,
+      },
+      { text },
+    );
   },
 });

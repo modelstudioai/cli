@@ -14,13 +14,11 @@ import {
 import {
   BailianError,
   defineCommand,
-  detectOutputFormat,
   ExitCode,
   type CommandRisk,
   type FlagsDef,
   type LocalizedText,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import {
@@ -164,9 +162,9 @@ interface WebhookOperation {
 }
 
 function emitWebhookResult(result: unknown, host: ManagedApiHost): void {
-  const format = detectOutputFormat(host.settings.output);
-  if (format === "json") emitResult(result, format);
-  else emitBare(JSON.stringify(result, null, 2));
+  host.output.result(result, {
+    text: host.settings.output === "text" ? JSON.stringify(result, null, 2) : undefined,
+  });
 }
 
 async function runWebhookOperation(
@@ -202,7 +200,7 @@ async function runWebhookOperation(
     );
   }
   const response = await withAgentErrors(() =>
-    withStdoutProtected(async () => {
+    withStdoutProtected(host, async () => {
       const context = buildManagedApiContext(host);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), Math.ceil(timeoutSeconds * 1000));
@@ -224,9 +222,14 @@ async function runWebhookOperation(
   );
   emitWebhookResult(response, host);
   if (operation.returnsSecret) {
-    process.stderr.write(
-      "Signing Secret is shown only in this successful create/reset response; save it now. / Signing Secret 仅在本次创建或重置成功响应中返回，请立即保存。\n",
-    );
+    host.output.warning({
+      message: {
+        "en-US":
+          "Signing Secret is shown only in this successful create/reset response; save it now.",
+        "zh-CN": "Signing Secret 仅在本次创建或重置成功响应中返回，请立即保存。",
+      },
+      code: "AGENT_WEBHOOK_SECRET_ONCE",
+    });
   }
 }
 

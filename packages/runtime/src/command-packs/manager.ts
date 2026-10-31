@@ -1,3 +1,4 @@
+import { StringDecoder } from "node:string_decoder";
 import { existsSync } from "node:fs";
 import { mkdir, open, stat, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -6,6 +7,7 @@ import {
   BailianError,
   ExitCode,
   isCompiledBinary,
+  type CommandOutput,
   type CommandPackManager,
   type CommandPackReport,
   type Identity,
@@ -96,7 +98,7 @@ async function ensureSandboxAt(dir: string): Promise<void> {
   }
 }
 
-async function runNpm(args: string[], cwd: string): Promise<void> {
+async function runNpm(args: string[], cwd: string, output: CommandOutput): Promise<void> {
   const npmCheck = spawnSync("npm", ["--version"], { encoding: "utf-8" });
   if (npmCheck.status !== 0) {
     const hint = isCompiledBinary()
@@ -114,10 +116,14 @@ async function runNpm(args: string[], cwd: string): Promise<void> {
       env: buildNpmEnv(),
       stdio: ["inherit", "pipe", "pipe"],
     });
-    child.stdout.on("data", (chunk) => process.stderr.write(chunk));
-    child.stderr.on("data", (chunk) => process.stderr.write(chunk));
+    const stdout = npmLogLines(output);
+    const stderr = npmLogLines(output);
+    child.stdout.on("data", (chunk: Buffer) => stdout.write(chunk));
+    child.stderr.on("data", (chunk: Buffer) => stderr.write(chunk));
     child.once("error", reject);
     child.once("close", (code, signal) => {
+      stdout.end();
+      stderr.end();
       if (code === 0) {
         resolvePromise();
         return;
@@ -130,6 +136,30 @@ async function runNpm(args: string[], cwd: string): Promise<void> {
       );
     });
   });
+}
+
+/** Decode complete child log lines without creating a second CLI output protocol. */
+function npmLogLines(output: CommandOutput) {
+  const decoder = new StringDecoder("utf8");
+  let pending = "";
+  const emit = (line: string) => {
+    if (/^npm\s+(?:warn(?:ing)?|err(?:or)?)\b/i.test(line)) {
+      output.warning({ code: "COMMAND_PACK_NPM", message: line });
+    } else if (line) output.info(line);
+  };
+  return {
+    write(chunk: Buffer) {
+      pending += decoder.write(chunk);
+      const lines = pending.split(/\r?\n/);
+      pending = lines.pop() ?? "";
+      for (const line of lines) emit(line);
+    },
+    end() {
+      pending += decoder.end();
+      if (pending) emit(pending);
+      pending = "";
+    },
+  };
 }
 
 async function acquireSandboxLock(identity: Identity): Promise<() => Promise<void>> {
@@ -224,6 +254,7 @@ async function restoreCommandPack(
   name: string,
   previousSpec: string | undefined,
   sandboxDir: string,
+  output: CommandOutput,
 ): Promise<void> {
   if (previousSpec) {
     await runNpm(
@@ -236,16 +267,22 @@ async function restoreCommandPack(
         "--no-audit",
       ],
       sandboxDir,
+      output,
     );
     return;
   }
-  await runNpm(["uninstall", name, "--ignore-scripts", "--no-fund", "--no-audit"], sandboxDir);
+  await runNpm(
+    ["uninstall", name, "--ignore-scripts", "--no-fund", "--no-audit"],
+    sandboxDir,
+    output,
+  );
 }
 
 export async function installCommandPack(
   spec: string,
   identity: Identity,
   policy: CommandPackPolicy,
+  output: CommandOutput,
 ): Promise<{ name: string; version?: string; commands: string[] }> {
   const { name, requested } = parseCommandPackSpec(spec, identity, policy);
   return withSandboxLock(identity, async () => {
@@ -257,6 +294,7 @@ export async function installCommandPack(
       await runNpm(
         ["install", requested, "--save-exact", "--ignore-scripts", "--no-fund", "--no-audit"],
         sandboxDir,
+        output,
       );
       const installed = await validateAtRoot(
         name,
@@ -274,7 +312,7 @@ export async function installCommandPack(
       };
     } catch (error) {
       try {
-        await restoreCommandPack(name, previousSpec, sandboxDir);
+        await restoreCommandPack(name, previousSpec, sandboxDir, output);
       } catch {
         /* preserve the install or validation error */
       }
@@ -287,6 +325,7 @@ export async function linkCommandPack(
   path: string,
   identity: Identity,
   policy: CommandPackPolicy,
+  output: CommandOutput,
 ): Promise<{ name: string; version?: string; commands: string[] }> {
   const root = resolve(path);
   if (!existsSync(join(root, "package.json"))) {
@@ -306,6 +345,7 @@ export async function linkCommandPack(
     await runNpm(
       ["install", `file:${root}`, "--save-exact", "--ignore-scripts", "--no-fund", "--no-audit"],
       getCommandPacksDir(identity),
+      output,
     );
     const installed = await validateAtRoot(
       name,
@@ -325,6 +365,7 @@ export async function removeCommandPack(
   name: string,
   identity: Identity,
   policy: CommandPackPolicy,
+  output: CommandOutput,
 ): Promise<void> {
   if (!policy.supported[name]) {
     throw new BailianError(
@@ -341,6 +382,7 @@ export async function removeCommandPack(
     runNpm(
       ["uninstall", name, "--ignore-scripts", "--no-fund", "--no-audit"],
       getCommandPacksDir(identity),
+      output,
     ),
   );
 }
@@ -355,11 +397,12 @@ export async function listCommandPacks(
 export function createCommandPackManager(
   identity: Identity,
   policy: CommandPackPolicy,
+  output: CommandOutput,
 ): CommandPackManager {
   return {
-    install: (spec) => installCommandPack(spec, identity, policy),
-    link: (path) => linkCommandPack(path, identity, policy),
+    install: (spec) => installCommandPack(spec, identity, policy, output),
+    link: (path) => linkCommandPack(path, identity, policy, output),
     list: () => listCommandPacks(identity, policy),
-    remove: (name) => removeCommandPack(name, identity, policy),
+    remove: (name) => removeCommandPack(name, identity, policy, output),
   };
 }

@@ -2,7 +2,6 @@ import {
   defineCommand,
   memoryEndpoint,
   memorySearchPath,
-  detectOutputFormat,
   type FlagsDef,
   type ParsedFlags,
   type MemoryMessage,
@@ -11,7 +10,6 @@ import {
   type MemorySearchResponse,
   type MemoryType,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_RATE_LIMIT_NOTE,
@@ -186,11 +184,11 @@ export default defineCommand({
     if (memoryTypes?.length) body.memory_types = memoryTypes as MemoryType[];
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url = memoryEndpoint(resolveWorkspaceId(ctx), memorySearchPath());
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "POST", request: body }, format);
+      ctx.output.result({ endpoint: url, method: "POST", request: body });
       return;
     }
 
@@ -200,18 +198,22 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format === "text") {
+    ctx.output.result(response, format === "text" ? { text: renderText0() } : undefined);
+    function renderText0(): string {
+      const lines: string[] = [];
       if (!response.memory_nodes || response.memory_nodes.length === 0) {
-        emitBare("No memory nodes found.");
+        lines.push(
+          ctx.localize({ "en-US": "No memory nodes found.", "zh-CN": "未找到记忆节点。" }),
+        );
       } else {
         for (const node of response.memory_nodes) {
           const typePrefix = node.memory_type ? `[${node.memory_type}] ` : "";
           const scoreSuffix = node.score !== undefined ? ` (score ${node.score})` : "";
-          emitBare(`${typePrefix}[${node.memory_node_id}] ${node.content}${scoreSuffix}`);
+          lines.push(`${typePrefix}[${node.memory_node_id}] ${node.content}${scoreSuffix}`);
         }
       }
-    } else {
-      emitResult(response, format);
+
+      return lines.join("\n");
     }
   },
 });

@@ -3,14 +3,14 @@ import {
   BailianError,
   defineCommand,
   ExitCode,
-  detectOutputFormat,
+  type CommandOutput,
+  type LocalizedText,
   type Client,
   type Settings,
   type DashScopeTTSRequest,
   type DashScopeTTSResponse,
   type DashScopeTTSStreamChunk,
   stripUndefined,
-  type OutputFormat,
   speechSynthesizePath,
   parseSSE,
   resolveOutputDir,
@@ -27,7 +27,6 @@ import {
 
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { VOICE_TTS_PAGE } from "bailian-cli-runtime";
 import {
   isAutoModel,
@@ -166,34 +165,78 @@ function voiceDocsUrl(model: string): string {
   return VOICE_TTS_PAGE;
 }
 
-function printVoiceList(model: string): void {
+function outputVoiceList(
+  model: string,
+  output: CommandOutput,
+  localize: (text: LocalizedText) => string,
+): void {
   const voices = MODEL_VOICES[model];
   const docsUrl = voiceDocsUrl(model);
+  const data = {
+    model,
+    voices: voices ?? null,
+    total: voices?.length ?? null,
+    voice_list_url: docsUrl,
+    ...(voices?.length === 0
+      ? { clone_design_docs_url: COSYVOICE_CLONE_DESIGN_DOC, console_url: VOICE_TTS_PAGE }
+      : {}),
+  };
   if (!voices) {
-    process.stdout.write(`No built-in voice list available for model: ${model}\n`);
-    process.stdout.write(`See official voice list: ${docsUrl}\n`);
+    output.result(data, {
+      text: [
+        localize({
+          "en-US": `No built-in voice list available for model: ${model}`,
+          "zh-CN": `模型 ${model} 未提供内置音色列表`,
+        }),
+        localize({
+          "en-US": `See official voice list: ${docsUrl}`,
+          "zh-CN": `请查看官方音色列表：${docsUrl}`,
+        }),
+      ].join("\n"),
+    });
     return;
   }
   if (voices.length === 0) {
-    process.stdout.write(`Model ${model} has no system voices.\n`);
-    process.stdout.write("Use clone or design voices created via the CosyVoice API.\n");
-    process.stdout.write(`See: ${COSYVOICE_CLONE_DESIGN_DOC}\n`);
-    process.stdout.write(`Browse voices in the console: ${VOICE_TTS_PAGE}\n`);
+    output.result(data, {
+      text: [
+        localize({
+          "en-US": `Model ${model} has no system voices.`,
+          "zh-CN": `模型 ${model} 没有系统音色。`,
+        }),
+        localize({
+          "en-US": "Use clone or design voices created via the CosyVoice API.",
+          "zh-CN": "请使用通过 CosyVoice API 创建的复刻或设计音色。",
+        }),
+        localize({
+          "en-US": `See: ${COSYVOICE_CLONE_DESIGN_DOC}`,
+          "zh-CN": `参考文档：${COSYVOICE_CLONE_DESIGN_DOC}`,
+        }),
+        localize({
+          "en-US": `Browse voices in the console: ${VOICE_TTS_PAGE}`,
+          "zh-CN": `在控制台浏览音色：${VOICE_TTS_PAGE}`,
+        }),
+      ].join("\n"),
+    });
     return;
   }
-  const col = (s: string, w: number) => s.padEnd(w);
-  process.stdout.write(`\nSystem voices for ${model}:\n`);
-  process.stdout.write(
-    `${col("VOICE ID", 26)} ${col("NAME", 10)} ${col("DESCRIPTION", 16)} LANGUAGE\n`,
-  );
-  process.stdout.write(`${"-".repeat(26)} ${"-".repeat(10)} ${"-".repeat(16)} ${"-".repeat(12)}\n`);
-  for (const entry of voices) {
-    process.stdout.write(
-      `${col(entry.voice, 26)} ${col(entry.name, 10)} ${col(entry.desc, 16)} ${entry.lang}\n`,
-    );
-  }
-  process.stdout.write(`\nTotal: ${voices.length} voices\n`);
-  process.stdout.write(`Preview and browse more voices: \n${docsUrl}\n`);
+  const col = (value: string, width: number) => value.padEnd(width);
+  const lines = [
+    "",
+    localize({ "en-US": `System voices for ${model}:`, "zh-CN": `${model} 的系统音色：` }),
+    `${col(localize({ "en-US": "VOICE ID", "zh-CN": "音色 ID" }), 26)} ${col(localize({ "en-US": "NAME", "zh-CN": "名称" }), 10)} ${col(localize({ "en-US": "DESCRIPTION", "zh-CN": "描述" }), 16)} ${localize({ "en-US": "LANGUAGE", "zh-CN": "语言" })}`,
+    `${"-".repeat(26)} ${"-".repeat(10)} ${"-".repeat(16)} ${"-".repeat(12)}`,
+    ...voices.map(
+      (entry) =>
+        `${col(entry.voice, 26)} ${col(entry.name, 10)} ${col(entry.desc, 16)} ${entry.lang}`,
+    ),
+    "",
+    localize({ "en-US": `Total: ${voices.length} voices`, "zh-CN": `共 ${voices.length} 个音色` }),
+    localize({
+      "en-US": `Preview and browse more voices: \n${docsUrl}`,
+      "zh-CN": `试听并浏览更多音色：\n${docsUrl}`,
+    }),
+  ];
+  output.result(data, { text: lines.join("\n") });
 }
 
 const SYNTHESIZE_FLAGS = {
@@ -324,8 +367,8 @@ const SYNTHESIZE_FLAGS = {
   stream: {
     type: "switch",
     description: {
-      "en-US": "Stream raw PCM audio to stdout (pipe to player)",
-      "zh-CN": "将原始 PCM 音频流式输出到 stdout（可通过管道传给播放器）",
+      "en-US": "Stream raw PCM audio to stdout (pipe to player); JSON output requires --out",
+      "zh-CN": "将原始 PCM 音频流式输出到 stdout（可通过管道传给播放器）；JSON 输出需要 --out",
     },
   },
   ...CONCURRENT_FLAG,
@@ -387,10 +430,10 @@ export default defineCommand({
         '模型 "auto"（通过 --model auto 或将配置默认模型设为 "auto"）改走百炼官方 MCP，参数面更小；MCP 不支持的参数会直接报用法错误，而不回退 REST。',
     },
   ],
-  validate: (f) => {
-    if (f.listVoices) return undefined;
-    if (!f.text && !f.textFile) return "Provide --text or --text-file.";
-    if (!f.voice)
+  validate: (flags) => {
+    if (flags.listVoices) return undefined;
+    if (!flags.text && !flags.textFile) return "Provide --text or --text-file.";
+    if (!flags.voice)
       return `Missing required flag: --voice (use --list-voices; browse more voices: ${VOICE_TTS_PAGE})`;
     return undefined;
   },
@@ -399,13 +442,7 @@ export default defineCommand({
 
     const resolvedModel = flags.model || settings.defaultSpeechModel;
     if (isAutoModel(resolvedModel)) {
-      await handleAutoMcpMode(
-        ctx.client,
-        ctx.localize,
-        settings,
-        flags,
-        detectOutputFormat(settings.output),
-      );
+      await handleAutoMcpMode(ctx.client, ctx.output, ctx.localize, settings, flags);
       return;
     }
 
@@ -413,8 +450,25 @@ export default defineCommand({
 
     // --list-voices: print voice list for the model and exit
     if (flags.listVoices) {
-      printVoiceList(model);
+      outputVoiceList(model, ctx.output, (text) => ctx.localize(text));
       return;
+    }
+
+    const useStream = flags.stream === true;
+    if (useStream && settings.output === "json" && !flags.out && !settings.dryRun) {
+      throw new BailianError(
+        ctx.localize({
+          "en-US": "--stream with --output json requires --out <path>.",
+          "zh-CN": "--stream 与 --output json 同用时需要指定 --out <path>。",
+        }),
+        ExitCode.USAGE,
+        ctx.localize({
+          "en-US":
+            "Use --out to save audio and return JSON metadata, or --output text to stream audio to stdout.",
+          "zh-CN":
+            "使用 --out 保存音频并返回 JSON 元数据，或使用 --output text 将音频流输出到 stdout。",
+        }),
+      );
     }
 
     // --text / --text-file presence enforced by validate; empty file content → API rejects.
@@ -431,7 +485,6 @@ export default defineCommand({
 
     const language = flags.language || undefined;
     const instruction = flags.instruction || undefined;
-    const useStream = flags.stream === true;
     const audioFormat = flags.format || (useStream ? "pcm" : "mp3");
     const sampleRate = flags.sampleRate !== undefined ? Number(flags.sampleRate) : undefined;
     const volume = flags.volume !== undefined ? Number(flags.volume) : undefined;
@@ -439,8 +492,6 @@ export default defineCommand({
     const pitch = flags.pitch !== undefined ? Number(flags.pitch) : undefined;
     const seed = flags.seed !== undefined ? Number(flags.seed) : undefined;
     const enableSsml = flags.enableSsml === true ? true : undefined;
-
-    const format = detectOutputFormat(settings.output);
 
     const body: DashScopeTTSRequest = {
       model,
@@ -463,28 +514,29 @@ export default defineCommand({
     stripUndefined(body.input as Record<string, unknown>);
 
     if (settings.dryRun) {
-      emitResult({ request: body }, format);
+      ctx.output.result({ request: body });
       return;
     }
 
-    if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}] [Voice: ${voice}]\n`);
-    }
+    ctx.output.info({
+      "en-US": `[Model: ${model}] [Voice: ${voice}]`,
+      "zh-CN": `[模型：${model}] [音色：${voice}]`,
+    });
 
     if (useStream) {
-      await handleStreamMode(ctx.client, settings, body, flags, format);
+      await handleStreamMode(ctx.client, ctx.output, body, flags);
     } else {
-      await handleNonStreamMode(ctx.client, settings, body, flags, format);
+      await handleNonStreamMode(ctx.client, ctx.output, settings, body, flags);
     }
   },
 });
 
 async function handleAutoMcpMode(
   client: Client,
+  commandOutput: CommandOutput,
   localize: Localize,
   settings: Settings,
   flags: SynthesizeFlags,
-  format: OutputFormat,
 ): Promise<void> {
   assertAutoMcpAvailable(client, localize);
   assertMcpCompatible("tts", flags, localize);
@@ -506,22 +558,20 @@ async function handleAutoMcpMode(
   const args = buildTtsArgs({ text, voice });
 
   if (settings.dryRun) {
-    emitResult(
-      {
-        server: AIGC_MCP_SERVER.speech,
-        url: client.url(bailianMcpPath(AIGC_MCP_SERVER.speech)),
-        tool: AIGC_MCP_TOOL.tts,
-        arguments: args,
-        mode: "mcp",
-      },
-      format,
-    );
+    commandOutput.result({
+      server: AIGC_MCP_SERVER.speech,
+      url: client.url(bailianMcpPath(AIGC_MCP_SERVER.speech)),
+      tool: AIGC_MCP_TOOL.tts,
+      arguments: args,
+      mode: "mcp",
+    });
     return;
   }
 
-  if (!settings.quiet) {
-    process.stderr.write(`[Model: auto] [Mode: mcp] [Voice: ${voice}]\n`);
-  }
+  commandOutput.info({
+    "en-US": `[Model: auto] [Mode: mcp] [Voice: ${voice}]`,
+    "zh-CN": `[模型：auto] [模式：mcp] [音色：${voice}]`,
+  });
 
   const concurrent = getConcurrency(flags);
   // One shared MCP session; --concurrent fans out parallel tools/call on it.
@@ -530,7 +580,7 @@ async function handleAutoMcpMode(
     AIGC_MCP_SERVER.speech,
     localize,
     async (callTool) =>
-      runConcurrent(concurrent, settings, async () => {
+      runConcurrent(concurrent, commandOutput, async () => {
         const inner = await callTool(AIGC_MCP_TOOL.tts, args);
         return parseAigcTtsResult(inner);
       }),
@@ -548,28 +598,28 @@ async function handleAutoMcpMode(
     return { url: audioUrl, destPath };
   });
 
-  const saved = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
+  const saved = await downloadParallel(items, downloadFile, {
+    quiet: settings.quiet || settings.output === "json",
+  });
 
   // auto output intentionally omits `model` (there is no specific REST model).
-  if (settings.quiet) {
-    emitBare(saved.join("\n"));
-  } else if (saved.length === 1) {
-    emitResult({ saved: saved[0], audio_url: audioUrls[0], voice }, format);
+  if (saved.length === 1) {
+    commandOutput.result({ saved: saved[0], audio_url: audioUrls[0], voice });
   } else {
-    emitResult({ saved, audio_urls: audioUrls, total: saved.length, voice }, format);
+    commandOutput.result({ saved, audio_urls: audioUrls, total: saved.length, voice });
   }
 }
 
 async function handleNonStreamMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   body: DashScopeTTSRequest,
   flags: SynthesizeFlags,
-  format: OutputFormat,
 ): Promise<void> {
   const concurrent = getConcurrency(flags);
 
-  const results = await runConcurrent(concurrent, settings, () =>
+  const results = await runConcurrent(concurrent, commandOutput, () =>
     client.requestJson<DashScopeTTSResponse>({
       path: speechSynthesizePath(),
       method: "POST",
@@ -577,7 +627,7 @@ async function handleNonStreamMode(
     }),
   );
 
-  const audioUrls = results.map((r) => r.output?.audio?.url).filter(Boolean) as string[];
+  const audioUrls = results.map((result) => result.output?.audio?.url).filter(Boolean) as string[];
 
   if (audioUrls.length === 0) {
     throw new BailianError("API returned no audio URL.", ExitCode.GENERAL);
@@ -587,55 +637,48 @@ async function handleNonStreamMode(
   const path = await import("path");
   const destDir = resolveOutputDir(settings, { subDir: "speech" });
 
-  const items = audioUrls.map((audioUrl, i) => {
+  const items = audioUrls.map((audioUrl, index) => {
     let destPath = flags.out;
     if (destPath && audioUrls.length === 1) {
       // Single explicit output path
     } else {
       const timestamp = Date.now();
-      const suffix = audioUrls.length > 1 ? `_${String(i + 1).padStart(3, "0")}` : "";
+      const suffix = audioUrls.length > 1 ? `_${String(index + 1).padStart(3, "0")}` : "";
       const ext = body.input.format ?? "mp3";
       destPath = path.join(destDir, `tts_${timestamp}${suffix}.${ext}`);
     }
     return { url: audioUrl, destPath: destPath! };
   });
 
-  const saved = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
+  const saved = await downloadParallel(items, downloadFile, {
+    quiet: settings.quiet || settings.output === "json",
+  });
 
-  if (settings.quiet) {
-    emitBare(saved.join("\n"));
-  } else if (saved.length === 1) {
+  if (saved.length === 1) {
     const expiresAt = results[0]!.output?.audio?.expires_at;
-    emitResult(
-      {
-        saved: saved[0],
-        audio_url: audioUrls[0],
-        model: body.model,
-        voice: body.input.voice,
-        ...(expiresAt ? { url_expires_at: expiresAt } : {}),
-      },
-      format,
-    );
+    commandOutput.result({
+      saved: saved[0],
+      audio_url: audioUrls[0],
+      model: body.model,
+      voice: body.input.voice,
+      ...(expiresAt ? { url_expires_at: expiresAt } : {}),
+    });
   } else {
-    emitResult(
-      {
-        saved,
-        audio_urls: audioUrls,
-        total: saved.length,
-        model: body.model,
-        voice: body.input.voice,
-      },
-      format,
-    );
+    commandOutput.result({
+      saved,
+      audio_urls: audioUrls,
+      total: saved.length,
+      model: body.model,
+      voice: body.input.voice,
+    });
   }
 }
 
 async function handleStreamMode(
   client: Client,
-  settings: Settings,
+  commandOutput: CommandOutput,
   body: DashScopeTTSRequest,
   flags: SynthesizeFlags,
-  format: OutputFormat,
 ): Promise<void> {
   const res = await client.request({
     path: speechSynthesizePath(),
@@ -676,8 +719,11 @@ async function handleStreamMode(
 
       if (chunk.output?.finish_reason === "stop") {
         lastAudioUrl = chunk.output?.audio?.url;
-        if (lastAudioUrl && !settings.quiet) {
-          process.stderr.write(`\nFull audio URL: ${lastAudioUrl}\n`);
+        if (lastAudioUrl) {
+          commandOutput.info({
+            "en-US": `\nFull audio URL: ${lastAudioUrl}`,
+            "zh-CN": `\n完整音频 URL：${lastAudioUrl}`,
+          });
         }
         break;
       }
@@ -689,22 +735,19 @@ async function handleStreamMode(
         writer.on("error", reject);
         writer.end();
       });
-      if (!settings.quiet && outPath) {
-        process.stderr.write(`Saved: ${outPath}\n`);
+      if (outPath) {
+        commandOutput.info({ "en-US": `Saved: ${outPath}`, "zh-CN": `已保存：${outPath}` });
       }
     }
   }
 
   // Emit structured result for agent consumption
   if (outPath) {
-    emitResult(
-      {
-        saved: outPath,
-        ...(lastAudioUrl ? { audio_url: lastAudioUrl } : {}),
-        model: body.model,
-        voice: body.input.voice,
-      },
-      format,
-    );
+    commandOutput.result({
+      saved: outPath,
+      ...(lastAudioUrl ? { audio_url: lastAudioUrl } : {}),
+      model: body.model,
+      voice: body.input.voice,
+    });
   }
 }

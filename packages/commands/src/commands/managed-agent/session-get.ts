@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef } from "bailian-cli-core";
 import { getSession } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -30,27 +29,32 @@ export default defineCommand({
   exampleArgs: ["--session-id sess_abc123"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const { flags } = ctx;
+
     const file = flags.file ?? "agents.yaml";
 
     const session = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         return getSession(runtime, flags.sessionId, "bailian");
       }),
     );
 
-    if (format === "json") {
-      emitResult(session, format);
-      return;
-    }
-    emitBare(`  ID:          ${session.id}`);
-    emitBare(`  Agent:       ${session.agent_id}`);
-    emitBare(`  Environment: ${session.environment_id}`);
-    emitBare(`  Status:      ${session.status}`);
-    if (session.title) emitBare(`  Title:       ${session.title}`);
-    emitBare(`  Created:     ${session.created_at}`);
-    emitBare(`  Updated:     ${session.updated_at}`);
+    ctx.output.result(session, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              lines.push(`  ID:          ${session.id}`);
+              lines.push(`  Agent:       ${session.agent_id}`);
+              lines.push(`  Environment: ${session.environment_id}`);
+              lines.push(`  Status:      ${session.status}`);
+              if (session.title) lines.push(`  Title:       ${session.title}`);
+              lines.push(`  Created:     ${session.created_at}`);
+              lines.push(`  Updated:     ${session.updated_at}`);
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
   },
 });

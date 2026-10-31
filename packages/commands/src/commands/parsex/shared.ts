@@ -5,7 +5,6 @@ import {
   UsageError,
   parsexBaseUrl,
   parsexEndpoint,
-  detectOutputFormat,
   submitParsexTask,
   type CommandContext,
   type FlagsDef,
@@ -14,7 +13,6 @@ import {
   type ParsexOssCredentials,
   type ParsexSubmitRequest,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 export { WORKSPACE_FLAG } from "../shared/workspace.ts";
 
 export const PARSEX_NOTE = {
@@ -249,18 +247,16 @@ export function resolveParsexBaseUrl(
 }
 
 export async function runSubmit(
-  ctx: Pick<CommandContext, "client" | "settings"> & { flags: { workspaceId?: string } },
+  ctx: Pick<CommandContext, "client" | "settings" | "output"> & { flags: { workspaceId?: string } },
   operation: ParsexOperation,
   body: ParsexSubmitRequest,
 ): Promise<void> {
   const baseUrl = resolveParsexBaseUrl(ctx);
   const endpoint = parsexEndpoint(baseUrl, operation, "submit");
-  const format = detectOutputFormat(ctx.settings.output);
   if (ctx.settings.dryRun) {
-    emitResult({ endpoint, method: "POST", request: redactParsexRequest(body) }, format);
+    ctx.output.result({ endpoint, method: "POST", request: redactParsexRequest(body) });
     return;
   }
   const response = await submitParsexTask(ctx.client, baseUrl, operation, body);
-  if (ctx.settings.quiet) emitBare(response.data.biz_id);
-  else emitResult(response, format);
+  ctx.output.result(response);
 }

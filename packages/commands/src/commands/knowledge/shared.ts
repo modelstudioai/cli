@@ -4,6 +4,7 @@ import {
   ExitCode,
   ragEndpoint,
   RAG_PATHS,
+  type CommandOutput,
   type Client,
   type FlagsDef,
   type RagIndexJobDoc,
@@ -117,10 +118,11 @@ export function importJobStatusUrl(workspaceId: string, indexId: string, jobId: 
 export async function pollImportJob(
   client: Client,
   settings: Settings,
-  options: { statusUrl: string; intervalSec: number },
+  options: { statusUrl: string; intervalSec: number; output: CommandOutput },
 ): Promise<RagIndexJobStatusResponse> {
   const deadline = Date.now() + settings.timeout * 1000;
-  return poll<RagIndexJobStatusResponse>(client, settings, {
+  return poll<RagIndexJobStatusResponse>(client, {
+    output: options.output,
     url: options.statusUrl,
     load: () => readImportJobPages(client, options.statusUrl, deadline),
     intervalSec: options.intervalSec,

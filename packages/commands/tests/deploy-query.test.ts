@@ -1,3 +1,4 @@
+import { withCommandOutput } from "./output/command-context.ts";
 import { httpTransport } from "bailian-cli-core";
 import {
   BailianError,
@@ -87,17 +88,19 @@ function runCommand(
   client: Client,
   dryRun = false,
 ) {
-  return command.run({
-    identity: {
-      binName: "bl",
-      version: "test",
-      npmPackage: "bailian-cli",
-      clientName: "bailian-cli",
-    },
-    settings: { ...SETTINGS, dryRun },
-    flags,
-    client,
-  } as never);
+  return command.run(
+    withCommandOutput({
+      identity: {
+        binName: "bl",
+        version: "test",
+        npmPackage: "bailian-cli",
+        clientName: "bailian-cli",
+      },
+      settings: { ...SETTINGS, dryRun },
+      flags,
+      client,
+    }) as never,
+  );
 }
 
 function wait(

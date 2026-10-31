@@ -1,5 +1,5 @@
-import { defineCommand, BailianError, ExitCode, detectOutputFormat } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
+import { defineCommand, BailianError, ExitCode } from "bailian-cli-core";
+import { ansi } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 import {
   LIST_API,
@@ -26,15 +26,17 @@ function formatLabel(label: UsageLabel): string {
   return `${label.en}${unitSuffix}`;
 }
 
-function printOverview(
+function renderOverview(
   stat: OverviewStatistic,
   startTime: number,
   endTime: number,
   days: number,
-): void {
+): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
-  process.stdout.write(
+  textChunks.push(
     `${color.dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${color.dim(`(${days} days)`)}\n\n`,
   );
 
@@ -51,25 +53,29 @@ function printOverview(
 
   const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
   for (const [label, value] of rows) {
-    process.stdout.write(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
+    textChunks.push(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
   }
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
-function printModelTable(
+function renderModelTable(
   items: ModelStatisticItem[],
   startTime: number,
   endTime: number,
   days: number,
-): void {
+): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
-  process.stdout.write(
+  textChunks.push(
     `${color.dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${color.dim(`(${days} days)`)}\n\n`,
   );
 
   if (items.length === 0) {
-    process.stdout.write("No usage data found.\n");
-    return;
+    textChunks.push("No usage data found.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   const usageKeys = new Set<string>();
@@ -112,15 +118,17 @@ function printModelTable(
   const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => color.dim("─".repeat(width))).join("──");
 
-  process.stdout.write(headerLine + "\n");
-  process.stdout.write(separator + "\n");
+  textChunks.push(headerLine + "\n");
+  textChunks.push(separator + "\n");
 
   for (const row of rows) {
     const cells = row.map((cell, col) => padEnd(cell, widths[col]));
-    process.stdout.write(cells.join("  ") + "\n");
+    textChunks.push(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(color.dim(`\nTotal: ${items.length} models`) + "\n");
+  textChunks.push(color.dim(`\nTotal: ${items.length} models`) + "\n");
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export default defineCommand({
@@ -164,7 +172,7 @@ export default defineCommand({
     const modelFlag = flags.model || undefined;
     const daysFlag = Number(flags.days) || 7;
     const typeFlag = flags.type || undefined;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const workspaceId = requireWorkspaceId(settings, identity.binName);
 
@@ -194,10 +202,10 @@ export default defineCommand({
       if (typeFlag) baseReqDTO.obsModelType = typeFlag;
 
       if (settings.dryRun) {
-        emitResult(
-          { api: LIST_API, data: { reqDTO: { ...baseReqDTO, model: models.join(",") } } },
-          format,
-        );
+        ctx.output.result({
+          api: LIST_API,
+          data: { reqDTO: { ...baseReqDTO, model: models.join(",") } },
+        });
         return;
       }
 
@@ -212,29 +220,26 @@ export default defineCommand({
         allItems.push(...listData.list);
       }
 
-      if (format === "json") {
-        const items = allItems.map((item) => {
-          const usage = resolveUsageMap(item);
-          const clean: Record<string, unknown> = {
-            model: item.model,
-            successfulCalls: item.callSuccessCount ?? 0,
-          };
-          for (const [key, val] of Object.entries(usage)) {
-            clean[key] = val;
-          }
-          return clean;
-        });
-        emitResult(
-          {
-            period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
-            items,
-          },
-          format,
-        );
-        return;
-      }
-
-      printModelTable(allItems, startTime, endTime, daysFlag);
+      const items = allItems.map((item) => {
+        const usage = resolveUsageMap(item);
+        const clean: Record<string, unknown> = {
+          model: item.model,
+          successfulCalls: item.callSuccessCount ?? 0,
+        };
+        for (const [key, val] of Object.entries(usage)) {
+          clean[key] = val;
+        }
+        return clean;
+      });
+      ctx.output.result(
+        {
+          period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
+          items,
+        },
+        format === "text"
+          ? { text: renderModelTable(allItems, startTime, endTime, daysFlag) }
+          : undefined,
+      );
     } else {
       const reqDTO: Record<string, unknown> = {
         startTime,
@@ -245,7 +250,7 @@ export default defineCommand({
       if (typeFlag) reqDTO.obsModelType = typeFlag;
 
       if (settings.dryRun) {
-        emitResult({ api: OVERVIEW_API, data: { reqDTO } }, format);
+        ctx.output.result({ api: OVERVIEW_API, data: { reqDTO } });
         return;
       }
 
@@ -256,41 +261,33 @@ export default defineCommand({
 
       const stat = extractOverviewData(result);
 
-      if (format === "json") {
-        if (!stat) {
-          emitResult(
-            {
-              period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
-              modelsCalled: 0,
-              successfulCalls: 0,
-            },
-            format,
-          );
-          return;
-        }
-        emitResult(
-          {
-            period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
-            modelsCalled: stat.modelCount ?? 0,
-            successfulCalls: stat.callSuccessCount ?? 0,
-            usages: (stat.usages ?? []).map((u) => ({
-              key: u.key,
-              value: u.value,
-              unit: u.unit,
-              label: USAGE_KEY_LABELS[u.key]?.en ?? u.key,
-            })),
-          },
-          format,
-        );
-        return;
-      }
-
-      if (!stat) {
-        process.stdout.write("No usage data found.\n");
-        return;
-      }
-
-      printOverview(stat, startTime, endTime, daysFlag);
+      ctx.output.result(
+        {
+          period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
+          modelsCalled: stat?.modelCount ?? 0,
+          successfulCalls: stat?.callSuccessCount ?? 0,
+          ...(stat
+            ? {
+                usages: (stat.usages ?? []).map((usage) => ({
+                  key: usage.key,
+                  value: usage.value,
+                  unit: usage.unit,
+                  label: USAGE_KEY_LABELS[usage.key]?.en ?? usage.key,
+                })),
+              }
+            : {}),
+        },
+        format === "text"
+          ? {
+              text: stat
+                ? renderOverview(stat, startTime, endTime, daysFlag)
+                : ctx.localize({
+                    "en-US": "No usage data found.",
+                    "zh-CN": "未找到用量数据。",
+                  }),
+            }
+          : undefined,
+      );
     }
   },
 });

@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef } from "bailian-cli-core";
 import { CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { launchManagedAgentPlayground } from "./_engine/playground-launcher.ts";
 
@@ -65,19 +64,18 @@ export const managedAgentPlayground = defineCommand({
     const file = ctx.flags.file ?? "agents.yaml";
     const port = ctx.flags.port ?? 4848;
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          would_launch: "playground",
-          config_file: file,
-          agent: ctx.flags.agent,
-          port,
-          open_browser: !ctx.flags.noOpen,
-        },
-        detectOutputFormat(ctx.settings.output),
-      );
+      ctx.output.result({
+        would_launch: "playground",
+        config_file: file,
+        agent: ctx.flags.agent,
+        port,
+        open_browser: !ctx.flags.noOpen,
+      });
       return;
     }
     await launchManagedAgentPlayground({
+      output: ctx.output,
+      localize: ctx.localize,
       file,
       agent: ctx.flags.agent,
       port,

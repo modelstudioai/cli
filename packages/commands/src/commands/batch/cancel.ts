@@ -1,5 +1,4 @@
 import { defineCommand, cancelBatch } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { BATCH_ID_FLAGS, DRY_RUN_NOTE } from "./shared.ts";
 export default defineCommand({
   description: { "en-US": "Request cancellation of a Batch task", "zh-CN": "请求取消 Batch 任务" },
@@ -18,11 +17,11 @@ export default defineCommand({
   ],
   async run(ctx) {
     if (ctx.settings.dryRun) {
-      emitResult({ action: "batch.cancel", batch_id: ctx.flags.batchId }, "json");
+      const preview = { action: "batch.cancel", batch_id: ctx.flags.batchId };
+      ctx.output.result(preview, { text: JSON.stringify(preview, null, 2) });
       return;
     }
     const job = await cancelBatch(ctx.client, ctx.flags.batchId);
-    if (ctx.settings.quiet) emitBare(job.id);
-    else emitResult(job, ctx.settings.output === "text" ? "text" : "json");
+    ctx.output.result(job);
   },
 });

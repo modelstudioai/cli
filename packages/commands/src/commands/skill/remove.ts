@@ -11,7 +11,7 @@ import {
   unlinkSkillFromAgents,
   writeSkillLock,
 } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 import { join } from "node:path";
 
 interface RemoveOutcome {
@@ -35,6 +35,7 @@ export default defineCommand({
     "zh-CN": "移除本地已安装的 Skill（不修改 Registry）",
   },
   auth: "none",
+  defaultOutput: "json",
   usageArgs: "--name <all|name,...>",
   flags: {
     name: {
@@ -50,14 +51,20 @@ export default defineCommand({
   exampleArgs: ["--name spark-video", "--name all"],
   async run(ctx) {
     // Purely local operation: no remote access, works offline
-    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     const requested = parseSkillNames(ctx.flags.name, false);
     const lock = readSkillLock();
     const names = requested === "all" ? Object.keys(lock.skills) : requested;
 
     if (names.length === 0) {
-      emitResult({ skills: [] }, format);
-      if (format === "text") emitBare("No skills installed locally; nothing to remove.");
+      ctx.output.result(
+        { skills: [] },
+        {
+          text: ctx.localize({
+            "en-US": "No skills installed locally; nothing to remove.",
+            "zh-CN": "本地未安装 Skill，无需移除。",
+          }),
+        },
+      );
       return;
     }
 
@@ -85,7 +92,7 @@ export default defineCommand({
         };
       });
 
-      emitResult({ action: "skill.remove", skills: results }, format);
+      ctx.output.result({ action: "skill.remove", skills: results });
 
       const failed = results.filter((result) => result.status === "failed");
       if (failed.length > 0) {
@@ -127,20 +134,20 @@ export default defineCommand({
     }
     writeSkillLock(lock);
 
-    if (format === "json") {
-      emitResult({ skills: results }, format);
-    } else {
-      const rows = results.map((result) => [
-        result.name,
-        result.status,
-        result.status === "removed"
-          ? `reclaimed ${result.removedLinks} agent link(s)`
-          : (result.reason ?? "-"),
-      ]);
-      for (const line of formatTable(["NAME", "STATUS", "DETAIL"], rows)) {
-        emitBare(line);
-      }
-    }
+    const rows = results.map((result) => [
+      result.name,
+      result.status,
+      result.status === "removed"
+        ? ctx.localize({
+            "en-US": `reclaimed ${result.removedLinks} agent link(s)`,
+            "zh-CN": `已回收 ${result.removedLinks} 个 Agent 链接`,
+          })
+        : (result.reason ?? "-"),
+    ]);
+    ctx.output.result(
+      { skills: results },
+      { text: formatTable(["NAME", "STATUS", "DETAIL"], rows).join("\n") },
+    );
 
     const failed = results.filter((result) => result.status === "failed");
     if (failed.length > 0) {

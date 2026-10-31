@@ -5,12 +5,10 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   resolveWorkspaceId,
   WORKSPACE_FLAG,
@@ -158,7 +156,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const parserOptions = { parser: "AUTO_SELECT", ...readParserOptions(flags, ctx.localize) };
 
     // Expand directories into individual file paths; unsupported extensions are
@@ -186,7 +184,14 @@ export default defineCommand({
     // file problems early); exceeding a soft limit only warns
     const checkedFiles = expandedFiles.map((filePath) => {
       const checked = checkUploadFile(filePath, ctx.localize);
-      if (checked.warning) process.stderr.write(`Warning: ${checked.warning}\n`);
+      if (checked.warning)
+        ctx.output.warning({
+          code: "KNOWLEDGE_UPLOAD_SIZE_WARNING",
+          message: checked.warning,
+          ...(format === "json"
+            ? { details: { file: filePath, size_bytes: checked.sizeBytes } }
+            : {}),
+        });
       return { filePath, sizeBytes: checked.sizeBytes };
     });
 
@@ -235,7 +240,7 @@ export default defineCommand({
           } as unknown,
         });
       }
-      emitResult({ steps, skipped }, format);
+      ctx.output.result({ steps, skipped });
       return;
     }
 
@@ -289,6 +294,7 @@ export default defineCommand({
         ingestionId = job.data?.ingestionId;
         if (flags.wait && ingestionId) {
           const statusResponse = await pollImportJob(ctx.client, settings, {
+            output: ctx.output,
             statusUrl: importJobStatusUrl(workspaceId, flags.indexId, ingestionId).toString(),
             intervalSec: flags.pollInterval ?? 5,
           });
@@ -310,40 +316,51 @@ export default defineCommand({
       }
     }
 
-    if (settings.quiet) {
-      for (const item of uploaded) emitBare(item.fileId);
-      return;
-    }
+    // This orchestration has a stable aggregate result rather than one raw response.
+    const result = {
+      files: uploaded.map((item) => ({ path: item.path, fileId: item.fileId })),
+      skipped,
+      ...(flags.indexId ? { index_id: flags.indexId } : {}),
+      ...(ingestionId ? { ingestion_id: ingestionId } : {}),
+      ...(finalStatus ? { final_status: finalStatus } : {}),
+    };
+    let text: string | undefined;
     if (format === "text") {
-      for (const item of uploaded) {
-        emitBare(`${basename(item.path)}  ${item.fileId}  registered`);
-      }
-      if (ingestionId) emitBare(`job: ${ingestionId}`);
-      if (finalStatus) emitBare(`status: ${finalStatus}`);
-      // Summary line: always show counts; list skipped files only with --verbose
-      const summaryParts = [`Uploaded ${uploaded.length} file${uploaded.length !== 1 ? "s" : ""}`];
-      if (skipped.length > 0) {
-        summaryParts.push(`skipped ${skipped.length} unsupported`);
-      }
-      emitBare(`\n${summaryParts.join(", ")}.`);
+      const lines = uploaded.map((item) =>
+        ctx.localize({
+          "en-US": `${basename(item.path)}  ${item.fileId}  registered`,
+          "zh-CN": `${basename(item.path)}  ${item.fileId}  已登记`,
+        }),
+      );
+      if (ingestionId)
+        lines.push(
+          ctx.localize({ "en-US": `job: ${ingestionId}`, "zh-CN": `任务: ${ingestionId}` }),
+        );
+      if (finalStatus)
+        lines.push(
+          ctx.localize({ "en-US": `status: ${finalStatus}`, "zh-CN": `状态: ${finalStatus}` }),
+        );
+      const summaryParts = [
+        ctx.localize({
+          "en-US": `Uploaded ${uploaded.length} file${uploaded.length !== 1 ? "s" : ""}`,
+          "zh-CN": `已上传 ${uploaded.length} 个文件`,
+        }),
+      ];
+      if (skipped.length > 0)
+        summaryParts.push(
+          ctx.localize({
+            "en-US": `skipped ${skipped.length} unsupported`,
+            "zh-CN": `跳过 ${skipped.length} 个不支持的文件`,
+          }),
+        );
+      lines.push(`\n${summaryParts.join(", ")}.`);
+      // Preserve the established verbose text projection; JSON always retains all skipped paths.
       if (settings.verbose && skipped.length > 0) {
-        emitBare("Skipped files:");
-        for (const skippedPath of skipped) {
-          emitBare(`  ${basename(skippedPath)}`);
-        }
+        lines.push(ctx.localize({ "en-US": "Skipped files:", "zh-CN": "已跳过文件:" }));
+        for (const skippedPath of skipped) lines.push(`  ${basename(skippedPath)}`);
       }
-      return;
+      text = lines.join("\n");
     }
-    // An orchestration command has no single response to pass through — emit a custom stable shape
-    emitResult(
-      {
-        files: uploaded.map((item) => ({ path: item.path, fileId: item.fileId })),
-        skipped,
-        ...(flags.indexId ? { index_id: flags.indexId } : {}),
-        ...(ingestionId ? { ingestion_id: ingestionId } : {}),
-        ...(finalStatus ? { final_status: finalStatus } : {}),
-      },
-      format,
-    );
+    ctx.output.result(result, text === undefined ? undefined : { text });
   },
 });

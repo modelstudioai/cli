@@ -122,7 +122,11 @@ function adaptCommandPack(
         notes: command.notes,
         flags: command.flags,
         validate: command.validate,
-        run: (ctx) => {
+        run: async (ctx) => {
+          let hasResult = false;
+          let invalidResult = false;
+          let result: unknown;
+          const text: string[] = [];
           const packContext = {
             identity: ctx.identity,
             settings: ctx.settings,
@@ -130,17 +134,40 @@ function adaptCommandPack(
             client: ctx.client,
             output: {
               result(data: unknown, options?: { text?: string }) {
+                if (hasResult) {
+                  invalidResult = true;
+                  throw new BailianError(
+                    ctx.localize({
+                      "en-US": "A Command Pack submitted more than one final result.",
+                      "zh-CN": "Command Pack 提交了多个最终结果。",
+                    }),
+                  );
+                }
+                // Snapshot JSON at submission time, matching the original API1
+                // serialization boundary even though final output is deferred.
+                const serialized =
+                  ctx.settings.output === "json" ? formatOutput(data, "json") : undefined;
+                if (ctx.settings.output === "json" && typeof serialized !== "string") {
+                  throw new BailianError(
+                    ctx.localize({
+                      "en-US": "The final result is not serializable.",
+                      "zh-CN": "最终结果无法序列化。",
+                    }),
+                  );
+                }
                 const rendered =
-                  ctx.settings.output === "text" && options?.text !== undefined
-                    ? options.text
-                    : formatOutput(data, ctx.settings.output);
-                process.stdout.write(`${rendered}\n`);
+                  ctx.settings.output === "text"
+                    ? (options?.text ?? formatOutput(data, "text"))
+                    : "";
+                hasResult = true;
+                result = serialized === undefined ? data : JSON.parse(serialized);
+                text.push(`${rendered}\n`);
               },
               line(value: string) {
-                process.stdout.write(`${value}\n`);
+                text.push(`${value}\n`);
               },
               write(chunk: string) {
-                process.stdout.write(chunk);
+                text.push(chunk);
               },
             },
             errors: {
@@ -186,7 +213,18 @@ function adaptCommandPack(
               },
             },
           };
-          return command.run(packContext);
+          try {
+            await command.run(packContext);
+          } finally {
+            // An explicitly submitted report survives a later failure. Duplicate
+            // submissions are invalid and must never leak partial stdout.
+            if (!invalidResult && (hasResult || text.length > 0)) {
+              const rendered = text.join("");
+              ctx.output.result(hasResult ? result : rendered, {
+                text: rendered.endsWith("\n") ? rendered.slice(0, -1) : rendered,
+              });
+            }
+          }
         },
       } satisfies AnyCommand,
     ]),

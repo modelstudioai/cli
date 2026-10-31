@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { BailianError, ExitCode, type Settings } from "bailian-cli-core";
+import { BailianError, ExitCode, type CommandOutput, type Settings } from "bailian-cli-core";
 import type { InitOptions, InitPrepared } from "./init-prepare.ts";
 import type { InitState } from "./init-state.ts";
 import { INIT_SAMPLE, matchesInitSample } from "./init-sample.ts";
@@ -33,6 +33,7 @@ export interface InitRunOptions extends InitOptions {
   prepared: InitPrepared;
   settings: Settings;
   pollInterval: number;
+  output: CommandOutput;
   report: (resource: InitResource) => void;
 }
 
@@ -141,6 +142,7 @@ export async function runKnowledgeInit(options: InitRunOptions) {
     // reuse, verify current retrieval rather than depending on old job retention.
     if (state.ingestionId && !state.agentId) {
       const response = await pollImportJob(client, settings, {
+        output: options.output,
         statusUrl: importJobStatusUrl(workspaceId, state.indexId, state.ingestionId).toString(),
         intervalSec: options.pollInterval,
       });

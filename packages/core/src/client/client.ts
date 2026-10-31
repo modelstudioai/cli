@@ -15,14 +15,15 @@ import {
 import { SdkMcpAdapter } from "./mcp-sdk.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
 import { refreshAccessToken } from "../auth/refresh-token.ts";
+import { debugRequest, debugResponse } from "./diagnostics.ts";
 import { getApiKeyLoginKind } from "../config/profile-presets.ts";
-import { maskToken } from "../utils/token.ts";
 import { trackingHeaders } from "./headers.ts";
 
 /** Client 的结构化依赖:身份 + 有效配置 + 各域凭证(按命令的 auth 注入)。 */
 export interface ClientDeps {
   identity: Identity;
   settings: Settings;
+  debug?: HttpDeps["debug"];
   /** Model 域 base URL(凭证无关链解析,resolveModelBaseUrl;有 apiCred 时两者一致)。 */
   baseUrl: string;
   /** True only when the shared URL chain used its default; explicit origins win over service defaults. */
@@ -75,7 +76,7 @@ export class Client {
   constructor(private readonly deps: ClientDeps) {}
 
   private get http(): HttpDeps {
-    return { identity: this.deps.identity, settings: this.deps.settings };
+    return { identity: this.deps.identity, settings: this.deps.settings, debug: this.deps.debug };
   }
 
   private requireApi(): ApiKeyCredential {
@@ -255,12 +256,9 @@ export class Client {
     const gwOpts = { api, data };
     const { timeout } = this.deps.settings;
     try {
-      return (await callConsoleGateway(
-        this.deps.consoleCred,
-        timeout,
-        gwOpts,
-        this.deps.settings,
-      )) as T;
+      return (await callConsoleGateway(this.deps.consoleCred, timeout, gwOpts, {
+        debug: this.deps.debug,
+      })) as T;
     } catch (err) {
       if (
         !(err instanceof BailianError) ||
@@ -279,14 +277,12 @@ export class Client {
           consoleSite: credential.site,
           consoleSwitchAgent: credential.switchAgent,
         },
+        debug: this.deps.debug,
         baseUrl: this.deps.baseUrl,
         validateToken: async (token) => {
-          retryResult = await callConsoleGateway(
-            { ...credential, token },
-            timeout,
-            gwOpts,
-            this.deps.settings,
-          );
+          retryResult = await callConsoleGateway({ ...credential, token }, timeout, gwOpts, {
+            debug: this.deps.debug,
+          });
         },
       });
       if (!newToken) throw err;
@@ -317,16 +313,7 @@ export class Client {
       queryString,
     });
 
-    if (this.deps.settings.verbose) {
-      process.stderr.write(`> ${opts.method} ${endpoint}\n`);
-      process.stderr.write(`> x-acs-action: ${opts.action} (version ${opts.version})\n`);
-      process.stderr.write(`> AK: ${maskToken(cred.accessKeyId)}\n`);
-      if (cred.securityToken) {
-        process.stderr.write(`> STS token: ${maskToken(cred.securityToken)}\n`);
-      }
-      if (queryString) process.stderr.write(`> query: ${queryString}\n`);
-      if (bodyStr) process.stderr.write(`> body: ${bodyStr}\n`);
-    }
+    debugRequest(this.http, opts.method, endpoint, { action: opts.action, version: opts.version });
 
     const timeoutMs = this.deps.settings.timeout * 1000;
     const res = await httpTransport.fetch(endpoint, {
@@ -337,10 +324,7 @@ export class Client {
     });
 
     const rawText = await res.text();
-    if (this.deps.settings.verbose) {
-      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
-      process.stderr.write(`< ${rawText}\n`);
-    }
+    debugResponse(this.http, res);
 
     let data: T;
     try {

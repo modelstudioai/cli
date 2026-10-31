@@ -6,7 +6,7 @@ import {
   listSkillDirsOnDisk,
   readSkillLock,
 } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 
 const DESCRIPTION_MAX = 60;
 
@@ -21,6 +21,7 @@ export default defineCommand({
     "zh-CN": "列出 Registry Skill，并与本地安装结果比较",
   },
   auth: "none",
+  defaultOutput: "json",
   exampleArgs: ["", "--output json"],
   notes: [
     {
@@ -31,25 +32,23 @@ export default defineCommand({
     },
   ],
   async run(ctx) {
-    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     // Three-way reconciliation: live remote index × skill-lock.json (installation facts) × disk
     const index = await fetchSkillsIndex();
     const lock = readSkillLock();
     const rows = computeSkillStatuses(index, lock, listSkillDirsOnDisk());
 
-    if (format === "json") {
-      emitResult(
-        {
-          registry: getSkillRegistryBaseUrl(),
-          ...(index.updatedAt ? { updatedAt: index.updatedAt } : {}),
-          skills: rows,
-        },
-        format,
-      );
-      return;
-    }
+    const payload = {
+      registry: getSkillRegistryBaseUrl(),
+      ...(index.updatedAt ? { updatedAt: index.updatedAt } : {}),
+      skills: rows,
+    };
     if (rows.length === 0) {
-      emitBare("Skill registry is empty and no skills are installed locally.");
+      ctx.output.result(payload, {
+        text: ctx.localize({
+          "en-US": "Skill registry is empty and no skills are installed locally.",
+          "zh-CN": "Skill Registry 为空，且本地未安装 Skill。",
+        }),
+      });
       return;
     }
     const table = rows.map((row) => [
@@ -58,8 +57,8 @@ export default defineCommand({
       row.publishedAt ? row.publishedAt.slice(0, 19).replace("T", " ") : "-",
       truncate(row.description),
     ]);
-    for (const line of formatTable(["NAME", "STATUS", "UPDATEDAT", "DESCRIPTION"], table)) {
-      emitBare(line);
-    }
+    ctx.output.result(payload, {
+      text: formatTable(["NAME", "STATUS", "UPDATEDAT", "DESCRIPTION"], table).join("\n"),
+    });
   },
 });

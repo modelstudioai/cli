@@ -1,5 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
-import { ansi, emitResult, displayWidth, padEnd } from "bailian-cli-runtime";
+import { ansi, displayWidth, padEnd } from "bailian-cli-runtime";
 import {
   defineTelemetryCommand,
   telemetryGatewayPreview,
@@ -74,65 +73,65 @@ export default defineTelemetryCommand({
   ],
   async run(ctx) {
     const { settings, identity } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          apis: [
-            SLR_STATUS_API,
-            TELEMETRY_SERVICE_STATUS_API,
-            "zeldaEasy.bailian-telemetry.telemetryGroup.getTelemetryGroupStatus",
-          ],
-          data: {
-            reqDTO: {
-              workspaceId: settings.workspaceId,
-              slrType: "Log",
-              serviceTypes: Object.values(LOG_SERVICE_TYPES),
-              telemetryTypes: ["AuditLog", "InferenceLog"],
-            },
+      ctx.output.result({
+        apis: [
+          SLR_STATUS_API,
+          TELEMETRY_SERVICE_STATUS_API,
+          "zeldaEasy.bailian-telemetry.telemetryGroup.getTelemetryGroupStatus",
+        ],
+        data: {
+          reqDTO: {
+            workspaceId: settings.workspaceId,
+            slrType: "Log",
+            serviceTypes: Object.values(LOG_SERVICE_TYPES),
+            telemetryTypes: ["AuditLog", "InferenceLog"],
           },
-          ...telemetryGatewayPreview(settings),
         },
-        format,
-      );
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
     ensureTelemetryRegionSupported(settings);
     const status = await fetchLogServiceStatus(ctx.client, settings.workspaceId);
 
-    if (format === "json") {
-      emitResult(status, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    const color = ansi(process.stdout);
-    const rows: [string, string][] = [
-      ["SLS Authorization (SLR)", status.slrAuthorized ? "Authorized" : "Not authorized"],
-      ["Audit Log (service)", statusText(status.audit)],
-      ["Audit Log (switch)", switchText(status.auditSwitch)],
-      ["Inference Log (service)", statusText(status.inference)],
-      ["Inference Log (switch)", switchText(status.inferenceSwitch)],
-    ];
-    const instanceUrl = status.inference.instanceInfo?.instanceUrl;
-    if (instanceUrl) rows.push(["SLS Instance URL", instanceUrl]);
+      const color = ansi(process.stdout);
+      const rows: [string, string][] = [
+        ["SLS Authorization (SLR)", status.slrAuthorized ? "Authorized" : "Not authorized"],
+        ["Audit Log (service)", statusText(status.audit)],
+        ["Audit Log (switch)", switchText(status.auditSwitch)],
+        ["Inference Log (service)", statusText(status.inference)],
+        ["Inference Log (switch)", switchText(status.inferenceSwitch)],
+      ];
+      const instanceUrl = status.inference.instanceInfo?.instanceUrl;
+      if (instanceUrl) rows.push(["SLS Instance URL", instanceUrl]);
 
-    const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
-    for (const [label, value] of rows) {
-      process.stdout.write(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
-    }
+      const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
+      for (const [label, value] of rows) {
+        textChunks.push(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
+      }
 
-    if (status.auditSwitch !== true) {
-      process.stdout.write(
-        color.dim(`\nRun \`${identity.binName} log audit enable\` to enable audit log delivery.\n`),
-      );
-    } else if (status.inferenceSwitch !== true) {
-      process.stdout.write(
-        color.dim(
-          `\nRun \`${identity.binName} log inference enable\` to enable inference log delivery.\n`,
-        ),
-      );
+      if (status.auditSwitch !== true) {
+        textChunks.push(
+          color.dim(`\nRun \`${identity.binName} log audit enable\` to enable audit log delivery.`),
+        );
+      } else if (status.inferenceSwitch !== true) {
+        textChunks.push(
+          color.dim(
+            `\nRun \`${identity.binName} log inference enable\` to enable inference log delivery.`,
+          ),
+        );
+      }
+
+      text = textChunks.join("").replace(/\n$/, "");
     }
+    ctx.output.result(status, { text });
   },
 });

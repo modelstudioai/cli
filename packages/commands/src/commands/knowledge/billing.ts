@@ -24,7 +24,7 @@ export const knowledgeCreationRisk: CommandRisk = {
   },
 };
 
-type NoticeContext = Pick<CommandContext, "localize" | "settings">;
+type NoticeContext = Pick<CommandContext, "localize" | "settings" | "output">;
 
 export function localizedKnowledgeBillingNotice(context: NoticeContext) {
   return { ...knowledgeBillingNotice, message: context.localize(knowledgeBillingNotice.message) };
@@ -32,11 +32,11 @@ export function localizedKnowledgeBillingNotice(context: NoticeContext) {
 
 export function writeKnowledgeBillingNotice(context: NoticeContext): void {
   const notice = localizedKnowledgeBillingNotice(context);
-  process.stderr.write(
-    context.settings.output === "json"
-      ? `${JSON.stringify({ warning: notice })}\n\n`
-      : `${notice.message}\n${notice.url}\n`,
-  );
+  context.output.warning({
+    code: notice.code,
+    message: `${notice.message}\n${notice.url}`,
+    details: { remainingAllowance: notice.remainingAllowance, url: notice.url },
+  });
 }
 
 /** Emit immediately after creation, before any fallible follow-up such as waiting for import. */
@@ -70,18 +70,18 @@ export function reportCreatedKnowledgeBase(
     "en-US": `Knowledge base ${indexId} was created and remains billable even if a later step fails. To stop its running-time charges, delete this knowledge base after confirming that its data is no longer needed.`,
     "zh-CN": `知识库 ${indexId} 已创建，后续步骤失败也不会停止其计费。如不再需要其中数据，请确认后删除该知识库以停止规格计费。`,
   });
-  process.stderr.write(
-    context.settings.output === "json"
-      ? `${JSON.stringify({ warning: { code: "KNOWLEDGE_RESOURCE_CREATED", message, resource } })}\n\n`
-      : `${message}\n`,
-  );
+  context.output.warning({
+    code: "KNOWLEDGE_RESOURCE_CREATED",
+    message,
+    details: { resource },
+  });
   if (command && context.settings.output !== "json") {
     const instruction = [command.bin, ...command.path, ...command.args]
       .map((word) =>
         /^[a-zA-Z0-9_./:@=-]+$/.test(word) ? word : `'${word.replaceAll("'", "'\\''")}'`,
       )
       .join(" ");
-    process.stderr.write(`${instruction}\n`);
+    context.output.info(instruction);
   }
   return resource;
 }

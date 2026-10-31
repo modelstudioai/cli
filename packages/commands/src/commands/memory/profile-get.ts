@@ -2,11 +2,9 @@ import {
   defineCommand,
   memoryEndpoint,
   userProfilePath,
-  detectOutputFormat,
   type FlagsDef,
   type UserProfileResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
 import {
   MEMORY_LIBRARY_FLAG,
@@ -62,7 +60,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), userProfilePath(flags.schemaId)) +
       buildQuery({
@@ -71,7 +69,7 @@ export default defineCommand({
       });
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+      ctx.output.result({ endpoint: url, method: "GET" });
       return;
     }
 
@@ -80,26 +78,32 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (settings.quiet || format === "text") {
+    ctx.output.result(response, format === "text" ? { text: renderText0() } : undefined);
+    function renderText0(): string {
+      const lines: string[] = [];
       const attributes = response.profile?.attributes ?? [];
       if (attributes.length === 0) {
-        emitBare("No profile data found.");
+        lines.push(
+          ctx.localize({ "en-US": "No profile data found.", "zh-CN": "未找到画像数据。" }),
+        );
       } else {
         for (const attribute of attributes) {
           const valueItems = attribute.value_items ?? [];
           if (valueItems.length > 0) {
             for (const item of valueItems) {
-              emitBare(
-                `${attribute.name}: ${item.value ?? "(empty)"} (item ${item.item_id ?? "-"}, ${item.status ?? "-"})`,
+              lines.push(
+                `${attribute.name}: ${item.value ?? ctx.localize({ "en-US": "(empty)", "zh-CN": "（空）" })} (item ${item.item_id ?? "-"}, ${item.status ?? "-"})`,
               );
             }
           } else {
-            emitBare(`${attribute.name}: ${attribute.value ?? "(empty)"}`);
+            lines.push(
+              `${attribute.name}: ${attribute.value ?? ctx.localize({ "en-US": "(empty)", "zh-CN": "（空）" })}`,
+            );
           }
         }
       }
-    } else {
-      emitResult(response, format);
+
+      return lines.join("\n");
     }
   },
 });

@@ -5,7 +5,6 @@ import {
   type FineTuneLogEntry,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 
 /**
  * Render a single log entry as a single line (used for search matching:
@@ -103,6 +102,7 @@ const LOGS_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Fetch training logs for a fine-tune job",
     "zh-CN": "获取微调任务的训练日志",
@@ -127,16 +127,17 @@ export default defineCommand({
     const tail = flags.tail;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "finetune.logs",
-          job_id: jobId,
-          page: pageNo,
-          page_size: pageSize,
-          search,
-          tail,
-        },
-        "json",
+      const resultData1 = {
+        action: "finetune.logs",
+        job_id: jobId,
+        page: pageNo,
+        page_size: pageSize,
+        search,
+        tail,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -161,22 +162,26 @@ export default defineCommand({
       const result =
         tailApplied !== undefined ? scanned.slice(scanned.length - tailApplied) : scanned;
 
-      emitResult(
-        {
-          ...(matched !== undefined ? { matched } : {}),
-          scanned: entries.length,
-          total: total || entries.length,
-          ...(search ? { search } : {}),
-          ...(tailApplied !== undefined ? { tail: tailApplied } : {}),
-          logs: result,
-        },
-        "json",
+      const resultData2 = {
+        ...(matched !== undefined ? { matched } : {}),
+        scanned: entries.length,
+        total: total || entries.length,
+        ...(search ? { search } : {}),
+        ...(tailApplied !== undefined ? { tail: tailApplied } : {}),
+        logs: result,
+      };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
       );
       return;
     }
 
     // Default: single page, verbatim response.
     const response = await getFineTuneLogs(ctx.client, jobId, { pageNo, pageSize });
-    emitResult(response, "json");
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

@@ -2,11 +2,9 @@ import {
   defineCommand,
   memoryEndpoint,
   memoryNodePath,
-  detectOutputFormat,
   type FlagsDef,
   type MemoryNodeUpdateRequest,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
@@ -112,11 +110,11 @@ export default defineCommand({
     }
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url = memoryEndpoint(resolveWorkspaceId(ctx), memoryNodePath(nodeId));
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "PATCH", request: body }, format);
+      ctx.output.result({ endpoint: url, method: "PATCH", request: body });
       return;
     }
 
@@ -126,10 +124,16 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Memory node ${nodeId} updated.`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Memory node ${nodeId} updated.`,
+              "zh-CN": `记忆节点 ${nodeId} 已更新。`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

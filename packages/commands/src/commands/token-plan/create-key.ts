@@ -1,10 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  type FlagsDef,
-  type ParsedFlags,
-} from "bailian-cli-core";
-import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef, type ParsedFlags } from "bailian-cli-core";
+import { padEnd } from "bailian-cli-runtime";
 import type { CreateTokenPlanKeyResponse } from "./types.ts";
 import {
   TOKEN_PLAN_COMMON_QUERY_FLAGS,
@@ -53,7 +48,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { identity, settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const workspaceId = requireWorkspaceId(settings, flags, identity.binName);
     const queryParams = buildQueryParams(flags, { accountId: flags.accountId, workspaceId });
@@ -64,7 +59,7 @@ export default defineCommand({
         API_PATH,
         queryParams,
       );
-      emitResult({ endpoint, query }, format);
+      ctx.output.result({ endpoint, query });
       return;
     }
 
@@ -77,11 +72,7 @@ export default defineCommand({
       queryParams,
     });
 
-    if (settings.quiet || format === "text") {
-      emitTextKey(data);
-    } else {
-      emitResult(data, format);
-    }
+    ctx.output.result(data, format === "text" ? { text: renderKey(data) } : undefined);
   },
 });
 
@@ -99,20 +90,23 @@ function buildQueryParams(
   return params;
 }
 
-function emitTextKey(data: CreateTokenPlanKeyResponse): void {
+function renderKey(data: CreateTokenPlanKeyResponse): string {
+  const lines: string[] = [];
+
   const item = data.Data;
   if (!item) {
-    emitBare("API key created.");
-    return;
+    return "API key created.";
   }
 
-  emitBare(`${padEnd("ApiKeyId", 14)} ${item.ApiKeyId ?? "-"}`);
-  emitBare(`${padEnd("MaskedApiKey", 14)} ${item.MaskedApiKey ?? "-"}`);
+  lines.push(`${padEnd("ApiKeyId", 14)} ${item.ApiKeyId ?? "-"}`);
+  lines.push(`${padEnd("MaskedApiKey", 14)} ${item.MaskedApiKey ?? "-"}`);
   if (item.Description) {
-    emitBare(`${padEnd("Description", 14)} ${item.Description}`);
+    lines.push(`${padEnd("Description", 14)} ${item.Description}`);
   }
   if (item.PlainApiKey) {
-    emitBare("");
-    emitBare(`PlainApiKey (shown once): ${item.PlainApiKey}`);
+    lines.push("");
+    lines.push(`PlainApiKey (shown once): ${item.PlainApiKey}`);
   }
+
+  return lines.join("\n");
 }

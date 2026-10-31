@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagAgentListResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, truncateLine, PAGE_FLAGS, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_LIST_FLAGS = {
@@ -85,7 +83,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // agent/list pagination goes in the body
     const body = {
@@ -100,7 +98,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentList);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -110,21 +108,19 @@ export default defineCommand({
       body,
     });
 
-    const rows = response.data?.rows ?? [];
-    if (settings.quiet) {
-      for (const row of rows) emitBare(row.agent_id ?? "");
-      return;
-    }
+    let text: string | undefined;
     if (format === "text") {
+      const rows = response.data?.rows ?? [];
+      const lines: string[] = [];
       if (rows.length === 0) {
-        emitBare("No services found.");
+        lines.push(ctx.localize({ "en-US": "No services found.", "zh-CN": "未找到服务。" }));
       } else {
         for (const row of rows) {
           const kbNames = (row.pipeline_list ?? [])
             .map((pipeline) => pipeline.pipeline_name)
             .filter(Boolean)
             .join(",");
-          emitBare(
+          lines.push(
             truncateLine(
               [
                 row.agent_id,
@@ -139,15 +135,27 @@ export default defineCommand({
           );
         }
       }
-      emitBare(`total: ${response.data?.total_count ?? rows.length}`);
-      // Connect finding an ID with using it (capability wording, no hardcoded product path)
-      emitBare(
-        flags.scene === "search"
-          ? "Use an agent_id above with the knowledge search command."
-          : "Use an agent_id above with the knowledge chat command.",
+      lines.push(
+        ctx.localize({
+          "en-US": `total: ${response.data?.total_count ?? rows.length}`,
+          "zh-CN": `总数: ${response.data?.total_count ?? rows.length}`,
+        }),
       );
-    } else {
-      emitResult(response, format);
+      lines.push(
+        ctx.localize(
+          flags.scene === "search"
+            ? {
+                "en-US": "Use an agent_id above with the knowledge search command.",
+                "zh-CN": "将上述 agent_id 用于知识库搜索命令。",
+              }
+            : {
+                "en-US": "Use an agent_id above with the knowledge chat command.",
+                "zh-CN": "将上述 agent_id 用于知识库对话命令。",
+              },
+        ),
+      );
+      text = lines.join("\n");
     }
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

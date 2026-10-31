@@ -2,11 +2,9 @@ import {
   defineCommand,
   memoryEndpoint,
   memorySkillExportPath,
-  detectOutputFormat,
   type FlagsDef,
   type MemorySkillExportResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { MEMORY_WORKSPACE_NOTE, WORKSPACE_FLAG, resolveWorkspaceId } from "./shared.ts";
 
 const SKILL_EXPORT_FLAGS = {
@@ -43,11 +41,11 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url = memoryEndpoint(resolveWorkspaceId(ctx), memorySkillExportPath(flags.nodeId));
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+      ctx.output.result({ endpoint: url, method: "GET" });
       return;
     }
 
@@ -56,15 +54,18 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (settings.quiet || format === "text") {
-      const node = response.memory_node;
-      if (!node) {
-        emitBare("Skill memory node not found.");
-        return;
-      }
-      emitBare(node.content);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: response.memory_node
+              ? String(response.memory_node.content)
+              : ctx.localize({
+                  "en-US": "Skill memory node not found.",
+                  "zh-CN": "未找到技能记忆节点。",
+                }),
+          }
+        : undefined,
+    );
   },
 });

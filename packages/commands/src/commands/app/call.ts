@@ -1,14 +1,13 @@
+import { parseModelStreamEvent } from "../shared/model-stream.ts";
 import {
   defineCommand,
   UsageError,
   appCompletionPath,
   parseSSE,
-  detectOutputFormat,
   type AppCompletionRequest,
   type AppStreamChunk,
   type AppCompletionResponse,
 } from "bailian-cli-core";
-import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: {
@@ -123,7 +122,7 @@ export default defineCommand({
     const prompt = flags.prompt;
 
     const shouldStream = flags.stream || process.stdout.isTTY;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body: AppCompletionRequest = {
       input: { prompt },
@@ -173,7 +172,7 @@ export default defineCommand({
     }
 
     if (settings.dryRun) {
-      emitResult({ endpoint: ctx.client.url(appCompletionPath(appId)), request: body }, format);
+      ctx.output.result({ endpoint: ctx.client.url(appCompletionPath(appId)), request: body });
       return;
     }
 
@@ -190,53 +189,52 @@ export default defineCommand({
       let fullText = "";
       let sessionId = "";
       const writesStreamingStdout = format === "text";
-      const stderrColor = ansi(process.stderr);
 
       for await (const event of parseSSE(res)) {
         if (event.data === "[DONE]") break;
-        try {
-          const chunk = JSON.parse(event.data) as AppStreamChunk;
-          const text = chunk.output?.text;
+        const chunk = parseModelStreamEvent(event) as unknown as AppStreamChunk | undefined;
+        if (!chunk) continue;
+        const text = chunk.output?.text;
 
-          if (text) {
-            // incremental_output: text is delta
-            if (writesStreamingStdout) process.stdout.write(text);
-            fullText += text;
-          }
+        if (text) {
+          // incremental_output: text is delta
+          if (writesStreamingStdout) process.stdout.write(text);
+          fullText += text;
+        }
 
-          // Capture session_id for multi-turn
-          if (chunk.output?.session_id) {
-            sessionId = chunk.output.session_id;
-          }
+        // Capture session_id for multi-turn
+        if (chunk.output?.session_id) {
+          sessionId = chunk.output.session_id;
+        }
 
-          // Show thoughts if available
-          if (chunk.output?.thoughts && flags.hasThoughts) {
-            for (const t of chunk.output.thoughts) {
-              if (t.thought)
-                process.stderr.write(`${stderrColor.dim(`[Thinking] ${t.thought}`)}\n`);
-              if (t.action_name)
-                process.stderr.write(
-                  `${stderrColor.dim(`[Action] ${t.action_name}: ${t.action_input || ""}`)}\n`,
-                );
-              if (t.observation)
-                process.stderr.write(`${stderrColor.dim(`[Observation] ${t.observation}`)}\n`);
-            }
+        // Explicit thoughts remain process information, separate from the final result.
+        if (chunk.output?.thoughts && flags.hasThoughts) {
+          for (const thought of chunk.output.thoughts) {
+            if (thought.thought)
+              ctx.output.info({
+                "en-US": `[Thinking] ${thought.thought}`,
+                "zh-CN": `[思考] ${thought.thought}`,
+              });
+            if (thought.action_name)
+              ctx.output.info({
+                "en-US": `[Action] ${thought.action_name}: ${thought.action_input || ""}`,
+                "zh-CN": `[操作] ${thought.action_name}: ${thought.action_input || ""}`,
+              });
+            if (thought.observation)
+              ctx.output.info({
+                "en-US": `[Observation] ${thought.observation}`,
+                "zh-CN": `[观察] ${thought.observation}`,
+              });
           }
-        } catch {
-          // skip unparseable
         }
       }
 
-      // Show session_id for multi-turn conversation
-      if (sessionId && !settings.quiet) {
-        process.stderr.write(`${stderrColor.dim(`Session ID: ${sessionId}`)}\n`);
-      }
-
-      if (format === "json") {
-        emitResult({ text: fullText, session_id: sessionId }, format);
-      } else {
-        process.stdout.write("\n");
-      }
+      if (sessionId)
+        ctx.output.info({ "en-US": `Session ID: ${sessionId}`, "zh-CN": `会话 ID: ${sessionId}` });
+      ctx.output.result(
+        { text: fullText, session_id: sessionId },
+        format === "text" ? { text: "" } : undefined,
+      );
     } else {
       const response = await ctx.client.requestJson<AppCompletionResponse>({
         path: appCompletionPath(appId),
@@ -246,11 +244,7 @@ export default defineCommand({
 
       const text = response.output?.text ?? "";
 
-      if (settings.quiet || format === "text") {
-        emitBare(text);
-      } else {
-        emitResult(response, format);
-      }
+      ctx.output.result(response, format === "text" ? { text } : undefined);
     }
   },
 });

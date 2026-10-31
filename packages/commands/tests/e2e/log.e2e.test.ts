@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import { Client, ExitCode, httpTransport, type AnyCommand, type Settings } from "bailian-cli-core";
+import { createOutputReporter } from "bailian-cli-runtime";
 import auditList from "../../src/commands/log/audit-list.ts";
 import auditGet from "../../src/commands/log/audit-get.ts";
 import auditCount from "../../src/commands/log/audit-count.ts";
@@ -138,13 +139,15 @@ describe("审计与推理日志请求与响应契约", () => {
         switchAgent: settings.consoleSwitchAgent,
       },
     });
+    const localize = (text: string | Record<"en-US" | "zh-CN", string>) =>
+      typeof text === "string" ? text : text[language];
     await command.run({
+      output: createOutputReporter({ settings, localize }).output,
       identity,
       settings,
       flags,
       client,
-      localize: (text: string | Record<"en-US" | "zh-CN", string>) =>
-        typeof text === "string" ? text : text[language],
+      localize,
     } as never);
     return {
       stdout: stdoutChunks.join(""),

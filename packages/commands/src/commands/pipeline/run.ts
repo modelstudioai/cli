@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { defineCommand, type FlagsDef, type ParsedFlags } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import {
+  BailianError,
+  UsageError,
+  defineCommand,
+  type FlagsDef,
+  type ParsedFlags,
+} from "bailian-cli-core";
 import { initPipelineSteps } from "bailian-cli-runtime";
 import { executePipeline, streamPipelineEvents } from "bailian-cli-runtime";
 import type { PipelineLifecycleEvent } from "bailian-cli-runtime";
@@ -41,7 +46,10 @@ const RUN_FLAGS = {
   events: {
     type: "string",
     valueHint: "<format>",
-    description: { "en-US": "Emit lifecycle events: jsonl", "zh-CN": "输出生命周期事件：jsonl" },
+    description: {
+      "en-US": "Emit raw lifecycle events: jsonl (requires text output)",
+      "zh-CN": "输出原始生命周期事件：jsonl（需 text 输出模式）",
+    },
     choices: ["jsonl"] as const,
   },
   stepTimeout: {
@@ -70,7 +78,7 @@ export default defineCommand({
     },
     "--file workflow.json --input-file inputs.json --concurrency 3",
     "--file workflow.yaml --dry-run",
-    "--file workflow.json --events jsonl",
+    "--file workflow.json --output text --events jsonl",
     "--file workflow.yaml --output json",
   ],
   validate: (f) => (f.input && f.inputFile ? "use --input or --input-file, not both" : undefined),
@@ -78,9 +86,22 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const file = flags.file;
 
-    initPipelineSteps();
-
     const eventsFormat = flags.events;
+    if (eventsFormat === "jsonl" && settings.output === "json") {
+      throw new UsageError(
+        ctx.localize({
+          "en-US": "Lifecycle events cannot be combined with JSON result output.",
+          "zh-CN": "生命周期事件不能与 JSON 结果输出组合使用。",
+        }),
+        ctx.localize({
+          "en-US":
+            "Use --output text --events jsonl for the lifecycle stream, or --output json without --events for the final report.",
+          "zh-CN":
+            "使用 --output text --events jsonl 获取生命周期事件流，或使用 --output json 且不指定 --events 获取最终报告。",
+        }),
+      );
+    }
+    initPipelineSteps();
 
     const filePath = resolve(file);
     const pipeline = await loadPipelineFile(filePath);
@@ -89,6 +110,7 @@ export default defineCommand({
 
     if (eventsFormat === "jsonl") {
       for await (const event of streamPipelineEvents(pipeline, runtimeInput, {
+        output: ctx.output,
         concurrency: flags.concurrency,
         basePath,
         dryRun: settings.dryRun,
@@ -100,20 +122,28 @@ export default defineCommand({
     }
 
     const report = await executePipeline(pipeline, runtimeInput, {
+      output: ctx.output,
       concurrency: flags.concurrency,
       basePath,
       dryRun: settings.dryRun,
       timeoutSeconds: flags.stepTimeout,
-      onEvent: settings.verbose ? logEvent : undefined,
+      onEvent: (event) =>
+        ctx.output.debug({
+          code: "PIPELINE_EVENT",
+          message: formatEvent(event),
+          details: event,
+        }),
     });
 
-    if (settings.output === "json") {
-      emitResult(report, "json");
-    } else {
-      printTextReport(report);
+    ctx.output.result(report, { text: formatTextReport(report) });
+    if (report.status === "failed") {
+      throw new BailianError(
+        ctx.localize({
+          "en-US": "Pipeline failed.",
+          "zh-CN": "Pipeline 执行失败。",
+        }),
+      );
     }
-
-    if (report.status === "failed") process.exitCode = 1;
   },
 });
 
@@ -128,17 +158,12 @@ async function resolveRuntimeInput(flags: RunFlags): Promise<Record<string, unkn
   return {};
 }
 
-function logEvent(event: PipelineLifecycleEvent): void {
+function formatEvent(event: PipelineLifecycleEvent): string {
   const prefix = `[${event.type}]`;
   if ("stepCount" in event) {
-    process.stderr.write(`${prefix} ${event.stepCount} step${event.stepCount === 1 ? "" : "s"}\n`);
-    return;
+    return `${prefix} ${event.stepCount} step${event.stepCount === 1 ? "" : "s"}`;
   }
-  if ("step" in event && event.step) {
-    process.stderr.write(`${prefix} ${formatStep(event.step)}\n`);
-  } else {
-    process.stderr.write(`${prefix}\n`);
-  }
+  return "step" in event && event.step ? `${prefix} ${formatStep(event.step)}` : prefix;
 }
 
 function formatStep(step: { id: string; type: string; index?: number; total?: number }): string {
@@ -147,7 +172,7 @@ function formatStep(step: { id: string; type: string; index?: number; total?: nu
   return `${progress}${step.id} (${step.type})`;
 }
 
-function printTextReport(report: {
+function formatTextReport(report: {
   status: string;
   steps: Array<{
     id: string;
@@ -156,9 +181,10 @@ function printTextReport(report: {
     skipReason?: string;
     error?: { message: string };
   }>;
-}): void {
+}): string {
+  const lines: string[] = [];
   const statusIcon = report.status === "succeeded" ? "+" : report.status === "failed" ? "x" : "~";
-  process.stdout.write(`\nPipeline ${report.status} [${statusIcon}]\n\n`);
+  lines.push(`\nPipeline ${report.status} [${statusIcon}]\n`);
   for (const step of report.steps) {
     const icon =
       step.status === "succeeded"
@@ -171,7 +197,7 @@ function printTextReport(report: {
     let line = `  [${icon}] ${step.id} (${step.type}) — ${step.status}`;
     if (step.skipReason) line += ` (${step.skipReason})`;
     if (step.error) line += `: ${step.error.message}`;
-    process.stdout.write(line + "\n");
+    lines.push(line);
   }
-  process.stdout.write("\n");
+  return lines.join("\n") + "\n";
 }

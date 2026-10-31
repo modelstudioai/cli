@@ -35,6 +35,7 @@ import { trackingHeaders } from "./headers.ts";
 import type { HttpDeps } from "./http.ts";
 import type { McpConnectedClient, McpTool, McpToolResult } from "./mcp.ts";
 import { httpTransport } from "./transport.ts";
+import { debugRequest, debugResponse } from "./diagnostics.ts";
 
 /**
  * Low-level Streamable HTTP MCP client keeping the constructor and method
@@ -172,7 +173,7 @@ export interface SseGetFailure {
  * `httpTransport` (packaged Undici fetch on Node, native fetch on Bun) so the
  * MCP path honors the configured dispatcher/proxy like every other request
  * path. It reproduces the old client's error contract for message POSTs and
- * mirrors its `--verbose` wire logging. GET responses are passed through
+ * routes its wire diagnostics through the invocation callback. GET responses are passed through
  * untouched so the SDK's own SSE-stream handling (including the
  * tolerated 405 on a standalone Streamable GET) stays intact — except that a
  * failing classic SSE stream GET has its status/body captured first, since
@@ -191,23 +192,18 @@ function createMcpFetch(
     const method = init?.method ?? "GET";
     const target = typeof url === "string" ? url : url.href;
 
-    if (deps.settings.verbose) {
-      console.error(`> ${method} ${target}`);
-      if (typeof init?.body === "string") {
-        try {
-          const parsed = JSON.parse(init.body) as { method?: string };
-          if (parsed.method) console.error(`> Method: ${parsed.method}`);
-        } catch {
-          /* non-JSON body */
-        }
+    let rpcMethod: string | undefined;
+    if (typeof init?.body === "string") {
+      try {
+        const parsed = JSON.parse(init.body) as { method?: unknown };
+        if (typeof parsed.method === "string") rpcMethod = parsed.method;
+      } catch {
+        /* non-JSON body */
       }
     }
-
+    debugRequest(deps, method, target, { rpc_method: rpcMethod });
     const response = await httpTransport.fetch(url, init);
-
-    if (deps.settings.verbose) {
-      console.error(`< ${response.status} ${response.statusText}`);
-    }
+    debugResponse(deps, response);
 
     if (!response.ok && method === "POST" && !isRedirectStatus(response.status)) {
       let message = `MCP request failed: ${response.status} ${response.statusText}`;
@@ -434,15 +430,17 @@ export class SdkMcpAdapter implements McpConnectedClient {
 
     this.client = client;
 
-    if (this.deps.settings.verbose) {
-      const label = this.kind === "sse" ? "MCP SSE" : "MCP";
-      const session =
-        transport instanceof StreamableHTTPClientTransport
-          ? (transport.sessionId ?? "no session")
-          : "no session";
-      console.error(`[${label}] Session initialized: ${session}`);
-      console.error(`[${label}] Server: ${JSON.stringify(client.getServerVersion() ?? {})}`);
-    }
+    const server = client.getServerVersion();
+    this.deps.debug?.({
+      message: { "en-US": "MCP session initialized", "zh-CN": "MCP 会话已初始化" },
+      details: {
+        transport: this.kind,
+        has_session_id:
+          transport instanceof StreamableHTTPClientTransport && Boolean(transport.sessionId),
+        server_name: server?.name,
+        server_version: server?.version,
+      },
+    });
   }
 
   private async requireClient(): Promise<Client> {

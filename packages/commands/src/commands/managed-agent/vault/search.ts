@@ -1,5 +1,5 @@
 import { listRemoteVaults } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import {
   emitCollection,
   matchesQuery,
@@ -20,9 +20,8 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   validate: validateLimitAndPageLimit,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return searchCursorPages(
           async (page) => {
@@ -43,8 +42,7 @@ export default defineCommand({
         );
       }),
     );
-    emitCollection({
-      format,
+    emitCollection(ctx, {
       key: "vaults",
       items: result.items,
       headers: ["ID", "NAME", "TYPE", "CREATED", "UPDATED"],

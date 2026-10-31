@@ -10,7 +10,6 @@ import {
   type BatchReport,
   type BatchCreateParams,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import {
   ENDPOINT_FLAGS,
   DRY_RUN_NOTE,
@@ -120,7 +119,8 @@ export default defineCommand({
       report = await validateBatch(blob ?? flags.file);
       if (flags.endpoint && flags.endpoint !== report.endpoint)
         batchUsage("--endpoint differs from JSONL url.", "--endpoint 与 JSONL url 不一致。");
-      for (const warning of report.warnings) console.error(warning);
+      for (const warning of report.warnings)
+        ctx.output.warning({ code: "BATCH_VALIDATION_WARNING", message: warning });
     }
     const request: BatchCreateParams = {
       input_file_id: flags.inputFileId ?? "<uploaded-file-id>",
@@ -129,15 +129,13 @@ export default defineCommand({
       metadata: batchMetadata(flags),
     };
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "batch.create",
-          request,
-          validation: report,
-          upload: flags.file ? { file: flags.file, purpose: "batch" } : undefined,
-        },
-        "json",
-      );
+      const preview = {
+        action: "batch.create",
+        request,
+        validation: report,
+        upload: flags.file ? { file: flags.file, purpose: "batch" } : undefined,
+      };
+      ctx.output.result(preview, { text: JSON.stringify(preview, null, 2) });
       return;
     }
     let uploaded: string | undefined;
@@ -152,16 +150,17 @@ export default defineCommand({
     }
     try {
       const job = await createBatch(ctx.client, request);
-      if (settings.quiet) emitBare(job.id);
-      else emitResult(job, settings.output === "text" ? "text" : "json");
+      ctx.output.result(job);
     } catch (error) {
       if (uploaded)
-        console.error(
-          ctx.localize({
+        ctx.output.warning({
+          code: "BATCH_INPUT_UPLOADED",
+          message: {
             "en-US": `Input uploaded: ${uploaded}. Creation failed; reuse --input-file-id with --endpoint or inspect dataset file management. The file was not deleted.`,
             "zh-CN": `输入已上传：${uploaded}。创建失败；可通过 --input-file-id 与 --endpoint 复用，或检查 dataset 文件管理。未删除该文件。`,
-          }),
-        );
+          },
+          details: { file_id: uploaded },
+        });
       throw error;
     }
   },

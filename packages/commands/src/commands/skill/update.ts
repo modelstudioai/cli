@@ -13,7 +13,7 @@ import {
   runWithConcurrency,
   writeSkillLock,
 } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
 
 interface UpdateOutcome {
@@ -40,6 +40,7 @@ export default defineCommand({
     "zh-CN": "将已安装的 Skill 更新到 Registry 最新版本",
   },
   auth: "none",
+  defaultOutput: "json",
   usageArgs: "[--all] [--name <name,...>]",
   flags: {
     all: {
@@ -64,7 +65,6 @@ export default defineCommand({
   },
   exampleArgs: ["", "--all", "--name spark-video"],
   async run(ctx) {
-    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     const updateAll = ctx.flags.all || !ctx.flags.name;
     const requested = updateAll ? "all" : parseSkillNames(ctx.flags.name, false);
     const index = await fetchSkillsIndex();
@@ -158,15 +158,12 @@ export default defineCommand({
         });
       }
 
-      emitResult(
-        {
-          action: "skill.update",
-          registry: getSkillRegistryBaseUrl(),
-          agents: summarizeAgents(agents),
-          skills: plan,
-        },
-        format,
-      );
+      ctx.output.result({
+        action: "skill.update",
+        registry: getSkillRegistryBaseUrl(),
+        agents: summarizeAgents(agents),
+        skills: plan,
+      });
 
       const failed = plan.filter((item) => item.status === "failed");
       if (failed.length > 0) {
@@ -205,31 +202,29 @@ export default defineCommand({
     results.push(...updateResults);
     writeSkillLock(lock);
 
-    if (format === "json") {
-      emitResult({ registry: getSkillRegistryBaseUrl(), skills: results }, format);
-    } else if (results.length === 0) {
-      emitBare("No skills installed locally; run bl skill add first.");
-    } else {
-      const rows = results.map((result) => [
-        result.name,
-        result.status,
-        result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
-      ]);
-      for (const line of formatTable(["NAME", "STATUS", "PUBLISHED"], rows)) {
-        emitBare(line);
-      }
-
-      // Footnotes for skipped / failed entries
-      const annotated = results.filter(
-        (result) => (result.status === "skipped" || result.status === "failed") && result.reason,
-      );
-      if (annotated.length > 0) {
-        emitBare("");
-        for (const result of annotated) {
-          emitBare(`  ${result.name}: ${result.reason}`);
-        }
-      }
-    }
+    const rows = results.map((result) => [
+      result.name,
+      result.status,
+      result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
+    ]);
+    const lines =
+      results.length === 0
+        ? [
+            ctx.localize({
+              "en-US": "No skills installed locally; run bl skill add first.",
+              "zh-CN": "本地未安装 Skill，请先运行 bl skill add。",
+            }),
+          ]
+        : formatTable(["NAME", "STATUS", "PUBLISHED"], rows);
+    const annotated = results.filter(
+      (result) => (result.status === "skipped" || result.status === "failed") && result.reason,
+    );
+    if (annotated.length > 0)
+      lines.push("", ...annotated.map((result) => `  ${result.name}: ${result.reason}`));
+    ctx.output.result(
+      { registry: getSkillRegistryBaseUrl(), skills: results },
+      { text: lines.join("\n") },
+    );
 
     const failed = results.filter((result) => result.status === "failed");
     if (failed.length > 0) {

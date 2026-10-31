@@ -7,7 +7,6 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const RESUME_FLAGS = {
   deployedModel: {
@@ -35,6 +34,7 @@ const RESUME_FLAGS = {
  * Precheck: status must be STOPPED.
  */
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Resume a paused model deployment (brings service back online)",
     "zh-CN": "恢复已暂停的模型部署（使服务重新上线）",
@@ -63,7 +63,11 @@ export default defineCommand({
     const deployedModel = flags.deployedModel;
 
     if (settings.dryRun) {
-      emitResult({ action: "deploy.resume", deployed_model: deployedModel }, "json");
+      const resultData1 = { action: "deploy.resume", deployed_model: deployedModel };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
@@ -91,10 +95,12 @@ export default defineCommand({
 
     const response = await startModelService(ctx.client, deployedModel);
 
-    if (settings.quiet) {
-      emitBare(deployedModel);
-    } else {
-      emitResult({ deployed_model: deployedModel, action: "resume", ...response }, "json");
+    {
+      const resultData2 = { deployed_model: deployedModel, action: "resume", ...response };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+      );
     }
   },
 });

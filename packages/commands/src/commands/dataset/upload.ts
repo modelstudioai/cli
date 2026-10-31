@@ -12,7 +12,6 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const UPLOAD_FLAGS = {
   file: {
@@ -61,6 +60,7 @@ const UPLOAD_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Upload a dataset file (.jsonl or .zip) to Bailian",
     "zh-CN": "将数据集文件（.jsonl 或 .zip）上传到百炼",
@@ -136,29 +136,30 @@ export default defineCommand({
         throw new BailianError(lines.join("\n"), ExitCode.GENERAL);
       }
       // Surface warnings to stderr but keep going.
-      if (result.warnings.length > 0 && !settings.quiet) {
-        process.stderr.write(
-          `Dataset validation passed with ${result.warnings.length} warning(s):\n`,
-        );
-        for (const warning of result.warnings.slice(0, 5))
-          process.stderr.write(`${formatIssue(warning)}\n`);
-        if (result.warnings.length > 5) {
-          process.stderr.write(`  … and ${result.warnings.length - 5} more.\n`);
-        }
+      if (result.warnings.length > 0) {
+        ctx.output.warning({
+          code: "DATASET_VALIDATION_WARNINGS",
+          message: {
+            "en-US": `Dataset validation passed with ${result.warnings.length} warning(s).`,
+            "zh-CN": `数据集校验通过，共 ${result.warnings.length} 条警告。`,
+          },
+          details: { file: filePath, warnings: result.warnings },
+        });
       }
     }
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "dataset.upload",
-          file: filePath,
-          purpose,
-          max_bytes: maxBytes,
-          validate: !flags.noValidate,
-          schema: schema ?? "auto",
-        },
-        "json",
+      const resultData1 = {
+        action: "dataset.upload",
+        file: filePath,
+        purpose,
+        max_bytes: maxBytes,
+        validate: !flags.noValidate,
+        schema: schema ?? "auto",
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -169,10 +170,12 @@ export default defineCommand({
     });
     const { request_id, ...file } = uploaded;
 
-    if (settings.quiet) {
-      emitBare(file.file_id);
-    } else {
-      emitResult({ ...file, request_id }, "json");
+    {
+      const resultData2 = { ...file, request_id };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+      );
     }
   },
 });

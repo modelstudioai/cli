@@ -1,10 +1,11 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import type { AnyCommand, CommandContext } from "bailian-cli-core";
 import kbInfo from "../../src/commands/knowledge/kb-info.ts";
 import kbList from "../../src/commands/knowledge/kb-list.ts";
 import docList from "../../src/commands/knowledge/doc-list.ts";
 afterEach(() => vi.restoreAllMocks());
-function context(response: unknown, output: string, flags: Record<string, unknown>) {
+function context(response: unknown, output: "text" | "json", flags: Record<string, unknown>) {
   const requestJson = vi.fn().mockResolvedValue(response);
   const writes: string[] = [];
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
@@ -14,6 +15,7 @@ function context(response: unknown, output: string, flags: Record<string, unknow
   const ctx = {
     flags,
     settings: { output, workspaceId: "ws_test" },
+    output: createOutputReporter({ settings: { output, quiet: false, verbose: false } }).output,
     identity: { binName: "bl" },
     localize: (text: string | { "en-US": string }) =>
       typeof text === "string" ? text : text["en-US"],

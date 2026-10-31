@@ -4,11 +4,9 @@ import {
   agentStudioFilesPath,
   BailianError,
   defineCommand,
-  detectOutputFormat,
   ExitCode,
   sandboxBaseUrl,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { redactConnectionCredentials, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const UPLOAD_SOURCE = "sandbox_template";
@@ -62,9 +60,9 @@ export const sandboxFileUpload = defineCommand({
     },
     {
       "en-US":
-        "Returns the upload response immediately; --quiet prints only its id. Upload does not wait for security review: status=checking is not ready to mount. Use an available file's id as mntConfig[].originFileId in template create/update --body, together with mountPath and optional originFileName, in the same workspace. This does not transfer files into a running instance.",
+        "Returns the complete upload response immediately, including with --quiet. Upload does not wait for security review: status=checking is not ready to mount. Use an available file's id as mntConfig[].originFileId in template create/update --body, together with mountPath and optional originFileName, in the same workspace. This does not transfer files into a running instance.",
       "zh-CN":
-        "上传响应返回后立即输出，--quiet 仅输出 id。不会等待安全审核：status=checking 不代表已可挂载。在同一工作空间的 template create/update --body 中，将可用文件的 id 填入 mntConfig[].originFileId，同时传入 mountPath 和可选的 originFileName。此命令不向运行中的实例传文件。",
+        "上传响应返回后立即完整输出，--quiet 也保留完整结果。不会等待安全审核：status=checking 不代表已可挂载。在同一工作空间的 template create/update --body 中，将可用文件的 id 填入 mntConfig[].originFileId，同时传入 mountPath 和可选的 originFileName。此命令不向运行中的实例传文件。",
     },
     {
       "en-US":
@@ -79,16 +77,12 @@ export const sandboxFileUpload = defineCommand({
     );
     const filename = ctx.flags.filename ?? basename(ctx.flags.path);
     const mimeType = ctx.flags.mimeType ?? "application/octet-stream";
-    const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          method: "POST",
-          endpoint,
-          request: { source: UPLOAD_SOURCE, file: { path: ctx.flags.path, filename, mimeType } },
-        },
-        format,
-      );
+      ctx.output.result({
+        method: "POST",
+        endpoint,
+        request: { source: UPLOAD_SOURCE, file: { path: ctx.flags.path, filename, mimeType } },
+      });
       return;
     }
 
@@ -107,7 +101,6 @@ export const sandboxFileUpload = defineCommand({
         ExitCode.GENERAL,
       );
     }
-    if (ctx.settings.quiet) emitBare(file.id);
-    else emitResult(redactConnectionCredentials(file), format);
+    ctx.output.result(redactConnectionCredentials(file));
   },
 });

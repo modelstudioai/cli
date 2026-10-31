@@ -1,6 +1,5 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
   TELEMETRY_LOG_TIME_FLAGS,
@@ -41,12 +40,14 @@ interface TraceListPayload {
   list?: TraceEntry[];
 }
 
-function printTraceTable(list: TraceEntry[]): void {
+function renderTraceTable(list: TraceEntry[]): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
   if (list.length === 0) {
-    process.stdout.write("No traces found in this range.\n");
-    return;
+    textChunks.push("No traces found in this range.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   const lines = renderBoxTable({
@@ -69,7 +70,9 @@ function printTraceTable(list: TraceEntry[]): void {
       return undefined;
     },
   });
-  for (const line of lines) process.stdout.write(line + "\n");
+  for (const line of lines) textChunks.push(line + "\n");
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export default defineTelemetryCommand({
@@ -123,7 +126,7 @@ export default defineTelemetryCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags, 1 / 24);
 
     const reqDTO = {
@@ -138,14 +141,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_TRACES_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_TRACES_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -156,11 +156,14 @@ export default defineTelemetryCommand({
     const list = Array.isArray(payload) ? payload : (payload?.list ?? []);
     const totalCount = Array.isArray(payload) ? undefined : payload?.totalCount;
 
-    if (format === "json") {
-      emitResult({ totalCount, list }, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printTraceTable(list);
+      textChunks.push(renderTraceTable(list) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
+    ctx.output.result({ totalCount, list }, { text });
   },
 });

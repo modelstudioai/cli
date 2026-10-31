@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { CommandRegistry } from "bailian-cli-runtime";
 import command from "../../src/commands/knowledge/init.ts";
@@ -44,6 +45,8 @@ function fixture(binName = "kscli") {
   const context = {
     flags: { workspaceId: "ws-test" },
     settings: { output: "json", quiet: true, timeout: 1 },
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     prepared: { state: { target: { workspaceId: "ws-test" } } },
     identity: { binName },
     commandPath: registry.commandPath.bind(registry),
@@ -51,6 +54,14 @@ function fixture(binName = "kscli") {
       typeof text === "string" ? text : text["en-US"],
   } as unknown as Parameters<typeof command.run>[0];
   return { context, stdout, stderr };
+}
+
+function runCommand(context: Parameters<typeof command.run>[0]) {
+  const output = createOutputReporter({
+    settings: context.settings,
+    localize: context.localize,
+  }).output;
+  return command.run({ ...context, output });
 }
 
 test.each(["kscli", "bl"])(
@@ -72,7 +83,7 @@ test.each(["kscli", "bl"])(
       stateFile: "state.json",
       timeToFirstValueMs: 1,
     });
-    await command.run(context);
+    await runCommand(context);
     const output = JSON.parse(stdout.mock.calls.map(([text]) => text).join(""));
     expect(output.sampleSearch).toEqual(sampleSearch);
     expect(output.cleanup).toEqual([
@@ -96,16 +107,16 @@ test("failure after creation prints the billable ID and cleanup even in quiet mo
     options.report({ kind: "knowledge-base", id: "billable-id", created: true });
     throw failure;
   });
-  await expect(command.run(context)).rejects.toBe(failure);
+  await expect(runCommand(context)).rejects.toBe(failure);
   const warning = JSON.parse(
     stderr.mock.calls
       .map(([text]) => text)
       .join("")
       .trim(),
   );
-  expect(warning.resource).toMatchObject({ id: "billable-id", created: true });
-  expect(warning.cleanup[0].args).toContain("billable-id");
-  expect(warning.message).toContain("charges");
+  expect(warning.warning.details.resource).toMatchObject({ id: "billable-id", created: true });
+  expect(warning.warning.details.cleanup[0].args).toContain("billable-id");
+  expect(warning.warning.message).toContain("charges");
   expect(stdout).not.toHaveBeenCalled();
 });
 
@@ -123,7 +134,7 @@ test("missing product route omits the command instead of inventing one", async (
     stateFile: "state.json",
     timeToFirstValueMs: 1,
   });
-  await command.run(context);
+  await runCommand(context);
   const output = JSON.parse(stdout.mock.calls.map(([text]) => text).join(""));
   expect(output.cleanup).toEqual([]);
   expect(output.nextSearch).toBeUndefined();
@@ -159,7 +170,7 @@ test.each(["en-US", "zh-CN"] as const)(
       stateFile: "state.json",
       timeToFirstValueMs: 1,
     });
-    await command.run(context);
+    await runCommand(context);
     const output = stdout.mock.calls.map(([text]) => text).join("");
     expect(output).toContain(INIT_SAMPLE.query);
     expect(output).toContain("sample-document");
@@ -193,7 +204,7 @@ test("text summary selects the matched node, prefers metadata content and bounds
     stateFile: "state.json",
     timeToFirstValueMs: 1,
   });
-  await command.run(context);
+  await runCommand(context);
   const output = stdout.mock.calls.map(([text]) => text).join("");
   expect(output).toContain(`Content: ${content.slice(0, 400)}…`);
   expect(output).not.toContain(content);

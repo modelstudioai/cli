@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagConnectorResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CATEGORY_DELETE_FLAGS = {
@@ -42,13 +40,13 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body = { categoryId: flags.categoryId };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.deleteCategory);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -60,11 +58,9 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet) return;
-    if (format === "text") {
-      emitBare(`deleted: ${flags.categoryId}`);
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text" ? { text: `deleted: ${flags.categoryId}` } : undefined,
+    );
   },
 });

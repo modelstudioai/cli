@@ -4,11 +4,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagOssImportResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 import { PARSER_FLAGS, readParserOptions } from "./parser-config.ts";
@@ -112,7 +110,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const parserOptions = readParserOptions(flags, ctx.localize);
     const body = {
@@ -131,7 +129,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.addFilesFromAuthorizedOss);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -141,23 +139,23 @@ export default defineCommand({
       body,
     });
 
-    // Live-verified shape: results come back as addFileResultList (the docs' flat
-    // fileIds field is not returned); per-file status is SUCCESS on success
-    const results = response.data?.addFileResultList ?? [];
-    const fileIds = results
-      .map((result) => result.fileId)
-      .filter((fileId): fileId is string => !!fileId);
-    if (settings.quiet) {
-      for (const fileId of fileIds) emitBare(fileId);
-      return;
-    }
+    let text: string | undefined;
     if (format === "text") {
-      emitBare(`imported: ${fileIds.length} file(s)`);
-      for (const result of results) {
-        emitBare(`  ${result.fileId ?? "-"}  ${result.status ?? "-"}  ${result.ossKey ?? ""}`);
-      }
-      return;
+      // The API returns per-file results, including failed or missing-ID records.
+      const results = response.data?.addFileResultList ?? [];
+      const fileIds = results
+        .map((result) => result.fileId)
+        .filter((fileId): fileId is string => !!fileId);
+      const lines = [
+        ctx.localize({
+          "en-US": `imported: ${fileIds.length} file(s)`,
+          "zh-CN": `已导入: ${fileIds.length} 个文件`,
+        }),
+      ];
+      for (const result of results)
+        lines.push(`  ${result.fileId ?? "-"}  ${result.status ?? "-"}  ${result.ossKey ?? ""}`);
+      text = lines.join("\n");
     }
-    emitResult(response, format);
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

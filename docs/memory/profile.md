@@ -33,7 +33,7 @@ bl memory profile create --name <name> --attributes <json> [flags]
 
 **输出**
 
-json保留 `profile_schema_id` 等响应字段；text / quiet输出模板创建确认和ID。
+json保留 `profile_schema_id` 等响应字段；text输出模板创建确认和ID。
 
 **注意事项**
 
@@ -71,7 +71,7 @@ bl memory profile list [flags]
 
 **输出**
 
-json返回 `profile_schemas` / `total`；text / quiet显示模板ID、名称、档位、描述及总数（如有）。
+json返回 `profile_schemas` / `total`；text显示模板ID、名称、档位、描述及总数（如有）。
 
 **注意事项**
 
@@ -108,7 +108,7 @@ bl memory profile show --schema-id <id> [flags]
 
 **输出**
 
-json保留模板详情；text / quiet显示模板名称、描述和属性定义（包括attribute_id、描述、默认值等）。
+json保留模板详情；text显示模板名称、描述和属性定义（包括attribute_id、描述、默认值等）。
 
 **注意事项**
 
@@ -152,7 +152,7 @@ bl memory profile update --schema-id <id> [flags]
 
 **输出**
 
-json保留服务响应；text / quiet输出模板更新确认。
+json保留服务响应；text输出模板更新确认。
 
 **注意事项**
 
@@ -193,7 +193,7 @@ bl memory profile delete --schema-id <id> [flags]
 
 **输出**
 
-json保留服务响应；text / quiet输出模板删除确认。
+json保留服务响应；text输出模板删除确认。
 
 **注意事项**
 
@@ -233,7 +233,7 @@ bl memory profile get --schema-id <id> --user-id <id> [flags]
 
 **输出**
 
-json中的 `profile.attributes` 包含用户属性，服务返回的value/status等字段保留；text / quiet显示属性及值，无画像数据时显示提示。字段可能缺省，不能假定每个属性都有value。
+json中的 `profile.attributes` 包含用户属性，服务返回的value/status等字段保留；text显示属性及值，无画像数据时显示提示。字段可能缺省，不能假定每个属性都有value。
 
 **注意事项**
 
@@ -245,3 +245,5 @@ json中的 `profile.attributes` 包含用户属性，服务返回的value/status
 bl memory add --user-id demo_user --profile-schema '<schema-id>' --extract-mode profile_only --messages '[{"role":"user","content":"我常住杭州，喜欢骑行。"}]' --output json
 bl memory profile get --schema-id '<schema-id>' --user-id demo_user --output json
 ```
+
+`--quiet` 仅隐藏过程提示，不改变最终结果；与 `--output json` 组合时仍返回完整 JSON，与 text 组合时保留完整文本结果。
