@@ -188,14 +188,14 @@ Config file location: `~/.bailian/config.json`
 
 All commands support these common flags:
 
-| Flag        | Description                                          |
-| :---------- | :--------------------------------------------------- |
-| `--output`  | Output format: `text` (default) or `json`            |
-| `--quiet`   | Print only the result value, no headers or hints     |
-| `--dry-run` | Preview the request without sending it to the server |
-| `--timeout` | Request timeout in seconds (default: 60)             |
-| `--verbose` | Show verbose output including HTTP details           |
-| `--config`  | Path to a custom config file                         |
+| Flag        | Description                                                                            |
+| :---------- | :------------------------------------------------------------------------------------- |
+| `--output`  | Output format: `text` (default) or `json`                                              |
+| `--quiet`   | Hide progress and informational messages; preserve final results, warnings, and errors |
+| `--dry-run` | Preview the request without sending it to the server                                   |
+| `--timeout` | Request timeout in seconds (default: 60)                                               |
+| `--verbose` | Show verbose output including HTTP details                                             |
+| `--config`  | Path to a custom config file                                                           |
 
 ## Links
 
@@ -216,4 +216,4 @@ Bug reports, feature requests, and PRs are welcome. See [CONTRIBUTING.md](https:
 
 ### RAG audio and video
 
-`kscli doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode emits only the final answer. See the [command guide](../../docs/knowledge/knowledge-cli-guide.md).
+`kscli doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode hides progress and informational messages while preserving the final result, including every JSON field. See the [command guide](../../docs/knowledge/knowledge-cli-guide.md).
