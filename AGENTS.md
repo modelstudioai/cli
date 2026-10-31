@@ -61,7 +61,7 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 | 场景              | 何时进入                                                              | 详见                                                                         |
 | ----------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 命令增删改        | 增加 / 删除 / 重命名 `bl xxx` 或入口命令路径                          | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)       |
-| E2E 测试维护      | 新增/改命令或 e2e 用例、补 help/缺参/dry-run                          | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)                 |
+| 测试维护与性能    | 新增/修改任意单测、输出契约测试或 E2E；选择 runner、fixture、计时方式 | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)                 |
 | 测试隔离          | 单测/E2E 受本地 HOME、语言、系统目录干扰；统一隔离基建                | [docs/agents/test-isolation.md](docs/agents/test-isolation.md)               |
 | 输出契约          | 新增输出、quiet/verbose、JSON 错误或流式输出                          | [docs/agents/output-contract.md](docs/agents/output-contract.md)             |
 | 批量压测          | 改/跑多能力并发压测、`test:stress`、fixtures                          | [docs/agents/stress-batch-tests.md](docs/agents/stress-batch-tests.md)       |
@@ -136,6 +136,8 @@ CLI 只为「自己能权威解释的错误」发出语义化信号,服务端的
 新增或修改用户可见的 CLI 文案时必须同时提供 `en-US` / `zh-CN`;runtime 公共文案遵循同一规则,服务端错误仍按第 3 节原样透传。命令文案的具体检查项见 [command-add-remove.md](docs/agents/command-add-remove.md)。
 
 ## 完成改动后的快速验证
+
+新增或修改任何 `**/tests/**` 用例（含 `tests/output`）前，必须读取[测试维护规范](docs/agents/cli-e2e-tests.md)。测试通过之外，还必须检查执行成本：按测试目标选择执行层，说明必要的子进程覆盖，并对新增/扩展套件提供耗时记录；性能优化必须提供同条件前后对比，不能靠删除必要覆盖或增加跳过项提速。具体执行方式、隔离与验收清单统一在该文档维护。
 
 ```sh
 vp check    # format + lint + type check

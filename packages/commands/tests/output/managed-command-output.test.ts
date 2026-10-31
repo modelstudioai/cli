@@ -39,6 +39,19 @@ interface CapturedOutput {
   calls: unknown[];
 }
 const expected = baseline as Record<string, { json: CapturedOutput; text: CapturedOutput }>;
+// Only these scenarios inspect an existing directory project. Other command
+// fixtures must not initialize/build/version a project they never consume.
+const directoryProjectCommands = new Set([
+  "managedAgentProjectBuild",
+  "managedAgentProjectPublish",
+  "managedAgentProjectValidate",
+  "managedAgentProjectVersionDisable",
+  "managedAgentProjectVersionEnable",
+  "managedAgentProjectVersionList",
+  "managedAgentProjectVersionPreview",
+  "managedAgentProjectVersionRestore",
+  "managedAgentProjectVersionStatus",
+]);
 const identity = {
   binName: "bl",
   version: "fixture-version",
@@ -155,12 +168,20 @@ agents:
   );
   await writeFile(join(directory, "content.txt"), "fixture");
   const projectDirectory = join(directory, "directory-project");
-  await initializeDirectoryProject({ projectRoot: projectDirectory });
-  const buildPreview = await previewProjectBuild(projectDirectory);
-  await commitProjectBuild({
-    projectRoot: projectDirectory,
-    baseRevision: buildPreview.project_revision,
-  });
+  let versionId = "0".repeat(64);
+  if (directoryProjectCommands.has(entry.name)) {
+    // Every consumer gets fresh mutable SDK state, including version history.
+    await initializeDirectoryProject({ projectRoot: projectDirectory });
+    const buildPreview = await previewProjectBuild(projectDirectory);
+    await commitProjectBuild({
+      projectRoot: projectDirectory,
+      baseRevision: buildPreview.project_revision,
+    });
+    const versions = createDirectoryWorkspaceVersionService(projectDirectory);
+    await versions.enable("fixture version");
+    const history = await versions.listVersions();
+    versionId = history.versions?.[0]?.version_id ?? versionId;
+  }
   const state = StateManager.initialize(join(directory, "agents.state.json"));
   state.setResource({
     address: { provider: "bailian", type: "agent", name: "assistant" },
@@ -186,10 +207,6 @@ agents:
     });
     await projectState.save();
   }
-  const versions = createDirectoryWorkspaceVersionService(projectDirectory);
-  await versions.enable("fixture version");
-  const history = await versions.listVersions();
-  const versionId = history.versions?.[0]?.version_id ?? "0".repeat(64);
   const command: AnyCommand = (
     await import(`${root}/packages/commands/src/commands/managed-agent/${entry.module}`)
   )[entry.exported];

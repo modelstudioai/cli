@@ -5,6 +5,10 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { expect, test } from "vite-plus/test";
 import { runNodeMain } from "e2e/runner";
+import { buildIsolatedCliEnv } from "e2e/isolation";
+import { runInProcess } from "e2e/in-process";
+import { createCli } from "../src/create-cli.ts";
+import { outputCommands, outputIdentity } from "./harness/output-commands.ts";
 
 const runtimeRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const main = join(runtimeRoot, "tests/harness/output-main.ts");
@@ -17,6 +21,7 @@ async function invoke(
     corrupt?: boolean;
     proxy?: string;
     verbose?: "0" | "1";
+    subprocess?: boolean;
   } = {},
 ) {
   const configDir = mkdtempSync(join(tmpdir(), "bl-runtime-output-"));
@@ -31,19 +36,35 @@ async function invoke(
       join(configDir, "update-state.json"),
       JSON.stringify({ lastChecked: Date.now(), latestVersion: "0.0.0" }),
     );
-    return await runNodeMain(main, args, {
-      cwd: runtimeRoot,
-      env: {
-        BAILIAN_CONFIG_DIR: configDir,
-        DASHSCOPE_OUTPUT: options.envOutput ?? "",
-        DASHSCOPE_QUIET: "0",
-        DASHSCOPE_VERBOSE: options.verbose ?? "0",
-        CI: "1",
-        HTTPS_PROXY: options.proxy ?? "",
-        HTTP_PROXY: "",
-        ALL_PROXY: "",
-      },
-    });
+    const environment = {
+      BAILIAN_CONFIG_DIR: configDir,
+      DASHSCOPE_OUTPUT: options.envOutput ?? "",
+      DASHSCOPE_QUIET: "0",
+      DASHSCOPE_VERBOSE: options.verbose ?? "0",
+      CI: "1",
+      HTTPS_PROXY: options.proxy ?? "",
+      HTTP_PROXY: "",
+      ALL_PROXY: "",
+      http_proxy: "",
+      https_proxy: "",
+      all_proxy: "",
+      NODE_OPTIONS: "",
+    };
+    // Proxy setup and real stdio/process lifetime belong in a subprocess.
+    // Ordinary formatting cases still exercise the complete CLI in-process.
+    if (options.subprocess || options.proxy) {
+      return await runNodeMain(main, args, { cwd: runtimeRoot, env: environment });
+    }
+    const isolated = buildIsolatedCliEnv({ overrides: environment });
+    try {
+      return await runInProcess(() => createCli(outputCommands, outputIdentity).run(args), args, {
+        cwd: runtimeRoot,
+        env: isolated.env,
+        entrypoint: main,
+      });
+    } finally {
+      isolated.dispose();
+    }
   } finally {
     rmSync(configDir, { recursive: true, force: true });
   }
@@ -55,6 +76,16 @@ function diagnostics(stderr: string) {
     .split("\n")
     .map((line) => JSON.parse(line));
 }
+
+test.each([
+  { label: "result, warning and debug", args: ["probe", "--output=json", "--quiet", "--verbose"] },
+  { label: "terminal error", args: ["fail", "--output=json", "--quiet"] },
+  { label: "early parser error", args: ["unknown", "--output=json"] },
+])("in-process output matches real subprocess bytes and exit status: $label", async ({ args }) => {
+  const inProcess = await invoke(args);
+  const subprocess = await invoke(args, { subprocess: true });
+  expect(subprocess).toEqual(inProcess);
+});
 
 test.each([[], ["--quiet"], ["--verbose"], ["--quiet", "--verbose"]].map((flags) => ({ flags })))(
   "ordinary errors are JSON with flags $flags",
@@ -90,7 +121,10 @@ test.each(
 });
 
 test("corrupt configuration preserves defaults with a structured warning", async () => {
-  const result = await invoke(["probe", "--output", "json"], { corrupt: true });
+  const result = await invoke(["probe", "--output", "json"], {
+    corrupt: true,
+    subprocess: true,
+  });
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.stdout)).toEqual({ task_id: "task-demo" });
   expect(
@@ -200,14 +234,17 @@ test("a closed stdout pipe still exits successfully after version dispatch", asy
 test.each(["0", "1"] as const)(
   "DASHSCOPE_VERBOSE=%s controls error stack even with quiet",
   async (verbose) => {
-    const result = await invoke(["fail", "--output=json", "--quiet"], { verbose });
+    const result = await invoke(["fail", "--output=json", "--quiet"], {
+      verbose,
+      subprocess: true,
+    });
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe("");
     const records = diagnostics(result.stderr);
     const stack = records.find((record) => record.debug?.code === "ERROR_STACK");
     if (verbose === "1") {
       expect(stack.debug.details.stack).toContain("SyntaxError: Invalid local JSON");
-      expect(stack.debug.details.stack).toContain("output-main.ts");
+      expect(stack.debug.details.stack).toContain("output-commands.ts");
     } else expect(stack).toBeUndefined();
     expect(records.at(-1).error.message).toBe("Invalid local JSON");
   },

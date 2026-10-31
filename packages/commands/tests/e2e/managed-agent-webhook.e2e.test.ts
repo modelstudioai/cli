@@ -7,9 +7,8 @@ import type {
   WebhookEventWithDelivery,
   WebhookTestResult,
 } from "@openagentpack/sdk";
-import { runNodeMain } from "e2e/runner";
 import { afterEach, describe, expect, test } from "vite-plus/test";
-import { commandsPackageRoot, parseStdoutJson, runCommandHelp } from "./helpers.ts";
+import { parseStdoutJson, runCommandE2e, runCommandHelp, runCommandInProcess } from "./helpers.ts";
 import { MANAGED_AGENT_WEBHOOK_ROUTES as ROUTES } from "./topic-routes.ts";
 
 const API_ROOT = "/api/v1/agentstudio";
@@ -185,6 +184,10 @@ function setup(config: Record<string, unknown> = {}) {
     BAILIAN_BASE_URL: "",
     BAILIAN_WORKSPACE_ID: "",
     BAILIAN_E2E: "0",
+    NODE_OPTIONS: "",
+    NODE_USE_ENV_PROXY: "0",
+    DASHSCOPE_QUIET: "0",
+    DASHSCOPE_VERBOSE: "0",
     HTTP_PROXY: "",
     HTTPS_PROXY: "",
     ALL_PROXY: "",
@@ -202,20 +205,21 @@ function runWebhook(
   environment: ReturnType<typeof setup>,
   overrides: NodeJS.ProcessEnv = {},
   outputFormat = "json",
+  subprocess = false,
 ) {
-  return runNodeMain(
-    join(commandsPackageRoot, "tests", "e2e", "harness", "main.ts"),
+  // Keep process startup, configuration overrides, timeout and text stdio coverage.
+  const runner =
+    subprocess ||
+    args.includes("--timeout") ||
+    Object.keys(overrides).length > 0 ||
+    outputFormat === "text"
+      ? runCommandE2e
+      : runCommandInProcess;
+  return runner(
+    ROUTES,
     ["managed-agent", "webhook", action, ...args, "--output", outputFormat],
-    {
-      cwd: environment.directory,
-      env: {
-        ...environment.env,
-        ...overrides,
-        BAILIAN_E2E_ROUTES: JSON.stringify(
-          Object.entries(ROUTES).map(([path, exportName]) => ({ path, export: exportName })),
-        ),
-      },
-    },
+    { ...environment.env, ...overrides },
+    { cwd: environment.directory },
   );
 }
 
@@ -355,10 +359,17 @@ describe("e2e: managed-agent Webhook confirmation and offline preview", () => {
     };
     for (const [name, content] of Object.entries(files))
       writeFileSync(join(environment.directory, name), content);
-    const getResult = await runWebhook("get", SINGLE_ARGS, environment);
+    const getResult = await runWebhook("get", SINGLE_ARGS, environment, {}, "json", true);
     expect(getResult.exitCode, getResult.stderr).toBe(0);
     expect(received).toHaveLength(1);
-    const result = await runWebhook("create", [...CREATE_ARGS, "--dry-run"], environment);
+    const result = await runWebhook(
+      "create",
+      [...CREATE_ARGS, "--dry-run"],
+      environment,
+      {},
+      "json",
+      true,
+    );
     expect(result.exitCode, result.stderr).toBe(0);
     expect(received).toHaveLength(1);
     for (const [name, content] of Object.entries(files))
@@ -367,6 +378,24 @@ describe("e2e: managed-agent Webhook confirmation and offline preview", () => {
 });
 
 describe("e2e: managed-agent Webhook SDK HTTP protocol", () => {
+  test.each([false, true])(
+    "create confirmation=%s matches subprocess stdout, stderr and exit code exactly",
+    async (confirmed) => {
+      const response = { ...ENDPOINT, signing_secret: SIGNING_SECRET };
+      const { origin, received } = await gateway(response, 201);
+      const environment = setup({ api_key: API_KEY, base_url: origin });
+      const args = [...CREATE_ARGS, ...(confirmed ? ["--yes"] : [])];
+      const inProcess = await runWebhook("create", args, environment);
+      const subprocess = await runWebhook("create", args, environment, {}, "json", true);
+      expect(inProcess).toEqual(subprocess);
+      expect(inProcess.exitCode).toBe(confirmed ? 0 : 7);
+      expect(received).toHaveLength(confirmed ? 2 : 0);
+      if (confirmed) expect(parseStdoutJson(inProcess.stdout)).toEqual(response);
+      expect(inProcess.stderr).not.toContain(SIGNING_SECRET);
+      expect(inProcess.stderr).not.toContain(API_KEY);
+    },
+  );
+
   test.each(OPERATIONS)(
     "$action sends the exact SDK method/path/body and preserves the response",
     async ({ action, args, method, suffix, body, response, status, write }) => {
@@ -543,7 +572,14 @@ describe("e2e: managed-agent Webhook CLI configuration precedence", () => {
               DASHSCOPE_BASE_URL: source === "environment" ? chosen.origin : fallback.origin,
               BAILIAN_WORKSPACE_ID: "ws-env",
             };
-      const result = await runWebhook("get", [...SINGLE_ARGS, ...args], environment, overrides);
+      const result = await runWebhook(
+        "get",
+        [...SINGLE_ARGS, ...args],
+        environment,
+        overrides,
+        "json",
+        true,
+      );
       expect(result.exitCode, result.stderr).toBe(0);
       expect(chosen.received).toHaveLength(1);
       expect(chosen.received[0]!.headers.authorization).toBe(`Bearer ${API_KEY}`);
@@ -557,7 +593,14 @@ describe("e2e: managed-agent Webhook CLI configuration precedence", () => {
       const environment = setup({ workspace_id: "ws-profile" });
       const args = source === "flags" ? ["--workspace-id", "ws-flag"] : [];
       const overrides = source === "profile" ? {} : { BAILIAN_WORKSPACE_ID: "ws-env" };
-      const result = await runWebhook("list", [...args, "--dry-run"], environment, overrides);
+      const result = await runWebhook(
+        "list",
+        [...args, "--dry-run"],
+        environment,
+        overrides,
+        "json",
+        true,
+      );
       expect(result.exitCode, result.stderr).toBe(0);
       const workspace =
         source === "flags" ? "ws-flag" : source === "environment" ? "ws-env" : "ws-profile";

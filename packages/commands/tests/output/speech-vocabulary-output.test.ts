@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
-import { runCommandE2e } from "../e2e/helpers.ts";
+import { runCommandE2e, runCommandInProcess } from "../e2e/helpers.ts";
 
 const routes = {
   "speech vocabulary create": "speechVocabularyCreate",
@@ -120,12 +120,16 @@ function invoke(
   name: string,
   flags: string[],
   display: { format: "text" | "json"; quiet?: boolean; verbose?: boolean; dryRun?: boolean },
+  subprocess = false,
 ) {
   const args = ["speech", "vocabulary", name, ...flags, "--output", display.format];
   if (display.quiet) args.push("--quiet");
   if (display.verbose) args.push("--verbose");
   if (display.dryRun) args.push("--dry-run");
-  return runCommandE2e(routes, args, {
+  // The matrix still exercises createCli, middleware and real loopback HTTP.
+  // Keep process startup coverage separate instead of paying for it per combination.
+  const run = subprocess ? runCommandE2e : runCommandInProcess;
+  return run(routes, args, {
     HOME: directory,
     BAILIAN_CONFIG_DIR: directory,
     DASHSCOPE_API_KEY: "test-vocabulary-placeholder",
@@ -133,6 +137,7 @@ function invoke(
     DASHSCOPE_QUIET: "0",
     DASHSCOPE_VERBOSE: "0",
     BAILIAN_INSTALL_METHOD: "brew",
+    NODE_OPTIONS: "",
     NODE_USE_ENV_PROXY: "0",
     HTTP_PROXY: "",
     http_proxy: "",
@@ -149,6 +154,21 @@ const displays = (["text", "json"] as const).flatMap((format) =>
 );
 
 for (const entry of entries) {
+  test(`${entry.name} subprocess preserves the JSON result and request`, async () => {
+    responseBody = {
+      request_id: "request-smoke",
+      output: entry.output,
+      service_extra: "preserved",
+    };
+    const result = await invoke(entry.name, entry.flags, { format: "json", quiet: true }, true);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual(responseBody);
+    expect(result.stderr).toBe("");
+    expect(requests).toEqual([
+      { path: endpoint, method: "POST", body: { model: "speech-biasing", input: entry.input } },
+    ]);
+  });
+
   test.each(displays)(
     `${entry.name} preserves results and requests with $format verbose=$verbose`,
     async (display) => {
@@ -337,7 +357,7 @@ test("loopback requests ignore inherited proxy settings", async () => {
   vi.stubEnv("NO_PROXY", "");
   vi.stubEnv("no_proxy", "");
   responseBody = { request_id: "request-direct", output: { vocabulary_list: [] } };
-  const result = await invoke("list", [], { format: "json", quiet: true, verbose: true });
+  const result = await invoke("list", [], { format: "json", quiet: true, verbose: true }, true);
   expect(result.exitCode, result.stderr).toBe(0);
   expect(JSON.parse(result.stdout)).toEqual(responseBody);
   expect(requests).toHaveLength(1);

@@ -1,4 +1,4 @@
-# CLI E2E 测试规范
+# 测试维护与 CLI E2E 规范
 
 ## 架构分层
 
@@ -15,6 +15,7 @@
 
 ## 触发条件
 
+- 新增/修改任意包的 `**/tests/**`，包括单测、`tests/output`、runtime 和测试 helper；均须执行下方「执行方式与性能必查清单」，命令 E2E 另遵循本文其余章节
 - 新增/修改 `packages/commands/src/commands` 下的 command 实现
 - 新增/修改 `packages/cli/src/commands.ts` 的 `bl` 命令路径 map
 - 新建或扩展 `packages/commands/tests/e2e/<topic>.e2e.test.ts`
@@ -30,7 +31,7 @@
 
 - 路径：`packages/commands/tests/e2e/<kebab-topic>.e2e.test.ts`；knowledge 领域集中在 `packages/commands/tests/e2e/knowledge/` 子目录（新增 knowledge 命令测试放这里）
 - help：`runCommandHelp(routes, [...path, "--help"])` from `./helpers.ts`（当前 Vitest worker 内用真实 command + `CommandRegistry` 渲染，不启动子进程）
-- 离线校验 / dry-run：确认用例不依赖进程初始化、真实请求或持久化后，可显式使用 `runCommandInProcess(routes, args, envOverrides)`；走真实 `createCli`、middleware 和 command，捕获 stdout / stderr / 退出码，执行后恢复进程环境。worker 内串行捕获，禁止与其他操作全局状态的并发用例混用
+- 离线 CLI 契约（校验 / dry-run / 本地模拟 HTTP）：不依赖进程初始化或跨进程持久化的用例必须优先使用 `runCommandInProcess(routes, args, envOverrides, { cwd? })`；走真实 `createCli`、middleware 和 command，捕获 stdout / stderr / 退出码，执行后恢复进程环境。本地模拟 HTTP 仍走真实 SDK / client 和回环服务，不能仅因存在 HTTP 就逐用例启动子进程。worker 内串行捕获，禁止与其他操作全局状态的并发用例混用
 - 子进程：`runCommandE2e(routes, args)` 保留给 live、实际写盘、进程隔离及 shell / stdio / env 契约；每个 topic 保留代表性子进程用例。`NODE_OPTIONS` / HTTP(S) 代理配置存在时，`runCommandInProcess` 自动回退子进程
 - 路由加载：harness 按 command 库公开导出名加载 topic 所需模块，不整体求值命令 barrel；新增导出形式需扩展 loader 并保留与公开导出对象一致性的测试
 - 更新检查：未发布的 harness 包 `latest` 查询固定返回本地 404，避免重复访问 npm；只拦截这个精确 URL，业务 fetch 和生产 updater 测试仍走原逻辑
@@ -52,7 +53,47 @@
 - 解析 JSON stdout：`parseStdoutJson`；输出目录：`makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url))`
 - 长任务：`cliTimeoutPrefix()`；视频用例加 `test(..., 3_600_000)` 等显式超时
 
-## 双层 describe（固定结构）
+## 执行方式与性能必查清单
+
+### A. 按测试目标选择执行层
+
+| 测试目标                                                                                 | 必须采用的方式                                                                                             |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 纯函数、独立模块行为                                                                     | 直接调用被测模块，不为单测启动完整 CLI                                                                     |
+| 全量 help / 命令路径发现                                                                 | registry + `runCommandHelp`；产品身份和代表性入口另保留子进程                                              |
+| CLI 参数、输出格式矩阵、普通 dry-run、本地模拟 HTTP 契约                                 | 使用已有隔离的进程内 runner；commands 用 `runCommandInProcess`，runtime 用 `e2e/in-process` + 真实入口逻辑 |
+| live、实际持久化及跨进程恢复、启动时 env / preload / proxy、TTY / 管道 / 信号 / 进程退出 | 保留真实子进程，并在用例或 helper 附近说明所验证的进程边界                                                 |
+
+- [ ] 每个 topic 保留与其风险对应的代表性子进程覆盖；不得把格式/参数矩阵逐项乘上 CLI 启动成本。迁移 runner 时，对代表性成功、错误或确认分支核对 stdout、stderr 和退出码；确定性 fixture 可直接逐字节比较
+- [ ] CLI 进程内契约测试必须复用 `e2e/isolation` 和 `e2e/in-process`，不得为此自写 stdout/stderr、env、cwd 捕获器。涉及项目或相对文件路径时显式传 `{ cwd: fixtureDirectory }`；修改 helper 时验证直接执行和自动子进程回退均保留 cwd，调用后恢复环境
+- [ ] 直接调用模块的单测无需套用 CLI runner，可以注入 reporter/输出流并监测意外的全局写入；需要 HOME/env 隔离时按 [test-isolation.md](test-isolation.md) 分层选择。core 单测使用自身的 `tests/helpers/isolation.ts`，不得反向依赖 `e2e`
+- [ ] 本地模拟 HTTP 继续断言实际请求的方法、路径、查询、鉴权头、body 和响应；静态命令的确认前分支与静态 dry-run 证明零请求/零写入；带 `prepare` 的命令在确认前或 dry-run 中可先鉴权并读取远端计划，须断言仅执行计划所需的只读请求，且零远端/本地写入。进程内执行不能替换掉这些协议断言
+- [ ] 离线 fixture 显式固定会影响结果的环境变量（如输出开关、凭证、代理、preload），不继承本机状态；启动环境专项测试仍显式注入并走子进程，不能通过清空变量绕过被测行为。完整隔离要求见 [test-isolation.md](test-isolation.md)
+
+### B. 控制等待与 fixture 成本
+
+- [ ] 轮询、重试、debounce 的普通逻辑测试使用受控时间推进，覆盖等待前后边界、请求次数、终态和必要清理；不得在矩阵内累计真实 sleep。不能把被测轮询函数整体 mock 掉；真实超时中止、信号和退出场景另保留真实计时/子进程覆盖
+- [ ] 仅为需要的用例创建 SDK 项目、build、版本和文件树等重型 fixture；输出展示或参数校验不得无条件执行无关初始化
+- [ ] 可共享不可变声明，不能为提速跨用例共享可写目录、State、服务端请求记录或未恢复的全局状态；服务器、连接、定时器和监听器必须清理
+- [ ] 性能优化保留必要的成功、失败、权限/确认、边界和副作用断言；不得通过放宽断言、提高超时、改成 gated/skip 或删除必要覆盖获得提速。确需合并重复用例时必须说明覆盖映射，不以用例总数替代审查
+
+### C. 提交前提供耗时证据
+
+- [ ] 新增/扩展套件至少运行一次并记录通过/跳过数量、套件耗时、总墙钟、Node 版本与 worker 数；修改既有套件须有同条件基线。结果写入 PR/交付说明，不新增依赖本机速度的断言
+- [ ] 性能优化或发现明显耗时增长时，前后各连续运行三轮，报告原始值和中位数；同机器、Node、worker、门控及 fixture 条件，不与其他重型任务并跑。并行套件耗时之和不能冒充总墙钟
+- [ ] 耗时明显增长时，定位新增的子进程、真实等待和重型初始化；说明必要成本，消除无关成本后再交付。修改共享 helper 时回归现有调用方及其回退路径
+- [ ] 保留/新增哪些覆盖、哪些仍用子进程、哪些因环境未执行，必须在交付中说明；缺凭证跳过和初始化失败不能当作通过
+
+定向计时示例（报告路径使用仓库外目录；该命令本身不会自动比较基线或阻止性能回退）：
+
+```sh
+pnpm exec vp test packages/commands/tests/e2e/managed-agent-webhook.e2e.test.ts \
+  --maxWorkers=2 --reporter=json --outputFile=/tmp/managed-webhook-before-1.json
+```
+
+需要三轮对比时为每轮分别命名 `before-1/2/3` 和 `after-1/2/3`，从报告读取套件耗时与总墙钟；worker 数可按环境选择，但前后必须一致。
+
+## 离线与真实集成分组
 
 ```ts
 // 1) 不 skip：进程内 --help，无密钥、无真实 API（分组 help 由 bl registry.smoke 覆盖）
@@ -63,10 +104,14 @@ describe("e2e: <topic>", () => {
   });
 });
 
-// 2) skipIf：缺参 / dry-run / 真实集成
-describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
+// 2) 不 skip：无密钥的离线校验、dry-run、本地模拟 HTTP 契约
+describe("e2e: <topic> offline contracts", () => {
   test("缺少 --<flag> 时退出为用法错误 (2)", ...);
   test("<cmd> --dry-run ...", ...); // 若适用
+});
+
+// 3) skipIf：需要真实凭证/服务的集成
+describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
   test("【model】真实流程", ..., LONG_TIMEOUT);
 });
 ```
@@ -129,9 +174,10 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 - [ ] `packages/commands/tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
 - [ ] 若改了 `usageArgs` / `flags` / `exampleArgs`,跑 `pnpm --filter bailian-cli run generate:reference` 更新各 `skills/<skill>/reference/` 并提交
 - [ ] 子命令 `--help` 使用 `runCommandHelp`（分组 help 由 bl `registry.smoke` 覆盖）
-- [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
+- [ ] 离线块：每个 required flag 缺参；可 dry-run 则加一条；仅需要真实服务的用例放进 skip 块
 - [ ] 至少一条真实集成（或说明为何仅 smoke）；不破坏已有集成用例顺序
 - [ ] `vp test packages/commands/tests/e2e/<file>` 通过
+- [ ] 完成「执行方式与性能必查清单」并提供覆盖与耗时记录
 
 ## 调试命令
 
@@ -145,16 +191,17 @@ pnpm --filter bailian-cli-runtime exec vp test packages/runtime/tests/proxy.e2e.
 ## 示例片段
 
 ```ts
+import { parseStdoutJson, runCommandInProcess } from "./helpers.ts";
 import { FOO_ROUTES } from "./topic-routes.ts";
 
 test("foo bar 缺少 --prompt 时退出为用法错误 (2)", async () => {
-  const { stderr, exitCode } = await runCommandE2e(FOO_ROUTES, ["foo", "bar", "--quiet"]);
+  const { stderr, exitCode } = await runCommandInProcess(FOO_ROUTES, ["foo", "bar", "--quiet"]);
   expect(exitCode).toBe(2);
   expect(stderr).toMatch(/--prompt|Missing required argument/i);
 });
 
 test("foo bar --dry-run 仅输出计划", async () => {
-  const { stdout, stderr, exitCode } = await runCommandE2e(FOO_ROUTES, [
+  const { stdout, stderr, exitCode } = await runCommandInProcess(FOO_ROUTES, [
     "foo",
     "bar",
     "--dry-run",

@@ -100,6 +100,8 @@ export async function runCommandHelp(
 }
 
 export interface CommandE2eRunOptions {
+  /** Resolve project files relative to this directory. */
+  cwd?: string;
   /** Copy host console access_token into the isolated config. */
   seedCredentials?: boolean;
 }
@@ -112,7 +114,7 @@ export async function runCommandE2e(
   options: CommandE2eRunOptions = {},
 ): Promise<RunCliResult> {
   return runNodeMain(harnessMainTs, args, {
-    cwd: commandsPackageRoot,
+    cwd: options.cwd ?? commandsPackageRoot,
     seedCredentials: options.seedCredentials,
     env: {
       BAILIAN_E2E_ROUTES: serializeRoutes(routes),
@@ -138,6 +140,7 @@ export async function runCommandInProcess(
   routes: E2eRouteExports,
   args: string[],
   envOverrides: NodeJS.ProcessEnv = {},
+  options: Pick<CommandE2eRunOptions, "cwd"> = {},
 ): Promise<RunCliResult> {
   const environment = { ...process.env, ...envOverrides };
   if (
@@ -147,7 +150,7 @@ export async function runCommandInProcess(
     environment.http_proxy ||
     environment.https_proxy
   ) {
-    return runCommandE2e(routes, args, envOverrides);
+    return runCommandE2e(routes, args, envOverrides, options);
   }
   const isolated = buildIsolatedCliEnv({ overrides: envOverrides });
   try {
@@ -155,7 +158,7 @@ export async function runCommandInProcess(
     return await runInProcess(
       () => withHarnessUpdateFixture(() => createCli(commands, E2E_HARNESS_IDENTITY).run(args)),
       args,
-      { cwd: commandsPackageRoot, env: isolated.env, entrypoint: harnessMainTs },
+      { cwd: options.cwd ?? commandsPackageRoot, env: isolated.env, entrypoint: harnessMainTs },
     );
   } finally {
     isolated.dispose();

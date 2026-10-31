@@ -23,6 +23,7 @@ interface Scenario {
   dryRun?: boolean;
   responses?: unknown[];
   advanceClock?: boolean;
+  virtualPollTimers?: boolean;
   interrupt?: boolean;
 }
 const dataset = {
@@ -406,7 +407,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 async function invoke(scenario: Scenario, display: (typeof displays)[number], fail = false) {
-  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.useFakeTimers({
+    toFake: scenario.virtualPollTimers ? ["Date", "setTimeout", "clearTimeout"] : ["Date"],
+  });
   vi.setSystemTime(new Date("2026-01-02T00:00:00Z"));
   let stdout = "",
     stderr = "",
@@ -657,10 +660,12 @@ for (const command of [commands.finetuneWatch, commands.finetuneCompressWatch]) 
   test.each(displays)(
     `${command === commands.finetuneWatch ? "training" : "compression"} follow progress obeys output settings: %j`,
     async (display) => {
-      const result = await invoke(
+      let completed = false;
+      const pending = invoke(
         {
           name: "progress",
           command,
+          virtualPollTimers: true,
           flags: { jobId: "job-fixture", follow: true, interval: 1 },
           response: {},
           responses: [
@@ -669,7 +674,18 @@ for (const command of [commands.finetuneWatch, commands.finetuneCompressWatch]) 
           ],
         },
         display,
-      );
+      ).then((result) => {
+        completed = true;
+        return result;
+      });
+      // Exercise the real polling sleep, including its boundary, on a virtual
+      // clock. A shortened or bypassed interval must still fail this matrix.
+      await vi.advanceTimersByTimeAsync(999);
+      expect(completed).toBe(false);
+      expect(vi.mocked(httpTransport.fetch).mock.calls).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(completed).toBe(true);
+      const result = await pending;
       expect(result.exitCode, result.stderr).toBe(0);
       expect(result.requests).toHaveLength(2);
       expect(result.results).toBe(1);
