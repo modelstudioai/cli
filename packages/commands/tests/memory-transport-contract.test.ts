@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { httpTransport } from "bailian-cli-core";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { Client } from "bailian-cli-core";
@@ -47,6 +48,7 @@ for (const status of [401, 429, 500]) {
       memoryAdd.run({
         flags: { userId: "test", workspaceId: "ws_test", content: "synthetic", wait: 0 },
         settings: deps.settings,
+        output: createOutputReporter({ settings: deps.settings }).output,
         client: new Client(deps),
         identity: deps.identity,
       } as never),
@@ -67,6 +69,7 @@ test("ambiguous write transport failure is not automatically resubmitted", async
     memoryAdd.run({
       flags: { userId: "test", workspaceId: "ws_test", content: "synthetic", wait: 0 },
       settings: deps.settings,
+      output: createOutputReporter({ settings: deps.settings }).output,
       client: new Client(deps),
       identity: deps.identity,
     } as never),

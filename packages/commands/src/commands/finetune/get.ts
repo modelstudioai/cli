@@ -1,5 +1,5 @@
 import { defineCommand, getFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { computeActualFee } from "./fee.ts";
 
 const GET_FLAGS = {
@@ -12,6 +12,7 @@ const GET_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Get details of a single fine-tune job",
     "zh-CN": "获取单个微调任务的详情",
@@ -25,7 +26,11 @@ export default defineCommand({
     const jobId = flags.jobId;
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.get", job_id: jobId }, "json");
+      const resultData1 = { action: "finetune.get", job_id: jobId };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
@@ -33,7 +38,11 @@ export default defineCommand({
     const job = response.output ?? response.data;
 
     if (!job) {
-      emitResult({ job_id: jobId, error: "No data returned" }, "json");
+      const resultData2 = { job_id: jobId, error: "No data returned" };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+      );
       return;
     }
 
@@ -75,6 +84,10 @@ export default defineCommand({
       }
     }
 
-    emitResult({ ...item, request_id: response.request_id }, "json");
+    const resultData3 = { ...item, request_id: response.request_id };
+    ctx.output.result(
+      resultData3,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData3, null, 2) } : undefined,
+    );
   },
 });

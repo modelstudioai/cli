@@ -1,3 +1,4 @@
+import type { RagIndexListResponse } from "bailian-cli-core";
 import { describe, expect, test } from "vite-plus/test";
 import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_KB_INFO_ROUTES } from "../topic-routes.ts";
@@ -44,7 +45,7 @@ describe("e2e: knowledge kb info", () => {
   });
 });
 
-interface KbListQuietResult {
+interface KbListResult {
   stdout: string;
 }
 
@@ -52,14 +53,16 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb info (live)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
   test("先 list 取 id 再 info 断言分组字段", async () => {
-    const listRun: KbListQuietResult = await runCommandE2e(KNOWLEDGE_KB_INFO_ROUTES, [
+    const listRun: KbListResult = await runCommandE2e(KNOWLEDGE_KB_INFO_ROUTES, [
       "knowledge",
       "list",
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
-    const firstId = listRun.stdout.trim().split("\n")[0];
+    const firstId = parseStdoutJson<RagIndexListResponse>(listRun.stdout).data?.rows?.[0]?.id ?? "";
     if (!firstId) return; // skip assertions when the workspace has no knowledge bases
     const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_KB_INFO_ROUTES, [
       "knowledge",

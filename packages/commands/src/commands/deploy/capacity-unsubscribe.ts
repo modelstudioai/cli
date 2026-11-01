@@ -1,8 +1,9 @@
 import { defineCommand } from "bailian-cli-core";
-import { emitResult, emitBare, refundConsolePage } from "bailian-cli-runtime";
+import { refundConsolePage } from "bailian-cli-runtime";
 import { CAPACITY_INSTANCE_FLAG, validateQueryIds } from "./query-shared.ts";
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Build the Aliyun billing console unsubscribe link for a prepaid capacity instance",
     "zh-CN": "生成预付费容量实例在阿里云费用中心的退订链接",
@@ -27,20 +28,18 @@ export default defineCommand({
   ],
   validate: validateQueryIds,
   async run(ctx) {
-    const { settings, flags } = ctx;
+    const { flags } = ctx;
     // Pure link builder: no network call, so dry-run and execution share one path.
     const refundUrl = refundConsolePage(flags.instanceId);
-    if (settings.quiet) {
-      emitBare(refundUrl);
-      return;
-    }
-    emitResult(
-      {
-        action: "deploy.capacity.unsubscribe",
-        instance_id: flags.instanceId,
-        refund_url: refundUrl,
-      },
-      "json",
+
+    const resultData1 = {
+      action: "deploy.capacity.unsubscribe",
+      instance_id: flags.instanceId,
+      refund_url: refundUrl,
+    };
+    ctx.output.result(
+      resultData1,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
     );
   },
 });

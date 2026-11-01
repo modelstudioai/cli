@@ -1,6 +1,5 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
+import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
 import {
   TELEMETRY_TIME_FLAGS,
@@ -28,16 +27,18 @@ function toRows(resp: Record<string, unknown>): ErrorCodeRow[] {
   return [];
 }
 
-function printTable(rows: ErrorCodeRow[], startTime: number, endTime: number): void {
+function renderTable(rows: ErrorCodeRow[], startTime: number, endTime: number): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
-  process.stdout.write(
+  textChunks.push(
     `${color.dim("Time Range:")} ${formatDateTime(startTime)} ~ ${formatDateTime(endTime)}\n\n`,
   );
 
   if (rows.length === 0) {
-    process.stdout.write("No failures found in this range.\n");
-    return;
+    textChunks.push("No failures found in this range.\n");
+    return textChunks.join("").replace(/\n$/, "");
   }
 
   const lines = renderBoxTable({
@@ -50,7 +51,9 @@ function printTable(rows: ErrorCodeRow[], startTime: number, endTime: number): v
     ]),
     align: ["left", "left", "right", "right"],
   });
-  for (const line of lines) process.stdout.write(line + "\n");
+  for (const line of lines) textChunks.push(line + "\n");
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export default defineTelemetryCommand({
@@ -78,7 +81,7 @@ export default defineTelemetryCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags);
 
     const reqDTO = {
@@ -88,14 +91,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: ERROR_CODE_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: ERROR_CODE_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -103,17 +103,20 @@ export default defineTelemetryCommand({
     const resp = await pollTelemetryData(ctx.client, ERROR_CODE_API, reqDTO);
     const rows = toRows(resp);
 
-    if (format === "json") {
-      emitResult(
-        {
-          period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
-          list: rows,
-        },
-        format,
-      );
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printTable(rows, startTime, endTime);
+      textChunks.push(renderTable(rows, startTime, endTime) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
+    ctx.output.result(
+      {
+        period: { start: formatDateTime(startTime), end: formatDateTime(endTime) },
+        list: rows,
+      },
+      { text },
+    );
   },
 });

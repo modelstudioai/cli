@@ -1,14 +1,7 @@
 import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import { createKnowledgeService } from "./operations/service.ts";
 import { parseConfigFile } from "./service-update.ts";
-import {
-  defineCommand,
-  ragEndpoint,
-  RAG_PATHS,
-  detectOutputFormat,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand, ragEndpoint, RAG_PATHS, type FlagsDef } from "bailian-cli-core";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_CREATE_FLAGS = {
@@ -117,7 +110,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // agent_config is optional — omit to use server defaults; with --index-id build
     // the minimal kb_search_configs (name/desc etc. are backfilled by the system from
@@ -127,7 +120,7 @@ export default defineCommand({
       agent_scene: flags.scene,
       ...(flags.description ? { agent_desc: flags.description } : {}),
       ...(flags.configFile !== undefined
-        ? { agent_config: parseConfigFile(flags.configFile) }
+        ? { agent_config: parseConfigFile(flags.configFile, ctx.output) }
         : flags.indexId
           ? { agent_config: { kb_search_configs: [{ id: flags.indexId }] } }
           : {}),
@@ -135,26 +128,29 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentCreate);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
     const response = await createKnowledgeService(ctx.client, workspaceId, body);
 
-    const agentId = agentMutationField(response, "agent_id");
-    if (settings.quiet) {
-      emitBare(agentId ?? "");
-      return;
-    }
-    if (format === "text") {
-      emitBare(
-        `created: ${agentId ?? "-"}  (status: ${agentMutationField(response, "agent_status") ?? "draft"}, version: ${agentMutationField(response, "agent_version") ?? "beta"})`,
-      );
-      emitBare(
-        "Test the draft with --agent-version beta on search/chat, then deploy it to publish.",
-      );
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: [
+              ctx.localize({
+                "en-US": `created: ${agentMutationField(response, "agent_id") ?? "-"}  (status: ${agentMutationField(response, "agent_status") ?? "draft"}, version: ${agentMutationField(response, "agent_version") ?? "beta"})`,
+                "zh-CN": `已创建: ${agentMutationField(response, "agent_id") ?? "-"}  (状态: ${agentMutationField(response, "agent_status") ?? "draft"}, 版本: ${agentMutationField(response, "agent_version") ?? "beta"})`,
+              }),
+              ctx.localize({
+                "en-US":
+                  "Test the draft with --agent-version beta on search/chat, then deploy it to publish.",
+                "zh-CN": "在 search/chat 中使用 --agent-version beta 测试草稿，然后部署发布。",
+              }),
+            ].join("\n"),
+          }
+        : undefined,
+    );
   },
 });

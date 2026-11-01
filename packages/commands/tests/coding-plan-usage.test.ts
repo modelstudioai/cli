@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import codingPlanUsage from "../src/commands/usage/coding-plan.ts";
 
@@ -25,10 +26,19 @@ function captureStdout(): string[] {
 }
 
 async function runCodingPlan(response: Record<string, unknown>, output?: string): Promise<void> {
+  const settings = {
+    dryRun: false,
+    output: output === "json" ? ("json" as const) : ("text" as const),
+    quiet: false,
+    verbose: false,
+  };
   await codingPlanUsage.run({
     client: { console: vi.fn().mockResolvedValue(response) },
     flags: {},
-    settings: { dryRun: false, output },
+    settings,
+    output: createOutputReporter({ settings }).output,
+    localize: (text: string | { "en-US": string }) =>
+      typeof text === "string" ? text : text["en-US"],
   } as never);
 }
 

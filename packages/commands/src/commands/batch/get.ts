@@ -6,7 +6,7 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitBare, emitResult, registerInterruptHandler } from "bailian-cli-runtime";
+import { registerInterruptHandler } from "bailian-cli-runtime";
 import { BATCH_ID_FLAGS, DRY_RUN_NOTE, batchInteger, followBatch } from "./shared.ts";
 const GET_FLAGS = {
   ...BATCH_ID_FLAGS,
@@ -65,7 +65,8 @@ export default defineCommand({
   },
   async run(ctx) {
     if (ctx.settings.dryRun) {
-      emitResult({ action: "batch.get", ...ctx.flags }, "json");
+      const preview = { action: "batch.get", ...ctx.flags };
+      ctx.output.result(preview, { text: JSON.stringify(preview, null, 2) });
       return;
     }
     const controller = new AbortController();
@@ -88,27 +89,27 @@ export default defineCommand({
             pollTimeout: ctx.flags.pollTimeout,
             signal: controller.signal,
             progress: (current) => {
-              if (!ctx.settings.quiet)
-                console.error(
-                  `${current.id}: ${current.status} ${JSON.stringify(current.request_counts ?? {})}`,
-                );
+              ctx.output.progress(
+                `${current.id}: ${current.status} ${JSON.stringify(current.request_counts ?? {})}`,
+              );
               if (
                 !BATCH_STATUSES.includes(current.status as (typeof BATCH_STATUSES)[number]) &&
                 !unknown.has(current.status)
               ) {
                 unknown.add(current.status);
-                console.error(
-                  ctx.localize({
+                ctx.output.warning({
+                  code: "BATCH_UNKNOWN_STATE",
+                  message: {
                     "en-US": `Unknown state ${current.status}; keep polling without inferring completion.`,
                     "zh-CN": `未知状态 ${current.status}；继续轮询，不推断已完成。`,
-                  }),
-                );
+                  },
+                  details: { batch_id: current.id, status: current.status },
+                });
               }
             },
           })
         : await getBatch(ctx.client, ctx.flags.batchId);
-      if (ctx.settings.quiet) emitBare(job.id);
-      else emitResult(job, ctx.settings.output === "text" ? "text" : "json");
+      ctx.output.result(job);
       if (ctx.flags.follow) {
         if (job.status !== "completed")
           throw new BailianError(
@@ -124,13 +125,10 @@ export default defineCommand({
             }),
             { rawResponse: JSON.stringify(job) },
           );
-        if (!ctx.settings.quiet)
-          console.error(
-            ctx.localize({
-              "en-US": `Completed; failed rows: ${job.request_counts?.failed ?? "unknown"}. Next: batch download --batch-id ${job.id}`,
-              "zh-CN": `已完成；失败行：${job.request_counts?.failed ?? "未知"}。下一步：batch download --batch-id ${job.id}`,
-            }),
-          );
+        ctx.output.info({
+          "en-US": `Completed; failed rows: ${job.request_counts?.failed ?? "unknown"}. Next: batch download --batch-id ${job.id}`,
+          "zh-CN": `已完成；失败行：${job.request_counts?.failed ?? "未知"}。下一步：batch download --batch-id ${job.id}`,
+        });
       }
     } finally {
       releaseInterrupt?.();

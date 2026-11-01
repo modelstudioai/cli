@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagIndexListResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, truncateLine, PAGE_FLAGS, WORKSPACE_FLAG } from "./shared.ts";
 
 const KB_LIST_FLAGS = {
@@ -58,7 +56,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // Pagination and filter parameters must go in the query string — the server ignores them in the body
     const url = new URL(ragEndpoint(workspaceId, RAG_PATHS.indexList));
@@ -68,7 +66,7 @@ export default defineCommand({
     const endpoint = url.toString();
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: null }, format);
+      ctx.output.result({ endpoint, request: null });
       return;
     }
 
@@ -78,16 +76,16 @@ export default defineCommand({
     });
 
     const rows = response.data?.rows ?? [];
-    if (settings.quiet) {
-      for (const row of rows) emitBare(row.id);
-      return;
-    }
-    if (format === "text") {
+
+    ctx.output.result(response, format === "text" ? { text: renderText() } : undefined);
+    function renderText(): string {
+      const lines: string[] = [];
+
       if (rows.length === 0) {
-        emitBare("No knowledge bases found.");
+        lines.push("No knowledge bases found.");
       } else {
         for (const row of rows) {
-          emitBare(
+          lines.push(
             truncateLine(
               [
                 row.id,
@@ -101,9 +99,9 @@ export default defineCommand({
           );
         }
       }
-      emitBare(`total: ${response.data?.total_count ?? rows.length}`);
-    } else {
-      emitResult(response, format);
+      lines.push(`total: ${response.data?.total_count ?? rows.length}`);
+
+      return lines.join("\n");
     }
   },
 });

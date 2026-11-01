@@ -1,8 +1,9 @@
 import { defineCommand, getCapacityOperation } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { CAPACITY_OPERATION_FLAGS, validateQueryIds } from "./query-shared.ts";
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Query a throughput reservation capacity operation once",
     "zh-CN": "单次查询吞吐预留容量操作",
@@ -23,19 +24,25 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.operation.get",
-          deployed_model: flags.deployedModel,
-          operation_id: flags.operationId,
-        },
-        "json",
+      const resultData1 = {
+        action: "deploy.operation.get",
+        deployed_model: flags.deployedModel,
+        operation_id: flags.operationId,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
-    emitResult(
-      await getCapacityOperation(ctx.client, flags.deployedModel, flags.operationId),
-      "json",
+    const resultData2 = await getCapacityOperation(
+      ctx.client,
+      flags.deployedModel,
+      flags.operationId,
+    );
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
     );
   },
 });

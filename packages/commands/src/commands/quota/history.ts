@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, BailianError, ExitCode } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
+import { defineCommand, BailianError, ExitCode } from "bailian-cli-core";
+import { ansi } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatNumber } from "../shared/format.ts";
 
@@ -50,7 +50,7 @@ function formatDateTime(ts: string | undefined): string {
   }
 }
 
-function printTable(records: LimitApplicationItem[], total: number): void {
+function renderTable(records: LimitApplicationItem[], total: number): string {
   const color = ansi(process.stdout);
 
   const headers = ["Model", "Token Limit", "Applied At"];
@@ -68,14 +68,12 @@ function printTable(records: LimitApplicationItem[], total: number): void {
   const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => color.dim("─".repeat(w))).join("──");
 
-  process.stdout.write(headerLine + "\n");
-  process.stdout.write(separator + "\n");
-
-  for (const row of rows) {
-    process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
-  }
-
-  process.stdout.write(color.dim(`\nTotal: ${total} records`) + "\n");
+  return [
+    headerLine,
+    separator,
+    ...rows.map((row) => row.map((cell, col) => padEnd(cell, widths[col])).join("  ")),
+    color.dim(`\nTotal: ${total} records`),
+  ].join("\n");
 }
 
 export default defineCommand({
@@ -105,14 +103,14 @@ export default defineCommand({
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
     const modelFilter = flags.model || undefined;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const requestData = {
       input: { pageNo: page, pageSize },
     };
 
     if (settings.dryRun) {
-      emitResult({ api: HISTORY_API, data: requestData }, format);
+      ctx.output.result({ api: HISTORY_API, data: requestData });
       return;
     }
 
@@ -138,21 +136,24 @@ export default defineCommand({
       records = records.filter((r) => r.deployedModel === modelFilter);
     }
 
-    if (format === "json") {
-      const items = records.map((r) => ({
-        model: r.deployedModel,
-        tokenLimit: r.usageLimit,
-        appliedAt: formatDateTime(r.gmtCreate),
-      }));
-      emitResult({ records: items, total: modelFilter ? records.length : total }, format);
-      return;
-    }
-
-    if (records.length === 0) {
-      process.stdout.write("No quota change history found.\n");
-      return;
-    }
-
-    printTable(records, modelFilter ? records.length : total);
+    const items = records.map((record) => ({
+      model: record.deployedModel,
+      tokenLimit: record.usageLimit,
+      appliedAt: formatDateTime(record.gmtCreate),
+    }));
+    const resultTotal = modelFilter ? records.length : total;
+    ctx.output.result(
+      { records: items, total: resultTotal },
+      format === "text"
+        ? {
+            text: records.length
+              ? renderTable(records, resultTotal)
+              : ctx.localize({
+                  "en-US": "No quota change history found.",
+                  "zh-CN": "未找到额度变更历史。",
+                }),
+          }
+        : undefined,
+    );
   },
 });

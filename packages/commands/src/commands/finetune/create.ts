@@ -14,8 +14,6 @@ import {
   formatIssue,
   BailianError,
   ExitCode,
-  type Client,
-  type Settings,
   type CommandContext,
   type CreateFineTuneRequest,
   type FineTuneHyperParameters,
@@ -26,7 +24,6 @@ import {
 } from "bailian-cli-core";
 import { existsSync, statSync } from "fs";
 import { basename } from "path";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 /**
  * A `--datasets` / `--validations` token is treated as a local file to upload
@@ -74,8 +71,7 @@ interface ResolvedDataset {
  * validated (the preview never touches the network or the disk beyond stat).
  */
 async function analyzeDatasetTokens(
-  settings: Settings,
-  binName: string,
+  context: Pick<CommandContext, "settings" | "identity" | "output">,
   raw: string,
   label: string,
   profile: TrainingProfile,
@@ -84,6 +80,8 @@ async function analyzeDatasetTokens(
   /** Pre-detected modality for a known path (avoids re-opening the file). */
   knownModality?: { path: string; modality: DataModality },
 ): Promise<ResolvedDataset> {
+  const { settings } = context;
+  const binName = context.identity.binName;
   const tokens = raw
     .split(",")
     .map((token) => token.trim())
@@ -142,16 +140,15 @@ async function analyzeDatasetTokens(
       );
       throw new BailianError(lines.join("\n"), ExitCode.GENERAL);
     }
-    if (result.warnings.length > 0 && !settings.quiet) {
-      process.stderr.write(
-        `Dataset validation passed with ${result.warnings.length} warning(s) for ${token}:\n`,
-      );
-      for (const warning of result.warnings.slice(0, 5)) {
-        process.stderr.write(`${formatIssue(warning)}\n`);
-      }
-      if (result.warnings.length > 5) {
-        process.stderr.write(`  … and ${result.warnings.length - 5} more.\n`);
-      }
+    if (result.warnings.length > 0) {
+      context.output.warning({
+        code: "DATASET_VALIDATION_WARNINGS",
+        message: {
+          "en-US": `Dataset validation passed with ${result.warnings.length} warning(s) for ${token}.`,
+          "zh-CN": `${token} 数据集校验通过，共 ${result.warnings.length} 条警告。`,
+        },
+        details: { file: token, warnings: result.warnings },
+      });
     }
 
     // Accumulate the sample count so the caller can pre-flight the batch-size
@@ -179,12 +176,12 @@ async function analyzeDatasetTokens(
  * happened in `analyzeDatasetTokens`, so this is pure upload.
  */
 async function uploadResolvedLocal(
-  client: Client,
-  settings: Settings,
+  context: Pick<CommandContext, "client" | "output">,
   resolved: ResolvedDataset,
   purpose: string,
   label: string,
 ): Promise<DatasetFile[]> {
+  const { client } = context;
   const uploaded: DatasetFile[] = [];
   for (const [index, token] of resolved.fileIds.entries()) {
     if (!isLocalPath(token)) continue;
@@ -197,11 +194,10 @@ async function uploadResolvedLocal(
     }
     uploaded.push(file);
     resolved.fileIds[index] = file.file_id;
-    if (!settings.quiet) {
-      process.stderr.write(
-        `Uploaded ${basename(token)} → ${file.file_id} (auto from --${label})\n`,
-      );
-    }
+    context.output.info({
+      "en-US": `Uploaded ${basename(token)} → ${file.file_id} (auto from --${label})`,
+      "zh-CN": `已上传 ${basename(token)} → ${file.file_id}（来自 --${label}）`,
+    });
   }
   return uploaded;
 }
@@ -565,7 +561,7 @@ async function runCreate<F extends FlagsDef>(
   commandModality: CommandModality,
   ctx: CommandContext<F>,
 ): Promise<void> {
-  const { identity, settings } = ctx;
+  const { settings } = ctx;
   const flags = ctx.flags as Record<string, unknown>;
   const model = flags.baseModel as string;
   const datasetsRaw = flags.datasets as string;
@@ -631,8 +627,7 @@ async function runCreate<F extends FlagsDef>(
   }
 
   const training = await analyzeDatasetTokens(
-    settings,
-    identity.binName,
+    ctx,
     datasetsRaw,
     "datasets",
     profile,
@@ -644,8 +639,7 @@ async function runCreate<F extends FlagsDef>(
 
   const validation = flags.validations
     ? await analyzeDatasetTokens(
-        settings,
-        identity.binName,
+        ctx,
         flags.validations as string,
         "validations",
         profile,
@@ -745,30 +739,33 @@ async function runCreate<F extends FlagsDef>(
   if (
     flags.batchSize !== undefined &&
     hp.batch_size !== undefined &&
-    !settings.quiet &&
     !profile.shouldSkipGate("batch_size", modality)
   ) {
     const requested = flags.batchSize as number;
     if (hp.batch_size !== requested) {
-      process.stderr.write(
-        `warning: --batch-size ${requested} clamped to ${hp.batch_size} ` +
-          `(server range [8, 1024] for the common training types).\n`,
-      );
+      ctx.output.warning({
+        code: "TRAINING_BATCH_SIZE_CLAMPED",
+        message: {
+          "en-US": `--batch-size ${requested} clamped to ${hp.batch_size} (server range [8, 1024] for the common training types).`,
+          "zh-CN": `--batch-size ${requested} 已调整为 ${hp.batch_size}（常用训练类型的服务端范围为 [8, 1024]）。`,
+        },
+        details: { requested, batch_size: hp.batch_size },
+      });
     }
   }
   // For modalities that skip the batch_size gate, warn the user that their
   // explicit --batch-size was discarded (model uses a fixed batch_size).
-  if (
-    flags.batchSize !== undefined &&
-    !settings.quiet &&
-    profile.shouldSkipGate("batch_size", modality)
-  ) {
+  if (flags.batchSize !== undefined && profile.shouldSkipGate("batch_size", modality)) {
     const requested = flags.batchSize as number;
     if (hp.batch_size !== undefined && hp.batch_size !== requested) {
-      process.stderr.write(
-        `warning: --batch-size ${requested} ignored for ${modality} training ` +
-          `(model uses a fixed batch_size of ${hp.batch_size}).\n`,
-      );
+      ctx.output.warning({
+        code: "TRAINING_BATCH_SIZE_IGNORED",
+        message: {
+          "en-US": `--batch-size ${requested} ignored for ${modality} training (model uses a fixed batch_size of ${hp.batch_size}).`,
+          "zh-CN": `${modality} 训练忽略了 --batch-size ${requested}（模型使用固定 batch_size ${hp.batch_size}）。`,
+        },
+        details: { requested, batch_size: hp.batch_size, modality },
+      });
     }
   }
 
@@ -823,12 +820,14 @@ async function runCreate<F extends FlagsDef>(
     try {
       capability = await fetchModelCapability(settings, model);
     } catch (error) {
-      if (!settings.quiet) {
-        process.stderr.write(
-          `warning: model capability lookup failed (${(error as Error).message}); ` +
-            "proceeding without local pre-flight.\n",
-        );
-      }
+      ctx.output.warning({
+        code: "TRAINING_CAPABILITY_LOOKUP_FAILED",
+        message: {
+          "en-US": "Model capability lookup failed; proceeding without local pre-flight.",
+          "zh-CN": "模型能力查询失败；将跳过本地预检继续提交。",
+        },
+        details: { reason: error instanceof Error ? error.message : undefined },
+      });
     }
     if (capability && !listSupportedTrainingTypes(capability).includes(trainingType)) {
       const supported = listSupportedTrainingTypes(capability);
@@ -846,9 +845,9 @@ async function runCreate<F extends FlagsDef>(
   // capability check) has cleared them. This swaps the placeholder path
   // entries in `training.fileIds` / `validation?.fileIds` for real file-ids.
   if (!settings.dryRun) {
-    await uploadResolvedLocal(ctx.client, settings, training, "fine-tune", "datasets");
+    await uploadResolvedLocal(ctx, training, "fine-tune", "datasets");
     if (validation) {
-      await uploadResolvedLocal(ctx.client, settings, validation, "fine-tune", "validations");
+      await uploadResolvedLocal(ctx, validation, "fine-tune", "validations");
     }
   }
 
@@ -872,27 +871,28 @@ async function runCreate<F extends FlagsDef>(
       ...training.localPaths.map((path) => ({ field: "datasets", path })),
       ...(validation?.localPaths ?? []).map((path) => ({ field: "validations", path })),
     ];
-    emitResult(
+    const resultData1 =
       pending.length > 0
         ? { action: "finetune.create", body, pending_uploads: pending }
-        : { action: "finetune.create", body },
-      "json",
+        : { action: "finetune.create", body };
+    ctx.output.result(
+      resultData1,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
     );
     return;
   }
 
   const response = await createFineTune(ctx.client, body);
-  const job = response.output ?? response.data;
 
-  if (settings.quiet) {
-    if (job?.job_id) emitBare(job.job_id);
-  } else {
-    emitResult(response, "json");
-  }
+  ctx.output.result(
+    response,
+    ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+  );
 }
 
 /** `bl finetune text create` — fine-tune a text model. Datasets are `.jsonl`. */
 export const finetuneTextCreate = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Create a text model fine-tune job (sft | sft-lora | dpo | dpo-lora | cpt)",
     "zh-CN": "创建文本模型微调任务（sft | sft-lora | dpo | dpo-lora | cpt）",
@@ -917,6 +917,7 @@ export const finetuneTextCreate = defineCommand({
 
 /** `bl finetune audio create` — fine-tune an audio TTS model. Datasets are `.zip`. */
 export const finetuneAudioCreate = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Create an audio TTS model fine-tune job (sft-lora)",
     "zh-CN": "创建音频 TTS 模型微调任务（sft-lora）",
@@ -937,6 +938,7 @@ export const finetuneAudioCreate = defineCommand({
 
 /** `bl finetune image create` — fine-tune an image generation model. Datasets are `.zip`. */
 export const finetuneImageCreate = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Create an image generation model fine-tune job (sft-lora)",
     "zh-CN": "创建图片生成模型微调任务（sft-lora）",
@@ -976,6 +978,7 @@ const VIDEO_NOTES = [
 
 /** `bl finetune video create` — fine-tune a video generation model. Datasets are `.zip`. */
 export const finetuneVideoCreate = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)",
     "zh-CN": "创建视频生成模型微调任务（Wan i2v/kf2v，efficient_sft）",

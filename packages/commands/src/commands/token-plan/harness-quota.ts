@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
-import { printQuotaBox, readNumber, type QuotaSection } from "../usage/quota-box.ts";
+import { defineCommand, unwrapResponse } from "bailian-cli-core";
+import { renderQuotaBox, readNumber, type QuotaSection } from "../usage/quota-box.ts";
 import { formatNumber } from "../shared/format.ts";
 import type { HarnessBenefitItem, TokenPlanEquityInfo } from "./types.ts";
 
@@ -128,20 +127,17 @@ export default defineCommand({
   exampleArgs: ["", "--type official_tool", "--output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const benefitsData = flags.type ? { type: flags.type } : {};
     const equityData = { queryTokenPlanEquityInfoRequest: { requestId: randomUUID() } };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          requests: [
-            { api: HARNESS_LIST_API, data: benefitsData },
-            { api: EQUITY_INFO_API, data: equityData },
-          ],
-        },
-        format,
-      );
+      ctx.output.result({
+        requests: [
+          { api: HARNESS_LIST_API, data: benefitsData },
+          { api: EQUITY_INFO_API, data: equityData },
+        ],
+      });
       return;
     }
 
@@ -154,16 +150,19 @@ export default defineCommand({
       readArray<TokenPlanEquityInfo>(equityResult, "tokenPlanEquityInfos"),
     );
 
-    if (format === "json") {
-      emitResult({ generatedAt: Date.now(), items: rows }, format);
-      return;
-    }
-
-    if (rows.length === 0) {
-      process.stdout.write("No harness with entitlement quota found.\n");
-      return;
-    }
-
-    printQuotaBox("Token Plan Harness Quota", rows.map(toSection), Date.now());
+    const generatedAt = Date.now();
+    ctx.output.result(
+      { generatedAt, items: rows },
+      format === "text"
+        ? {
+            text: rows.length
+              ? renderQuotaBox("Token Plan Harness Quota", rows.map(toSection), generatedAt)
+              : ctx.localize({
+                  "en-US": "No harness with entitlement quota found.",
+                  "zh-CN": "未找到具有权益额度的 harness。",
+                }),
+          }
+        : undefined,
+    );
   },
 });

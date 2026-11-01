@@ -122,7 +122,7 @@ pnpm run test:stress -- video-edit --reuse-fixtures -- --count 3
 - 除 `speech recognize` 外，压测子进程宜带 `--output json`（语音识别以 `--out` 文件为准 stdout 可能为纯文本）
 - 异步类命令带 `--timeout`、对应 `--poll-interval`
 
-**禁止**对子进程加 `--quiet`（与 `--output json` 并存时可能丢 `urls` / `video_url`）。
+`--quiet` 仅隐藏过程提示；与 `--output json` 并用仍须返回完整结果（包括 `urls` / `video_url`），警告和错误保留。不要依赖 quiet 选择结果字段。
 
 **禁止**对视频相关子进程加 `--async`；须阻塞到任务完成（及下载路径正确时落盘）。
 

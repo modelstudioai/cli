@@ -1,6 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { emitResult } from "bailian-cli-runtime";
 import { parseCommaList } from "../shared/params.ts";
 import {
   TELEMETRY_LOG_TIME_FLAGS,
@@ -11,7 +9,7 @@ import {
 import {
   type ModelLogEntry,
   LIST_INFERENCE_LOGS_API,
-  printLogTable,
+  renderLogTable,
   validateHoursFlag,
   validateStatusCodeTypes,
 } from "./shared.ts";
@@ -108,7 +106,7 @@ export default defineTelemetryCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const { startTime, endTime } = resolveTimeRange(flags, 1 / 24);
 
     // The inference log API takes single model/apikey values and string timestamps.
@@ -129,14 +127,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: LIST_INFERENCE_LOGS_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: LIST_INFERENCE_LOGS_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -144,17 +139,20 @@ export default defineTelemetryCommand({
     const resp = await pollTelemetryData(ctx.client, LIST_INFERENCE_LOGS_API, reqDTO);
     const list = (resp.list as ModelLogEntry[]) ?? [];
 
-    if (format === "json") {
-      emitResult(
-        {
-          totalCount: resp.totalCount ?? 0,
-          list,
-        },
-        format,
-      );
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printLogTable(list);
+      textChunks.push(renderLogTable(list) + "\n");
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
+    ctx.output.result(
+      {
+        totalCount: resp.totalCount ?? 0,
+        list,
+      },
+      { text },
+    );
   },
 });

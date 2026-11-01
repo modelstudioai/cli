@@ -1,6 +1,5 @@
 import { getRemoteAgent } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import { displayValue } from "../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
@@ -20,9 +19,8 @@ export default defineCommand({
       ? "--agent-version must be a positive integer."
       : undefined,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const agent = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getRemoteAgent(runtime, ctx.flags.agentId, {
           provider: "bailian",
@@ -30,16 +28,21 @@ export default defineCommand({
         });
       }),
     );
-    if (format === "json") {
-      emitResult(agent, format);
-      return;
-    }
-    emitBare(`ID:          ${agent.id}`);
-    emitBare(`Name:        ${displayValue(agent.name)}`);
-    emitBare(`Description: ${displayValue(agent.description, 120)}`);
-    emitBare(`Version:     ${displayValue(agent.version)}`);
-    emitBare(`Type:        ${displayValue(agent.type)}`);
-    emitBare(`Created:     ${displayValue(agent.created_at)}`);
-    emitBare(`Updated:     ${displayValue(agent.updated_at)}`);
+    ctx.output.result(agent, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              lines.push(`ID:          ${agent.id}`);
+              lines.push(`Name:        ${displayValue(agent.name)}`);
+              lines.push(`Description: ${displayValue(agent.description, 120)}`);
+              lines.push(`Version:     ${displayValue(agent.version)}`);
+              lines.push(`Type:        ${displayValue(agent.type)}`);
+              lines.push(`Created:     ${displayValue(agent.created_at)}`);
+              lines.push(`Updated:     ${displayValue(agent.updated_at)}`);
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
   },
 });

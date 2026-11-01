@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagGetConnectorResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const COLLECTION_GET_FLAGS = {
@@ -43,7 +41,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // The server contract still uses connector* fields; only the CLI-facing term is collection
     const body = {
@@ -53,7 +51,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.getConnector);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -64,18 +62,17 @@ export default defineCommand({
     });
 
     const collection = response.data;
-    if (settings.quiet) {
-      emitBare(collection?.connectorId ?? "");
-      return;
-    }
-    if (format === "text") {
-      emitBare(`id: ${collection?.connectorId ?? "-"}`);
-      emitBare(`name: ${collection?.connectorName ?? "-"}`);
-      emitBare(`description: ${collection?.description ?? "-"}`);
+
+    ctx.output.result(response, format === "text" ? { text: renderText() } : undefined);
+    function renderText(): string {
+      const lines: string[] = [];
+
+      lines.push(`id: ${collection?.connectorId ?? "-"}`);
+      lines.push(`name: ${collection?.connectorName ?? "-"}`);
+      lines.push(`description: ${collection?.description ?? "-"}`);
       // getConnector does not return fileConnectorConfig (storeType/regionId/bucketName);
       // these fields are only available on the create request body.
-      return;
+      return lines.join("\n");
     }
-    emitResult(response, format);
   },
 });

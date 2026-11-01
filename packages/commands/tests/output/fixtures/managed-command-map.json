@@ -1,0 +1,462 @@
+[
+  {
+    "name": "managedAgentInit",
+    "module": "init.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentValidate",
+    "module": "validate.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentPlan",
+    "module": "plan.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentApply",
+    "module": "apply.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDestroy",
+    "module": "destroy.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentPlayground",
+    "module": "workbench.ts",
+    "exported": "managedAgentPlayground"
+  },
+  {
+    "name": "managedAgentProjectBuild",
+    "module": "project.ts",
+    "exported": "managedAgentProjectBuild"
+  },
+  {
+    "name": "managedAgentProjectInit",
+    "module": "project.ts",
+    "exported": "managedAgentProjectInit"
+  },
+  {
+    "name": "managedAgentProjectPublish",
+    "module": "project.ts",
+    "exported": "managedAgentProjectPublish"
+  },
+  {
+    "name": "managedAgentProjectValidate",
+    "module": "project.ts",
+    "exported": "managedAgentProjectValidate"
+  },
+  {
+    "name": "managedAgentProjectVersionDisable",
+    "module": "project.ts",
+    "exported": "managedAgentProjectVersionDisable"
+  },
+  {
+    "name": "managedAgentProjectVersionEnable",
+    "module": "project.ts",
+    "exported": "managedAgentProjectVersionEnable"
+  },
+  {
+    "name": "managedAgentProjectVersionList",
+    "module": "project.ts",
+    "exported": "managedAgentProjectVersionList"
+  },
+  {
+    "name": "managedAgentProjectVersionPreview",
+    "module": "project.ts",
+    "exported": "managedAgentProjectVersionPreview"
+  },
+  {
+    "name": "managedAgentProjectVersionRestore",
+    "module": "project.ts",
+    "exported": "managedAgentProjectVersionRestore"
+  },
+  {
+    "name": "managedAgentProjectVersionStatus",
+    "module": "project.ts",
+    "exported": "managedAgentProjectVersionStatus"
+  },
+  {
+    "name": "managedAgentProjectWorkbench",
+    "module": "project.ts",
+    "exported": "managedAgentProjectWorkbench"
+  },
+  {
+    "name": "managedAgentStateList",
+    "module": "state-list.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentStateShow",
+    "module": "state-show.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentStateRm",
+    "module": "state-rm.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentStateImport",
+    "module": "state-import.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSessionCreate",
+    "module": "session-create.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSessionList",
+    "module": "session-list.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSessionGet",
+    "module": "session-get.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSessionDelete",
+    "module": "session-delete.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSessionRun",
+    "module": "session-run.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSessionSend",
+    "module": "session-send.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSessionEvents",
+    "module": "session-events.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSkillList",
+    "module": "skill-list.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentAgentCreate",
+    "module": "agent/create.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentEnvironmentCreate",
+    "module": "environment/create.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSkillCreate",
+    "module": "skill/create.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentVaultCreate",
+    "module": "vault/create.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentVaultCredentialCreate",
+    "module": "vault/credential/create.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentCreate",
+    "module": "deployment/create.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentAgentGet",
+    "module": "agent/get.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentAgentList",
+    "module": "agent/list.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentAgentSearch",
+    "module": "agent/search.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentAgentVersions",
+    "module": "agent/versions.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentEnvironmentGet",
+    "module": "environment/get.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentEnvironmentList",
+    "module": "environment/list.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentEnvironmentSearch",
+    "module": "environment/search.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSkillDownload",
+    "module": "skill/download.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSkillGet",
+    "module": "skill/get.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSkillSearch",
+    "module": "skill/search.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSkillVersions",
+    "module": "skill/versions.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentVaultGet",
+    "module": "vault/get.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentVaultList",
+    "module": "vault/list.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentVaultSearch",
+    "module": "vault/search.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentGet",
+    "module": "deployment/get.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentList",
+    "module": "deployment/list.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentPause",
+    "module": "deployment/pause.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentRun",
+    "module": "deployment/run.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentRunsGet",
+    "module": "deployment/runs/get.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentRunsList",
+    "module": "deployment/runs/list.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentSearch",
+    "module": "deployment/search.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentDeploymentUnpause",
+    "module": "deployment/unpause.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentSessionArchive",
+    "module": "session-management.ts",
+    "exported": "managedAgentSessionArchive"
+  },
+  {
+    "name": "managedAgentSessionSearch",
+    "module": "session-management.ts",
+    "exported": "managedAgentSessionSearch"
+  },
+  {
+    "name": "managedAgentSessionUpdate",
+    "module": "session-management.ts",
+    "exported": "managedAgentSessionUpdate"
+  },
+  {
+    "name": "managedAgentSessionEventList",
+    "module": "session-event.ts",
+    "exported": "managedAgentSessionEventList"
+  },
+  {
+    "name": "managedAgentSessionEventSend",
+    "module": "session-event.ts",
+    "exported": "managedAgentSessionEventSend"
+  },
+  {
+    "name": "managedAgentSessionEventStream",
+    "module": "session-event.ts",
+    "exported": "managedAgentSessionEventStream"
+  },
+  {
+    "name": "managedAgentSessionDebug",
+    "module": "session-debug.ts",
+    "exported": "managedAgentSessionDebug"
+  },
+  {
+    "name": "managedAgentSessionExport",
+    "module": "session-debug.ts",
+    "exported": "managedAgentSessionExport"
+  },
+  {
+    "name": "managedAgentFileDelete",
+    "module": "file.ts",
+    "exported": "managedAgentFileDelete"
+  },
+  {
+    "name": "managedAgentFileDownload",
+    "module": "file.ts",
+    "exported": "managedAgentFileDownload"
+  },
+  {
+    "name": "managedAgentFileGet",
+    "module": "file.ts",
+    "exported": "managedAgentFileGet"
+  },
+  {
+    "name": "managedAgentFileList",
+    "module": "file.ts",
+    "exported": "managedAgentFileList"
+  },
+  {
+    "name": "managedAgentFileSearch",
+    "module": "file.ts",
+    "exported": "managedAgentFileSearch"
+  },
+  {
+    "name": "managedAgentFileUpload",
+    "module": "file.ts",
+    "exported": "managedAgentFileUpload"
+  },
+  {
+    "name": "managedAgentWebhookCreate",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookCreate"
+  },
+  {
+    "name": "managedAgentWebhookList",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookList"
+  },
+  {
+    "name": "managedAgentWebhookGet",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookGet"
+  },
+  {
+    "name": "managedAgentWebhookUpdate",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookUpdate"
+  },
+  {
+    "name": "managedAgentWebhookDelete",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookDelete"
+  },
+  {
+    "name": "managedAgentWebhookEnable",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookEnable"
+  },
+  {
+    "name": "managedAgentWebhookDisable",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookDisable"
+  },
+  {
+    "name": "managedAgentWebhookTest",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookTest"
+  },
+  {
+    "name": "managedAgentWebhookResetSecret",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookResetSecret"
+  },
+  {
+    "name": "managedAgentWebhookEvents",
+    "module": "webhook.ts",
+    "exported": "managedAgentWebhookEvents"
+  },
+  {
+    "name": "managedAgentMemoryStoreCreate",
+    "module": "memory-store/create.ts",
+    "exported": "default"
+  },
+  {
+    "name": "managedAgentMemoryStoreList",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryStoreList"
+  },
+  {
+    "name": "managedAgentMemoryStoreGet",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryStoreGet"
+  },
+  {
+    "name": "managedAgentMemoryCreate",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryCreate"
+  },
+  {
+    "name": "managedAgentMemoryList",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryList"
+  },
+  {
+    "name": "managedAgentMemoryGet",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryGet"
+  },
+  {
+    "name": "managedAgentMemoryUpdate",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryUpdate"
+  },
+  {
+    "name": "managedAgentMemoryDelete",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryDelete"
+  },
+  {
+    "name": "managedAgentMemoryVersionList",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryVersionList"
+  },
+  {
+    "name": "managedAgentMemoryVersionGet",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryVersionGet"
+  },
+  {
+    "name": "managedAgentMemoryVersionRedact",
+    "module": "memory-store/api.ts",
+    "exported": "managedAgentMemoryVersionRedact"
+  }
+]

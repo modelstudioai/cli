@@ -1,12 +1,11 @@
 import {
   defineCommand,
-  detectOutputFormat,
   type FlagsDef,
   type ParsedFlags,
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
-import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
+import { padEnd } from "bailian-cli-runtime";
 import type { GetSubscriptionSeatDetailsResponse, TokenPlanSeatDetail } from "./types.ts";
 import {
   TOKEN_PLAN_COMMON_QUERY_FLAGS,
@@ -82,7 +81,7 @@ export default defineCommand({
   exampleArgs: ["", "--page-size 20 --status NORMAL", "--query-assigned true --seat-type standard"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const queryParams = buildQueryParams(flags);
 
     if (settings.dryRun) {
@@ -91,7 +90,7 @@ export default defineCommand({
         API_PATH,
         queryParams,
       );
-      emitResult({ endpoint, query }, format);
+      ctx.output.result({ endpoint, query });
       return;
     }
 
@@ -105,11 +104,12 @@ export default defineCommand({
     });
 
     const items = data.Data?.Items ?? [];
-    if (settings.quiet || format === "text") {
-      emitTextSeats(items, data.Data?.Total, data.Data?.PageNo, data.Data?.PageSize);
-    } else {
-      emitResult(data, format);
-    }
+    ctx.output.result(
+      data,
+      format === "text"
+        ? { text: renderSeats(items, data.Data?.Total, data.Data?.PageNo, data.Data?.PageSize) }
+        : undefined,
+    );
   },
 });
 
@@ -139,15 +139,16 @@ function buildQueryParams(flags: ListSeatsFlags): TokenPlanQueryParams {
   return params;
 }
 
-function emitTextSeats(
+function renderSeats(
   items: TokenPlanSeatDetail[],
   total?: number,
   pageNo?: number,
   pageSize?: number,
-): void {
+): string {
+  const lines: string[] = [];
+
   if (items.length === 0) {
-    emitBare("No seats found.");
-    return;
+    return "No seats found.";
   }
 
   const header = [
@@ -157,8 +158,8 @@ function emitTextSeats(
     padEnd("Assigned", 12),
     padEnd("Account", 20),
   ].join(" ");
-  emitBare(header);
-  emitBare("-".repeat(header.length));
+  lines.push(header);
+  lines.push("-".repeat(header.length));
 
   for (const item of items) {
     const row = [
@@ -168,13 +169,15 @@ function emitTextSeats(
       padEnd(item.AssignedStatus ?? "-", 12),
       padEnd(item.AccountName ?? item.AccountId ?? "-", 20),
     ].join(" ");
-    emitBare(row);
+    lines.push(row);
   }
 
   if (total !== undefined) {
-    emitBare("");
-    emitBare(
+    lines.push("");
+    lines.push(
       `Total: ${total}${pageNo !== undefined ? ` | Page: ${pageNo}` : ""}${pageSize !== undefined ? ` | PageSize: ${pageSize}` : ""}`,
     );
   }
+
+  return lines.join("\n");
 }

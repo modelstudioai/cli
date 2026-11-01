@@ -1,11 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { executePlannedProject, planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -59,50 +52,50 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const file = flags.file ?? "agents.yaml";
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          would_apply: {
-            provider: "bailian",
-            refresh: !flags.noRefresh,
-            concurrency: flags.concurrency,
-          },
-          config_file: file,
-          hint: "Run `managed-agent plan` to preview the exact resource changes.",
+      ctx.output.result({
+        would_apply: {
+          provider: "bailian",
+          refresh: !flags.noRefresh,
+          concurrency: flags.concurrency,
         },
-        format,
-      );
+        config_file: file,
+        hint: "Run `managed-agent plan` to preview the exact resource changes.",
+      });
       return;
     }
 
     const planned = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         return planProjectContext(runtime, {
           provider: "bailian",
           refresh: !flags.noRefresh,
-          quiet: true,
-          onFeedback: renderAgentFeedback,
+          quiet: false,
+          onFeedback: (event) => renderAgentFeedback(ctx.output, event),
         });
       }),
     );
 
     const plan = planned.plan;
-    // In --output json, stdout must stay a single-JSON data channel: diagnostics
-    // and the action preview are progress info → stderr; text mode keeps stdout.
-    const emitProgress = (line: string): void => {
-      if (format === "json") process.stderr.write(`${line}\n`);
-      else emitBare(line);
-    };
+    const emitProgress = (line: string): void => ctx.output.info(line);
     const errorDiagnostics = plan.diagnostics.filter(
       (diagnostic) => diagnostic.severity === "error",
     );
     if (errorDiagnostics.length > 0) {
       for (const diagnostic of errorDiagnostics) {
-        emitProgress(`[error] ${diagnostic.code}: ${diagnostic.message}`);
+        ctx.output.warning({
+          message: `[error] ${diagnostic.code}: ${diagnostic.message}`,
+          code: "AGENT_PLAN_DIAGNOSTIC",
+          details: {
+            severity: diagnostic.severity,
+            code: diagnostic.code,
+            resource: diagnostic.resource,
+          },
+        });
       }
       throw new BailianError(
         formatAgentDiagnosticFailure(
@@ -115,9 +108,15 @@ export default defineCommand({
 
     const actionable = plan.actions.filter((action) => action.action !== "no-op");
     if (actionable.length === 0) {
-      if (format === "json")
-        emitResult({ succeeded: 0, failed: 0, skipped: 0, results: [] }, format);
-      else emitBare("No changes. Infrastructure is up-to-date.");
+      ctx.output.result(
+        { succeeded: 0, failed: 0, skipped: 0, results: [] },
+        {
+          text:
+            ctx.settings.output === "text"
+              ? "No changes. Infrastructure is up-to-date."
+              : undefined,
+        },
+      );
       return;
     }
 
@@ -127,9 +126,9 @@ export default defineCommand({
     }
 
     const result = await withAgentErrors(() =>
-      withStdoutProtected(() =>
+      withStdoutProtected(ctx, () =>
         executePlannedProject(planned, {
-          onFeedback: renderAgentFeedback,
+          onFeedback: (event) => renderAgentFeedback(ctx.output, event),
           policy: "force",
           concurrency: flags.concurrency,
         }),
@@ -141,11 +140,15 @@ export default defineCommand({
     const failed = failedResults.length;
     const skipped = result.results.filter((entry) => entry.status === "skipped").length;
 
-    if (format === "json") {
-      emitResult({ succeeded, failed, skipped, results: result.results }, format);
-    } else {
-      emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
-    }
+    ctx.output.result(
+      { succeeded, failed, skipped, results: result.results },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? `\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`
+            : undefined,
+      },
+    );
 
     if (failed > 0) {
       const firstFailure = failedResults.find((entry) => entry.error);

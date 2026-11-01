@@ -1,6 +1,5 @@
 import { getRemoteDeploymentRun } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import { displayValue } from "../../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../../_engine/config-loader.ts";
 import { withStdoutProtected } from "../../_engine/console-capture.ts";
@@ -18,21 +17,28 @@ export default defineCommand({
   exampleArgs: ["--run-id run_abc"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const run = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getRemoteDeploymentRun(runtime, ctx.flags.runId, { provider: "bailian" });
       }),
     );
-    if (format === "json") emitResult(run, format);
-    else {
-      emitBare(`ID:         ${run.id}`);
-      emitBare(`Deployment: ${displayValue(run.deployment_id)}`);
-      emitBare(`Session:    ${displayValue(run.session_id)}`);
-      emitBare(`Status:     ${displayValue(run.status)}`);
-      emitBare(`Created:    ${displayValue(run.created_at)}`);
-      emitBare(`Error:      ${displayValue(run.error)}`);
-    }
+    ctx.output.result(run, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              {
+                lines.push(`ID:         ${run.id}`);
+                lines.push(`Deployment: ${displayValue(run.deployment_id)}`);
+                lines.push(`Session:    ${displayValue(run.session_id)}`);
+                lines.push(`Status:     ${displayValue(run.status)}`);
+                lines.push(`Created:    ${displayValue(run.created_at)}`);
+                lines.push(`Error:      ${displayValue(run.error)}`);
+              }
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
   },
 });

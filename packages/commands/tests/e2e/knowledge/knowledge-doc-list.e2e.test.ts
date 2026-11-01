@@ -1,3 +1,4 @@
+import type { RagIndexListResponse } from "bailian-cli-core";
 import { describe, expect, test } from "vite-plus/test";
 import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_DOC_LIST_ROUTES } from "../topic-routes.ts";
@@ -76,8 +77,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc list (live)", () => {
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
-    const firstIndexId = listRun.stdout.trim().split("\n")[0];
+    const firstIndexId =
+      parseStdoutJson<RagIndexListResponse>(listRun.stdout).data?.rows?.[0]?.id ?? "";
     if (!firstIndexId) return;
     const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_LIST_ROUTES, [
       "knowledge",

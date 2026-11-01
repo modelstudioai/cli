@@ -3,12 +3,11 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagAgentDetail,
+  type LocalizedText,
   type RagAgentGetResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_GET_FLAGS = {
@@ -29,21 +28,58 @@ const SERVICE_GET_FLAGS = {
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
-function printDetail(detail: RagAgentDetail): void {
-  emitBare(`Version ${detail.agent_version ?? "?"}:`);
-  if (detail.agent_version_desc) emitBare(`  desc: ${detail.agent_version_desc}`);
-  if (detail.publish_time !== undefined) emitBare(`  published: ${detail.publish_time}`);
+function detailLines(detail: RagAgentDetail, localize: (text: LocalizedText) => string): string[] {
+  const lines = [
+    localize({
+      "en-US": `Version ${detail.agent_version ?? "?"}:`,
+      "zh-CN": `版本 ${detail.agent_version ?? "?"}:`,
+    }),
+  ];
+  if (detail.agent_version_desc)
+    lines.push(
+      localize({
+        "en-US": `  desc: ${detail.agent_version_desc}`,
+        "zh-CN": `  描述: ${detail.agent_version_desc}`,
+      }),
+    );
+  if (detail.publish_time !== undefined)
+    lines.push(
+      localize({
+        "en-US": `  published: ${detail.publish_time}`,
+        "zh-CN": `  发布时间: ${detail.publish_time}`,
+      }),
+    );
   const config = detail.agent_config;
-  if (!config) return;
-  if (config.agent_policy) emitBare(`  policy: ${config.agent_policy}`);
-  if (config.agent_model) emitBare(`  model: ${config.agent_model}`);
+  if (!config) return lines;
+  if (config.agent_policy)
+    lines.push(
+      localize({
+        "en-US": `  policy: ${config.agent_policy}`,
+        "zh-CN": `  策略: ${config.agent_policy}`,
+      }),
+    );
+  if (config.agent_model)
+    lines.push(
+      localize({
+        "en-US": `  model: ${config.agent_model}`,
+        "zh-CN": `  模型: ${config.agent_model}`,
+      }),
+    );
   if (config.hybrid_rerank !== undefined)
-    emitBare(`  hybrid_rerank: ${JSON.stringify(config.hybrid_rerank)}`);
-  if (config.temperature !== undefined) emitBare(`  temperature: ${config.temperature}`);
+    lines.push(`  hybrid_rerank: ${JSON.stringify(config.hybrid_rerank)}`);
+  if (config.temperature !== undefined)
+    lines.push(
+      localize({
+        "en-US": `  temperature: ${config.temperature}`,
+        "zh-CN": `  温度: ${config.temperature}`,
+      }),
+    );
   for (const kbConfig of config.kb_search_configs ?? []) {
     const kbId = typeof kbConfig.id === "string" ? kbConfig.id : "?";
     const kbName = typeof kbConfig.name === "string" ? `  (${kbConfig.name})` : "";
-    emitBare(`  kb: ${kbId}${kbName}`);
+    lines.push(
+      localize({ "en-US": `  kb: ${kbId}${kbName}`, "zh-CN": `  知识库: ${kbId}${kbName}` }),
+    );
     for (const key of [
       "rerank",
       "rerank_model",
@@ -52,9 +88,10 @@ function printDetail(detail: RagAgentDetail): void {
       "dense_similarity_top_k",
       "sparse_similarity_top_k",
     ]) {
-      if (kbConfig[key] !== undefined) emitBare(`    ${key}: ${JSON.stringify(kbConfig[key])}`);
+      if (kbConfig[key] !== undefined) lines.push(`    ${key}: ${JSON.stringify(kbConfig[key])}`);
     }
   }
+  return lines;
 }
 
 export default defineCommand({
@@ -88,7 +125,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body = {
       agent_id: flags.agentId,
@@ -97,7 +134,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentGet);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -107,23 +144,33 @@ export default defineCommand({
       body,
     });
 
-    const data = response.data;
-    if (settings.quiet) {
-      emitBare(data?.agent_id ?? "");
-      return;
+    let text: string | undefined;
+    if (format === "text") {
+      const data = response.data;
+      const lines = [
+        ctx.localize({ "en-US": "Basic:", "zh-CN": "基本信息:" }),
+        `  id: ${data?.agent_id ?? "-"}`,
+        ctx.localize({
+          "en-US": `  name: ${data?.agent_name ?? "-"}`,
+          "zh-CN": `  名称: ${data?.agent_name ?? "-"}`,
+        }),
+        ctx.localize({
+          "en-US": `  desc: ${data?.agent_desc ?? "-"}`,
+          "zh-CN": `  描述: ${data?.agent_desc ?? "-"}`,
+        }),
+        ctx.localize({
+          "en-US": `  scene: ${data?.agent_scene ?? "-"}`,
+          "zh-CN": `  场景: ${data?.agent_scene ?? "-"}`,
+        }),
+        ctx.localize({
+          "en-US": `  status: ${data?.agent_status ?? "-"}`,
+          "zh-CN": `  状态: ${data?.agent_status ?? "-"}`,
+        }),
+      ];
+      for (const detail of data?.agent_details ?? [])
+        lines.push(...detailLines(detail, ctx.localize));
+      text = lines.join("\n");
     }
-    if (format !== "text") {
-      emitResult(response, format);
-      return;
-    }
-    emitBare("Basic:");
-    emitBare(`  id: ${data?.agent_id ?? "-"}`);
-    emitBare(`  name: ${data?.agent_name ?? "-"}`);
-    emitBare(`  desc: ${data?.agent_desc ?? "-"}`);
-    emitBare(`  scene: ${data?.agent_scene ?? "-"}`);
-    emitBare(`  status: ${data?.agent_status ?? "-"}`);
-    for (const detail of data?.agent_details ?? []) {
-      printDetail(detail);
-    }
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

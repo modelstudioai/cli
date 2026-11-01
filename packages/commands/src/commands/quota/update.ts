@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, modelsLimitsPath } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, modelsLimitsPath } from "bailian-cli-core";
 import { formatNumber } from "../shared/format.ts";
 
 const MINUTE_SECONDS = 60;
@@ -63,7 +62,6 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const modelName = flags.model;
-    const format = detectOutputFormat(settings.output);
 
     const entry: Record<string, unknown> = { model: modelName };
     if (flags.rpm !== undefined) {
@@ -77,10 +75,11 @@ export default defineCommand({
     const body = { models: [entry] };
 
     if (settings.dryRun) {
-      emitResult(
-        { endpoint: ctx.client.url(modelsLimitsPath()), method: "POST", request: body },
-        format,
-      );
+      ctx.output.result({
+        endpoint: ctx.client.url(modelsLimitsPath()),
+        method: "POST",
+        request: body,
+      });
       return;
     }
 
@@ -90,13 +89,16 @@ export default defineCommand({
       body,
     });
 
-    if (format === "json") {
-      emitResult({ model: modelName, ...result }, format);
-      return;
+    let text: string | undefined;
+    if (settings.output === "text") {
+      const parts: string[] = [];
+      if (flags.rpm !== undefined) parts.push(`QPM ${formatNumber(flags.rpm)}`);
+      if (flags.tpm !== undefined) parts.push(`TPM ${formatNumber(flags.tpm)}`);
+      text = ctx.localize({
+        "en-US": `Rate limits updated for "${modelName}": ${parts.join(", ")}`,
+        "zh-CN": `模型“${modelName}”的限流配置已更新：${parts.join("，")}`,
+      });
     }
-    const parts: string[] = [];
-    if (flags.rpm !== undefined) parts.push(`QPM ${formatNumber(flags.rpm)}`);
-    if (flags.tpm !== undefined) parts.push(`TPM ${formatNumber(flags.tpm)}`);
-    process.stdout.write(`Rate limits updated for "${modelName}": ${parts.join(", ")}\n`);
+    ctx.output.result({ model: modelName, ...result }, { text });
   },
 });

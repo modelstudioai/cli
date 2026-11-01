@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { describe, expect, test } from "vite-plus/test";
+import { httpTransport } from "bailian-cli-core";
+import { describe, expect, test, vi } from "vite-plus/test";
 import {
   isDashScopeE2EReady,
   parseStdoutJson,
@@ -22,13 +23,119 @@ const require = createRequire(${JSON.stringify(fileURLToPath(new URL("../../../c
 require("undici").fetch = globalThis.fetch = async () => { throw new Error("Network disabled for deploy query E2E"); };`)}`,
 };
 
-function runReadOnlyDeploy(args: string[]) {
-  return runCommandInProcess(
-    DEPLOY_ROUTES,
-    ["deploy", ...args, "--api-key", "e2e-dummy-key", "--dry-run", "--output", "json", "--quiet"],
-    READ_ONLY_ENV,
-  );
+const IN_PROCESS_ENV: NodeJS.ProcessEnv = {
+  ...READ_ONLY_ENV,
+  NODE_OPTIONS: "",
+  NODE_USE_ENV_PROXY: "0",
+  HTTP_PROXY: "",
+  HTTPS_PROXY: "",
+  ALL_PROXY: "",
+  http_proxy: "",
+  https_proxy: "",
+  all_proxy: "",
+  DASHSCOPE_API_KEY: "",
+  BAILIAN_API_KEY: "",
+  DASHSCOPE_BASE_URL: "",
+  BAILIAN_BASE_URL: "",
+  BAILIAN_WORKSPACE_ID: "",
+  DASHSCOPE_OUTPUT: "",
+  DASHSCOPE_QUIET: "0",
+  DASHSCOPE_VERBOSE: "0",
+};
+
+async function runOfflineDeploy(args: string[]) {
+  // Keep the no-network contract without NODE_OPTIONS forcing every matrix case
+  // into a new process. Fail even if command code catches a forbidden request.
+  const transportFetch = vi
+    .spyOn(httpTransport, "fetch")
+    .mockRejectedValue(new Error("Network disabled for deploy query E2E"));
+  const nativeFetch = vi
+    .spyOn(globalThis, "fetch")
+    .mockRejectedValue(new Error("Network disabled for deploy query E2E"));
+  try {
+    const result = await runCommandInProcess(DEPLOY_ROUTES, args, IN_PROCESS_ENV);
+    expect(transportFetch).not.toHaveBeenCalled();
+    expect(nativeFetch).not.toHaveBeenCalled();
+    return result;
+  } finally {
+    transportFetch.mockRestore();
+    nativeFetch.mockRestore();
+  }
 }
+
+function runReadOnlyDeploy(args: string[]) {
+  return runOfflineDeploy([
+    "deploy",
+    ...args,
+    "--api-key",
+    "e2e-dummy-key",
+    "--dry-run",
+    "--output",
+    "json",
+    "--quiet",
+  ]);
+}
+
+test.each([
+  {
+    label: "read-only query preview",
+    args: [
+      "deploy",
+      "capacity",
+      "list",
+      "--deployed-model",
+      "dep-test",
+      "--dry-run",
+      "--api-key",
+      "e2e-dummy-key",
+    ],
+    exitCode: 0,
+  },
+  {
+    label: "missing required query flag",
+    args: [
+      "deploy",
+      "capacity",
+      "get",
+      "--deployed-model",
+      "dep-test",
+      "--dry-run",
+      "--api-key",
+      "e2e-dummy-key",
+    ],
+    exitCode: 2,
+  },
+  {
+    label: "risky write confirmation",
+    args: [
+      "deploy",
+      "capacity",
+      "delete",
+      "--deployed-model",
+      "dep-test",
+      "--instance-id",
+      "instance-test",
+      "--api-key",
+      "e2e-dummy-key",
+    ],
+    exitCode: 7,
+  },
+  {
+    label: "refund link without credentials",
+    args: ["deploy", "capacity", "unsubscribe", "--instance-id", "a b&c"],
+    exitCode: 0,
+  },
+])("$label matches the network-blocked subprocess exactly", async ({ args, exitCode }) => {
+  const commandArgs = [...args, "--output", "json"];
+  const inProcess = await runOfflineDeploy(commandArgs);
+  // Preserve real startup/preload coverage and block networking in that process.
+  const subprocess = await runCommandE2e(DEPLOY_ROUTES, commandArgs, {
+    ...IN_PROCESS_ENV,
+    NODE_OPTIONS: READ_ONLY_ENV.NODE_OPTIONS,
+  });
+  expect(subprocess.exitCode, subprocess.stderr).toBe(exitCode);
+  expect(inProcess).toEqual(subprocess);
+});
 
 // Deliberately ungated: these checks must also run on machines without credentials.
 describe("e2e: deploy read-only queries (offline, no credentials)", () => {
@@ -204,11 +311,7 @@ describe("e2e: deploy capacity unsubscribe (offline, no credentials)", () => {
   const REFUND_URL = `https://billing-cost.console.aliyun.com/refund/refund?instanceId=${INSTANCE_ID}`;
 
   function runUnsubscribe(args: string[]) {
-    return runCommandE2e(
-      DEPLOY_ROUTES,
-      ["deploy", "capacity", "unsubscribe", ...args, "--output", "json"],
-      READ_ONLY_ENV,
-    );
+    return runOfflineDeploy(["deploy", "capacity", "unsubscribe", ...args, "--output", "json"]);
   }
 
   test("--help exposes --instance-id, no --yes and no --api-key requirement", async () => {
@@ -238,14 +341,21 @@ describe("e2e: deploy capacity unsubscribe (offline, no credentials)", () => {
     expect(stderr).not.toContain("Network disabled");
   });
 
-  test("--quiet emits only the bare refund URL", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(
-      DEPLOY_ROUTES,
-      ["deploy", "capacity", "unsubscribe", "--instance-id", INSTANCE_ID, "--quiet"],
-      READ_ONLY_ENV,
-    );
+  test("--quiet retains the complete refund-link result", async () => {
+    const { stdout, stderr, exitCode } = await runOfflineDeploy([
+      "deploy",
+      "capacity",
+      "unsubscribe",
+      "--instance-id",
+      INSTANCE_ID,
+      "--quiet",
+    ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout.trim()).toBe(REFUND_URL);
+    expect(JSON.parse(stdout)).toEqual({
+      action: "deploy.capacity.unsubscribe",
+      instance_id: INSTANCE_ID,
+      refund_url: REFUND_URL,
+    });
   });
 
   test("URL-encodes unusual instance IDs", async () => {
@@ -794,11 +904,15 @@ describe("e2e: deploy capacity writes (offline, no credentials)", () => {
     },
     { path: ["overflow"], args: ["--deployed-model", "dep-test", "--strategy", "disable"] },
   ])("deploy $path without --yes requires confirmation (7)", async ({ path, args }) => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(
-      DEPLOY_ROUTES,
-      ["deploy", ...path, ...args, "--api-key", "e2e-dummy-key", "--output", "json"],
-      READ_ONLY_ENV,
-    );
+    const { stdout, stderr, exitCode } = await runOfflineDeploy([
+      "deploy",
+      ...path,
+      ...args,
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(7);
     expect(stdout.trim()).toBe("");
     expect(JSON.parse(stderr)).toMatchObject({

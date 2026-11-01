@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagAddConnectorResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const COLLECTION_CREATE_FLAGS = {
@@ -102,7 +100,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const storeType = (flags.storeType ?? "platform").toUpperCase();
     // The server contract still uses connector* fields; only the CLI-facing term is collection.
@@ -122,7 +120,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.addConnector);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -133,14 +131,12 @@ export default defineCommand({
     });
 
     const collectionId = response.data?.connectorId;
-    if (settings.quiet) {
-      emitBare(collectionId ?? "");
-      return;
-    }
-    if (format === "text") {
-      emitBare(`created: ${collectionId ?? "-"}  (${flags.name}, ${storeType})`);
-      return;
-    }
-    emitResult(response, format);
+
+    ctx.output.result(
+      response,
+      format === "text"
+        ? { text: `created: ${collectionId ?? "-"}  (${flags.name}, ${storeType})` }
+        : undefined,
+    );
   },
 });

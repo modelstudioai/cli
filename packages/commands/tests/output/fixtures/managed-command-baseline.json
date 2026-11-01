@@ -1,0 +1,2694 @@
+{
+  "managedAgentInit": {
+    "json": {
+      "fixtureVersionId": "b1c9ca480398ede8f3eb9548a0c157408ee99dc7b3445be7d778a5a82be90c62",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_create\": \"<ROOT>/new-agents.yaml\",\n  \"provider\": \"bailian\",\n  \"agent\": \"assistant\",\n  \"would_update_gitignore\": true\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "de0c04dd05a5791417aacb21e7486dca2315fd421fd728a2bd902c1c1bd47b56",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_create: <ROOT>/new-agents.yaml\nprovider: bailian\nagent: assistant\nwould_update_gitignore: true\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentValidate": {
+    "json": {
+      "fixtureVersionId": "21995d0050b0c9b4919bb44a14a2b0cd1ce274567ba5e626ae0a5ccc0d14113c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"valid\": true,\n  \"diagnostics\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "aebc9de662dfb164462b19b68cd66d7c05deaab847a47e917a6e532622cdbc57",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Configuration is valid.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentPlan": {
+    "json": {
+      "fixtureVersionId": "d4fecc3328802936bf0d0d5dd8afb9718fff8d989618178927aca2f0cca0c31e",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"actions\": [\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"environment\",\n        \"name\": \"dev\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"7368f1e3e7591183941e2a4e0359da22724618e885c160375a48e7a7d72a56fa\"\n      },\n      \"dependencies\": []\n    },\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"vault\",\n        \"name\": \"secrets\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"2e1059a3aa22959734ebe7627724e5097b3e341b9730adeeef54c6f777d71227\"\n      },\n      \"dependencies\": []\n    },\n    {\n      \"action\": \"update\",\n      \"address\": {\n        \"type\": \"agent\",\n        \"name\": \"assistant\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"local\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Local config changed\",\n      \"before\": {\n        \"content_hash\": \"fixture-hash\"\n      },\n      \"after\": {\n        \"content_hash\": \"62711e7080bb3cd2489cc7ca2b67e8b83351a516175b67ce30ceec9e5de68835\"\n      },\n      \"dependencies\": [\n        {\n          \"type\": \"environment\",\n          \"name\": \"dev\",\n          \"provider\": \"bailian\"\n        }\n      ]\n    }\n  ],\n  \"diagnostics\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "8b73db90f189a7a33533e61ba6e444d961a595c6902335ea231da66305465d38",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "\nPlanned actions:\n\n  + environment.dev (bailian)\n  + vault.secrets (bailian)\n  ~ agent.assistant (bailian)\n    Local config changed\n\nPlan: 2 to create, 1 to update, 0 to destroy.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentApply": {
+    "json": {
+      "fixtureVersionId": "46d9489677ab8d7e893a3542cd05bc8f31c08c33ca54444b77c3753864a3bb44",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_apply\": {\n    \"provider\": \"bailian\",\n    \"refresh\": false\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"hint\": \"Run `managed-agent plan` to preview the exact resource changes.\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "611d9566590934f6297a45dc122ef1634e2fbcd567f09378194c5dab38b498f1",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_apply:\n  provider: bailian\n  refresh: false\nconfig_file: <ROOT>/agents.yaml\nhint: Run `managed-agent plan` to preview the exact resource changes.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentDestroy": {
+    "json": {
+      "fixtureVersionId": "e4a4d32007e816da2b64a62415d328529d93a1b83f826b21723419a73a2b1929",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_destroy\": {\n    \"cascade\": false\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"hint\": \"Run `managed-agent state list` to see the resources tracked in state.\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "373c5daed2ee133f781bda3fae868395dfe540e15a2ad9e5afd3bc1cd13c2aff",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_destroy:\n  cascade: false\nconfig_file: <ROOT>/agents.yaml\nhint: Run `managed-agent state list` to see the resources tracked in state.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentPlayground": {
+    "json": {
+      "fixtureVersionId": "6ebbd0486458246c59479894cfa8650dc776149b37f2f0c98284a82e7febbe17",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_launch\": \"playground\",\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"agent\": \"assistant\",\n  \"port\": 4848,\n  \"open_browser\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "54d11bcee7f19f4d2da9a149ded499f23a6127e91a8b9cc022a89800da28b5e4",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_launch: playground\nconfig_file: <ROOT>/agents.yaml\nagent: assistant\nport: 4848\nopen_browser: false\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectBuild": {
+    "json": {
+      "fixtureVersionId": "c3782e67531ebc58a97527606e7778bc1bc02bc0b31857dfc7cb0078e3440084",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"project_root\": \"<ROOT>/directory-project\",\n  \"project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n  \"source_manifest_hash\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n  \"yaml_hash\": \"e1acb6c4ccc5be292e39e91a5678458d471879150048d99424767a71731f327b\",\n  \"diagnostics\": [],\n  \"warnings\": [],\n  \"organization_moves\": [],\n  \"before_yaml\": \"agents:\\n  assistant:\\n    instructions: ../../agents/assistant/instructions.md\\n    model: qwen3.7-max\\n    name: Assistant\\ndefaults:\\n  provider: bailian\\nproviders:\\n  bailian:\\n    api_key: \\\"[redacted]\\\"\\n    base_url: ${BAILIAN_BASE_URL}\\nskills: {}\\nversion: \\\"1\\\"\\n\",\n  \"after_yaml\": \"agents:\\n  assistant:\\n    instructions: ../../agents/assistant/instructions.md\\n    model: qwen3.7-max\\n    name: Assistant\\ndefaults:\\n  provider: bailian\\nproviders:\\n  bailian:\\n    api_key: ${DASHSCOPE_API_KEY}\\n    base_url: ${BAILIAN_BASE_URL}\\nskills: {}\\nversion: \\\"1\\\"\\n\",\n  \"can_build\": true\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "795e25c014fd19a1058d33616f907ddb0101a2645937ae81df51ab928f9cc026",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "project_root: <ROOT>/directory-project\nproject_revision: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\nsource_manifest_hash: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\nyaml_hash: e1acb6c4ccc5be292e39e91a5678458d471879150048d99424767a71731f327b\ndiagnostics: []\nwarnings: []\norganization_moves: []\nbefore_yaml: |\n  agents:\n    assistant:\n      instructions: ../../agents/assistant/instructions.md\n      model: qwen3.7-max\n      name: Assistant\n  defaults:\n    provider: bailian\n  providers:\n    bailian:\n      api_key: \"[redacted]\"\n      base_url: ${BAILIAN_BASE_URL}\n  skills: {}\n  version: \"1\"\nafter_yaml: |\n  agents:\n    assistant:\n      instructions: ../../agents/assistant/instructions.md\n      model: qwen3.7-max\n      name: Assistant\n  defaults:\n    provider: bailian\n  providers:\n    bailian:\n      api_key: ${DASHSCOPE_API_KEY}\n      base_url: ${BAILIAN_BASE_URL}\n  skills: {}\n  version: \"1\"\ncan_build: true\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectInit": {
+    "json": {
+      "fixtureVersionId": "25eea7d987a0b3e1565ad8d5ced7f5327f59be6f02e946bad775621e8e4dd814",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_initialize_project\": \"<ROOT>/new-directory\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "a3ab1afbbac688460f95472189b31c4c31d37b629e78b8f208a35cfe36e2e46b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_initialize_project: <ROOT>/new-directory\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectPublish": {
+    "json": {
+      "fixtureVersionId": "31cdb055eff93c1d21837aa20e96c5d2bcd16d084d5a405b45b8084a8774c595",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n  \"build_manifest\": {\n    \"schema_version\": 1,\n    \"project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n    \"source_manifest_hash\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n    \"yaml_hash\": \"e1acb6c4ccc5be292e39e91a5678458d471879150048d99424767a71731f327b\",\n    \"built_at\": \"<TIMESTAMP>\"\n  },\n  \"plan\": {\n    \"actions\": [\n      {\n        \"action\": \"create\",\n        \"address\": {\n          \"type\": \"agent\",\n          \"name\": \"assistant\",\n          \"provider\": \"bailian\"\n        },\n        \"driftKind\": \"none\",\n        \"readinessImpact\": \"blocking\",\n        \"reason\": \"Resource does not exist in state\",\n        \"after\": {\n          \"content_hash\": \"1698d3328ad3ac8db171d6a932b6e85389710d44016ef071a58bd6f7b5bb48d5\"\n        },\n        \"dependencies\": []\n      }\n    ],\n    \"diagnostics\": []\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "193f463d00dc7acb445f6af2580dce267d92984d115a68e2bc51e2f5d84e8772",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "project_revision: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\nbuild_manifest:\n  schema_version: 1\n  project_revision: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\n  source_manifest_hash: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\n  yaml_hash: e1acb6c4ccc5be292e39e91a5678458d471879150048d99424767a71731f327b\n  built_at: <TIMESTAMP>\nplan:\n  actions:\n    - action: create\n      address:\n        type: agent\n        name: assistant\n        provider: bailian\n      driftKind: none\n      readinessImpact: blocking\n      reason: Resource does not exist in state\n      after:\n        content_hash: 1698d3328ad3ac8db171d6a932b6e85389710d44016ef071a58bd6f7b5bb48d5\n      dependencies: []\n  diagnostics: []\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectValidate": {
+    "json": {
+      "fixtureVersionId": "e9a2827f2a135fd81bdbc587d1ed650384270d10edf7c4a9fd4901ece634cfad",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"project_root\": \"<ROOT>/directory-project\",\n  \"project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n  \"source_manifest_hash\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n  \"yaml_hash\": \"e1acb6c4ccc5be292e39e91a5678458d471879150048d99424767a71731f327b\",\n  \"diagnostics\": [],\n  \"warnings\": [],\n  \"organization_moves\": [],\n  \"after_yaml\": \"agents:\\n  assistant:\\n    instructions: ../../agents/assistant/instructions.md\\n    model: qwen3.7-max\\n    name: Assistant\\ndefaults:\\n  provider: bailian\\nproviders:\\n  bailian:\\n    api_key: ${DASHSCOPE_API_KEY}\\n    base_url: ${BAILIAN_BASE_URL}\\nskills: {}\\nversion: \\\"1\\\"\\n\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "847bc18dbc1c9f1ca48bac36ceb24b16a48c26368306bd930295c7198b179ccf",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Project is valid (b174bc9558c1).\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectVersionDisable": {
+    "json": {
+      "fixtureVersionId": "433d1a07dd3f81c226e880136646e7d99946e49c746d1a323c36ef7eee29d297",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_set_enabled\": false,\n  \"status\": {\n    \"initialized\": true,\n    \"enabled\": true,\n    \"store_root\": \"<ROOT>/directory-project/.openagentpack/versions/project\",\n    \"head_version\": \"433d1a07dd3f81c226e880136646e7d99946e49c746d1a323c36ef7eee29d297\",\n    \"source_status\": \"clean\",\n    \"project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n    \"write_blockers\": [],\n    \"restore_blockers\": []\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "2da75842f8867715ea50f5b078b8766043f1f7aed9afb1a80608b30638f0c17a",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_set_enabled: false\nstatus:\n  initialized: true\n  enabled: true\n  store_root: <ROOT>/directory-project/.openagentpack/versions/project\n  head_version: 2da75842f8867715ea50f5b078b8766043f1f7aed9afb1a80608b30638f0c17a\n  source_status: clean\n  project_revision: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\n  write_blockers: &a1 []\n  restore_blockers: *a1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectVersionEnable": {
+    "json": {
+      "fixtureVersionId": "1d96a6bbec5aa60bb6c542582d4f3a09325db6ebb50557e69a68c0d98e560fd0",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_set_enabled\": true,\n  \"status\": {\n    \"initialized\": true,\n    \"enabled\": true,\n    \"store_root\": \"<ROOT>/directory-project/.openagentpack/versions/project\",\n    \"head_version\": \"1d96a6bbec5aa60bb6c542582d4f3a09325db6ebb50557e69a68c0d98e560fd0\",\n    \"source_status\": \"clean\",\n    \"project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n    \"write_blockers\": [],\n    \"restore_blockers\": []\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "93282ba5866d1428493daceb7c010d38072ad241e73a08d36ac439419eeb3cd5",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_set_enabled: true\nstatus:\n  initialized: true\n  enabled: true\n  store_root: <ROOT>/directory-project/.openagentpack/versions/project\n  head_version: 93282ba5866d1428493daceb7c010d38072ad241e73a08d36ac439419eeb3cd5\n  source_status: clean\n  project_revision: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\n  write_blockers: &a1 []\n  restore_blockers: *a1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectVersionList": {
+    "json": {
+      "fixtureVersionId": "1303aaa8949396386c56e8fda9fecf3240e6036d943b2cf0d5e346804059d1f5",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"versions\": [\n    {\n      \"version_id\": \"1303aaa8949396386c56e8fda9fecf3240e6036d943b2cf0d5e346804059d1f5\",\n      \"short_version\": \"1303aaa89493\",\n      \"parent_version\": null,\n      \"tree_hash\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n      \"yaml_hash\": \"e1acb6c4ccc5be292e39e91a5678458d471879150048d99424767a71731f327b\",\n      \"message\": \"Initialize project\",\n      \"created_by\": \"fixture-author\",\n      \"created_at\": \"<TIMESTAMP>\"\n    }\n  ],\n  \"next_cursor\": null\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "bfd50aef14b48c22c241a394de38dc2d9f19a1b5ae3f2c9360d20ed6c7c006d6",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "versions:\n  - version_id: bfd50aef14b48c22c241a394de38dc2d9f19a1b5ae3f2c9360d20ed6c7c006d6\n    short_version: bfd50aef14b4\n    parent_version: null\n    tree_hash: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\n    yaml_hash: e1acb6c4ccc5be292e39e91a5678458d471879150048d99424767a71731f327b\n    message: Initialize project\n    created_by: fixture-author\n    created_at: <TIMESTAMP>\nnext_cursor: null\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectVersionPreview": {
+    "json": {
+      "fixtureVersionId": "c3af4056bd8d76cfdc7a5dafbf90234fc512d7e3005bd9cd3bce4d8971e80a9f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"version_id\": \"c3af4056bd8d76cfdc7a5dafbf90234fc512d7e3005bd9cd3bce4d8971e80a9f\",\n  \"base_head_version\": \"c3af4056bd8d76cfdc7a5dafbf90234fc512d7e3005bd9cd3bce4d8971e80a9f\",\n  \"base_project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n  \"before_yaml\": \"agents:\\n  assistant:\\n    instructions: ../../agents/assistant/instructions.md\\n    model: qwen3.7-max\\n    name: Assistant\\ndefaults:\\n  provider: bailian\\nproviders:\\n  bailian:\\n    api_key: \\\"[redacted]\\\"\\n    base_url: ${BAILIAN_BASE_URL}\\nskills: {}\\nversion: \\\"1\\\"\\n\",\n  \"after_yaml\": \"agents:\\n  assistant:\\n    instructions: ../../agents/assistant/instructions.md\\n    model: qwen3.7-max\\n    name: Assistant\\ndefaults:\\n  provider: bailian\\nproviders:\\n  bailian:\\n    api_key: \\\"[redacted]\\\"\\n    base_url: ${BAILIAN_BASE_URL}\\nskills: {}\\nversion: \\\"1\\\"\\n\",\n  \"changes\": [],\n  \"diagnostics\": [],\n  \"can_restore\": true,\n  \"blockers\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "29cc782c6bd629dce0ec6ec2185e792c79dfeb75d37b9ee558b667570ea1323b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "version_id: 29cc782c6bd629dce0ec6ec2185e792c79dfeb75d37b9ee558b667570ea1323b\nbase_head_version: 29cc782c6bd629dce0ec6ec2185e792c79dfeb75d37b9ee558b667570ea1323b\nbase_project_revision: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\nbefore_yaml: |\n  agents:\n    assistant:\n      instructions: ../../agents/assistant/instructions.md\n      model: qwen3.7-max\n      name: Assistant\n  defaults:\n    provider: bailian\n  providers:\n    bailian:\n      api_key: \"[redacted]\"\n      base_url: ${BAILIAN_BASE_URL}\n  skills: {}\n  version: \"1\"\nafter_yaml: |\n  agents:\n    assistant:\n      instructions: ../../agents/assistant/instructions.md\n      model: qwen3.7-max\n      name: Assistant\n  defaults:\n    provider: bailian\n  providers:\n    bailian:\n      api_key: \"[redacted]\"\n      base_url: ${BAILIAN_BASE_URL}\n  skills: {}\n  version: \"1\"\nchanges: []\ndiagnostics: []\ncan_restore: true\nblockers: []\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectVersionRestore": {
+    "json": {
+      "fixtureVersionId": "0bb79e4c7bfd85efa903d861ad7d7f7725839acc2188857993c504a1bed652ed",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_restore\": \"0bb79e4c7bfd85efa903d861ad7d7f7725839acc2188857993c504a1bed652ed\",\n  \"preview\": {\n    \"version_id\": \"0bb79e4c7bfd85efa903d861ad7d7f7725839acc2188857993c504a1bed652ed\",\n    \"base_head_version\": \"0bb79e4c7bfd85efa903d861ad7d7f7725839acc2188857993c504a1bed652ed\",\n    \"base_project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n    \"before_yaml\": \"agents:\\n  assistant:\\n    instructions: ../../agents/assistant/instructions.md\\n    model: qwen3.7-max\\n    name: Assistant\\ndefaults:\\n  provider: bailian\\nproviders:\\n  bailian:\\n    api_key: \\\"[redacted]\\\"\\n    base_url: ${BAILIAN_BASE_URL}\\nskills: {}\\nversion: \\\"1\\\"\\n\",\n    \"after_yaml\": \"agents:\\n  assistant:\\n    instructions: ../../agents/assistant/instructions.md\\n    model: qwen3.7-max\\n    name: Assistant\\ndefaults:\\n  provider: bailian\\nproviders:\\n  bailian:\\n    api_key: \\\"[redacted]\\\"\\n    base_url: ${BAILIAN_BASE_URL}\\nskills: {}\\nversion: \\\"1\\\"\\n\",\n    \"changes\": [],\n    \"diagnostics\": [],\n    \"can_restore\": true,\n    \"blockers\": []\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "6d220f9be34fcc992921f0a964dd4fa48b7fd8466f02b83a01d5f00be36bd7cf",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_restore: 6d220f9be34fcc992921f0a964dd4fa48b7fd8466f02b83a01d5f00be36bd7cf\npreview:\n  version_id: 6d220f9be34fcc992921f0a964dd4fa48b7fd8466f02b83a01d5f00be36bd7cf\n  base_head_version: 6d220f9be34fcc992921f0a964dd4fa48b7fd8466f02b83a01d5f00be36bd7cf\n  base_project_revision: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\n  before_yaml: |\n    agents:\n      assistant:\n        instructions: ../../agents/assistant/instructions.md\n        model: qwen3.7-max\n        name: Assistant\n    defaults:\n      provider: bailian\n    providers:\n      bailian:\n        api_key: \"[redacted]\"\n        base_url: ${BAILIAN_BASE_URL}\n    skills: {}\n    version: \"1\"\n  after_yaml: |\n    agents:\n      assistant:\n        instructions: ../../agents/assistant/instructions.md\n        model: qwen3.7-max\n        name: Assistant\n    defaults:\n      provider: bailian\n    providers:\n      bailian:\n        api_key: \"[redacted]\"\n        base_url: ${BAILIAN_BASE_URL}\n    skills: {}\n    version: \"1\"\n  changes: []\n  diagnostics: []\n  can_restore: true\n  blockers: []\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectVersionStatus": {
+    "json": {
+      "fixtureVersionId": "c7f8955a39cd64787d0f10734910592218f61ef0207879324804a65c8ab7609b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"initialized\": true,\n  \"enabled\": true,\n  \"store_root\": \"<ROOT>/directory-project/.openagentpack/versions/project\",\n  \"head_version\": \"c7f8955a39cd64787d0f10734910592218f61ef0207879324804a65c8ab7609b\",\n  \"source_status\": \"clean\",\n  \"project_revision\": \"b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\",\n  \"write_blockers\": [],\n  \"restore_blockers\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "0f930f0dd29cf3cbadd97571ce3a215ef51344c198bd03fd0f09abcdc2d57f6c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "initialized: true\nenabled: true\nstore_root: <ROOT>/directory-project/.openagentpack/versions/project\nhead_version: 0f930f0dd29cf3cbadd97571ce3a215ef51344c198bd03fd0f09abcdc2d57f6c\nsource_status: clean\nproject_revision: b174bc9558c1b11ace3c2db604c41158a2bbdb8a90fc7ad3c3b805ba80cb7f9e\nwrite_blockers: &a1 []\nrestore_blockers: *a1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentProjectWorkbench": {
+    "json": {
+      "fixtureVersionId": "495da10ab1ec2af67b9b972748b773057f8e942a3ce341dd01af97a130cd6958",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_launch\": \"workbench\",\n  \"project_root\": \"<ROOT>/directory-project\",\n  \"port\": 4848\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "3a2664290823bb2d05669055cbfcb0f63cf5bdc223a144ed77fbecc6cd6c1d2d",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_launch: workbench\nproject_root: <ROOT>/directory-project\nport: 4848\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentStateList": {
+    "json": {
+      "fixtureVersionId": "b26a9890a8c793a08759f6cdb8f615dd0099540805230a32cef1321bca6c926a",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"resources\": [\n    {\n      \"address\": {\n        \"provider\": \"bailian\",\n        \"type\": \"agent\",\n        \"name\": \"assistant\"\n      },\n      \"remote_id\": \"fixture-agent\",\n      \"content_hash\": \"fixture-hash\",\n      \"desired_hash\": \"fixture-hash\"\n    }\n  ]\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "2655d26640042cb0490b60698b618556fb42005b45ddc4bb130d96e53c9b38eb",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "TYPE   NAME       PROVIDER  REMOTE ID    \nagent  assistant  bailian   fixture-agent\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentStateShow": {
+    "json": {
+      "fixtureVersionId": "512d1799968c25fc5791cac80c74058494c2916d0cb4714b8fd0118cd9ef07d6",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"address\": {\n    \"provider\": \"bailian\",\n    \"type\": \"agent\",\n    \"name\": \"assistant\"\n  },\n  \"remote_id\": \"fixture-agent\",\n  \"content_hash\": \"fixture-hash\",\n  \"desired_hash\": \"fixture-hash\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "6aba34a54943c983f68d4e825f20ef54d5659335f69a54d3bcc31ef246b6009d",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"address\": {\n    \"provider\": \"bailian\",\n    \"type\": \"agent\",\n    \"name\": \"assistant\"\n  },\n  \"remote_id\": \"fixture-agent\",\n  \"content_hash\": \"fixture-hash\",\n  \"desired_hash\": \"fixture-hash\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentStateRm": {
+    "json": {
+      "fixtureVersionId": "19ef66d608a459115be90b2c1241aa0af7ca542aed072c2ffd80076d28b25851",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_remove\": \"bailian.agent.assistant\",\n  \"config_file\": \"<ROOT>/agents.yaml\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "b2a8284809dd78e2f3a5b54bb3f29eef92946834baa58d6ca66224139d64a20c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_remove: bailian.agent.assistant\nconfig_file: <ROOT>/agents.yaml\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentStateImport": {
+    "json": {
+      "fixtureVersionId": "5391586210796a28ce443b570f9c76da4237f8b2d141ed0d8f65ee1b561cd951",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_import\": \"bailian.agent.assistant\",\n  \"remote_id\": \"fixture-agent\",\n  \"config_file\": \"<ROOT>/agents.yaml\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "3542ae4849daaf64b34e9550e385092b6e687cae4cef69e803a020f679ed71e9",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_import: bailian.agent.assistant\nremote_id: fixture-agent\nconfig_file: <ROOT>/agents.yaml\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionCreate": {
+    "json": {
+      "fixtureVersionId": "c9100ac5e4f0488a2916e37ee38c61479d6a2788689be9811c207d3201785770",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_create_session\": {\n    \"agent\": \"assistant\",\n    \"provider\": \"bailian\",\n    \"vault\": \"secrets\",\n    \"title\": \"Fixture title\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "e903931cfbc404c592a2b1d4e90426fcf2e00e401ec0b957a149918d16138785",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_create_session:\n  agent: assistant\n  provider: bailian\n  vault: secrets\n  title: Fixture title\nconfig_file: <ROOT>/agents.yaml\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionList": {
+    "json": {
+      "fixtureVersionId": "c86ff69fd207a398fefb6ac737e0f85933a3ffeabf3e776a4d5955d891fad3e1",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"sessions\": [\n    {\n      \"id\": \"fixture-id\",\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"status\": \"completed\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions",
+          "query": "?agent_id=fixture-agent&limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "6ca46388287ce4d89dc842a2968f5258b3278958cc540b4b9c86ecec90edd2bc",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          TITLE  AGENT      STATUS     CREATED             \nfixture-id         assistant  completed  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions",
+          "query": "?agent_id=fixture-agent&limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSessionGet": {
+    "json": {
+      "fixtureVersionId": "07056bf40ef1c08fd30a971a75a173c53b6f5825a27647ac2775601cc56aa2ce",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"status\": \"completed\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"attributes\": {\n    \"id\": \"fixture-id\",\n    \"name\": \"Fixture\",\n    \"display_name\": \"Fixture\",\n    \"description\": \"Fixture resource\",\n    \"version\": 1,\n    \"type\": \"custom\",\n    \"source\": \"custom\",\n    \"status\": \"completed\",\n    \"agent\": {\n      \"id\": \"fixture-agent\"\n    },\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"deployment_id\": \"fixture-deployment\",\n    \"session_id\": \"fixture-session\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"filename\": \"fixture.txt\",\n    \"mime_type\": \"text/plain\",\n    \"size_bytes\": 4,\n    \"latest_version\": \"1\",\n    \"secret\": \"fixture-one-time-secret\",\n    \"signing_secret\": \"fixture-signing-secret\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "a2f0ce02f2f6417ed471f5525d7a38bdcd97e833f2a4ce5dd3c4760e21429516",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "  ID:          fixture-id\n  Agent:       fixture-agent\n  Environment: fixture-env\n  Status:      completed\n  Created:     <TIMESTAMP>\n  Updated:     <TIMESTAMP>\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSessionDelete": {
+    "json": {
+      "fixtureVersionId": "f60ae4cddc147a258a5bef224d9a205cc4670fd0070c244bc81115343a8b92be",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_delete_session\": \"fixture-session\",\n  \"provider\": \"bailian\",\n  \"config_file\": \"<ROOT>/agents.yaml\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "3715c2f1aea75785b6cf69b15dac2b4adb61bad9b8b26c3430c51972b25bee1b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_delete_session: fixture-session\nprovider: bailian\nconfig_file: <ROOT>/agents.yaml\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionRun": {
+    "json": {
+      "fixtureVersionId": "a638a58406a9deede160d94f14f82de4f5fdaac75d33a944cafebfc5be0dec0e",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_run\": {\n    \"prompt\": \"Fixture prompt\",\n    \"agent\": \"assistant\",\n    \"provider\": \"bailian\",\n    \"vault\": \"secrets\",\n    \"title\": \"Fixture title\",\n    \"mode\": \"polling\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "57455b3a6c672e7a9c6b5289e7099e0d966c03cbd6e9ffcc3a5473731538bb55",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_run:\n  prompt: Fixture prompt\n  agent: assistant\n  provider: bailian\n  vault: secrets\n  title: Fixture title\n  mode: polling\nconfig_file: <ROOT>/agents.yaml\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionSend": {
+    "json": {
+      "fixtureVersionId": "2d124ca0705613fd40a537e5941984a460da9ba785962014c76c917f210eb7d4",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_send\": {\n    \"session_id\": \"fixture-session\",\n    \"message\": \"Fixture message\",\n    \"provider\": \"bailian\",\n    \"mode\": \"polling\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "d1147a738886d8d1dadd79008367ce34e95c2099e56a0652992b418c00deb59e",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_send:\n  session_id: fixture-session\n  message: Fixture message\n  provider: bailian\n  mode: polling\nconfig_file: <ROOT>/agents.yaml\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionEvents": {
+    "json": {
+      "fixtureVersionId": "69e32eb051dd8362c57bd491a2c725bcb8ebc9586854cc39a52197656acdb63d",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"events\": [\n    {\n      \"type\": \"status\"\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session/events",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "cc01ab25cd77598cd72b114f15ff0509cc06350b61691e7de818949012944c03",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID             TYPE    THREAD  CONTENT\nevent-fixture  status  -       -      \n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session/events",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSkillList": {
+    "json": {
+      "fixtureVersionId": "2f6704543790aa2ef063ffb8cfba00a2a92ecd4978a0f943b5ab9192545c0eb7",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"source\": \"custom\",\n  \"skills\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"source\": \"official\",\n      \"status\": \"checking\",\n      \"latest_version\": \"1\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/skills",
+          "query": "?limit=2&source=customer",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "ebe8d961a5fb68d9e8cba52abe186a085b03fc8e61dc97359de5e94bc0a429ff",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     SOURCE    STATUS    VERSION  UPDATED             \nfixture-id  Fixture  official  checking  1        <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/skills",
+          "query": "?limit=2&source=customer",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentAgentCreate": {
+    "json": {
+      "fixtureVersionId": "64d7af5c1d2022cf9fd0f64fe60ad0c9f506baa4c83080e8b7e22491b70ec340",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"agent\": {\n    \"key\": \"fixture\",\n    \"name\": \"Fixture\",\n    \"provider\": \"bailian\",\n    \"skills\": [],\n    \"vault\": \"secrets\",\n    \"mcp\": []\n  },\n  \"local_skills\": [],\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"yaml_written\": false,\n  \"reused_pending\": false,\n  \"requires_confirmation\": false,\n  \"ready_to_create\": false,\n  \"actions\": [\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"vault\",\n        \"name\": \"secrets\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"2e1059a3aa22959734ebe7627724e5097b3e341b9730adeeef54c6f777d71227\"\n      },\n      \"dependencies\": []\n    },\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"agent\",\n        \"name\": \"fixture\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"2e207802c4b0b0db53bb0415d4366e6f218a5b2799de076aa851cbfbd7edda78\"\n      },\n      \"dependencies\": [\n        {\n          \"type\": \"vault\",\n          \"name\": \"secrets\",\n          \"provider\": \"bailian\"\n        }\n      ]\n    }\n  ],\n  \"diagnostics\": [\n    {\n      \"severity\": \"error\",\n      \"code\": \"resource.create_only.blocked\",\n      \"message\": \"Create-only requires every scoped dependency to be up-to-date. Reconcile first: bailian.vault.secrets (create).\",\n      \"resource\": {\n        \"type\": \"agent\",\n        \"name\": \"fixture\",\n        \"provider\": \"bailian\"\n      }\n    }\n  ]\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "51ec008c2fe0fedaf80251b0059438c0281e45c85bc6baaa751b59c2c3446a8d",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Generated Agent YAML key: fixture\n[error] resource.create_only.blocked: Create-only requires every scoped dependency to be up-to-date. Reconcile first: bailian.vault.secrets (create).\n  + vault.secrets (bailian)\n  + agent.fixture (bailian)\nDry run: YAML, State, and remote resources were not changed.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentEnvironmentCreate": {
+    "json": {
+      "fixtureVersionId": "ea604a51943376c363f9149f0b515dcec31f7b9e3965415f937be33d3da80807",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"resource\": {\n    \"type\": \"environment\",\n    \"key\": \"fixture\",\n    \"name\": \"Fixture\",\n    \"provider\": \"bailian\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"yaml_written\": false,\n  \"reused_pending\": false,\n  \"requires_confirmation\": false,\n  \"ready_to_create\": true,\n  \"actions\": [\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"environment\",\n        \"name\": \"fixture\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"752eb4d99b4c6466da4c8926afd7660d3dda1f185a410cc5974c3c5977500cdd\"\n      },\n      \"dependencies\": []\n    }\n  ],\n  \"diagnostics\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "24f3af48221122f923061b1dd2f67adb5324a42c83a3e79e4665485c62b00eeb",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Generated YAML key: fixture\n  + environment.fixture (bailian)\nDry run: YAML, State, and remote resources were not changed.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSkillCreate": {
+    "json": {
+      "fixtureVersionId": "95a5301d55723d5b04fa19075bbf28d0d678188ae83c75e936c4b6354bc70c13",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"resource\": {\n    \"type\": \"skill\",\n    \"key\": \"fixture-skill\",\n    \"name\": \"fixture-skill\",\n    \"provider\": \"bailian\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"yaml_written\": false,\n  \"reused_pending\": false,\n  \"requires_confirmation\": false,\n  \"ready_to_create\": true,\n  \"actions\": [\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"skill\",\n        \"name\": \"fixture-skill\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"0d41f641553cbb00f0388aa45f2ca971e27c4c2c1ae46d80e8987f2eb542cf0c\"\n      },\n      \"dependencies\": []\n    }\n  ],\n  \"diagnostics\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "d82d7aa4b48188aba919ec7cfb1e946e08f1fd7e9036697bb3f5a514737d8d65",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Generated YAML key: fixture-skill\n  + skill.fixture-skill (bailian)\nDry run: YAML, State, and remote resources were not changed.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentVaultCreate": {
+    "json": {
+      "fixtureVersionId": "6821fb3917497d9bfb8b8c9ba2d09e45f7c244c278c318be600c46a498bc2274",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"resource\": {\n    \"type\": \"vault\",\n    \"key\": \"fixture\",\n    \"name\": \"Fixture\",\n    \"provider\": \"bailian\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"yaml_written\": false,\n  \"reused_pending\": false,\n  \"requires_confirmation\": false,\n  \"ready_to_create\": true,\n  \"actions\": [\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"vault\",\n        \"name\": \"fixture\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"c6cf02a14e7e173fc723a99fd6cbb75e5cec7124a13daf572968ca128f90af27\"\n      },\n      \"dependencies\": []\n    }\n  ],\n  \"diagnostics\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "d294f308a9e17456ab4f08341aff7297e531328951c2c0960692f83a3b62505f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Generated YAML key: fixture\n  + vault.fixture (bailian)\nDry run: YAML, State, and remote resources were not changed.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentVaultCredentialCreate": {
+    "json": {
+      "fixtureVersionId": "69d8c34f769cee884910a1b0a344e12baeec65309e59e10b54c57cd1bd5bfb7f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"vault\": {\n    \"key\": \"secrets\",\n    \"remote_id\": \"fixture-vault\"\n  },\n  \"credential\": {\n    \"name\": \"Fixture\",\n    \"secret_name\": \"FIXTURE_SECRET\",\n    \"secret_env\": \"FIXTURE_SECRET\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"yaml_written\": false,\n  \"reused_pending\": false,\n  \"requires_confirmation\": false,\n  \"ready_to_create\": true,\n  \"remote_checked\": false,\n  \"reuse_remote\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "958de4fbdef569d0fc66ed0580f9d570460dea320489f5b54573e69c2a241793",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Vault: secrets\nCredential: Fixture (secret from FIXTURE_SECRET)\nDry run: YAML, State, and remote resources were not changed.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentDeploymentCreate": {
+    "json": {
+      "fixtureVersionId": "28e2e220c4f2111401f0ff43ebc3256096a1e4ccd0f955666a6b937502a359fe",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"resource\": {\n    \"type\": \"deployment\",\n    \"key\": \"fixture\",\n    \"name\": \"Fixture\",\n    \"provider\": \"bailian\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"yaml_written\": false,\n  \"reused_pending\": false,\n  \"requires_confirmation\": false,\n  \"ready_to_create\": false,\n  \"actions\": [\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"environment\",\n        \"name\": \"dev\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"7368f1e3e7591183941e2a4e0359da22724618e885c160375a48e7a7d72a56fa\"\n      },\n      \"dependencies\": []\n    },\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"vault\",\n        \"name\": \"secrets\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"2e1059a3aa22959734ebe7627724e5097b3e341b9730adeeef54c6f777d71227\"\n      },\n      \"dependencies\": []\n    },\n    {\n      \"action\": \"update\",\n      \"address\": {\n        \"type\": \"agent\",\n        \"name\": \"assistant\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"local\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Local config changed\",\n      \"before\": {\n        \"content_hash\": \"fixture-hash\"\n      },\n      \"after\": {\n        \"content_hash\": \"62711e7080bb3cd2489cc7ca2b67e8b83351a516175b67ce30ceec9e5de68835\"\n      },\n      \"dependencies\": [\n        {\n          \"type\": \"environment\",\n          \"name\": \"dev\",\n          \"provider\": \"bailian\"\n        }\n      ]\n    },\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"deployment\",\n        \"name\": \"fixture\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"263b24c1bb5881390d87b10744aba5b34a709f4a2251baee18af9f29392b6c96\"\n      },\n      \"dependencies\": [\n        {\n          \"type\": \"agent\",\n          \"name\": \"assistant\",\n          \"provider\": \"bailian\"\n        },\n        {\n          \"type\": \"vault\",\n          \"name\": \"secrets\",\n          \"provider\": \"bailian\"\n        }\n      ]\n    }\n  ],\n  \"diagnostics\": [\n    {\n      \"severity\": \"error\",\n      \"code\": \"resource.create_only.blocked\",\n      \"message\": \"Create-only requires every scoped dependency to be up-to-date. Reconcile first: bailian.environment.dev (create), bailian.vault.secrets (create), bailian.agent.assistant (update).\",\n      \"resource\": {\n        \"type\": \"deployment\",\n        \"name\": \"fixture\",\n        \"provider\": \"bailian\"\n      }\n    }\n  ]\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "150282d055549ca51926c278bda166176f94f9b88421f5245e0b6ed90508adbf",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Generated YAML key: fixture\n[error] resource.create_only.blocked: Create-only requires every scoped dependency to be up-to-date. Reconcile first: bailian.environment.dev (create), bailian.vault.secrets (create), bailian.agent.assistant (update).\n  + environment.dev (bailian)\n  + vault.secrets (bailian)\n  ~ agent.assistant (bailian)\n  + deployment.fixture (bailian)\nDry run: YAML, State, and remote resources were not changed.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentAgentGet": {
+    "json": {
+      "fixtureVersionId": "b4f0d0be8d829896710c9782e8321ac97ff8f877cd07bc22af41f662f9150603",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"archived_at\": null,\n  \"attributes\": {\n    \"id\": \"fixture-id\",\n    \"name\": \"Fixture\",\n    \"display_name\": \"Fixture\",\n    \"description\": \"Fixture resource\",\n    \"version\": 1,\n    \"type\": \"custom\",\n    \"source\": \"custom\",\n    \"status\": \"completed\",\n    \"agent\": {\n      \"id\": \"fixture-agent\"\n    },\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"deployment_id\": \"fixture-deployment\",\n    \"session_id\": \"fixture-session\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"filename\": \"fixture.txt\",\n    \"mime_type\": \"text/plain\",\n    \"size_bytes\": 4,\n    \"latest_version\": \"1\",\n    \"secret\": \"fixture-one-time-secret\",\n    \"signing_secret\": \"fixture-signing-secret\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/agents/fixture-agent",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "0186a82c2a260101461265d96d88347f51d52218ed60199e196e033384056f40",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID:          fixture-id\nName:        Fixture\nDescription: Fixture resource\nVersion:     1\nType:        custom\nCreated:     <TIMESTAMP>\nUpdated:     <TIMESTAMP>\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/agents/fixture-agent",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentAgentList": {
+    "json": {
+      "fixtureVersionId": "3373b138abc231bf6245b1519d655ae13ef7b442622a69324dcfb6a5e91aff58",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"agents\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"archived_at\": null,\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/agents",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "db207b544845a807bae6070c3c20e3b60a6cded2bece5f5f3fc2d6f32ea59250",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     VERSION  TYPE    UPDATED             \nfixture-id  Fixture  1        custom  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/agents",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentAgentSearch": {
+    "json": {
+      "fixtureVersionId": "a1ac52d924ce360b3a5ad777aaf7dec536d9f55d4a1bdbe2cf163f882fc3431e",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"agents\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"archived_at\": null,\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"truncated\": false,\n  \"scanned_pages\": 1\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/agents",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "b2344b5e903c0e4f08166b3eedcd681e6418d96a593070ce1c2435157103838f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     VERSION  TYPE    UPDATED             \nfixture-id  Fixture  1        custom  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/agents",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentAgentVersions": {
+    "json": {
+      "fixtureVersionId": "af80cbe0ce91fb884fc36bd90fbbb1062fbb3a78c9fdeee2256eed66453aeed0",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"versions\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"archived_at\": null,\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/agents/fixture-agent/versions",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "f793fd865fa288760ad59e3d7ddf45d54a691f98ac5822c442358b625104c4ab",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     VERSION  TYPE    UPDATED             \nfixture-id  Fixture  1        custom  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/agents/fixture-agent/versions",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentEnvironmentGet": {
+    "json": {
+      "fixtureVersionId": "0947b6bca3f397e9066aefddb4f94738f5456c2cccb290645959d4e64acd0a97",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"archived_at\": null,\n  \"attributes\": {\n    \"id\": \"fixture-id\",\n    \"name\": \"Fixture\",\n    \"display_name\": \"Fixture\",\n    \"description\": \"Fixture resource\",\n    \"version\": 1,\n    \"type\": \"custom\",\n    \"source\": \"custom\",\n    \"status\": \"completed\",\n    \"agent\": {\n      \"id\": \"fixture-agent\"\n    },\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"deployment_id\": \"fixture-deployment\",\n    \"session_id\": \"fixture-session\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"filename\": \"fixture.txt\",\n    \"mime_type\": \"text/plain\",\n    \"size_bytes\": 4,\n    \"latest_version\": \"1\",\n    \"secret\": \"fixture-one-time-secret\",\n    \"signing_secret\": \"fixture-signing-secret\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/environments/fixture-env",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "644c5cd82462b4efd0a8b744317f707ccb944e27a7ac27a5a1c57b248abaad15",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID:          fixture-id\nName:        Fixture\nDescription: Fixture resource\nScope:       -\nVersion:     1\nUpdated:     <TIMESTAMP>\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/environments/fixture-env",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentEnvironmentList": {
+    "json": {
+      "fixtureVersionId": "6fa0a9cb4b8845f25dced93959ef8dfa2eb142d87af9c2c5c4e498d026b78fc2",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"environments\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"archived_at\": null,\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/environments",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "a2a1b700294813036a9f921c9a08f39838fc222ea58c8a2c6cd534137dc8021c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     SCOPE  VERSION  UPDATED             \nfixture-id  Fixture  -      1        <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/environments",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentEnvironmentSearch": {
+    "json": {
+      "fixtureVersionId": "77177678b5287cd72f4156e64b9df3fc934c1a52870cdfb434a29e3798ddef7c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"environments\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"archived_at\": null,\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"truncated\": false,\n  \"scanned_pages\": 1\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/environments",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "39f9cc81f2a5c2de9d449df8078aa7ca000d097e650d920d1e42feb5cbd37123",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     SCOPE  VERSION  UPDATED             \nfixture-id  Fixture  -      1        <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/environments",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSkillDownload": {
+    "json": {
+      "fixtureVersionId": "7cb300b10335c27b788f0222537ebf17a608d7dbe7e3815e55e1ef4477d8a4b0",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_download_skill\": \"fixture-skill\",\n  \"version\": \"1\",\n  \"output_file\": \"<ROOT>/result.bin\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "b78da0747eb458309b074c080fcadbf040642a8bfb7047b1e05d1807103a0250",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_download_skill: fixture-skill\nversion: \"1\"\noutput_file: <ROOT>/result.bin\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSkillGet": {
+    "json": {
+      "fixtureVersionId": "fdb91c64d6158cc26b2293e600d0d4057820d990abef8b5c678c8f23a08ab99c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"source\": \"official\",\n  \"status\": \"checking\",\n  \"latest_version\": \"1\",\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"attributes\": {\n    \"id\": \"fixture-id\",\n    \"name\": \"Fixture\",\n    \"display_name\": \"Fixture\",\n    \"description\": \"Fixture resource\",\n    \"version\": 1,\n    \"type\": \"custom\",\n    \"source\": \"custom\",\n    \"status\": \"completed\",\n    \"agent\": {\n      \"id\": \"fixture-agent\"\n    },\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"deployment_id\": \"fixture-deployment\",\n    \"session_id\": \"fixture-session\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"filename\": \"fixture.txt\",\n    \"mime_type\": \"text/plain\",\n    \"size_bytes\": 4,\n    \"latest_version\": \"1\",\n    \"secret\": \"fixture-one-time-secret\",\n    \"signing_secret\": \"fixture-signing-secret\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/skills/fixture-skill",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "59ee5b9b87526125fde0085b5f50c22e8a753edf4f87af361e88be65c6778104",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID:          fixture-id\nName:        Fixture\nDescription: Fixture resource\nSource:      official\nStatus:      checking\nVersion:     1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/skills/fixture-skill",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSkillSearch": {
+    "json": {
+      "fixtureVersionId": "991c43e4502e156051e56b09674af3deb512911713977d7794fb54f525a7bb5f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"skills\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"source\": \"official\",\n      \"status\": \"checking\",\n      \"latest_version\": \"1\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"truncated\": false,\n  \"scanned_pages\": 1\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/skills",
+          "query": "?limit=2&source=customer",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "9adb668a98a305e597bf2baf2629e6a80eb3cbeecad8826566415ee4b7cfb120",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     SOURCE    STATUS    VERSION  UPDATED             \nfixture-id  Fixture  official  checking  1        <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/skills",
+          "query": "?limit=2&source=customer",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSkillVersions": {
+    "json": {
+      "fixtureVersionId": "875f6b60f0588fad586b72b1286b9e365d14262527fcbc9cb113185c96565da4",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"versions\": [\n    {\n      \"id\": \"fixture-id\",\n      \"skill_id\": \"\",\n      \"type\": \"custom\",\n      \"name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"status\": \"completed\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/skills/fixture-skill/versions",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "2fe211cce7250cdd8532d42b97748f24b851fd18df251d462fc2a4b0a9ebea2f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "VERSION  NAME     TYPE    STATUS     UPDATED             \n1        Fixture  custom  completed  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/skills/fixture-skill/versions",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentVaultGet": {
+    "json": {
+      "fixtureVersionId": "023ef05258deddea2bdf32b42118fd8ace9074b5bdeb6baa427820b99b7ce245",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"display_name\": \"Fixture\",\n  \"type\": \"custom\",\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"archived_at\": null,\n  \"attributes\": {\n    \"id\": \"fixture-id\",\n    \"name\": \"Fixture\",\n    \"display_name\": \"Fixture\",\n    \"description\": \"Fixture resource\",\n    \"version\": 1,\n    \"type\": \"custom\",\n    \"source\": \"custom\",\n    \"status\": \"completed\",\n    \"agent\": {\n      \"id\": \"fixture-agent\"\n    },\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"deployment_id\": \"fixture-deployment\",\n    \"session_id\": \"fixture-session\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"filename\": \"fixture.txt\",\n    \"mime_type\": \"text/plain\",\n    \"size_bytes\": 4,\n    \"latest_version\": \"1\",\n    \"secret\": \"fixture-one-time-secret\",\n    \"signing_secret\": \"fixture-signing-secret\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/vaults/fixture-vault",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "f1311861754b68064863b109c64c076e4d15f1589bcc7e3f1d1948265a7ca91b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID:      fixture-id\nName:    Fixture\nType:    custom\nCreated: <TIMESTAMP>\nUpdated: <TIMESTAMP>\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/vaults/fixture-vault",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentVaultList": {
+    "json": {
+      "fixtureVersionId": "e120f27ea697562fb76bd9bf15ce4f30e3403b640e17a4ba09069cb4d4a6829d",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"vaults\": [\n    {\n      \"id\": \"fixture-id\",\n      \"display_name\": \"Fixture\",\n      \"type\": \"custom\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"archived_at\": null,\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/vaults",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "57d0e64e08fe959cbe76e2df1c0b5446d5e74e2490d32e5916899671e37cd74a",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     TYPE    CREATED               UPDATED             \nfixture-id  Fixture  custom  <TIMESTAMP>  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/vaults",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentVaultSearch": {
+    "json": {
+      "fixtureVersionId": "2f2e996045994417e02d408b5e68a035be00fe85bbda950e81824fadb6484a70",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"vaults\": [\n    {\n      \"id\": \"fixture-id\",\n      \"display_name\": \"Fixture\",\n      \"type\": \"custom\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"archived_at\": null,\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"truncated\": false,\n  \"scanned_pages\": 1\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/vaults",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "360ec2a4c925cfbbbf90d888616d04466a435982037daa5cc3f7f56094a2bfdd",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          NAME     TYPE    CREATED               UPDATED             \nfixture-id  Fixture  custom  <TIMESTAMP>  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/vaults",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentDeploymentGet": {
+    "json": {
+      "fixtureVersionId": "af37b1bf53edbc5d0dbbac0bda1f8f2416d4561b0b58bb45227a427a7b19cf2c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"status\": \"completed\",\n  \"attributes\": {\n    \"id\": \"fixture-id\",\n    \"name\": \"Fixture\",\n    \"display_name\": \"Fixture\",\n    \"description\": \"Fixture resource\",\n    \"version\": 1,\n    \"type\": \"custom\",\n    \"source\": \"custom\",\n    \"status\": \"completed\",\n    \"agent\": {\n      \"id\": \"fixture-agent\"\n    },\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"deployment_id\": \"fixture-deployment\",\n    \"session_id\": \"fixture-session\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"filename\": \"fixture.txt\",\n    \"mime_type\": \"text/plain\",\n    \"size_bytes\": 4,\n    \"latest_version\": \"1\",\n    \"secret\": \"fixture-one-time-secret\",\n    \"signing_secret\": \"fixture-signing-secret\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployments/fixture-deployment",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "c8002b03349a0ee23729d9650931de066f76dcd26e6d7c1ff4efe6a947f237fa",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID:      fixture-id\nStatus:  completed\nSchedule:-\nPaused:  -\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployments/fixture-deployment",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentDeploymentList": {
+    "json": {
+      "fixtureVersionId": "23c4acb59e4990dea2606dfd9a897ef9bb2584857a8259f051708b6cfbde92e0",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"deployments\": [\n    {\n      \"id\": \"fixture-id\",\n      \"status\": \"completed\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployments",
+          "query": "?agent_id=fixture-agent&limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "53cc1caa135f6f2a364daa8459de2854d8d33400e39eb7b4f88bbb696c929361",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          STATUS     SCHEDULE  PAUSED REASON\nfixture-id  completed  -         -            \n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployments",
+          "query": "?agent_id=fixture-agent&limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentDeploymentPause": {
+    "json": {
+      "fixtureVersionId": "ce3b9afce8535939468dffe1cf06c2147e52bfcae434218d3bf980683b96a60b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_pause_deployment\": \"fixture-deployment\",\n  \"target_kind\": \"id\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "55c4ba1bd44c6e51193c351e302a7d667218d7e8cdc4651625ab465f2b5a7903",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_pause_deployment: fixture-deployment\ntarget_kind: id\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentDeploymentRun": {
+    "json": {
+      "fixtureVersionId": "1f0ea6d32574908ba8c6cd87d000bc1c3bcba49fdafb8dd1872876db24bfa83b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_run_deployment\": \"fixture-deployment\",\n  \"target_kind\": \"id\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "ccedef70e861f553c902948e805f1a56d4b0ed28815dc20fe7baef5e94b824e7",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_run_deployment: fixture-deployment\ntarget_kind: id\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentDeploymentRunsGet": {
+    "json": {
+      "fixtureVersionId": "89aec06538d1f869d61acc3081a66e8aeca1bcf0fd71848e6324fcf19dfaac88",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"status\": \"completed\",\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"attributes\": {\n    \"id\": \"fixture-id\",\n    \"name\": \"Fixture\",\n    \"display_name\": \"Fixture\",\n    \"description\": \"Fixture resource\",\n    \"version\": 1,\n    \"type\": \"custom\",\n    \"source\": \"custom\",\n    \"status\": \"completed\",\n    \"agent\": {\n      \"id\": \"fixture-agent\"\n    },\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"deployment_id\": \"fixture-deployment\",\n    \"session_id\": \"fixture-session\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"filename\": \"fixture.txt\",\n    \"mime_type\": \"text/plain\",\n    \"size_bytes\": 4,\n    \"latest_version\": \"1\",\n    \"secret\": \"fixture-one-time-secret\",\n    \"signing_secret\": \"fixture-signing-secret\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployment_runs/fixture-run",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "28359f9ff4bb8f68d5a432461a5669d21e405fb7c4e73ac5716fed779bb68e6f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID:         fixture-id\nDeployment: fixture-deployment\nSession:    fixture-session\nStatus:     completed\nCreated:    <TIMESTAMP>\nError:      -\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployment_runs/fixture-run",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentDeploymentRunsList": {
+    "json": {
+      "fixtureVersionId": "2ecaf4dacad6c6524b829b895f4f28e9732fcddb6a9e47b2248f9852144ab34f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"runs\": [\n    {\n      \"id\": \"fixture-id\",\n      \"deployment_id\": \"fixture-deployment\",\n      \"session_id\": \"fixture-session\",\n      \"status\": \"completed\",\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployments/fixture-deployment/runs",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "e833114255c23203160c92a336589bd6cef3a99698ca432964e69344ad19c296",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          DEPLOYMENT          SESSION          STATUS     CREATED             \nfixture-id  fixture-deployment  fixture-session  completed  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployments/fixture-deployment/runs",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentDeploymentSearch": {
+    "json": {
+      "fixtureVersionId": "7bd88e80fea33ab09f53f9d37eb533b1d484d00bcc80f48413f61766a0c16764",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"deployments\": [\n    {\n      \"id\": \"fixture-id\",\n      \"status\": \"completed\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployments",
+          "query": "?agent_id=fixture-agent&keyword=fixture&limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "2314540af34dc044ac4f078d0a0b766c394e2f7c2c73ccceae27004919f4dad0",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          STATUS     SCHEDULE  PAUSED REASON\nfixture-id  completed  -         -            \n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/deployments",
+          "query": "?agent_id=fixture-agent&keyword=fixture&limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentDeploymentUnpause": {
+    "json": {
+      "fixtureVersionId": "03fb2dff707cd599c45f85768fc2a61783a9c281dae1ad43030204a3f743cee6",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_unpause_deployment\": \"fixture-deployment\",\n  \"target_kind\": \"id\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "2816f4d75130abac47804d8db983e706d06e17572a81dfbdbac7335127925666",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_unpause_deployment: fixture-deployment\ntarget_kind: id\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionArchive": {
+    "json": {
+      "fixtureVersionId": "a1d016114b7c014e8a247c6d760d7fc0907b1a3992c95e6f1348d427244b8ae6",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_archive_session\": \"fixture-session\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "3d877bc511439345b6cd0980c9b783d35e5266421b8589a495276b03a5bfcdb8",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_archive_session: fixture-session\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionSearch": {
+    "json": {
+      "fixtureVersionId": "2381fdd4182c1b72b2a4207535f0c061fa661551484150d67dd4bfcf10c1992e",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"sessions\": [\n    {\n      \"id\": \"fixture-id\",\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"status\": \"completed\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"truncated\": false,\n  \"scanned_pages\": 1\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions",
+          "query": "?agent_id=fixture-agent&limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "7ea1642e361e0b09ffce594a783b763a5777b5aeb5716857365d0fd9541a7c1f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          TITLE  AGENT          STATUS     UPDATED             \nfixture-id  -      fixture-agent  completed  <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions",
+          "query": "?agent_id=fixture-agent&limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSessionUpdate": {
+    "json": {
+      "fixtureVersionId": "df621b99c6be20df8c2f2f6e7410314614c121d6ad794e5da5ce17488cddf8c1",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_update_session\": \"fixture-session\",\n  \"input\": {\n    \"title\": \"Fixture title\",\n    \"metadata\": {\n      \"owner\": \"fixture\"\n    }\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "365a8fb51d3cd4c3189c094ade102daed1ccc0adeaf4aa64a74baef6e83b0b73",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_update_session: fixture-session\ninput:\n  title: Fixture title\n  metadata:\n    owner: fixture\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionEventList": {
+    "json": {
+      "fixtureVersionId": "3d3fe67a71dc46bfae3dbfc2454ac6849003fc75c08ff578a7e31ca5af92bafe",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"events\": [\n    {\n      \"type\": \"status\"\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session/events",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "ec5493bf199b0fb3f11df42e02b0674fc85d5c9942f6e0a4ea7f866cd1745900",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID             TYPE    THREAD  CONTENT\nevent-fixture  status  -       -      \n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session/events",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSessionEventSend": {
+    "json": {
+      "fixtureVersionId": "6433ee52637bfeae690dcd1b12b6aeff885b8db5c0a1d590913334476e8a5bf4",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_send_events\": [\n    {\n      \"type\": \"message\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"fixture\"\n        }\n      ]\n    }\n  ],\n  \"session_id\": \"fixture-session\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "7883b59df32b2cd6d3f626161f00faec6a1e3f3dffaeab677b4cf00e81d9c77a",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_send_events:\n  - type: message\n    content:\n      - type: text\n        text: fixture\nsession_id: fixture-session\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentSessionEventStream": {
+    "json": {
+      "fixtureVersionId": "240c17f89c1fcb0f4042367bc18762181187e337d57a89fdfecd313462369747",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"session_id\": \"fixture-session\",\n  \"events\": [\n    {\n      \"type\": \"status\"\n    }\n  ]\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session/events/stream",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "3306a5874775e811910626c88f031a4de786f146f8adb3bd2636c8d172527afa",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\"type\":\"status\"}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session/events/stream",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSessionDebug": {
+    "json": {
+      "fixtureVersionId": "2f423dfeca0518c465f358de392ba794ef8f9443e6421ea72e029d4dda2daa33",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"session\": {\n    \"id\": \"fixture-id\",\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"status\": \"completed\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"attributes\": {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"display_name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"source\": \"custom\",\n      \"status\": \"completed\",\n      \"agent\": {\n        \"id\": \"fixture-agent\"\n      },\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"deployment_id\": \"fixture-deployment\",\n      \"session_id\": \"fixture-session\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"latest_version\": \"1\",\n      \"secret\": \"[REDACTED]\",\n      \"signing_secret\": \"[REDACTED]\",\n      \"future\": {\n        \"values\": [\n          false,\n          0,\n          null,\n          []\n        ]\n      }\n    }\n  },\n  \"events\": [\n    {\n      \"type\": \"status\"\n    }\n  ],\n  \"files\": [\n    {\n      \"id\": \"fixture-id\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"created_at\": \"<TIMESTAMP>\",\n      \"status\": \"completed\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"[REDACTED]\",\n        \"signing_secret\": \"[REDACTED]\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"capabilities\": {\n    \"provider\": \"bailian\",\n    \"operations\": {\n      \"webhook.create\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"webhook.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"webhook.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"webhook.update\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"webhook.delete\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"webhook.enable\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"webhook.disable\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"webhook.test\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"webhook.reset_secret\": \"[REDACTED]\",\n      \"webhook.events\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"agent.create\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"YAML declaration plus scoped create-only apply.\"\n      },\n      \"agent.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"agent.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"agent.search\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client-side filtering over the corresponding list API.\"\n      },\n      \"agent.versions\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"environment.create\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"YAML declaration plus scoped create-only apply.\"\n      },\n      \"environment.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"environment.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"environment.search\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client-side filtering over the corresponding list API.\"\n      },\n      \"skill.create\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"YAML declaration plus scoped create-only apply.\"\n      },\n      \"skill.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"skill.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"skill.search\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client-side filtering over the corresponding list API.\"\n      },\n      \"skill.versions\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"skill.download\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"vault.create\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"YAML declaration plus scoped create-only apply.\"\n      },\n      \"vault.credential.create\": \"[REDACTED]\",\n      \"vault.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"vault.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"vault.search\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client-side filtering over the corresponding list API.\"\n      },\n      \"deployment.create\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"YAML declaration plus scoped create-only apply.\"\n      },\n      \"deployment.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"deployment.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"deployment.search\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Maps to the server-side keyword parameter.\"\n      },\n      \"deployment.runs.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"deployment.runs.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"deployment.run\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"deployment.pause\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"deployment.unpause\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.create\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.search\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client-side filtering over the corresponding list API.\"\n      },\n      \"session.update\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.archive\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.delete\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.run\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client composition of session create and event send/stream.\"\n      },\n      \"session.event.send\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.event.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.event.stream\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"session.debug\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client-side aggregation of supported read APIs.\"\n      },\n      \"session.export\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client-side export of supported read APIs.\"\n      },\n      \"file.upload\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"file.list\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"file.get\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"file.search\": {\n        \"supported\": true,\n        \"auth\": \"api_key\",\n        \"reason\": \"Client-side filtering over the corresponding list API.\"\n      },\n      \"file.download\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"file.delete\": {\n        \"supported\": true,\n        \"auth\": \"api_key\"\n      },\n      \"model.list\": {\n        \"supported\": false,\n        \"auth\": null,\n        \"reason\": \"The public Managed Agents API does not expose a model catalog endpoint.\"\n      },\n      \"model.search\": {\n        \"supported\": false,\n        \"auth\": null,\n        \"reason\": \"The public Managed Agents API does not expose a model catalog endpoint.\"\n      },\n      \"session_thread.list\": {\n        \"supported\": false,\n        \"auth\": null,\n        \"reason\": \"Managed Agents exposes child-thread ids and lifecycle events through Session Events, but no independent Thread resource API.\"\n      },\n      \"session_thread.get\": {\n        \"supported\": false,\n        \"auth\": null,\n        \"reason\": \"Managed Agents exposes child-thread ids and lifecycle events through Session Events, but no independent Thread resource API.\"\n      },\n      \"session_thread.archive\": {\n        \"supported\": false,\n        \"auth\": null,\n        \"reason\": \"Managed Agents exposes child-thread ids and lifecycle events through Session Events, but no independent Thread resource API.\"\n      },\n      \"session_thread.events\": {\n        \"supported\": false,\n        \"auth\": null,\n        \"reason\": \"Managed Agents exposes child-thread ids and lifecycle events through Session Events, but no independent Thread resource API.\"\n      },\n      \"mcp.oauth_login\": {\n        \"supported\": false,\n        \"auth\": null,\n        \"reason\": \"The public Managed Agents data plane does not expose MCP OAuth login.\"\n      }\n    }\n  },\n  \"errors\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session",
+          "query": "",
+          "method": "GET",
+          "body": null
+        },
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session/events",
+          "query": "?limit=100&order=asc",
+          "method": "GET",
+          "body": null
+        },
+        {
+          "path": "/api/v1/agentstudio/files",
+          "query": "?limit=100&scope_id=fixture-session",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "7f5eae4ba211cb0c5c27cfe36ca8c1c6dd1076ab43498a4ad997bce9e227793a",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Session:      fixture-id (completed)\nEvents:       1\nScoped files: 1\nPartial errors: 0\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session",
+          "query": "",
+          "method": "GET",
+          "body": null
+        },
+        {
+          "path": "/api/v1/agentstudio/sessions/fixture-session/events",
+          "query": "?limit=100&order=asc",
+          "method": "GET",
+          "body": null
+        },
+        {
+          "path": "/api/v1/agentstudio/files",
+          "query": "?limit=100&scope_id=fixture-session",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentSessionExport": {
+    "json": {
+      "fixtureVersionId": "886cb4a39f1c2335bde067e04056cc9d2cb4361890dfea1b1e5b905610ef2a8d",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_export_session\": \"fixture-session\",\n  \"output_file\": \"<ROOT>/result.bin\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "2b64a6e4f193b6b068521ae2cc1d9ddd7c88135d9b989d0855c1958bd18b3a5b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_export_session: fixture-session\noutput_file: <ROOT>/result.bin\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentFileDelete": {
+    "json": {
+      "fixtureVersionId": "dd0c928330f6c06330d036f87bd6286164f7ec2960d1f03ddad28d8fa118d7da",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "71c30e2c2a9683b656bc2d921d86c7e6abc663f089ef85ff19023d5e4b9b44ee",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentFileDownload": {
+    "json": {
+      "fixtureVersionId": "d5d6bc0fd7368bce31fc7479e4f58ce96994f0f58c93e718b1d0c56478e1026f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"output_file\": \"<ROOT>/result.bin\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "a91371bc5fa6da6a64e04841d85ca0d266a1d93917a13677883501503d7827a3",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "output_file: <ROOT>/result.bin\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentFileGet": {
+    "json": {
+      "fixtureVersionId": "beb154fc26fe00664eaf3b06051b94b1edd0f7c752049bda7ab805f283fa2b12",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"created_at\": \"<TIMESTAMP>\",\n  \"attributes\": {\n    \"id\": \"fixture-id\",\n    \"name\": \"Fixture\",\n    \"display_name\": \"Fixture\",\n    \"description\": \"Fixture resource\",\n    \"version\": 1,\n    \"type\": \"custom\",\n    \"source\": \"custom\",\n    \"status\": \"completed\",\n    \"agent\": {\n      \"id\": \"fixture-agent\"\n    },\n    \"agent_id\": \"fixture-agent\",\n    \"environment_id\": \"fixture-env\",\n    \"deployment_id\": \"fixture-deployment\",\n    \"session_id\": \"fixture-session\",\n    \"vault_ids\": [],\n    \"memory_store_ids\": [],\n    \"created_at\": \"<TIMESTAMP>\",\n    \"updated_at\": \"<TIMESTAMP>\",\n    \"filename\": \"fixture.txt\",\n    \"mime_type\": \"text/plain\",\n    \"size_bytes\": 4,\n    \"latest_version\": \"1\",\n    \"secret\": \"fixture-one-time-secret\",\n    \"signing_secret\": \"fixture-signing-secret\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  },\n  \"available\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/files/undefined",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "6f0bd975c875c5cccc99038e33a50960dc2918327ff7124869e8763e1e3d7a5c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID:       fixture-id\nFilename: fixture.txt\nMIME:     text/plain\nBytes:    4\nStatus:   -\nScope:    -\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/files/undefined",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentFileList": {
+    "json": {
+      "fixtureVersionId": "3b59e3568128189bf565bda9ae7afb44e736a8560042a9b91fd6dad3fb74f2c1",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"files\": [\n    {\n      \"id\": \"fixture-id\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"created_at\": \"<TIMESTAMP>\",\n      \"status\": \"completed\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/files",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "6ace1db1e38af5b1b11bc54ca5543fdef444b6e874e2e70be12d7f0e25c5ffc6",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          FILENAME     STATUS     BYTES  SCOPE  CREATED             \nfixture-id  fixture.txt  completed  4      -      <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/files",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentFileSearch": {
+    "json": {
+      "fixtureVersionId": "2073b44804b214757aaba2fe68f6781cfa2af93d747d40eedc8f05252ea7536c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"files\": [\n    {\n      \"id\": \"fixture-id\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"created_at\": \"<TIMESTAMP>\",\n      \"status\": \"completed\",\n      \"attributes\": {\n        \"id\": \"fixture-id\",\n        \"name\": \"Fixture\",\n        \"display_name\": \"Fixture\",\n        \"description\": \"Fixture resource\",\n        \"version\": 1,\n        \"type\": \"custom\",\n        \"source\": \"custom\",\n        \"status\": \"completed\",\n        \"agent\": {\n          \"id\": \"fixture-agent\"\n        },\n        \"agent_id\": \"fixture-agent\",\n        \"environment_id\": \"fixture-env\",\n        \"deployment_id\": \"fixture-deployment\",\n        \"session_id\": \"fixture-session\",\n        \"vault_ids\": [],\n        \"memory_store_ids\": [],\n        \"created_at\": \"<TIMESTAMP>\",\n        \"updated_at\": \"<TIMESTAMP>\",\n        \"filename\": \"fixture.txt\",\n        \"mime_type\": \"text/plain\",\n        \"size_bytes\": 4,\n        \"latest_version\": \"1\",\n        \"secret\": \"fixture-one-time-secret\",\n        \"signing_secret\": \"fixture-signing-secret\",\n        \"future\": {\n          \"values\": [\n            false,\n            0,\n            null,\n            []\n          ]\n        }\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"truncated\": false,\n  \"scanned_pages\": 1\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/files",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "f7768d3cff25d4298630f3d986fc25381750e4174b0d1ba85488f3cfedc87071",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "ID          FILENAME     STATUS     BYTES  SCOPE  CREATED             \nfixture-id  fixture.txt  completed  4      -      <TIMESTAMP>\n\nTotal: 1\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/files",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentFileUpload": {
+    "json": {
+      "fixtureVersionId": "62df95c7a8512b85e45d3819118e671a33f4ec30f9ecdcddc3b7726733793a32",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"would_upload_file\": \"<ROOT>/content.txt\",\n  \"filename\": \"content.txt\",\n  \"mime_type\": \"text/plain\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "fe48285f506699a74a62bee51233cab1de937d5cadff90f39800e85d460a692c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "would_upload_file: <ROOT>/content.txt\nfilename: content.txt\nmime_type: text/plain\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentWebhookCreate": {
+    "json": {
+      "fixtureVersionId": "d11eef1f3c65890e2553b5ab68bd14b6f888f8d7f10c62088c7b4e2d2dddd9b6",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "Signing Secret is shown only in this successful create/reset response; save it now. / Signing Secret 仅在本次创建或重置成功响应中返回，请立即保存。\n",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints",
+          "query": "",
+          "method": "POST",
+          "body": "{\"url\":\"https://receiver.fixture.invalid\",\"events\":[\"session.updated\"]}"
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "ccad8f690985f27180f2576b6637b75dce52991a60f9a80c8dd9c532224c2d48",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "Signing Secret is shown only in this successful create/reset response; save it now. / Signing Secret 仅在本次创建或重置成功响应中返回，请立即保存。\n",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints",
+          "query": "",
+          "method": "POST",
+          "body": "{\"url\":\"https://receiver.fixture.invalid\",\"events\":[\"session.updated\"]}"
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookList": {
+    "json": {
+      "fixtureVersionId": "770f8e74156e2b793aab6617becb51861a7cd094c56680176a1dc901711c212c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"data\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"display_name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"source\": \"custom\",\n      \"status\": \"completed\",\n      \"agent\": {\n        \"id\": \"fixture-agent\"\n      },\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"deployment_id\": \"fixture-deployment\",\n      \"session_id\": \"fixture-session\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"latest_version\": \"1\",\n      \"secret\": \"fixture-one-time-secret\",\n      \"signing_secret\": \"fixture-signing-secret\",\n      \"future\": {\n        \"values\": [\n          false,\n          0,\n          null,\n          []\n        ]\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"next_page\": null,\n  \"request_id\": \"fixture-request\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "2554e44be22af463006b7ba8880c9125891b4e9e9a055717198b7860390bf5ff",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"data\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"display_name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"source\": \"custom\",\n      \"status\": \"completed\",\n      \"agent\": {\n        \"id\": \"fixture-agent\"\n      },\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"deployment_id\": \"fixture-deployment\",\n      \"session_id\": \"fixture-session\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"latest_version\": \"1\",\n      \"secret\": \"fixture-one-time-secret\",\n      \"signing_secret\": \"fixture-signing-secret\",\n      \"future\": {\n        \"values\": [\n          false,\n          0,\n          null,\n          []\n        ]\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"next_page\": null,\n  \"request_id\": \"fixture-request\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookGet": {
+    "json": {
+      "fixtureVersionId": "6d10ceada703209f680409e4b88020337d7b4c2f5df0c15f0d6d872f4bf05ee6",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "1b5609fa444ecfd3c506e83a7caeff594639b4f6bc3b477c8c13d615ab753e43",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookUpdate": {
+    "json": {
+      "fixtureVersionId": "c0b502afa3b8284a9bb22279092bba1b7ceac9cecd1e254215614bab14a27f04",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook",
+          "query": "",
+          "method": "PUT",
+          "body": "{\"url\":\"https://receiver.fixture.invalid\",\"events\":[\"session.updated\"]}"
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "481a4e59157a4b31fbc17e81668c517054698d93d90f3220830bcf7c8253f96e",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook",
+          "query": "",
+          "method": "PUT",
+          "body": "{\"url\":\"https://receiver.fixture.invalid\",\"events\":[\"session.updated\"]}"
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookDelete": {
+    "json": {
+      "fixtureVersionId": "3a06abfb3bbc3dd878e03ed1d77e96b2a98df81b67afba1cd8e5fc4b23223951",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook",
+          "query": "",
+          "method": "DELETE",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "3dcbdfcfb3888c9e5b272fa2bf9f07def0d954838095927401d4bed073e9bd4e",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook",
+          "query": "",
+          "method": "DELETE",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookEnable": {
+    "json": {
+      "fixtureVersionId": "857b9e61faf5e7ebfb24d37c3c24ef16220d14e8ff41489bc246edc5a5a29a50",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/enable",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "8cab0b03c9b284b5b42918525e6fab1059546b62157a2232193abf29eea01022",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/enable",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookDisable": {
+    "json": {
+      "fixtureVersionId": "2c4d6780a4e14698348c9e2185f33c91524cddde3b69106c03799b82da623e84",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/disable",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "c2a6c9743a1f89acb9c53a4a489d5565bd855cd13b31951865a15640cdc13cf2",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/disable",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookTest": {
+    "json": {
+      "fixtureVersionId": "e84dd349f8fbbc76c81698357cf18ad4be342b7817ae7352907d28bbf0a7e8f5",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/test",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "25205925d1669fec323aab3b944499022c456c2dac0964f0e4e8cf7a30effaea",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/test",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookResetSecret": {
+    "json": {
+      "fixtureVersionId": "7d828a4ef7f9948abaa5a6e7dc21d51f564a26f424e58ca637d3bea5e83970c8",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "Signing Secret is shown only in this successful create/reset response; save it now. / Signing Secret 仅在本次创建或重置成功响应中返回，请立即保存。\n",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/reset_secret",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "5c81e298b2590138028016300adab15377914dea74d8db869b10144da74d2678",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "Signing Secret is shown only in this successful create/reset response; save it now. / Signing Secret 仅在本次创建或重置成功响应中返回，请立即保存。\n",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/reset_secret",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentWebhookEvents": {
+    "json": {
+      "fixtureVersionId": "c899f6b945f394bd3dd5eee07af4c0ce3de383ac9dea478507a4d7b0987609f9",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/events",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "498406364ee585bb954c07815b18a92bfdb917b97a5d9e1a6ba09dea393fe196",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/webhook_endpoints/fixture-webhook/events",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentMemoryStoreCreate": {
+    "json": {
+      "fixtureVersionId": "8521589cea846837c149870da4ca50a1072eb91e8b3ecfcf9c24509e5c156d10",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"resource\": {\n    \"type\": \"memory_store\",\n    \"key\": \"fixture\",\n    \"name\": \"Fixture\",\n    \"provider\": \"bailian\"\n  },\n  \"config_file\": \"<ROOT>/agents.yaml\",\n  \"yaml_written\": false,\n  \"reused_pending\": false,\n  \"requires_confirmation\": false,\n  \"ready_to_create\": true,\n  \"actions\": [\n    {\n      \"action\": \"create\",\n      \"address\": {\n        \"type\": \"memory_store\",\n        \"name\": \"fixture\",\n        \"provider\": \"bailian\"\n      },\n      \"driftKind\": \"none\",\n      \"readinessImpact\": \"blocking\",\n      \"reason\": \"Resource does not exist in state\",\n      \"after\": {\n        \"content_hash\": \"787e84835bb3bd8a6d69ae8a2f2bdb710da606211da8f3d77b96f42521a82eab\"\n      },\n      \"dependencies\": []\n    }\n  ],\n  \"diagnostics\": []\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "6fbf8be226d0189146ba2898508af6e1491c7f5d32259fc73cb817e060a0c3b1",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "Generated YAML key: fixture\n  + memory_store.fixture (bailian)\nDry run: YAML, State, and remote resources were not changed.\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentMemoryStoreList": {
+    "json": {
+      "fixtureVersionId": "d87d97ae2df3fea7c0871c8d21edecadfd6214bad994d4274161fc44b26b916a",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"data\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"display_name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"source\": \"custom\",\n      \"status\": \"completed\",\n      \"agent\": {\n        \"id\": \"fixture-agent\"\n      },\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"deployment_id\": \"fixture-deployment\",\n      \"session_id\": \"fixture-session\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"latest_version\": \"1\",\n      \"secret\": \"fixture-one-time-secret\",\n      \"signing_secret\": \"fixture-signing-secret\",\n      \"future\": {\n        \"values\": [\n          false,\n          0,\n          null,\n          []\n        ]\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"next_page\": null,\n  \"request_id\": \"fixture-request\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "db66e9987ed77df7be60be7f23db12450cf102f8e441bd79457236990789d38c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"data\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"display_name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"source\": \"custom\",\n      \"status\": \"completed\",\n      \"agent\": {\n        \"id\": \"fixture-agent\"\n      },\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"deployment_id\": \"fixture-deployment\",\n      \"session_id\": \"fixture-session\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"latest_version\": \"1\",\n      \"secret\": \"fixture-one-time-secret\",\n      \"signing_secret\": \"fixture-signing-secret\",\n      \"future\": {\n        \"values\": [\n          false,\n          0,\n          null,\n          []\n        ]\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"next_page\": null,\n  \"request_id\": \"fixture-request\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentMemoryStoreGet": {
+    "json": {
+      "fixtureVersionId": "beadad251958bcb607a063f451a4e58bba6c7dc9f2260277b544c70b48dd4aa7",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "f2cc833917b0731f9dbd37b9c0cda5d49112a433d333f56a243872b7c51e0888",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentMemoryCreate": {
+    "json": {
+      "fixtureVersionId": "58479d5802b22adfe6441e6afb932173c960d4325a0cd8fc08aa8afe2f981843",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"operation\": \"memory-store.memories.create\",\n  \"provider\": \"bailian\",\n  \"base_url\": \"https://managed.fixture.invalid/api/v1/agentstudio\",\n  \"store_id\": \"fixture-store\",\n  \"request\": {\n    \"path\": \"notes.md\",\n    \"content\": \"Fixture content\"\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "b514513b07c42726cbc419b672814a3fd6f91836dc23fd7a3c9d7553ff2214b2",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"operation\": \"memory-store.memories.create\",\n  \"provider\": \"bailian\",\n  \"base_url\": \"https://managed.fixture.invalid/api/v1/agentstudio\",\n  \"store_id\": \"fixture-store\",\n  \"request\": {\n    \"path\": \"notes.md\",\n    \"content\": \"Fixture content\"\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentMemoryList": {
+    "json": {
+      "fixtureVersionId": "071e0600cf157781582906181458601b16439175590dbbba7023b6f16804eb12",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"data\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"display_name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"source\": \"custom\",\n      \"status\": \"completed\",\n      \"agent\": {\n        \"id\": \"fixture-agent\"\n      },\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"deployment_id\": \"fixture-deployment\",\n      \"session_id\": \"fixture-session\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"latest_version\": \"1\",\n      \"secret\": \"fixture-one-time-secret\",\n      \"signing_secret\": \"fixture-signing-secret\",\n      \"future\": {\n        \"values\": [\n          false,\n          0,\n          null,\n          []\n        ]\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"next_page\": null,\n  \"request_id\": \"fixture-request\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memories",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "3d478cfbbf36a497b05c0836d9a97fdeb28a652da13a42262bd49616d7643883",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"data\": [\n    {\n      \"id\": \"fixture-id\",\n      \"name\": \"Fixture\",\n      \"display_name\": \"Fixture\",\n      \"description\": \"Fixture resource\",\n      \"version\": 1,\n      \"type\": \"custom\",\n      \"source\": \"custom\",\n      \"status\": \"completed\",\n      \"agent\": {\n        \"id\": \"fixture-agent\"\n      },\n      \"agent_id\": \"fixture-agent\",\n      \"environment_id\": \"fixture-env\",\n      \"deployment_id\": \"fixture-deployment\",\n      \"session_id\": \"fixture-session\",\n      \"vault_ids\": [],\n      \"memory_store_ids\": [],\n      \"created_at\": \"<TIMESTAMP>\",\n      \"updated_at\": \"<TIMESTAMP>\",\n      \"filename\": \"fixture.txt\",\n      \"mime_type\": \"text/plain\",\n      \"size_bytes\": 4,\n      \"latest_version\": \"1\",\n      \"secret\": \"fixture-one-time-secret\",\n      \"signing_secret\": \"fixture-signing-secret\",\n      \"future\": {\n        \"values\": [\n          false,\n          0,\n          null,\n          []\n        ]\n      }\n    }\n  ],\n  \"has_more\": false,\n  \"next_page\": null,\n  \"request_id\": \"fixture-request\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memories",
+          "query": "?limit=2",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentMemoryGet": {
+    "json": {
+      "fixtureVersionId": "dbf262f5b998d0ec04a48ca37738861a0dc14c951793794b7023effd1df03d6c",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memories/fixture-memory",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "fd2efc6b60c591e151fd0d624fae4b345e8bf4da9343d936fce93384df989696",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memories/fixture-memory",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentMemoryUpdate": {
+    "json": {
+      "fixtureVersionId": "1a46ce599ff7c9d9e65e8fa31881e57ef369e4ac050721de73b70b8ceeb7e8a8",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"operation\": \"memory-store.memories.update\",\n  \"provider\": \"bailian\",\n  \"base_url\": \"https://managed.fixture.invalid/api/v1/agentstudio\",\n  \"store_id\": \"fixture-store\",\n  \"memory_id\": \"fixture-memory\",\n  \"request\": {\n    \"content\": \"Fixture content\"\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "59ec5257c760df88ebc4aa1a8416b73554e76e59cce4cf39f7032720812b358d",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"operation\": \"memory-store.memories.update\",\n  \"provider\": \"bailian\",\n  \"base_url\": \"https://managed.fixture.invalid/api/v1/agentstudio\",\n  \"store_id\": \"fixture-store\",\n  \"memory_id\": \"fixture-memory\",\n  \"request\": {\n    \"content\": \"Fixture content\"\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentMemoryDelete": {
+    "json": {
+      "fixtureVersionId": "1b9a0f30e9171d97a9a3a18d9d958eb5024c498b347dbad650d340e59f524b18",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"operation\": \"memory-store.memories.delete\",\n  \"provider\": \"bailian\",\n  \"base_url\": \"https://managed.fixture.invalid/api/v1/agentstudio\",\n  \"store_id\": \"fixture-store\",\n  \"memory_id\": \"fixture-memory\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    },
+    "text": {
+      "fixtureVersionId": "46c0bfe7a8d18f1939e601a21ff2c52a4f0903c44c959db230e1f655ea297268",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"operation\": \"memory-store.memories.delete\",\n  \"provider\": \"bailian\",\n  \"base_url\": \"https://managed.fixture.invalid/api/v1/agentstudio\",\n  \"store_id\": \"fixture-store\",\n  \"memory_id\": \"fixture-memory\"\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": []
+    }
+  },
+  "managedAgentMemoryVersionList": {
+    "json": {
+      "fixtureVersionId": "744cbd8e39ef2ab8788392d7d4ba13aecfb0932036b9d7eabe2e2148e0225298",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memory_versions",
+          "query": "?limit=2&memory_id=fixture-memory",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "4dc75ff6888327fb944619ef1d0b2f6d70ac1198fea0ba0369eb345affbaba5b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memory_versions",
+          "query": "?limit=2&memory_id=fixture-memory",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentMemoryVersionGet": {
+    "json": {
+      "fixtureVersionId": "978387cc134670ce68e13a9e3d96914116bdc033488b6b929f288a29a0929abc",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memory_versions/fixture-memory-version",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "ee17a46fe6ccf512a14528347d2d272f3ed7a07b10188b60df09de261cfdde3b",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memory_versions/fixture-memory-version",
+          "query": "",
+          "method": "GET",
+          "body": null
+        }
+      ]
+    }
+  },
+  "managedAgentMemoryVersionRedact": {
+    "json": {
+      "fixtureVersionId": "260b6749f3ef1baee0b364e526ddc5002d467db1e09e04e27e215a3adeca914f",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memory_versions/fixture-memory-version/redact",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    },
+    "text": {
+      "fixtureVersionId": "a972f60248c239b0014b44c92e0caf019f6232393989e44c4f93338f2fe07c42",
+      "stdout": "",
+      "stderr": "",
+      "strayOut": "{\n  \"id\": \"fixture-id\",\n  \"name\": \"Fixture\",\n  \"display_name\": \"Fixture\",\n  \"description\": \"Fixture resource\",\n  \"version\": 1,\n  \"type\": \"custom\",\n  \"source\": \"custom\",\n  \"status\": \"completed\",\n  \"agent\": {\n    \"id\": \"fixture-agent\"\n  },\n  \"agent_id\": \"fixture-agent\",\n  \"environment_id\": \"fixture-env\",\n  \"deployment_id\": \"fixture-deployment\",\n  \"session_id\": \"fixture-session\",\n  \"vault_ids\": [],\n  \"memory_store_ids\": [],\n  \"created_at\": \"<TIMESTAMP>\",\n  \"updated_at\": \"<TIMESTAMP>\",\n  \"filename\": \"fixture.txt\",\n  \"mime_type\": \"text/plain\",\n  \"size_bytes\": 4,\n  \"latest_version\": \"1\",\n  \"secret\": \"fixture-one-time-secret\",\n  \"signing_secret\": \"fixture-signing-secret\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+      "strayErr": "",
+      "exitCode": 0,
+      "resultCount": 0,
+      "calls": [
+        {
+          "path": "/api/v1/agentstudio/memory_stores/fixture-store/memory_versions/fixture-memory-version/redact",
+          "query": "",
+          "method": "POST",
+          "body": null
+        }
+      ]
+    }
+  }
+}

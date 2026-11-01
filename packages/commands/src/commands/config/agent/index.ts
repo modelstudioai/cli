@@ -1,6 +1,5 @@
 import { platform } from "os";
-import { defineCommand, detectOutputFormat, maskToken, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand, maskToken, type FlagsDef } from "bailian-cli-core";
 import { AGENTS, VALID_AGENT_NAMES, type WriteParams } from "./writers.ts";
 import { decodeTokenPlanKey } from "./decode-key.ts";
 import { resolveRegionBaseUrl } from "./writers/utils.ts";
@@ -103,26 +102,26 @@ export default defineCommand({
     // even --dry-run validates the token.
     const apiKey = flags.key ? decodeTokenPlanKey(flags.key) : flags.apiKey!;
     const agentDef = AGENTS[agentName];
-    const format = detectOutputFormat(settings.output);
 
     // Hermes has no native Windows support.
     if (agentName === "hermes" && platform() === "win32") {
-      process.stderr.write(
-        "Warning: Hermes Agent does not support native Windows. Please use WSL2.\n",
-      );
+      ctx.output.warning({
+        message: {
+          "en-US": "Hermes Agent does not support native Windows. Please use WSL2.",
+          "zh-CN": "Hermes Agent 不支持原生 Windows，请使用 WSL2。",
+        },
+        code: "AGENT_PLATFORM_UNSUPPORTED",
+      });
     }
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          agent: agentName,
-          label: agentDef.label,
-          base_url: baseUrl,
-          api_key: maskToken(apiKey),
-          model,
-        },
-        format,
-      );
+      ctx.output.result({
+        agent: agentName,
+        label: agentDef.label,
+        base_url: baseUrl,
+        api_key: maskToken(apiKey),
+        model,
+      });
       return;
     }
 
@@ -136,13 +135,22 @@ export default defineCommand({
     };
     const summary = agentDef.write(params);
 
-    if (!settings.quiet) {
-      emitBare(`${agentDef.label} configured successfully.`);
-      for (const path of summary.paths) emitBare(`  Written: ${path}`);
-      emitBare(`  ${summary.nextStep}`);
-      for (const warning of summary.warnings ?? []) {
-        process.stderr.write(`Warning: ${warning}\n`);
-      }
-    }
+    for (const warning of summary.warnings ?? [])
+      ctx.output.warning({ message: warning, code: "AGENT_CONFIG_WARNING" });
+    ctx.output.result(
+      { agent: agentName, label: agentDef.label, ...summary },
+      {
+        text: [
+          ctx.localize({
+            "en-US": `${agentDef.label} configured successfully.`,
+            "zh-CN": `${agentDef.label} 配置成功。`,
+          }),
+          ...summary.paths.map((path) =>
+            ctx.localize({ "en-US": `  Written: ${path}`, "zh-CN": `  已写入：${path}` }),
+          ),
+          `  ${summary.nextStep}`,
+        ].join("\n"),
+      },
+    );
   },
 });

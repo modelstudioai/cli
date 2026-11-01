@@ -6,6 +6,7 @@ import { runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import {
   CONFIG_ROUTES,
   KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+  MANAGED_AGENT_MEMORY_ROUTES,
   QUOTA_ROUTES,
 } from "./topic-routes.ts";
 
@@ -102,6 +103,60 @@ test("profile-language errors match in-process and subprocess output", async () 
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test.each(["in-process", "subprocess", "preload fallback"])(
+  "%s resolves content files from the supplied cwd and restores the caller",
+  async (mode) => {
+    const directory = mkdtempSync(join(tmpdir(), "bl-command-cwd-"));
+    const originalCwd = process.cwd();
+    const originalEnvironment = { ...process.env };
+    try {
+      writeFileSync(join(directory, "notes.txt"), "relative memory content");
+      const environment = {
+        ...captureEnvironment,
+        NODE_OPTIONS: mode === "preload fallback" ? "--no-warnings" : undefined,
+        NODE_USE_ENV_PROXY: "0",
+        BAILIAN_CONFIG_DIR: directory,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+        BAILIAN_API_KEY: "",
+        BAILIAN_BASE_URL: "",
+        BAILIAN_E2E: "0",
+      };
+      const runner = mode === "subprocess" ? runCommandE2e : runCommandInProcess;
+      const result = await runner(
+        MANAGED_AGENT_MEMORY_ROUTES,
+        [
+          "managed-agent",
+          "memory-store",
+          "memories",
+          "update",
+          "--store-id",
+          "store-test",
+          "--memory-id",
+          "memory-test",
+          "--content-file",
+          "./notes.txt",
+          "--workspace-id",
+          "workspace-test",
+          "--dry-run",
+          "--output",
+          "json",
+        ],
+        environment,
+        { cwd: directory },
+      );
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        request: { content: "relative memory content" },
+      });
+      expect(process.cwd()).toBe(originalCwd);
+      expect(process.env).toEqual(originalEnvironment);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  },
+);
 
 test("Node preloads retain the real subprocess contract", async () => {
   const directory = mkdtempSync(join(tmpdir(), "bl-command-preload-"));

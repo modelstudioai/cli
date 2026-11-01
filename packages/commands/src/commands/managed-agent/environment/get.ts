@@ -1,6 +1,5 @@
 import { getRemoteEnvironment } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import { displayValue } from "../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
@@ -18,24 +17,28 @@ export default defineCommand({
   exampleArgs: ["--environment-id env_abc"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const environment = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getRemoteEnvironment(runtime, ctx.flags.environmentId, {
           provider: "bailian",
         });
       }),
     );
-    if (format === "json") {
-      emitResult(environment, format);
-      return;
-    }
-    emitBare(`ID:          ${environment.id}`);
-    emitBare(`Name:        ${displayValue(environment.name)}`);
-    emitBare(`Description: ${displayValue(environment.description, 120)}`);
-    emitBare(`Scope:       ${displayValue(environment.scope)}`);
-    emitBare(`Version:     ${displayValue(environment.version)}`);
-    emitBare(`Updated:     ${displayValue(environment.updated_at)}`);
+    ctx.output.result(environment, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              lines.push(`ID:          ${environment.id}`);
+              lines.push(`Name:        ${displayValue(environment.name)}`);
+              lines.push(`Description: ${displayValue(environment.description, 120)}`);
+              lines.push(`Scope:       ${displayValue(environment.scope)}`);
+              lines.push(`Version:     ${displayValue(environment.version)}`);
+              lines.push(`Updated:     ${displayValue(environment.updated_at)}`);
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
   },
 });

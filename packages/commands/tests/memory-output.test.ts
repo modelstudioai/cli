@@ -1,3 +1,5 @@
+import type { LocalizedText } from "bailian-cli-core";
+import { createOutputReporter } from "bailian-cli-runtime";
 import { expect, test, vi } from "vite-plus/test";
 import memoryAdd from "../src/commands/memory/add.ts";
 
@@ -25,6 +27,9 @@ test("user_profile text output identifies the attribute and its change", async (
     await memoryAdd.run({
       flags: { userId: "user1", content: "fact", workspaceId: "workspace1" },
       settings: { output: "text" },
+      output: createOutputReporter({ settings: { output: "text", quiet: false, verbose: false } })
+        .output,
+      localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
       client: { requestJson },
     } as unknown as Parameters<typeof memoryAdd.run>[0]);
     expect(output.join("")).toContain("爱好");

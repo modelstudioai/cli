@@ -1,3 +1,4 @@
+import { readUploadedFileIds } from "./document-response.ts";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -217,9 +218,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc tag (live)", () => {
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(uploadRun.exitCode, uploadRun.stderr).toBe(0);
-    const fileId = uploadRun.stdout.trim();
+    const fileId = readUploadedFileIds(uploadRun.stdout)[0]!;
 
     const tagRun = await runCommandE2e(KNOWLEDGE_DOC_TAG_ROUTES, [
       "knowledge",

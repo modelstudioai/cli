@@ -1,3 +1,4 @@
+import { readServiceMutationField } from "../service-response.ts";
 // J1 cold-start first answer: from zero to the first citable answer.
 // upload → kb create --wait → service create (search/chat, draft)
 // → search --agent-version beta recalls → chat --agent-version beta first answer.
@@ -47,10 +48,12 @@ describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ],
       );
       expect(searchServiceRun.exitCode, searchServiceRun.stderr).toBe(0);
-      const searchAgentId = searchServiceRun.stdout.trim().split("\n").pop()!;
+      const searchAgentId = readServiceMutationField(searchServiceRun.stdout, "agent_id");
       expect(searchAgentId).toMatch(/^aid-/);
       reporter.trackResource("service", searchAgentId);
       serviceAgentIds.push(searchAgentId);
@@ -101,9 +104,11 @@ describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(chatServiceRun.exitCode, chatServiceRun.stderr).toBe(0);
-      const chatAgentId = chatServiceRun.stdout.trim().split("\n").pop()!;
+      const chatAgentId = readServiceMutationField(chatServiceRun.stdout, "agent_id");
       expect(chatAgentId).toMatch(/^aid-/);
       reporter.trackResource("service", chatAgentId);
       serviceAgentIds.push(chatAgentId);

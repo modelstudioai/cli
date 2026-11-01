@@ -1,7 +1,6 @@
 import {
   defineCommand,
   chatPath,
-  detectOutputFormat,
   type ChatRequest,
   type ChatResponse,
   type ChatMessageContent,
@@ -11,7 +10,7 @@ import {
   imageFileToDataUri,
   redactDataUri,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+
 import { existsSync, statSync } from "fs";
 import { extname } from "path";
 
@@ -110,20 +109,17 @@ export default defineCommand({
     const defaultPrompt = hasVideo ? "Describe the video." : "Describe the image.";
     const prompt = flags.prompt || defaultPrompt;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          request: {
-            prompt,
-            image: image ? redactDataUri(image) : undefined,
-            video: videoInputs.length ? videoInputs.map(redactDataUri) : undefined,
-            model,
-          },
+      ctx.output.result({
+        request: {
+          prompt,
+          image: image ? redactDataUri(image) : undefined,
+          video: videoInputs.length ? videoInputs.map(redactDataUri) : undefined,
+          model,
         },
-        format,
-      );
+      });
       return;
     }
 
@@ -181,11 +177,6 @@ export default defineCommand({
 
     const content = response.choices?.[0]?.message?.content;
 
-    if (format !== "text") {
-      emitResult(response, format);
-      return;
-    }
-
-    emitBare((content || "") as string);
+    ctx.output.result(response, format === "text" ? { text: String(content || "") } : undefined);
   },
 });

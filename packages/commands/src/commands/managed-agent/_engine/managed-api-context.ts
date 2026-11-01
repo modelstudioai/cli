@@ -45,7 +45,7 @@ export function buildManagedApiContext(host: ManagedApiHost) {
     );
   }
   const baseUrl = resolveManagedApiBaseUrl(host);
-  installSdkTransport(host);
+  installSdkTransport();
   return createManagedApiContext({
     providers: {
       bailian: {

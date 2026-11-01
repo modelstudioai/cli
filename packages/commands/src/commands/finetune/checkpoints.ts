@@ -1,5 +1,4 @@
 import { defineCommand, listCheckpoints, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 
 const CHECKPOINTS_FLAGS = {
   jobId: {
@@ -13,6 +12,7 @@ const CHECKPOINTS_FLAGS = {
 const EXPIRY_WARN_THRESHOLD_MS = 72 * 60 * 60 * 1000; // 72 hours
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "List checkpoints produced by a fine-tune job",
     "zh-CN": "列出微调任务生成的 Checkpoint",
@@ -39,7 +39,11 @@ export default defineCommand({
     const jobId = flags.jobId;
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.checkpoints", job_id: jobId }, "json");
+      const resultData1 = { action: "finetune.checkpoints", job_id: jobId };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
@@ -56,7 +60,11 @@ export default defineCommand({
       expire_time: item.expire_time ?? "",
     }));
 
-    emitResult({ items, total, request_id: response.request_id }, "json");
+    const resultData2 = { items, total, request_id: response.request_id };
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+    );
 
     // Near-expiry warning: check if any non-expired checkpoint is within 72h of expiry.
     const now = Date.now();
@@ -68,10 +76,14 @@ export default defineCommand({
       return remaining > 0 && remaining < EXPIRY_WARN_THRESHOLD_MS;
     });
     if (expiringSoon.length > 0) {
-      process.stderr.write(
-        `\n[warning] ${expiringSoon.length} checkpoint(s) will expire within 72 hours. ` +
-          "Export or deploy before expiry to avoid losing the model artifact.\n",
-      );
+      ctx.output.warning({
+        code: "CHECKPOINTS_EXPIRING_SOON",
+        message: {
+          "en-US": `${expiringSoon.length} checkpoint(s) will expire within 72 hours. Export or deploy before expiry to avoid losing the model artifact.`,
+          "zh-CN": `${expiringSoon.length} 个 Checkpoint 将在 72 小时内过期。请在过期前导出或部署，避免丢失模型产物。`,
+        },
+        details: { checkpoints: expiringSoon },
+      });
     }
   },
 });

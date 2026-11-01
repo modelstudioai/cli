@@ -1,10 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  type FlagsDef,
-  type ParsedFlags,
-} from "bailian-cli-core";
-import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef, type ParsedFlags } from "bailian-cli-core";
+import { padEnd } from "bailian-cli-runtime";
 import type { AddOrganizationMemberResponse } from "./types.ts";
 import {
   TOKEN_PLAN_COMMON_QUERY_FLAGS,
@@ -67,7 +62,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const queryParams = buildQueryParams(flags);
 
     if (settings.dryRun) {
@@ -76,7 +71,7 @@ export default defineCommand({
         API_PATH,
         queryParams,
       );
-      emitResult({ endpoint, query }, format);
+      ctx.output.result({ endpoint, query });
       return;
     }
 
@@ -89,11 +84,7 @@ export default defineCommand({
       queryParams,
     });
 
-    if (settings.quiet || format === "text") {
-      emitTextMember(data);
-    } else {
-      emitResult(data, format);
-    }
+    ctx.output.result(data, format === "text" ? { text: renderMember(data) } : undefined);
   },
 });
 
@@ -109,13 +100,16 @@ function buildQueryParams(flags: AddMemberFlags): TokenPlanQueryParams {
   return params;
 }
 
-function emitTextMember(data: AddOrganizationMemberResponse): void {
+function renderMember(data: AddOrganizationMemberResponse): string {
+  const lines: string[] = [];
+
   const item = data.Data;
   if (!item) {
-    emitBare("Member added.");
-    return;
+    return "Member added.";
   }
 
-  emitBare(`${padEnd("AccountId", 14)} ${item.AccountId ?? "-"}`);
-  emitBare(`${padEnd("SeatAssigned", 14)} ${String(item.SeatAssigned ?? "-")}`);
+  lines.push(`${padEnd("AccountId", 14)} ${item.AccountId ?? "-"}`);
+  lines.push(`${padEnd("SeatAssigned", 14)} ${String(item.SeatAssigned ?? "-")}`);
+
+  return lines.join("\n");
 }

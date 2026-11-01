@@ -1,13 +1,11 @@
 import {
   defineCommand,
-  detectOutputFormat,
   speechVocabularyPath,
   buildVocabularyRequest,
   queryVocabulary,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { VOCABULARY_ID_FLAG } from "./shared.ts";
 
 const GET_FLAGS = {
@@ -35,45 +33,38 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const vocabularyId = (flags as GetFlags).id;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          endpoint: ctx.client.url(speechVocabularyPath()),
-          request: buildVocabularyRequest("query_vocabulary", {
-            vocabulary_id: vocabularyId,
-          }),
-        },
-        format,
-      );
+      ctx.output.result({
+        endpoint: ctx.client.url(speechVocabularyPath()),
+        request: buildVocabularyRequest("query_vocabulary", {
+          vocabulary_id: vocabularyId,
+        }),
+      });
       return;
     }
 
     const response = await queryVocabulary(ctx.client, vocabularyId);
-    const output = response.output;
-
-    if (settings.quiet) {
-      emitBare(output?.target_model ?? "");
-      return;
-    }
-
-    if (format === "text") {
-      emitBare(`vocabulary_id: ${vocabularyId}`);
-      emitBare(`status: ${output?.status ?? ""}`);
-      emitBare(`target_model: ${output?.target_model ?? ""}`);
-      emitBare(`gmt_create: ${output?.gmt_create ?? ""}`);
-      emitBare(`gmt_modified: ${output?.gmt_modified ?? ""}`);
+    let text: string | undefined;
+    if (settings.output === "text") {
+      const output = response.output;
+      const lines = [
+        `vocabulary_id: ${vocabularyId}`,
+        `status: ${output?.status ?? ""}`,
+        `target_model: ${output?.target_model ?? ""}`,
+        `gmt_create: ${output?.gmt_create ?? ""}`,
+        `gmt_modified: ${output?.gmt_modified ?? ""}`,
+      ];
       const entries = output?.vocabulary ?? [];
       if (entries.length > 0) {
-        emitBare("vocabulary:");
+        lines.push("vocabulary:");
         for (const entry of entries) {
           const langPart = entry.lang ? ` lang=${entry.lang}` : "";
-          emitBare(`  ${entry.text} weight=${entry.weight}${langPart}`);
+          lines.push(`  ${entry.text} weight=${entry.weight}${langPart}`);
         }
       }
-    } else {
-      emitResult(response, format);
+      text = lines.join("\n");
     }
+    ctx.output.result(response, { text });
   },
 });

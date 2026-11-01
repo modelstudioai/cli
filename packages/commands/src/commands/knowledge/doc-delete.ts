@@ -3,11 +3,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagDeleteFileResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const DOC_DELETE_FLAGS = {
@@ -52,9 +50,9 @@ export default defineCommand({
     },
     {
       "en-US":
-        "Use the doc_id from `knowledge doc list --quiet`, not the fileId from `knowledge doc upload`. For documents created via `knowledge create --doc-id`, the doc_id equals the fileId; for documents imported via `knowledge doc upload --index-id`, the doc_id may include a workspace suffix.",
+        "Use doc_id from the document-list JSON response (--output json), not fileId from document upload. For documents created via `knowledge create --doc-id`, the doc_id equals the fileId; for documents imported via `knowledge doc upload --index-id`, the doc_id may include a workspace suffix.",
       "zh-CN":
-        "请使用 `knowledge doc list --quiet` 返回的 doc_id，而不是 `knowledge doc upload` 返回的 fileId。通过 `knowledge create --doc-id` 创建的文档，其 doc_id 等于 fileId；通过 `knowledge doc upload --index-id` 导入的文档，其 doc_id 可能带有 Workspace 后缀。",
+        "请使用文档列表命令 JSON 响应（--output json）中的 doc_id，而不是文档上传返回的 fileId。通过 `knowledge create --doc-id` 创建的文档，其 doc_id 等于 fileId；通过 `knowledge doc upload --index-id` 导入的文档，其 doc_id 可能带有 Workspace 后缀。",
     },
     {
       "en-US":
@@ -81,14 +79,14 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // snake_case: body { index_id, doc_ids }
     const body = { index_id: flags.indexId, doc_ids: flags.docId };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.indexDeleteFile);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -98,22 +96,31 @@ export default defineCommand({
       body,
     });
 
-    // Output follows the server's data.deleted list
+    // Output follows the server's data.deleted list.
     const deleted = response.data?.deleted ?? [];
-    if (settings.quiet) {
-      for (const docId of deleted) emitBare(docId);
-      return;
-    }
+    let text: string | undefined;
     if (format === "text") {
-      emitBare(`deleted: ${deleted.length} document(s)`);
-      for (const docId of deleted) emitBare(`  ${docId}`);
-      if (deleted.length !== flags.docId.length) {
-        process.stderr.write(
-          `Warning: requested ${flags.docId.length} deletion(s) but the server reported ${deleted.length}.\n`,
-        );
-      }
-      return;
+      const lines = [
+        ctx.localize({
+          "en-US": `deleted: ${deleted.length} document(s)`,
+          "zh-CN": `已删除: ${deleted.length} 个文档`,
+        }),
+      ];
+      for (const docId of deleted) lines.push(`  ${docId}`);
+      text = lines.join("\n");
     }
-    emitResult(response, format);
+    ctx.output.result(response, text === undefined ? undefined : { text });
+    if (deleted.length !== flags.docId.length) {
+      ctx.output.warning({
+        code: "KNOWLEDGE_DOC_DELETE_PARTIAL",
+        message: {
+          "en-US": `requested ${flags.docId.length} deletion(s) but the server reported ${deleted.length}.`,
+          "zh-CN": `请求删除 ${flags.docId.length} 个文档，但服务端报告已删除 ${deleted.length} 个。`,
+        },
+        ...(format === "json"
+          ? { details: { requested_count: flags.docId.length, deleted_count: deleted.length } }
+          : {}),
+      });
+    }
   },
 });

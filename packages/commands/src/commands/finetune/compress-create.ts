@@ -4,7 +4,7 @@ import {
   type CreateCompressJobRequest,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+
 import { parseCommaSeparated, parseCompressHyperParameters } from "./compress-shared.ts";
 
 const CREATE_FLAGS = {
@@ -66,6 +66,7 @@ const CREATE_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "Create a model compression job", "zh-CN": "创建模型压缩任务" },
   auth: "apiKey",
   usageArgs: "--model <model> --template-id <id> [flags]",
@@ -106,11 +107,17 @@ export default defineCommand({
       ...(ctx.flags.suffix ? { output_model_suffix: ctx.flags.suffix } : {}),
     };
     if (ctx.settings.dryRun) {
-      emitResult({ action: "finetune.compress.create", request: body }, "json");
+      const resultData1 = { action: "finetune.compress.create", request: body };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
     const response = await createCompressJob(ctx.client, body);
-    if (ctx.settings.quiet) emitBare(response.output?.job_id ?? "");
-    else emitResult(response, "json");
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

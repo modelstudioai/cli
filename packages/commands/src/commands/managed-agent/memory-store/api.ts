@@ -13,12 +13,10 @@ import {
 } from "@openagentpack/sdk";
 import {
   defineCommand,
-  detectOutputFormat,
   type CommandRisk,
   type FlagsDef,
   type LocalizedText,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
 import { withAgentErrors } from "../_engine/errors.ts";
 import {
@@ -209,12 +207,14 @@ async function runOperation(
   request: Record<string, unknown>,
   invoke: (context: ApiContext) => Promise<unknown>,
 ): Promise<void> {
-  const format = detectOutputFormat(host.settings.output);
   const result = host.settings.dryRun
     ? { operation, provider: "bailian", base_url: resolveManagedApiBaseUrl(host), ...request }
-    : await withAgentErrors(() => withStdoutProtected(() => invoke(buildManagedApiContext(host))));
-  if (format === "json") emitResult(result, format);
-  else emitBare(JSON.stringify(result, null, 2));
+    : await withAgentErrors(() =>
+        withStdoutProtected(host, () => invoke(buildManagedApiContext(host))),
+      );
+  host.output.result(result, {
+    text: host.settings.output === "text" ? JSON.stringify(result, null, 2) : undefined,
+  });
 }
 
 export const managedAgentMemoryStoreList = defineCommand({

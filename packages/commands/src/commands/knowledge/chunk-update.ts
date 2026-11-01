@@ -2,7 +2,6 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   BailianError,
   ExitCode,
   type Client,
@@ -10,7 +9,6 @@ import {
   type RagChunkListResponse,
   type RagMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 import { readUtf8TextFile } from "./upload-support.ts";
 
@@ -162,7 +160,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // dry-run also reads the file and validates (rehearsal semantics); the read-back
     // request is only made outside dry-run and when no new content is given
@@ -200,7 +198,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.chunkUpdate);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -210,11 +208,16 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet) return;
-    if (format === "text") {
-      emitBare(`updated: ${flags.chunkId}`);
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `updated: ${flags.chunkId}`,
+              "zh-CN": `已更新: ${flags.chunkId}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

@@ -46,7 +46,7 @@ Use an agent_id above with the knowledge chat command.
 
 > 最后一行根据 scene 自动提示用 `search` 还是 `chat` 命令消费。
 
-quiet 模式：每行一个 `agent_id`。
+quiet 模式：仅隐藏过程提示，保留所选格式的完整最终结果；程序解析请使用 `--output json` 并读取对应字段。
 
 json 模式：返回 API 原始响应。
 
@@ -105,7 +105,7 @@ Version 1:
   ...
 ```
 
-quiet 模式：输出 JSON 格式。
+quiet 模式：仅隐藏过程提示，保留所选格式的完整最终结果；程序解析请使用 `--output json` 并读取对应字段。
 
 json 模式：返回 API 原始响应。
 
@@ -160,7 +160,7 @@ created: aid-xxx  (status: draft, version: beta)
 Test the draft with --agent-version beta on search/chat, then deploy it to publish.
 ```
 
-quiet 模式：输出 agent ID。
+quiet 模式：仅隐藏过程提示，保留所选格式的完整最终结果；程序解析请使用 `--output json` 并读取对应字段。
 
 json 模式：返回 API 原始响应。
 
@@ -232,7 +232,7 @@ updated: aid-xxx
 Draft config changed — verify with --agent-version beta, then deploy.
 ```
 
-quiet 模式：无输出。
+quiet 模式：仅隐藏过程提示，保留所选格式的完整最终结果；程序解析请使用 `--output json` 并读取对应字段。
 
 json 模式：返回 API 原始响应。
 
@@ -284,7 +284,7 @@ text 模式：
 deployed: aid-xxx  version 2
 ```
 
-quiet 模式：输出新版本号。
+quiet 模式：仅隐藏过程提示，保留所选格式的完整最终结果；程序解析请使用 `--output json` 并读取对应字段。
 
 json 模式：返回 API 原始响应。
 
@@ -332,7 +332,7 @@ text 模式：
 deleted: aid-xxx  (status: deleted)
 ```
 
-quiet 模式：无输出。
+quiet 模式：仅隐藏过程提示，保留所选格式的完整最终结果；程序解析请使用 `--output json` 并读取对应字段。
 
 json 模式：返回 API 原始响应。
 
@@ -380,7 +380,7 @@ new agent_id: aid-new  (name: copy_my-qa, status: draft)
 Test the draft with --agent-version beta on search/chat, then deploy it to publish.
 ```
 
-quiet 模式：输出新 agent ID。
+quiet 模式：仅隐藏过程提示，保留所选格式的完整最终结果；程序解析请使用 `--output json` 并读取对应字段。
 
 json 模式：返回 API 原始响应。
 

@@ -48,7 +48,7 @@ chunk created (pipeline: idx-xxx)
 List chunks to find the new chunk id.
 ```
 
-quiet 模式：无输出（成功退出码 0）。
+quiet 模式：仅隐藏过程提示，保留完整结果（成功退出码 0）。
 
 json 模式：返回 API 原始响应（不含 chunk ID）。
 
@@ -109,7 +109,7 @@ total: 1
 
 > 如果 chunk 被排除检索，行尾会显示 `[excluded from retrieval]`。
 
-quiet 模式：每行一个 `metadata._id`（chunk ID），用于管道传给 update/delete。
+quiet 模式：仅隐藏过程提示，保留完整结果。提取 chunk ID 时使用 `--output json`，读取 `data.nodes[].metadata._id`，再传给 update/delete。
 
 json 模式：返回 API 原始响应，`data.nodes[]` 含完整 chunk 数据。
 
@@ -172,7 +172,7 @@ text 模式：
 updated: chunk-xxx
 ```
 
-quiet 模式：无输出。
+quiet 模式：仅隐藏过程提示，保留完整结果。
 
 json 模式：返回 API 原始响应。
 
@@ -223,7 +223,7 @@ text 模式：
 deleted: 2 chunk(s) in 1 batch(es)
 ```
 
-quiet 模式：无输出。
+quiet 模式：仅隐藏过程提示，保留完整结果。
 
 json 模式：返回 `{ deleted_count, batches }`。
 

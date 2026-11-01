@@ -12,8 +12,7 @@ import {
   resolveProjectConfigFromObject,
   syncProjectResourcesWithStateBackend,
 } from "@openagentpack/sdk";
-import { BailianError, type CommandContext, detectOutputFormat, ExitCode } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, type CommandContext, ExitCode } from "bailian-cli-core";
 import { parseDocument } from "yaml";
 import { formatResourceLabel } from "./address-utils.ts";
 import { resolveAgentProjectConfig } from "./config-loader.ts";
@@ -21,9 +20,13 @@ import { assertProviderCredentials } from "./credentials.ts";
 import { withStdoutProtected } from "./console-capture.ts";
 import { retainAgentError, withAgentErrors } from "./errors.ts";
 import { createFileStateScope } from "./file-state-manager.ts";
+import { renderAgentFeedback } from "./feedback.ts";
 import { installSdkTransport } from "./transport.ts";
 
-export type ScopedCreateHost = Pick<CommandContext, "client" | "identity" | "settings">;
+export type ScopedCreateHost = Pick<
+  CommandContext,
+  "client" | "identity" | "settings" | "output" | "localize"
+>;
 export type ScopedCreateGroup =
   | "agents"
   | "environments"
@@ -160,7 +163,7 @@ export async function loadScopedCreateProject(
   }
   const provider = "bailian";
   if (!host.settings.dryRun) assertProviderCredentials(loaded.config.providers, [provider]);
-  installSdkTransport(host);
+  installSdkTransport();
   const stateBackend = new LocalFileStateBackend({ configPath: loaded.configPath });
   return {
     ...loaded,
@@ -199,7 +202,6 @@ export async function resolveCandidateDeclaration(options: {
 
 export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput): Promise<void> {
   const { project, host } = input;
-  const format = detectOutputFormat(host.settings.output);
   const keySelection = await project.stateBackend.read(project.stateScope, (state) =>
     selectResourceKey({
       displayName: input.displayName,
@@ -243,13 +245,14 @@ export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput):
 
   if (host.settings.dryRun || !input.yes) {
     const planned = await withAgentErrors(() =>
-      withStdoutProtected(() =>
+      withStdoutProtected(host, () =>
         planProjectWithStateBackend(backendInput, {
           provider: project.provider,
           scope: { roots: [root] },
           mode: "create-only",
           refresh: !host.settings.dryRun,
-          quiet: format === "json",
+          quiet: false,
+          onFeedback: (event) => renderAgentFeedback(host.output, event),
         }),
       ),
     );
@@ -271,16 +274,25 @@ export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput):
       actions: planned.plan.actions,
       diagnostics: planned.plan.diagnostics,
     };
-    if (format === "json") emitResult(result, format);
-    else {
-      emitBare(`Generated YAML key: ${resourceKey}`);
-      renderPlan(planned.plan.actions, planned.plan.diagnostics);
-      emitBare(
-        host.settings.dryRun
-          ? "Dry run: YAML, State, and remote resources were not changed."
-          : "Preview only: re-run with --yes to write YAML and create this resource.",
-      );
-    }
+    const text = [
+      host.localize({
+        "en-US": `Generated YAML key: ${resourceKey}`,
+        "zh-CN": `生成的 YAML key：${resourceKey}`,
+      }),
+      renderPlan(planned.plan.actions, planned.plan.diagnostics),
+      host.settings.dryRun
+        ? host.localize({
+            "en-US": "Dry run: YAML, State, and remote resources were not changed.",
+            "zh-CN": "Dry run：YAML、State 和远端资源均未修改。",
+          })
+        : host.localize({
+            "en-US": "Preview only: re-run with --yes to write YAML and create this resource.",
+            "zh-CN": "仅预览：使用 --yes 重新运行以写入 YAML 并创建此资源。",
+          }),
+    ]
+      .filter((line) => line !== "")
+      .join("\n");
+    host.output.result(result, { text });
     return;
   }
 
@@ -288,13 +300,14 @@ export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput):
   let run: ResourceSyncRun;
   try {
     run = await withAgentErrors(() =>
-      withStdoutProtected(() =>
+      withStdoutProtected(host, () =>
         syncProjectResourcesWithStateBackend(backendInput, {
           provider: project.provider,
           scope: { roots: [root] },
           mode: "create-only",
           refresh: true,
-          quiet: format === "json",
+          quiet: false,
+          onFeedback: (event) => renderAgentFeedback(host.output, event),
           policy: "block",
         }),
       ),
@@ -328,11 +341,20 @@ export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput):
     results,
     error: failed?.error,
   };
-  if (format === "json") emitResult(result, format);
-  else {
-    emitBare(`Wrote ${project.configPath} with ${input.resourceType} key '${resourceKey}'.`);
-    if (!failed) emitBare(`Created ${input.resourceType} '${input.displayName}'.`);
-  }
+  const text = [
+    host.localize({
+      "en-US": `Wrote ${project.configPath} with ${input.resourceType} key '${resourceKey}'.`,
+      "zh-CN": `已写入 ${project.configPath}，${input.resourceType} key 为 '${resourceKey}'。`,
+    }),
+  ];
+  if (!failed)
+    text.push(
+      host.localize({
+        "en-US": `Created ${input.resourceType} '${input.displayName}'.`,
+        "zh-CN": `已创建 ${input.resourceType} '${input.displayName}'。`,
+      }),
+    );
+  host.output.result(result, { text: text.join("\n") });
   if (failed) {
     throw new BailianError(
       failed.error ?? `Scoped ${input.resourceType} create failed.`,
@@ -411,12 +433,13 @@ export async function parseJsonInputs(
 function renderPlan(
   actions: Array<{ action: string; address: ResourceAddress }>,
   diagnostics: Array<{ severity: string; code: string; message: string }>,
-): void {
-  for (const diagnostic of diagnostics) {
-    emitBare(`[${diagnostic.severity}] ${diagnostic.code}: ${diagnostic.message}`);
-  }
+): string {
+  const lines = diagnostics.map(
+    (diagnostic) => `[${diagnostic.severity}] ${diagnostic.code}: ${diagnostic.message}`,
+  );
   for (const action of actions.filter((entry) => entry.action !== "no-op")) {
     const icon = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
-    emitBare(`  ${icon} ${formatResourceLabel(action.address)}`);
+    lines.push(`  ${icon} ${formatResourceLabel(action.address)}`);
   }
+  return lines.join("\n");
 }

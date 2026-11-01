@@ -1,5 +1,4 @@
 import { defineCommand, deleteDataset, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const DELETE_FLAGS = {
   fileId: {
@@ -11,6 +10,7 @@ const DELETE_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "Delete a dataset file by ID", "zh-CN": "通过 ID 删除数据集文件" },
   auth: "apiKey",
   risk: {
@@ -32,16 +32,19 @@ export default defineCommand({
     const fileId = flags.fileId;
 
     if (settings.dryRun) {
-      emitResult({ action: "dataset.delete", file_id: fileId }, "json");
+      const resultData1 = { action: "dataset.delete", file_id: fileId };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
     const response = await deleteDataset(ctx.client, fileId);
 
-    if (settings.quiet) {
-      emitBare(fileId);
-    } else {
-      emitResult(response, "json");
-    }
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

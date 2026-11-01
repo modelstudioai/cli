@@ -493,10 +493,15 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
           "--words",
           '{"奋斗者":4}',
           "--quiet",
+          "--output",
+          "json",
         ]);
         expect(created.exitCode, created.stderr).toBe(0);
-        vocabularyId = created.stdout.trim();
-        expect(vocabularyId.length).toBeGreaterThan(0);
+        const createdBody = parseStdoutJson<{ output?: { vocabulary_id?: string } }>(
+          created.stdout,
+        );
+        vocabularyId = createdBody.output?.vocabulary_id ?? "";
+        expect(vocabularyId).toMatch(/^\S+$/);
         writeFileSync(join(outDir, "vocabulary-id.txt"), vocabularyId + "\n");
 
         const listed = await runCommandE2e(SPEECH_ROUTES, [

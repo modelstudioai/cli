@@ -1,0 +1,137 @@
+{
+  "false": {
+    "result": {
+      "resource": {
+        "type": "vault",
+        "key": "fixture-vault",
+        "name": "Fixture Vault",
+        "provider": "bailian",
+        "remote_id": "vault_created"
+      },
+      "config_file": "<config>",
+      "yaml_written": true,
+      "reused_pending": false,
+      "actions": [
+        {
+          "action": "create",
+          "address": {
+            "type": "vault",
+            "name": "fixture-vault",
+            "provider": "bailian"
+          },
+          "driftKind": "none",
+          "readinessImpact": "blocking",
+          "reason": "Resource does not exist in state",
+          "after": {
+            "content_hash": "e3f5e703571f6dcc9b347c3ca3da1428fb25edfad6fb624418e004780d0e6eb6"
+          },
+          "dependencies": []
+        }
+      ],
+      "diagnostics": [],
+      "results": [
+        {
+          "action": {
+            "action": "create",
+            "address": {
+              "type": "vault",
+              "name": "fixture-vault",
+              "provider": "bailian"
+            },
+            "driftKind": "none",
+            "readinessImpact": "blocking",
+            "reason": "Resource does not exist in state",
+            "after": {
+              "content_hash": "e3f5e703571f6dcc9b347c3ca3da1428fb25edfad6fb624418e004780d0e6eb6"
+            },
+            "dependencies": []
+          },
+          "status": "success"
+        }
+      ]
+    },
+    "requests": [
+      {
+        "url": "https://example.test/api/v1/agentstudio/vaults",
+        "method": "POST",
+        "body": {
+          "display_name": "Fixture Vault",
+          "metadata": {
+            "agents.project": "<project>",
+            "agents.resource": "fixture-vault",
+            "empty": "",
+            "count": "0"
+          }
+        }
+      }
+    ]
+  },
+  "true": {
+    "result": {
+      "resource": {
+        "type": "vault",
+        "key": "fixture-vault",
+        "name": "Fixture Vault",
+        "provider": "bailian"
+      },
+      "config_file": "<config>",
+      "yaml_written": true,
+      "reused_pending": false,
+      "actions": [
+        {
+          "action": "create",
+          "address": {
+            "type": "vault",
+            "name": "fixture-vault",
+            "provider": "bailian"
+          },
+          "driftKind": "none",
+          "readinessImpact": "blocking",
+          "reason": "Resource does not exist in state",
+          "after": {
+            "content_hash": "e3f5e703571f6dcc9b347c3ca3da1428fb25edfad6fb624418e004780d0e6eb6"
+          },
+          "dependencies": []
+        }
+      ],
+      "diagnostics": [],
+      "results": [
+        {
+          "action": {
+            "action": "create",
+            "address": {
+              "type": "vault",
+              "name": "fixture-vault",
+              "provider": "bailian"
+            },
+            "driftKind": "none",
+            "readinessImpact": "blocking",
+            "reason": "Resource does not exist in state",
+            "after": {
+              "content_hash": "e3f5e703571f6dcc9b347c3ca3da1428fb25edfad6fb624418e004780d0e6eb6"
+            },
+            "dependencies": []
+          },
+          "status": "failed",
+          "error": "Bailian API 403: {\"code\":\"FixtureDenied\",\"message\":\"original server fixture\",\"request_id\":\"fixture-request\"}"
+        }
+      ],
+      "error": "Bailian API 403: {\"code\":\"FixtureDenied\",\"message\":\"original server fixture\",\"request_id\":\"fixture-request\"}"
+    },
+    "requests": [
+      {
+        "url": "https://example.test/api/v1/agentstudio/vaults",
+        "method": "POST",
+        "body": {
+          "display_name": "Fixture Vault",
+          "metadata": {
+            "agents.project": "<project>",
+            "agents.resource": "fixture-vault",
+            "empty": "",
+            "count": "0"
+          }
+        }
+      }
+    ]
+  }
+}

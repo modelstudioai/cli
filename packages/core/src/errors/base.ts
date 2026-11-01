@@ -1,3 +1,4 @@
+import { sanitizeDiagnosticDetails } from "../output/diagnostics.ts";
 import { ExitCode } from "./codes.ts";
 
 export interface ApiErrorContext {
@@ -68,7 +69,7 @@ function serializeCause(cause: unknown): Record<string, unknown> | undefined {
     return { message: String(cause) };
   }
   try {
-    return { message: JSON.stringify(cause) };
+    return { message: JSON.stringify(sanitizeDiagnosticDetails(cause)) };
   } catch {
     return undefined;
   }

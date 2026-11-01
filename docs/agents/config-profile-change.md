@@ -50,7 +50,7 @@
 - `config list` 标识所有 Profile 与当前激活项。
 - `config show`、`auth status` 只输出本次最终选择的 `config` 和 `config_file`，不重复携带激活状态。
 - `config show` 额外展示 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL`（有值才输出，key 脱敏）；JSON 字段值保持干净，另用 `active: { api_key?, base_url? }` 标生效源；text 模式才在生效层值后追加 `(active)` / `（active）`。`base_url` 展示文件层或内置默认，不再被 client 生效值覆盖来源语义。
-- 模型域 `api_key` 与显式 `base_url` 来自不同优先级层级时，仅 `auth: "apiKey"` 命令在 `authStage` 向 stderr 告警一次（`--quiet` 抑制；`--output json` 为 `API_KEY_BASE_URL_SOURCE_MISMATCH`）；同源或仅一端显式配置不告。排查建议指向 `{binName} config show`。
+- 模型域 `api_key` 与显式 `base_url` 来自不同优先级层级时，仅 `auth: "apiKey"` 命令在 `authStage` 向 stderr 告警一次（`--quiet` 保留；`--output json` 为单行结构化 `API_KEY_BASE_URL_SOURCE_MISMATCH` warning）；同源或仅一端显式配置不告。排查建议指向 `{binName} config show`。
 - `config ui` 从持久化元数据读取激活项，提供显式激活操作，并在删除激活项后刷新为 `default`。
 - `config ui` 展示并可编辑完整 `ConfigFile`（含 `console_*`、`telemetry`），保存时按类型（数字/布尔/枚举）归一化写回；`config set` 仍只暴露较窄的 `VALID_KEYS`。UI 未管理的顶层元数据（如 `active_config`）不进入 Profile block，仍由写盘逻辑单独保留。
 - `config ui` 只读展示本地 agent 生态：Skills 跨全部 agent skill 目录（`~/.agents/skills` 及各 agent 的 `skills/`，含软链接）按 id 聚合并标注安装来源；MCP、Agents 从各 agent 本地配置读取。
@@ -73,7 +73,7 @@
 - Console token 自动刷新不从其他 Profile 借用 AK/SK，也不把新 token 写入其他 Profile。
 - Console/OpenAPI/none 命令不参与 API Key capability fallback；fallback 后的 Client 特殊端点行为必须跟随最终解析的 `base_url`，不能根据原 `settings.configName` 推断端点类型。
 - Fallback 反馈只描述 CLI 能权威确认的本地行为：当前 Profile 不支持空格分隔的用户可见叶子命令，本次将从 `default` 读取 API Key 配置；不得声称整个 Profile 已切换，也不得展示 capability ID 或 `<undeclared>` 等内部值。存在 `--api-key` / `--base-url` 或 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` 任一显式覆盖时必须跳过 fallback 且不输出反馈。
-- Fallback 反馈写 stderr，`--quiet` 抑制；text 模式输出本地化句子，`--output json` 输出两空格缩进的多行 `warning` 对象。dry-run 和后续鉴权失败仍保留反馈；JSON 模式下多个 diagnostics 以空行分隔，任何模式都不得输出凭证值。
+- Fallback 作为 warning 写 stderr，`--quiet` 下仍保留；text 模式输出本地化警告，`--output json` 每条输出一个单行 `warning` 对象（JSONL），记录之间不插入空行。dry-run 和后续鉴权失败仍保留反馈；stderr 与 stdout 的最终业务结果分开解析，任何模式都不得输出凭证值。
 - 跨源告警覆盖：env key + file base_url、flag/env 与另一层组合；同源与「仅 key + 默认 base_url」不告；quiet / json 形态与 fallback 一致。
 - `config list/show/use/ui`、`auth status` 和依赖默认模型的消费命令覆盖对应 E2E；`config show` 覆盖 env 脱敏与 active 标记。
 - `config ui` 覆盖保存时保留顶层元数据（如 `active_config`），继续允许空值清除字段，并覆盖 `console_*`/`telemetry` 的类型归一化与枚举校验。

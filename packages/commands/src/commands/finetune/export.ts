@@ -1,5 +1,4 @@
 import { defineCommand, exportCheckpoint, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const EXPORT_FLAGS = {
   jobId: {
@@ -26,6 +25,7 @@ const EXPORT_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Publish a checkpoint as a deployable model",
     "zh-CN": "将 Checkpoint 发布为可部署模型",
@@ -49,26 +49,24 @@ export default defineCommand({
     const modelName = flags.modelName;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "finetune.export",
-          job_id: jobId,
-          checkpoint,
-          model_name: modelName,
-        },
-        "json",
+      const resultData1 = {
+        action: "finetune.export",
+        job_id: jobId,
+        checkpoint,
+        model_name: modelName,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
 
     const response = await exportCheckpoint(ctx.client, jobId, checkpoint, modelName);
-    const payload = response.output ?? response.data;
-    const exported = payload?.model_name ?? modelName;
 
-    if (settings.quiet) {
-      emitBare(exported);
-    } else {
-      emitResult(response, "json");
-    }
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

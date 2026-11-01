@@ -1,5 +1,5 @@
 import { defineCommand, listCapacityInstances, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import {
   DEPLOYED_MODEL_FLAG,
   queryValues,
@@ -49,6 +49,7 @@ const FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "List throughput reservation capacity instances",
     "zh-CN": "查询吞吐预留容量实例列表",
@@ -96,22 +97,27 @@ export default defineCommand({
       chargeTypes: queryValues(flags.chargeTypes),
     };
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.capacity.list",
-          deployed_model: flags.deployedModel,
-          query: {
-            page_no: params.pageNo,
-            page_size: params.pageSize,
-            include_deleted: params.includeDeleted,
-            statuses: params.statuses?.join(","),
-            charge_types: params.chargeTypes?.join(","),
-          },
+      const resultData1 = {
+        action: "deploy.capacity.list",
+        deployed_model: flags.deployedModel,
+        query: {
+          page_no: params.pageNo,
+          page_size: params.pageSize,
+          include_deleted: params.includeDeleted,
+          statuses: params.statuses?.join(","),
+          charge_types: params.chargeTypes?.join(","),
         },
-        "json",
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
-    emitResult(await listCapacityInstances(ctx.client, flags.deployedModel, params), "json");
+    const resultData2 = await listCapacityInstances(ctx.client, flags.deployedModel, params);
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+    );
   },
 });

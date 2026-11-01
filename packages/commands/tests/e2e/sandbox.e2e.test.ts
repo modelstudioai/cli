@@ -135,9 +135,11 @@ describe("e2e: Sandbox offline validation and dry-run", () => {
       "sandbox",
       "official-images",
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(quietResult.exitCode, quietResult.stderr).toBe(0);
-    expect(quietResult.stdout.trim().split("\n")).toEqual([
+    expect((JSON.parse(quietResult.stdout) as { id: string }[]).map((image) => image.id)).toEqual([
       "code-interpreter",
       "browser",
       "all-in-one",

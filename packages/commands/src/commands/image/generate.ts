@@ -1,7 +1,7 @@
 import {
   defineCommand,
   taskPath,
-  detectOutputFormat,
+  type CommandOutput,
   type Client,
   type Settings,
   type FlagsDef,
@@ -12,7 +12,6 @@ import {
   BailianError,
   ExitCode,
   type DashScopeAsyncResponse,
-  type OutputFormat,
   type DashScopeTaskResponse,
   generateFilename,
   resolveBooleanFlag,
@@ -29,7 +28,6 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 import {
@@ -194,13 +192,7 @@ export default defineCommand({
 
     const resolvedModel = flags.model || settings.defaultImageModel;
     if (isAutoModel(resolvedModel)) {
-      await handleAutoMcpMode(
-        ctx.client,
-        ctx.localize,
-        settings,
-        flags,
-        detectOutputFormat(settings.output),
-      );
+      await handleAutoMcpMode(ctx.client, ctx.output, ctx.localize, settings, flags);
       return;
     }
 
@@ -249,24 +241,24 @@ export default defineCommand({
             },
           };
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult(
-        { request: body, mode: route.useSync ? "sync" : "async", path: route.path },
-        format,
-      );
+      ctx.output.result({
+        request: body,
+        mode: route.useSync ? "sync" : "async",
+        path: route.path,
+      });
       return;
     }
 
-    if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}]\n`);
-    }
+    ctx.output.info({
+      "en-US": `[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}]`,
+      "zh-CN": `[模型：${model}] [模式：${route.useSync ? "同步" : "异步"}]`,
+    });
 
     if (route.useSync) {
-      await handleSyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
+      await handleSyncMode(ctx.client, ctx.output, settings, route.path, body, flags, concurrent);
     } else {
-      await handleAsyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
+      await handleAsyncMode(ctx.client, ctx.output, settings, route.path, body, flags, concurrent);
     }
   },
 });
@@ -275,10 +267,10 @@ export default defineCommand({
 
 async function handleAutoMcpMode(
   client: Client,
+  commandOutput: CommandOutput,
   localize: Localize,
   settings: Settings,
   flags: GenerateFlags,
-  format: string,
 ): Promise<void> {
   assertAutoMcpAvailable(client, localize);
   assertMcpCompatible("imageGen", flags, localize);
@@ -293,27 +285,22 @@ async function handleAutoMcpMode(
   });
 
   if (settings.dryRun) {
-    emitResult(
-      {
-        server: AIGC_MCP_SERVER.image,
-        url: client.url(bailianMcpPath(AIGC_MCP_SERVER.image)),
-        tool: AIGC_MCP_TOOL.imageGen,
-        arguments: args,
-        mode: "mcp",
-        concurrent,
-      },
-      format as OutputFormat,
-    );
+    commandOutput.result({
+      server: AIGC_MCP_SERVER.image,
+      url: client.url(bailianMcpPath(AIGC_MCP_SERVER.image)),
+      tool: AIGC_MCP_TOOL.imageGen,
+      arguments: args,
+      mode: "mcp",
+      concurrent,
+    });
     return;
   }
 
-  if (!settings.quiet) {
-    process.stderr.write("[Model: auto] [Mode: mcp]\n");
-  }
+  commandOutput.info({ "en-US": "[Model: auto] [Mode: mcp]", "zh-CN": "[模型：auto] [模式：mcp]" });
 
   // One shared MCP session; --concurrent fans out parallel tools/call on it.
   await withAigcMcpSession(client, AIGC_MCP_SERVER.image, localize, async (callTool) => {
-    const perRequest = await runConcurrent(concurrent, settings, async () => {
+    const perRequest = await runConcurrent(concurrent, commandOutput, async () => {
       const inner = await callTool(AIGC_MCP_TOOL.imageGen, args);
       return parseAigcImageResults(inner);
     });
@@ -323,7 +310,7 @@ async function handleAutoMcpMode(
       throw new BailianError("Generation completed but no images returned.", ExitCode.GENERAL);
     }
 
-    await saveImages(imageUrls, flags, settings, format);
+    await saveImages(imageUrls, flags, settings, commandOutput);
   });
 }
 
@@ -331,14 +318,14 @@ async function handleAutoMcpMode(
 
 async function handleSyncMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   path: string,
   body: DashScopeImageRequest,
   flags: GenerateFlags,
-  format: string,
   concurrent: number,
 ): Promise<void> {
-  const results = await runConcurrent(concurrent, settings, () =>
+  const results = await runConcurrent(concurrent, commandOutput, () =>
     client.requestJson<DashScopeImageSyncResponse>({ path, method: "POST", body }),
   );
 
@@ -352,23 +339,23 @@ async function handleSyncMode(
     throw new BailianError("Generation completed but no images returned.", ExitCode.GENERAL);
   }
 
-  await saveImages(imageUrls, flags, settings, format);
+  await saveImages(imageUrls, flags, settings, commandOutput);
 }
 
 // ---- Async mode: wan2.6-t2i / wan2.6-image / legacy text2image ----
 
 async function handleAsyncMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   path: string,
   body: DashScopeImageRequest,
   flags: GenerateFlags,
-  format: string,
   concurrent: number,
 ): Promise<void> {
   const responses = await runConcurrent(
     concurrent,
-    settings,
+    commandOutput,
     () =>
       client.requestJson<DashScopeAsyncResponse>({
         path,
@@ -382,7 +369,7 @@ async function handleAsyncMode(
 
   // --async: return all task IDs immediately
   if (flags.async) {
-    emitResult({ task_ids: taskIds }, format as OutputFormat);
+    commandOutput.result({ task_ids: taskIds });
     return;
   }
 
@@ -391,7 +378,8 @@ async function handleAsyncMode(
 
   const pollPromises = taskIds.map((taskId) => {
     const pollUrl = client.url(taskPath(taskId));
-    return poll<DashScopeTaskResponse>(client, settings, {
+    return poll<DashScopeTaskResponse>(client, {
+      output: commandOutput,
       url: pollUrl,
       intervalSec: pollInterval,
       timeoutSec: settings.timeout,
@@ -432,7 +420,7 @@ async function handleAsyncMode(
     imageUrls,
     flags,
     settings,
-    format,
+    commandOutput,
     taskIds.length === 1 ? taskIds[0] : undefined,
     taskIds,
   );
@@ -444,7 +432,7 @@ async function saveImages(
   imageUrls: string[],
   flags: GenerateFlags,
   settings: Settings,
-  format: string,
+  commandOutput: CommandOutput,
   taskId?: string,
   taskIds?: string[],
 ): Promise<void> {
@@ -465,18 +453,16 @@ async function saveImages(
         })
       : [{ url: imageUrls[0], destPath: join(outDir, `${prefix}.png`) }];
 
-  const results = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
+  const results = await downloadParallel(items, downloadFile, {
+    quiet: settings.quiet || settings.output === "json",
+  });
 
-  if (settings.quiet) {
-    emitBare(results.join("\n"));
-  } else {
-    const output: Record<string, unknown> = {
-      urls: imageUrls,
-      saved: results,
-      total: imageUrls.length,
-    };
-    if (taskId) output.task_id = taskId;
-    if (taskIds && taskIds.length > 1) output.task_ids = taskIds;
-    emitResult(output, format as OutputFormat);
-  }
+  const output: Record<string, unknown> = {
+    urls: imageUrls,
+    saved: results,
+    total: imageUrls.length,
+  };
+  if (taskId) output.task_id = taskId;
+  if (taskIds && taskIds.length > 1) output.task_ids = taskIds;
+  commandOutput.result(output);
 }

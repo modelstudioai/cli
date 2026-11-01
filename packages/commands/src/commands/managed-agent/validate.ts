@@ -1,11 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { validateProjectConfig } from "@openagentpack/sdk";
 import { OFFLINE_NOTE, resolveAgentProjectConfig } from "./_engine/config-loader.ts";
 import { formatAgentDiagnosticFailure, withAgentErrors } from "./_engine/errors.ts";
@@ -32,8 +25,8 @@ export default defineCommand({
   exampleArgs: ["", "--file agents.yaml"],
   notes: OFFLINE_NOTE,
   async run(ctx) {
-    const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const { flags } = ctx;
+
     const file = flags.file ?? "agents.yaml";
 
     const diagnostics = await withAgentErrors(async () => {
@@ -45,15 +38,27 @@ export default defineCommand({
 
     const errorCount = diagnostics.filter((diag) => diag.severity === "error").length;
 
-    if (format === "json") {
-      emitResult({ valid: errorCount === 0, diagnostics }, format);
-    } else {
-      for (const diag of diagnostics) {
-        const where = diag.resource ? ` (${diag.resource.type}.${diag.resource.name})` : "";
-        emitBare(`[${diag.severity}] ${diag.message}${where}`);
-      }
-      if (errorCount === 0) emitBare("Configuration is valid.");
-    }
+    ctx.output.result(
+      { valid: errorCount === 0, diagnostics },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? (() => {
+                const lines: string[] = [];
+                {
+                  for (const diag of diagnostics) {
+                    const where = diag.resource
+                      ? ` (${diag.resource.type}.${diag.resource.name})`
+                      : "";
+                    lines.push(`[${diag.severity}] ${diag.message}${where}`);
+                  }
+                  if (errorCount === 0) lines.push("Configuration is valid.");
+                }
+                return lines.join("\n");
+              })()
+            : undefined,
+      },
+    );
 
     if (errorCount > 0) {
       throw new BailianError(

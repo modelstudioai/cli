@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, findModelByName } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, findModelByName } from "bailian-cli-core";
 import {
   FREE_TIER_API,
   FREE_TIER_ONLY_STATUS_API,
@@ -8,7 +7,7 @@ import {
   fetchAllModels,
   resolveModelType,
   formatDate,
-  printFreeTierTable,
+  renderFreeTierTable,
   quotaRemainingPercent,
   type FreeTierQuota,
 } from "./shared.ts";
@@ -73,7 +72,7 @@ export default defineCommand({
     const expiringDays = Number(flags.expiring) || 0;
     const sortField = flags.sort || undefined;
     const showAll = Boolean(flags.all);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     let models: string[];
     const typeMap = new Map<string, string>();
@@ -96,7 +95,7 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult({ api: FREE_TIER_API, data: requestData }, format);
+      ctx.output.result({ api: FREE_TIER_API, data: requestData });
       return;
     }
 
@@ -159,56 +158,56 @@ export default defineCommand({
     const stopStatuses = stopResult ? extractFreeTierOnlyStatuses(stopResult) : [];
     const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
 
-    if (format === "json") {
-      const items = quotas.map((quota: FreeTierQuota) => {
-        const hasQuota = quota.quotaInitTotal != null && quota.quotaTotal != null;
-        const used = hasQuota ? quota.quotaInitTotal - quota.quotaTotal : 0;
-        const stopStatus = stopMap.get(quota.model);
-        const autoStop =
-          stopStatus === true
-            ? true
-            : stopStatus === false
-              ? false
-              : quota.quotaStatus === "UNKNOWN"
-                ? "unsupported"
-                : null;
-        return {
-          model: quota.model,
-          type: typeMap.get(quota.model) || null,
-          remaining: hasQuota ? quota.quotaTotal : null,
-          total: hasQuota ? quota.quotaInitTotal : null,
-          usagePercent:
-            hasQuota && quota.quotaInitTotal > 0
-              ? Math.round((used / quota.quotaInitTotal) * 1000) / 10
-              : null,
-          remainingPercent: quotaRemainingPercent(quota),
-          expires: quota.quotaValidityPeriod ? formatDate(quota.quotaValidityPeriod) : null,
-          autoStop,
-        };
-      });
-      emitResult(items, format);
-      return;
-    }
-
-    if (quotas.length === 0) {
-      process.stdout.write("No free-tier quota found.\n");
-      return;
-    }
+    const items = quotas.map((quota: FreeTierQuota) => {
+      const hasQuota = quota.quotaInitTotal != null && quota.quotaTotal != null;
+      const used = hasQuota ? quota.quotaInitTotal - quota.quotaTotal : 0;
+      const stopStatus = stopMap.get(quota.model);
+      const autoStop =
+        stopStatus === true
+          ? true
+          : stopStatus === false
+            ? false
+            : quota.quotaStatus === "UNKNOWN"
+              ? "unsupported"
+              : null;
+      return {
+        model: quota.model,
+        type: typeMap.get(quota.model) || null,
+        remaining: hasQuota ? quota.quotaTotal : null,
+        total: hasQuota ? quota.quotaInitTotal : null,
+        usagePercent:
+          hasQuota && quota.quotaInitTotal > 0
+            ? Math.round((used / quota.quotaInitTotal) * 1000) / 10
+            : null,
+        remainingPercent: quotaRemainingPercent(quota),
+        expires: quota.quotaValidityPeriod ? formatDate(quota.quotaValidityPeriod) : null,
+        autoStop,
+      };
+    });
 
     const browseAll = !modelFlag && !showAll;
     const visible = browseAll ? quotas.slice(0, TOP_N) : quotas;
     const remaining = quotas.length - visible.length;
 
     const titleSuffix = effectiveSort === "remaining" ? " · sorted by urgency" : "";
-    printFreeTierTable({
-      quotas: visible,
-      stopMap,
-      typeMap,
-      title: `Free Tier Quota · ${quotas.length} models${titleSuffix}`,
-      moreHint:
-        remaining > 0
-          ? `+ ${remaining} more · ${identity.binName} usage free --all to browse all`
-          : undefined,
-    });
+    ctx.output.result(
+      items,
+      format === "text"
+        ? {
+            text: quotas.length
+              ? renderFreeTierTable({
+                  quotas: visible,
+                  stopMap,
+                  typeMap,
+                  title: `Free Tier Quota · ${quotas.length} models${titleSuffix}`,
+                  moreHint:
+                    remaining > 0
+                      ? `+ ${remaining} more · ${identity.binName} usage free --all to browse all`
+                      : undefined,
+                })
+              : ctx.localize({ "en-US": "No free-tier quota found.", "zh-CN": "未找到免费额度。" }),
+          }
+        : undefined,
+    );
   },
 });

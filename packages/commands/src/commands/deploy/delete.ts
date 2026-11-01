@@ -8,7 +8,6 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const DELETE_FLAGS = {
   deployedModel: {
@@ -30,6 +29,7 @@ const DELETE_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Delete a model deployment (PTU must be STOPPED with all capacity released)",
     "zh-CN": "删除模型部署（PTU 须为 STOPPED 且已释放全部容量）",
@@ -70,7 +70,11 @@ export default defineCommand({
     const deployedModel = flags.deployedModel;
 
     if (settings.dryRun) {
-      emitResult({ action: "deploy.delete", deployed_model: deployedModel }, "json");
+      const resultData1 = { action: "deploy.delete", deployed_model: deployedModel };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
@@ -155,10 +159,9 @@ export default defineCommand({
 
     // Prechecks are not atomic and cannot enumerate queued operations; the server decides.
     const response = await deleteDeployment(ctx.client, deployedModel);
-    if (settings.quiet) {
-      emitBare(deployedModel);
-    } else {
-      emitResult(response, "json");
-    }
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

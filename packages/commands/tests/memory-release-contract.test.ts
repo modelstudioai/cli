@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { expect, test, vi } from "vite-plus/test";
 import { ExitCode } from "bailian-cli-core";
 import create from "../src/commands/memory/profile-create.ts";
@@ -31,7 +32,14 @@ for (const command of [create, update]) {
               workspaceId: "ws_test",
             };
       await expect(
-        command.run({ flags, settings: { output: "json" }, client: { requestJson } } as never),
+        command.run({
+          flags,
+          settings: { output: "json" },
+          client: { requestJson },
+          output: createOutputReporter({
+            settings: { output: "json", quiet: false, verbose: false },
+          }).output,
+        } as never),
       ).rejects.toMatchObject({ exitCode: ExitCode.USAGE });
       expect(requestJson).not.toHaveBeenCalled();
     },

@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 
 export default defineCommand({
   description: {
@@ -22,6 +21,6 @@ export default defineCommand({
   exampleArgs: ["--name @ali/bailian-plugin-agent"],
   async run(ctx) {
     await ctx.commandPacks.remove(ctx.flags.name);
-    emitResult({ removed: ctx.flags.name }, detectOutputFormat(ctx.settings.output));
+    ctx.output.result({ removed: ctx.flags.name });
   },
 });

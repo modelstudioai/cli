@@ -18,7 +18,7 @@ afterEach(async () => {
   );
 });
 
-async function setup() {
+async function setup(baseUrl = "") {
   const directory = await mkdtemp(join(tmpdir(), "init-runtime-"));
   directories.push(directory);
   const stateFile = join(directory, "state/init.json");
@@ -45,6 +45,7 @@ async function setup() {
           INIT_TEST_DIRECTORY: directory,
           INIT_TEST_FAILURE: failure,
           BAILIAN_CONFIG_DIR: join(directory, "config"),
+          DASHSCOPE_BASE_URL: baseUrl,
           DO_NOT_TRACK: "1",
           HTTP_PROXY: "",
           HTTPS_PROXY: "",
@@ -60,13 +61,26 @@ async function setup() {
   return { directory, stateFile, run, paths };
 }
 
-test.each([{ args: ["--dry-run"] }, { args: [] }])(
-  "init $args reads the plan without creating cloud resources or checkpoints",
-  async ({ args }) => {
-    const context = await setup();
+test.each([
+  { args: ["--dry-run"], baseUrl: "" },
+  { args: [], baseUrl: "" },
+  { args: [], baseUrl: "https://fixture-base.invalid" },
+])(
+  "init $args with baseUrl=$baseUrl reads the plan without creating cloud resources or checkpoints",
+  async ({ args, baseUrl }) => {
+    const context = await setup(baseUrl);
     const result = await context.run(args);
     expect(result.exitCode, result.stderr).toBe(args.length ? 0 : 7);
-    const payload = JSON.parse(args.length ? result.stdout : result.stderr);
+    const diagnostics = result.stderr
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+    expect(
+      diagnostics.some((record) => record.warning?.code === "API_KEY_BASE_URL_SOURCE_MISMATCH"),
+    ).toBe(Boolean(baseUrl));
+    const payload = args.length
+      ? JSON.parse(result.stdout)
+      : diagnostics.find((record) => record.error);
     const plan = args.length ? payload : payload.error;
     expect(plan.notices[0]).toMatchObject({
       code: "KNOWLEDGE_BILLING",

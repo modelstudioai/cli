@@ -1,5 +1,4 @@
 import { defineCommand, cancelFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const CANCEL_FLAGS = {
   jobId: {
@@ -11,6 +10,7 @@ const CANCEL_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "Cancel a running fine-tune job", "zh-CN": "取消正在运行的微调任务" },
   auth: "apiKey",
   usageArgs: "--job-id <id>",
@@ -29,16 +29,19 @@ export default defineCommand({
     const jobId = flags.jobId;
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.cancel", job_id: jobId }, "json");
+      const resultData1 = { action: "finetune.cancel", job_id: jobId };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
     const response = await cancelFineTune(ctx.client, jobId);
 
-    if (settings.quiet) {
-      emitBare(jobId);
-    } else {
-      emitResult(response, "json");
-    }
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

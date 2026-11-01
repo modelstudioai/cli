@@ -1,10 +1,11 @@
 import { defineCommand, getDeployment } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { DEPLOYED_MODEL_FLAG, validateQueryIds } from "./query-shared.ts";
 
 const GET_FLAGS = DEPLOYED_MODEL_FLAG;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Get details of a single model deployment",
     "zh-CN": "获取单个模型部署的详情",
@@ -30,7 +31,11 @@ export default defineCommand({
     const deployedModel = flags.deployedModel;
 
     if (settings.dryRun) {
-      emitResult({ action: "deploy.get", deployed_model: deployedModel }, "json");
+      const resultData1 = { action: "deploy.get", deployed_model: deployedModel };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
@@ -38,7 +43,11 @@ export default defineCommand({
     const deployment = response.output ?? response.data;
 
     if (!deployment) {
-      emitResult({ deployed_model: deployedModel, request_id: response.request_id }, "json");
+      const resultData2 = { deployed_model: deployedModel, request_id: response.request_id };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+      );
       return;
     }
 
@@ -63,6 +72,10 @@ export default defineCommand({
     if (deployment.gmt_create) item.created_at = deployment.gmt_create;
     if (deployment.gmt_modified) item.updated_at = deployment.gmt_modified;
 
-    emitResult({ ...item, request_id: response.request_id }, "json");
+    const resultData3 = { ...item, request_id: response.request_id };
+    ctx.output.result(
+      resultData3,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData3, null, 2) } : undefined,
+    );
   },
 });

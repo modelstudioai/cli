@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef } from "bailian-cli-core";
 import { startSessionRun, startSessionRunPolling } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -120,11 +119,10 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const file = flags.file ?? "agents.yaml";
     const environmentVariables = parseEnvironmentVariables(flags.environment_variables);
     const resources = await readSessionResources(flags.resource);
-    const asJson = format === "json";
 
     const runOptions = {
       agent: flags.agent,
@@ -138,42 +136,45 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          would_run: {
-            prompt: flags.prompt,
-            agent: flags.agent ?? "auto",
-            provider: "bailian",
-            environment: flags.environment,
-            environment_variables: redactEnvironmentVariables(environmentVariables),
-            vault: flags.vault,
-            memory_stores: runOptions.memoryStores,
-            resources,
-            title: flags.title,
-            mode: flags.noStream ? "polling" : "streaming",
-          },
-          config_file: file,
+      ctx.output.result({
+        would_run: {
+          prompt: flags.prompt,
+          agent: flags.agent ?? "auto",
+          provider: "bailian",
+          environment: flags.environment,
+          environment_variables: redactEnvironmentVariables(environmentVariables),
+          vault: flags.vault,
+          memory_stores: runOptions.memoryStores,
+          resources,
+          title: flags.title,
+          mode: flags.noStream ? "polling" : "streaming",
         },
-        format,
-      );
+        config_file: file,
+      });
       return;
     }
 
     await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         if (flags.noStream) {
           const run = await startSessionRunPolling(runtime, flags.prompt, runOptions);
-          if (!asJson) process.stderr.write(`Session created: ${run.session.id}\n`);
-          renderCollectedEvents(run, asJson, {
+          ctx.output.info({
+            "en-US": `Session created: ${run.session.id}`,
+            "zh-CN": `Session 已创建：${run.session.id}`,
+          });
+          renderCollectedEvents(ctx, run, {
             session_id: run.session.id,
             provider: run.provider,
             agent: run.agentName,
           });
         } else {
           const run = await startSessionRun(runtime, flags.prompt, runOptions);
-          if (!asJson) process.stderr.write(`Session created: ${run.session.id}\n`);
-          await streamAndRenderEvents(run.events, asJson, {
+          ctx.output.info({
+            "en-US": `Session created: ${run.session.id}`,
+            "zh-CN": `Session 已创建：${run.session.id}`,
+          });
+          await streamAndRenderEvents(ctx, run.events, {
             session_id: run.session.id,
             provider: run.provider,
             agent: run.agentName,

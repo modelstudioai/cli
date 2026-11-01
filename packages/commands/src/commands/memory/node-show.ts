@@ -2,11 +2,9 @@ import {
   defineCommand,
   memoryEndpoint,
   memoryNodePath,
-  detectOutputFormat,
   type FlagsDef,
   type MemoryNodeDetailResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { MEMORY_WORKSPACE_NOTE, WORKSPACE_FLAG, resolveWorkspaceId } from "./shared.ts";
 
 const NODE_SHOW_FLAGS = {
@@ -40,11 +38,11 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url = memoryEndpoint(resolveWorkspaceId(ctx), memoryNodePath(flags.nodeId));
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+      ctx.output.result({ endpoint: url, method: "GET" });
       return;
     }
 
@@ -53,27 +51,74 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (settings.quiet || format === "text") {
+    let text: string | undefined;
+    if (format === "text") {
       const node = response.memory_node;
+      const lines: string[] = [];
       if (!node) {
-        emitBare("Memory node not found.");
-        return;
+        lines.push(
+          ctx.localize({ "en-US": "Memory node not found.", "zh-CN": "未找到记忆节点。" }),
+        );
+      } else {
+        lines.push(`[${node.memory_node_id}] ${node.content}`);
+        lines.push(
+          ctx.localize({
+            "en-US": `  type: ${node.memory_type ?? "-"}  status: ${node.status ?? "-"}`,
+            "zh-CN": `  类型: ${node.memory_type ?? "-"}  状态: ${node.status ?? "-"}`,
+          }),
+        );
+        if (node.project_id)
+          lines.push(
+            ctx.localize({
+              "en-US": `  project: ${node.project_id}`,
+              "zh-CN": `  项目: ${node.project_id}`,
+            }),
+          );
+        if (node.timestamp !== undefined)
+          lines.push(
+            ctx.localize({
+              "en-US": `  timestamp: ${node.timestamp}`,
+              "zh-CN": `  时间戳: ${node.timestamp}`,
+            }),
+          );
+        if (node.created_at !== undefined)
+          lines.push(
+            ctx.localize({
+              "en-US": `  created_at: ${node.created_at}`,
+              "zh-CN": `  创建时间: ${node.created_at}`,
+            }),
+          );
+        if (node.updated_at !== undefined)
+          lines.push(
+            ctx.localize({
+              "en-US": `  updated_at: ${node.updated_at}`,
+              "zh-CN": `  更新时间: ${node.updated_at}`,
+            }),
+          );
+        if (node.meta_data && Object.keys(node.meta_data).length > 0)
+          lines.push(
+            ctx.localize({
+              "en-US": `  meta: ${JSON.stringify(node.meta_data)}`,
+              "zh-CN": `  元数据: ${JSON.stringify(node.meta_data)}`,
+            }),
+          );
+        if (node.media_desc)
+          lines.push(
+            ctx.localize({
+              "en-US": `  media_desc: ${node.media_desc}`,
+              "zh-CN": `  媒体描述: ${node.media_desc}`,
+            }),
+          );
+        if (node.media_urls && node.media_urls.length > 0)
+          lines.push(
+            ctx.localize({
+              "en-US": `  media_urls: ${node.media_urls.join(", ")}`,
+              "zh-CN": `  媒体 URL: ${node.media_urls.join(", ")}`,
+            }),
+          );
       }
-      emitBare(`[${node.memory_node_id}] ${node.content}`);
-      emitBare(`  type: ${node.memory_type ?? "-"}  status: ${node.status ?? "-"}`);
-      if (node.project_id) emitBare(`  project: ${node.project_id}`);
-      if (node.timestamp !== undefined) emitBare(`  timestamp: ${node.timestamp}`);
-      if (node.created_at !== undefined) emitBare(`  created_at: ${node.created_at}`);
-      if (node.updated_at !== undefined) emitBare(`  updated_at: ${node.updated_at}`);
-      if (node.meta_data && Object.keys(node.meta_data).length > 0) {
-        emitBare(`  meta: ${JSON.stringify(node.meta_data)}`);
-      }
-      if (node.media_desc) emitBare(`  media_desc: ${node.media_desc}`);
-      if (node.media_urls && node.media_urls.length > 0) {
-        emitBare(`  media_urls: ${node.media_urls.join(", ")}`);
-      }
-    } else {
-      emitResult(response, format);
+      text = lines.join("\n");
     }
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

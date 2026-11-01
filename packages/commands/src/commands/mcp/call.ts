@@ -3,11 +3,9 @@ import {
   UsageError,
   BailianError,
   bailianMcpPath,
-  detectOutputFormat,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 import { rethrowWithMcpActivateHint } from "./activate-hint.ts";
 
 const CALL_FLAGS = {
@@ -143,18 +141,14 @@ export default defineCommand({
     const toolArgs = buildToolArgs(flags);
 
     const previewUrl = flags.url || ctx.client.url(bailianMcpPath(serverCode));
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          server: serverCode,
-          url: previewUrl,
-          tool: toolName,
-          arguments: toolArgs,
-        },
-        format,
-      );
+      ctx.output.result({
+        server: serverCode,
+        url: previewUrl,
+        tool: toolName,
+        arguments: toolArgs,
+      });
       return;
     }
 
@@ -169,7 +163,7 @@ export default defineCommand({
         throw new BailianError(`Tool error: ${errText}`);
       }
 
-      emitResult(result, format);
+      ctx.output.result(result);
     } catch (error) {
       if (!flags.url) {
         rethrowWithMcpActivateHint(error, serverCode);

@@ -1,11 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { parseStateAddress } from "@openagentpack/sdk";
 import { buildAgentRuntime, OFFLINE_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -51,7 +44,7 @@ export default defineCommand({
   notes: OFFLINE_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const file = flags.file ?? "agents.yaml";
 
     if (settings.dryRun) {
@@ -59,12 +52,12 @@ export default defineCommand({
       await withAgentErrors(async () => {
         parseStateAddress(flags.address, { requireProvider: false });
       });
-      emitResult({ would_remove: flags.address, config_file: file }, format);
+      ctx.output.result({ would_remove: flags.address, config_file: file });
       return;
     }
 
     await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file, {
           credentials: "none",
         });
@@ -81,7 +74,9 @@ export default defineCommand({
     );
 
     const message = `Removed ${flags.address} from state (remote resource not deleted).`;
-    if (format === "json") emitResult({ removed: flags.address }, format);
-    else emitBare(message);
+    ctx.output.result(
+      { removed: flags.address },
+      { text: ctx.settings.output === "text" ? message : undefined },
+    );
   },
 });

@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagListFileResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, truncateLine, WORKSPACE_FLAG } from "./shared.ts";
 
 const FILE_LIST_FLAGS = {
@@ -85,7 +83,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body = {
       categoryId: flags.categoryId,
@@ -97,7 +95,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.listFile);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -108,16 +106,16 @@ export default defineCommand({
     });
 
     const files = response.data?.fileList ?? [];
-    if (settings.quiet) {
-      for (const file of files) emitBare(file.fileId ?? "");
-      return;
-    }
-    if (format === "text") {
+
+    ctx.output.result(response, format === "text" ? { text: renderText() } : undefined);
+    function renderText(): string {
+      const lines: string[] = [];
+
       if (files.length === 0) {
-        emitBare("No files found.");
+        lines.push("No files found.");
       } else {
         for (const file of files) {
-          emitBare(
+          lines.push(
             truncateLine(
               [file.fileId, file.status ?? "-", file.fileName, file.sizeBytes ?? "-"].join("  "),
             ),
@@ -125,9 +123,9 @@ export default defineCommand({
         }
       }
       const nextToken = response.data?.nextToken;
-      if (nextToken) emitBare(`next: --next-token ${nextToken}`);
-    } else {
-      emitResult(response, format);
+      if (nextToken) lines.push(`next: --next-token ${nextToken}`);
+
+      return lines.join("\n");
     }
   },
 });

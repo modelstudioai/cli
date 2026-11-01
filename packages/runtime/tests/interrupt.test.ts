@@ -12,13 +12,41 @@ test("临时 Ctrl-C 处理释放后恢复默认退出 130，释放可重复调�
       http_proxy: "",
       https_proxy: "",
       NODE_OPTIONS: "",
+      NO_UPDATE_NOTIFIER: "1",
     },
   });
   try {
     const result = await runInProcess(
       async () => {
-        createCli(
-          {},
+        const beforeListeners = process.rawListeners("SIGINT");
+        const cli = createCli(
+          {
+            fixture: {
+              auth: "none",
+              description: "fixture",
+              async run() {
+                const listeners = process.rawListeners("SIGINT");
+                const handled: string[] = [];
+                const release = registerInterruptHandler(() => handled.push("interrupted"));
+                const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+                try {
+                  process.emit("SIGINT");
+                  process.emit("SIGINT");
+                  expect(handled).toEqual(["interrupted", "interrupted"]);
+                  expect(exit).not.toHaveBeenCalled();
+                  release();
+                  release();
+                  expect(process.rawListeners("SIGINT")).toEqual(listeners);
+                  process.emit("SIGINT");
+                  await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(130));
+                  expect(handled).toEqual(["interrupted", "interrupted"]);
+                } finally {
+                  release();
+                  exit.mockRestore();
+                }
+              },
+            },
+          },
           {
             binName: "test-cli",
             version: "0.0.0-test",
@@ -26,24 +54,9 @@ test("临时 Ctrl-C 处理释放后恢复默认退出 130，释放可重复调�
             clientName: "test-client",
           },
         );
-        const listeners = process.rawListeners("SIGINT");
-        const handled: string[] = [];
-        const release = registerInterruptHandler(() => handled.push("interrupted"));
-        const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-        try {
-          process.emit("SIGINT");
-          expect(handled).toEqual(["interrupted"]);
-          expect(exit).not.toHaveBeenCalled();
-          release();
-          release();
-          expect(process.rawListeners("SIGINT")).toEqual(listeners);
-          process.emit("SIGINT");
-          await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(130));
-          expect(handled).toEqual(["interrupted"]);
-        } finally {
-          release();
-          exit.mockRestore();
-        }
+        expect(process.rawListeners("SIGINT")).toEqual(beforeListeners);
+        await cli.run(["fixture"]);
+        expect(process.rawListeners("SIGINT")).toEqual(beforeListeners);
       },
       [],
       { env: isolated.env },

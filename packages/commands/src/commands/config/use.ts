@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 
 export default defineCommand({
   description: { "en-US": "Set the active config profile", "zh-CN": "设置当前激活的配置 Profile" },
@@ -18,28 +17,19 @@ export default defineCommand({
   },
   exampleArgs: ["--name token-plan", "--name default"],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
       const activeConfig = ctx.configStore.validateActivation(ctx.flags.name);
-      emitResult(
-        {
-          would_activate: activeConfig,
-          config_file: ctx.configStore.path,
-        },
-        format,
-      );
+      ctx.output.result({
+        would_activate: activeConfig,
+        config_file: ctx.configStore.path,
+      });
       return;
     }
 
     const activeConfig = await ctx.configStore.activate(ctx.flags.name);
-    if (!ctx.settings.quiet) {
-      emitResult(
-        {
-          active_config: activeConfig,
-          config_file: ctx.configStore.path,
-        },
-        format,
-      );
-    }
+    ctx.output.result({
+      active_config: activeConfig,
+      config_file: ctx.configStore.path,
+    });
   },
 });

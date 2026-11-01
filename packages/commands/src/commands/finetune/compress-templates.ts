@@ -1,5 +1,4 @@
 import { defineCommand, listCompressTemplates, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 
 const TEMPLATE_FLAGS = {
   model: {
@@ -13,6 +12,7 @@ const TEMPLATE_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "List quantizable models and their compression templates",
     "zh-CN": "列出可量化模型及其压缩模板",
@@ -50,10 +50,17 @@ export default defineCommand({
     const model = ctx.flags.model || undefined;
     const lang = ctx.localize({ "en-US": "en-US", "zh-CN": "zh-CN" });
     if (ctx.settings.dryRun) {
-      emitResult({ action: "finetune.compress.templates", model, lang }, "json");
+      const resultData1 = { action: "finetune.compress.templates", model, lang };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
     const response = await listCompressTemplates(ctx.client, { model, lang });
-    emitResult(response, "json");
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

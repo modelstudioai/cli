@@ -5,10 +5,10 @@ import {
   createReadlineInteraction,
   DEFAULT_LLM_MODEL,
   defineCommand,
-  detectOutputFormat,
   ExitCode,
   type EngineRecommendResult,
   type Degradation,
+  type CommandOutput,
   LLMError,
   loadCatalog,
   loadFamilies,
@@ -16,7 +16,6 @@ import {
   recommendEngine,
   type RecommendedModel,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { adaptCommandOutput } from "./recommend-adapter.ts";
 
 const STAGE_LABEL: Record<string, string> = {
@@ -38,9 +37,13 @@ function describeDegradation(entry: Degradation): string {
   return `${STAGE_LABEL[entry.stage] ?? entry.stage} failed (${tag}); ${effect}. ${entry.message}`;
 }
 
-function emitDegradations(degradations: Degradation[]): void {
+function emitDegradations(degradations: Degradation[], output: CommandOutput): void {
   for (const entry of degradations) {
-    process.stderr.write(`Warning: ${describeDegradation(entry)}\n`);
+    output.warning({
+      message: describeDegradation(entry),
+      code: "ADVISOR_DEGRADED",
+      details: { stage: entry.stage, kind: entry.kind, fallback: entry.fallback },
+    });
   }
 }
 
@@ -146,6 +149,9 @@ export default defineCommand({
     "zh-CN": "为你的使用场景推荐最佳模型（意图 → 路由 → 召回 → 打分 → 排序，支持 agent 澄清交互）",
   },
   auth: "apiKey",
+  defaultOutput: "json",
+  defaultInteractiveOutput: "text",
+  verboseFlags: ["trace"],
   usageArgs: "--message <text> [flags]",
   flags,
   exampleArgs: [
@@ -170,6 +176,16 @@ export default defineCommand({
     const { settings, flags: runtimeFlags } = ctx;
     const message = runtimeFlags.message;
     const top = runtimeFlags.top ?? 3;
+    const useAgent = !runtimeFlags.noAgent && process.stdin.isTTY === true;
+    if (useAgent && settings.output === "json")
+      throw new BailianError(
+        ctx.localize({
+          "en-US":
+            "Interactive advisor clarification requires --output text. Use --no-agent for JSON output.",
+          "zh-CN": "交互式模型推荐澄清需要 --output text。请使用 --no-agent 获取 JSON 输出。",
+        }),
+        ExitCode.USAGE,
+      );
 
     // Keep the local wiki catalog fresh: throttled (12h) version check against
     // the remote manifest, silently replaces data when a newer version exists.
@@ -196,7 +212,7 @@ export default defineCommand({
           get(target, prop, receiver) {
             if (prop === "push") {
               return (...items: string[]) => {
-                for (const item of items) process.stderr.write(`  ${item}\n`);
+                for (const item of items) ctx.output.info(`  ${item}`);
                 return target.push(...items);
               };
             }
@@ -218,12 +234,20 @@ export default defineCommand({
       catalog: () => loadCatalog(),
       families: () => loadFamilies(),
       verbose: runtimeFlags.trace ?? false,
+      onTrace: (
+        trace: Parameters<NonNullable<Parameters<typeof recommendEngine>[1]["onTrace"]>>[0],
+      ) => {
+        const { input: _input, ...details } = trace;
+        ctx.output.debug({
+          message: { "en-US": "Recommendation trace", "zh-CN": "模型推荐追踪" },
+          code: "ADVISOR_TRACE",
+          details,
+        });
+      },
+      onDiagnostic: (message: string) => ctx.output.debug({ message, code: "ADVISOR_AGENT" }),
       decisionLog: liveDecisionLog,
       topN: top,
     };
-
-    const isTTY = process.stdin.isTTY === true;
-    const useAgent = !runtimeFlags.noAgent && isTTY;
 
     let result: EngineRecommendResult | undefined;
     let finalText = "";
@@ -234,7 +258,7 @@ export default defineCommand({
           ...deps,
           interaction: createReadlineInteraction(),
           // Real-time tool progress to stderr (always on, independent of --think)
-          onProgress: (event) => process.stderr.write(`[agent] ${event}\n`),
+          onProgress: (event) => ctx.output.progress(`[agent] ${event}`),
         });
         result = agentResult.recommendResult;
         finalText = agentResult.finalText;
@@ -256,21 +280,19 @@ export default defineCommand({
       ...agentDegradations,
     ];
 
-    // Default to JSON for structured output; text rendering only when the
-    // user explicitly asked for text output.
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
-
-    // Degradations go to stderr so stdout stays a clean result
-    emitDegradations(degradations);
+    emitDegradations(degradations, ctx.output);
 
     // Non-interactive clarify: auto-apply defaultIfSkip so a single non-TTY run
     // still produces recommendations (advisor's single-shot contract), while
     // surfacing the question+options on stderr for visibility.
     if (result?.type === "need_clarify" && !useAgent) {
-      process.stderr.write(
-        `Clarification (auto-answered "${result.defaultIfSkip}"): ${result.question}\n`,
+      ctx.output.info(
+        ctx.localize({
+          "en-US": `Clarification (auto-answered "${result.defaultIfSkip}"): ${result.question}`,
+          "zh-CN": `澄清（自动回答“${result.defaultIfSkip}”）：${result.question}`,
+        }),
       );
-      for (const opt of result.options) process.stderr.write(`  - ${opt}\n`);
+      for (const option of result.options) ctx.output.info(`  - ${option}`);
       const retryResult = await recommendEngine(
         `${message}\n- ${result.question} → ${result.defaultIfSkip}`,
         deps,
@@ -278,9 +300,13 @@ export default defineCommand({
       if (retryResult.type === "need_clarify") {
         // Still ambiguous after one auto-answer: give up on clarification and
         // surface the second question; fall through to a bare result.
-        process.stderr.write(
-          `Warning: request still ambiguous after auto-clarification. / 自动澄清后仍存在歧义。\n`,
-        );
+        ctx.output.warning({
+          message: {
+            "en-US": "Request still ambiguous after auto-clarification.",
+            "zh-CN": "自动澄清后仍存在歧义。",
+          },
+          code: "ADVISOR_AMBIGUOUS",
+        });
         result = undefined;
       } else {
         result = retryResult;
@@ -291,50 +317,47 @@ export default defineCommand({
     // directly without running the recommend engine. finalText is the answer;
     // there is no recommendation result and that is a valid terminal state.
     if (finalText && !result) {
-      if (format === "text") {
-        emitBare(finalText.trim());
-      } else {
-        emitResult({ final_text: finalText.trim() }, format);
-      }
+      ctx.output.result({ final_text: finalText.trim() }, { text: finalText.trim() });
       return;
     }
-
     if (!result || result.type === "need_clarify") {
-      // TTY agent loop ran out of clarification budget, or double-clarify above.
       if (result?.type === "need_clarify") {
-        emitBare(`Clarification needed: ${result.question}`);
-        for (const opt of result.options) emitBare(`  - ${opt}`);
-        emitBare(
-          `(If unanswered, defaults to "${result.defaultIfSkip}". Re-run with a more specific description of your need.)`,
-        );
+        ctx.output.result(result, {
+          text: [
+            ctx.localize({
+              "en-US": `Clarification needed: ${result.question}`,
+              "zh-CN": `需要澄清：${result.question}`,
+            }),
+            ...result.options.map((option) => `  - ${option}`),
+            ctx.localize({
+              "en-US": `(If unanswered, defaults to "${result.defaultIfSkip}". Re-run with a more specific description of your need.)`,
+              "zh-CN": `（未回答时默认使用“${result.defaultIfSkip}”。请提供更具体的需求描述后重试。）`,
+            }),
+          ].join("\n"),
+        });
         return;
       }
-      emitBare("No recommendation produced.");
-      return;
-    }
-
-    const adapted = adaptCommandOutput(result);
-
-    if (format !== "text") {
-      emitResult(adapted, format);
-      return;
-    }
-
-    if (finalText) {
-      emitBare(finalText.trim());
-      return;
-    }
-
-    if (adapted.result.type === "pipeline") {
-      emitBare(
-        formatPipelineResult(
-          adapted.result.summary as string,
-          adapted.result.steps as PipelineStepLocal[],
-        ),
+      ctx.output.result(
+        { recommendations: [] },
+        {
+          text: ctx.localize({
+            "en-US": "No recommendation produced.",
+            "zh-CN": "未生成推荐结果。",
+          }),
+        },
       );
-    } else {
-      emitBare(formatSingleResult(adapted.result.recommendations as RecommendedModel[]));
+      return;
     }
+    const adapted = adaptCommandOutput(result);
+    const text = finalText
+      ? finalText.trim()
+      : adapted.result.type === "pipeline"
+        ? formatPipelineResult(
+            adapted.result.summary as string,
+            adapted.result.steps as PipelineStepLocal[],
+          )
+        : formatSingleResult(adapted.result.recommendations as RecommendedModel[]);
+    ctx.output.result(adapted, { text });
   },
 });
 

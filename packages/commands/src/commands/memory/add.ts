@@ -5,15 +5,14 @@ import {
   ExitCode,
   memoryAddAsyncPath,
   memoryEndpoint,
-  detectOutputFormat,
   type FlagsDef,
   type ParsedFlags,
   type MemoryAddAsyncResponse,
   type MemoryAddRequest,
   type MemoryEvent,
+  type LocalizedText,
   type MemoryMessage,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_RATE_LIMIT_NOTE,
@@ -145,7 +144,12 @@ function assertMessageShapes(messages: MemoryMessage[]): void {
 }
 
 /** Text rendering of terminal events: result lines for extraction tasks, one status line per profile task. */
-function emitEventsText(events: MemoryEvent[]): void {
+function renderEventsText(
+  events: MemoryEvent[],
+  localize: (text: LocalizedText) => string,
+): string {
+  const lines: string[] = [];
+
   let emitted = 0;
   for (const event of events) {
     const status = event.status ?? "UNKNOWN";
@@ -153,7 +157,12 @@ function emitEventsText(events: MemoryEvent[]): void {
     if (isMemoryEventSuccess(status)) {
       const results = event.result ?? [];
       if (results.length === 0) {
-        emitBare(`${label}: ${status} (no memory change)`);
+        lines.push(
+          localize({
+            "en-US": `${label}: ${status} (no memory change)`,
+            "zh-CN": `${label}: ${status}（记忆无变更）`,
+          }),
+        );
         emitted += 1;
         continue;
       }
@@ -162,16 +171,19 @@ function emitEventsText(events: MemoryEvent[]): void {
           event.resource_type === "user_profile"
             ? `user_profile ${item.name ?? event.resource_id ?? "-"}`
             : (item.memory_node_id ?? "-");
-        emitBare(`[${item.event ?? "ADD"}] ${target} ${item.content ?? ""}`);
+        lines.push(`[${item.event ?? "ADD"}] ${target} ${item.content ?? ""}`);
         emitted += 1;
       }
       continue;
     }
     // UNRECORDED and any other non-success terminal status: surface as-is.
-    emitBare(`${label}: ${status}`);
+    lines.push(`${label}: ${status}`);
     emitted += 1;
   }
-  if (emitted === 0) emitBare("No memory node changed.");
+  if (emitted === 0)
+    lines.push(localize({ "en-US": "No memory node changed.", "zh-CN": "未更改任何记忆节点。" }));
+
+  return lines.join("\n");
 }
 
 export default defineCommand({
@@ -285,12 +297,12 @@ export default defineCommand({
     }
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const workspaceId = resolveWorkspaceId(ctx);
     const url = memoryEndpoint(workspaceId, memoryAddAsyncPath());
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "POST", request: body }, format);
+      ctx.output.result({ endpoint: url, method: "POST", request: body });
       return;
     }
 
@@ -305,15 +317,22 @@ export default defineCommand({
 
     // Preserve the submission receipt even when completion cannot be tracked.
     if (waitSeconds === 0 || !eventId) {
-      if (settings.quiet || format === "text") {
-        emitBare(
-          eventId
-            ? `Submitted: event ${eventId} (${(submission.events ?? []).length} task(s) pending).`
-            : "Submitted (no event ID returned).",
-        );
-      } else {
-        emitResult(submission, format);
-      }
+      ctx.output.result(
+        submission,
+        format === "text"
+          ? {
+              text: eventId
+                ? ctx.localize({
+                    "en-US": `Submitted: event ${eventId} (${(submission.events ?? []).length} task(s) pending).`,
+                    "zh-CN": `已提交：事件 ${eventId}（${(submission.events ?? []).length} 个任务待完成）。`,
+                  })
+                : ctx.localize({
+                    "en-US": "Submitted (no event ID returned).",
+                    "zh-CN": "已提交（未返回事件 ID）。",
+                  }),
+            }
+          : undefined,
+      );
       if (waitSeconds !== 0) {
         throw new BailianError(
           "The submission returned no event_id; extraction completion cannot be confirmed. / 提交响应未返回 event_id，无法确认抽取完成。",
@@ -335,7 +354,11 @@ export default defineCommand({
             const statuses = events
               .map((event) => `${event.resource_type ?? "task"}=${event.status ?? "UNKNOWN"}`)
               .join(" ");
-            process.stderr.write(`[poll ${round}] ${eventId} ${statuses}\n`);
+            ctx.output.debug({
+              code: "MEMORY_EXTRACTION_POLL",
+              message: { "en-US": "Polling memory extraction", "zh-CN": "正在查询记忆抽取状态" },
+              details: { round, event_id: eventId, statuses },
+            });
           }
         : undefined,
     });
@@ -354,11 +377,12 @@ export default defineCommand({
 
     // Partial failure: surface the completed part first, then propagate the
     // failed events verbatim (server errors are never translated).
-    if (settings.quiet || format === "text") {
-      emitEventsText(reportableEvents);
-    } else {
-      emitResult({ request_id: submission.request_id, event_id: eventId, events }, format);
-    }
+    ctx.output.result(
+      { request_id: submission.request_id, event_id: eventId, events },
+      format === "text"
+        ? { text: renderEventsText(reportableEvents, (text) => ctx.localize(text)) }
+        : undefined,
+    );
 
     if (failedEvents.length > 0) {
       throw new BailianError(

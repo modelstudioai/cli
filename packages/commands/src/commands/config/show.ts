@@ -86,9 +86,11 @@ export default defineCommand({
 
     if (format === "json") {
       result.active = active;
-      process.stdout.write(formatOutput(result, format) + "\n");
+      ctx.output.result(result);
       return;
     }
+
+    const payload = { ...result, active };
 
     // Text: append (active) to the winning layer's displayed value.
     if (typeof result.api_key === "string") {
@@ -120,8 +122,8 @@ export default defineCommand({
 
     // Color after render so YAML does not escape ANSI into values.
     const rendered = formatOutput(result, format);
-    process.stdout.write(
-      rendered.replaceAll(activeSuffix, ansi(process.stdout).cyan(activeSuffix)) + "\n",
-    );
+    ctx.output.result(payload, {
+      text: rendered.replaceAll(activeSuffix, ansi(process.stdout).cyan(activeSuffix)),
+    });
   },
 });

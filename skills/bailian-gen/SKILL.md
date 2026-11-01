@@ -95,7 +95,7 @@ bl omni --message "Describe the video content" --video ./demo.mp4 --text-only
 bl speech synthesize --text "Hello, welcome to Bailian" --out hello.mp3
 bl speech recognize --url ./meeting.wav --model qwen-audio-3.0-asr-flash-filetrans \
   --vocabulary '{"奋斗者":4}' --context "奋斗者号"
-VOCAB=$(bl speech vocabulary create --model fun-asr --prefix demo --words '{"奋斗者":4}' --quiet)
+VOCAB=$(bl speech vocabulary create --model fun-asr --prefix demo --words '{"奋斗者":4}' --output json | jq -r '.output.vocabulary_id')
 bl speech recognize --url ./meeting.wav --model fun-asr --vocabulary-id "$VOCAB"
 bl speech vocabulary delete --id "$VOCAB" --yes
 ```

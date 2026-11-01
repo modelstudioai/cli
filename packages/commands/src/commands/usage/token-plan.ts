@@ -1,6 +1,5 @@
-import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
-import { printQuotaBox, readNumber, type QuotaSection } from "./quota-box.ts";
+import { defineCommand, unwrapResponse } from "bailian-cli-core";
+import { renderQuotaBox, readNumber, type QuotaSection } from "./quota-box.ts";
 
 const TOKEN_PLAN_USAGE_API = "zeldaHttp.apikeyMgr./tokenplan/personal/api/v2/usage";
 
@@ -73,10 +72,10 @@ function toSection(window: TokenPlanWindow): QuotaSection {
   };
 }
 
-function printView(windows: TokenPlanWindow[], generatedAt: number): void {
+function renderView(windows: TokenPlanWindow[], generatedAt: number): string {
   const visibleWindows =
     windows.length > 0 ? windows : [{ key: DEFAULT_WINDOW_KEY, count: 1, unit: "Month" }];
-  printQuotaBox("Token Plan Usage", visibleWindows.map(toSection), generatedAt);
+  return renderQuotaBox("Token Plan Usage", visibleWindows.map(toSection), generatedAt);
 }
 
 export default defineCommand({
@@ -89,21 +88,19 @@ export default defineCommand({
   exampleArgs: ["", "--output json"],
   async run(ctx) {
     const { settings } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult({ api: TOKEN_PLAN_USAGE_API, data: {} }, format);
+      ctx.output.result({ api: TOKEN_PLAN_USAGE_API, data: {} });
       return;
     }
 
     const result = await ctx.client.console(TOKEN_PLAN_USAGE_API, {});
     const windows = readWindows(unwrapResponse(result as Record<string, unknown>));
 
-    if (format === "json") {
-      emitResult(toJson(windows), format);
-      return;
-    }
-
-    printView(windows, Date.now());
+    ctx.output.result(
+      toJson(windows),
+      format === "text" ? { text: renderView(windows, Date.now()) } : undefined,
+    );
   },
 });

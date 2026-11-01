@@ -36,6 +36,7 @@ config 文件     ─┘
 - [ ] `packages/core/src/config/loader.ts`:
   - `buildSources()` 如需新增来源,把 flag/file/env 纳入 sources
   - `buildSettings()` 加新字段的合并逻辑(`flags.x ?? process.env.XXX ?? file.x ?? default`)
+  - 开启型 switch(如 `quiet`)未传时解析为 `false`,环境变量回退用 `flags.quiet || env.DASHSCOPE_QUIET === "1"`,不要用 `??` 将默认 `false` 当作显式关闭
   - 校验(数值范围、枚举合法性等)
   - 校验失败抛 `BailianError(USAGE)`
 

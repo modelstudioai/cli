@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, maskToken, type ConfigFile } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, maskToken, type ConfigFile } from "bailian-cli-core";
 import { SECRET_KEYS, resolveKey, validateAndCoerce } from "./shared.ts";
 
 export default defineCommand({
@@ -42,17 +41,12 @@ export default defineCommand({
     const resolvedKey: string = resolveKey(key);
     const coerced = validateAndCoerce(key, value);
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
-      emitResult(
-        {
-          would_set: { [resolvedKey]: coerced },
-          config: settings.configName ?? "default",
-          config_file: ctx.configStore.path,
-        },
-        format,
-      );
+      ctx.output.result({
+        would_set: { [resolvedKey]: coerced },
+        config: settings.configName ?? "default",
+        config_file: ctx.configStore.path,
+      });
       return;
     }
 
@@ -60,16 +54,11 @@ export default defineCommand({
       [resolvedKey]: coerced,
     } as Partial<ConfigFile>);
 
-    if (!settings.quiet) {
-      const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;
-      emitResult(
-        {
-          [resolvedKey]: shown,
-          config: settings.configName ?? "default",
-          config_file: ctx.configStore.path,
-        },
-        format,
-      );
-    }
+    const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;
+    ctx.output.result({
+      [resolvedKey]: shown,
+      config: settings.configName ?? "default",
+      config_file: ctx.configStore.path,
+    });
   },
 });

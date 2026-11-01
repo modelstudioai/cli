@@ -13,7 +13,7 @@ import { recall } from "./recall/index.ts";
 import { score } from "./score/index.ts";
 import { rank } from "./rank/index.ts";
 import { explain } from "./explain/index.ts";
-import { formatDegradation, throwIfCancelled, toLLMError } from "./llm/errors.ts";
+import { throwIfCancelled, toLLMError } from "./llm/errors.ts";
 import { runStepwise } from "./steps/index.ts";
 
 function computeConfidence(ctx: RecommendContext, candidates: ScoredCandidate[]): ConfidenceLevel {
@@ -34,26 +34,6 @@ function computeConfidence(ctx: RecommendContext, candidates: ScoredCandidate[])
   if (plan.recall === "forced") return "high";
 
   return "medium";
-}
-
-function emitTrace(trace: RecommendTrace, verbose: boolean): void {
-  if (verbose) {
-    process.stderr.write(`[recommend:trace] ${JSON.stringify(trace)}\n`);
-    return;
-  }
-  const parts = [
-    trace.failure ? `failed at ${trace.failure.stage}` : (trace.routingReason ?? "?"),
-    `${trace.performance.totalMs}ms`,
-    `llm=${trace.performance.llmCalls}`,
-  ];
-  if (trace.failure) {
-    const { status, kind } = trace.failure;
-    parts.push(`error=${status ? `${status} ${kind}` : kind}`);
-  }
-  if (trace.degradations.length) {
-    parts.push(`degraded=${trace.degradations.map(formatDegradation).join(",")}`);
-  }
-  process.stderr.write(`[recommend] ${parts.join(", ")}\n`);
 }
 
 /**
@@ -105,7 +85,7 @@ export async function recommend(
         requestId: llmErr.requestId,
         message: llmErr.message,
       };
-      emitTrace(trace, deps.verbose ?? false);
+      deps.onTrace?.(trace);
       throw llmErr;
     }
   }
@@ -123,7 +103,7 @@ export async function recommend(
 
   if (plan.clarify) {
     trace.performance.totalMs = Date.now() - t0;
-    emitTrace(trace, deps.verbose ?? false);
+    deps.onTrace?.(trace);
     return { type: "need_clarify", ...plan.clarify, intent };
   }
 
@@ -144,7 +124,7 @@ export async function recommend(
     const stepwise = await runStepwise(ctx);
     throwIfCancelled(deps.signal);
     trace.performance.totalMs = Date.now() - t0;
-    emitTrace(trace, deps.verbose ?? false);
+    deps.onTrace?.(trace);
     return {
       type: "result",
       recommendations: stepwise.steps.flatMap((step) => step.recommendations),
@@ -191,7 +171,7 @@ export async function recommend(
   trace.performance.explainMs = Date.now() - tExplain;
 
   trace.performance.totalMs = Date.now() - t0;
-  emitTrace(trace, deps.verbose ?? false);
+  deps.onTrace?.(trace);
 
   return {
     type: "result",

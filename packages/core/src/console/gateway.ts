@@ -1,3 +1,5 @@
+import { debugRequest, debugResponse } from "../client/diagnostics.ts";
+import type { HttpDeps } from "../client/http.ts";
 import { httpTransport } from "../client/transport.ts";
 import type { Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
@@ -73,6 +75,7 @@ export type ConsoleCall = (api: string, data: Record<string, unknown>) => Promis
  */
 export function anonymousConsoleCall(
   config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout">,
+  diagnostics: Pick<HttpDeps, "debug"> = {},
 ): ConsoleCall {
   const eff = effectiveConsoleGatewayConfig(config);
   return (api, data) =>
@@ -80,6 +83,7 @@ export function anonymousConsoleCall(
       { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
       config.timeout,
       { api, data },
+      diagnostics,
     );
 }
 
@@ -124,7 +128,7 @@ export async function callConsoleGateway(
   target: ConsoleGatewayTarget,
   timeoutSec: number,
   { api, data }: ConsoleGatewayRequest,
-  settings?: Pick<Settings, "verbose">,
+  diagnostics: Pick<HttpDeps, "debug"> = {},
 ): Promise<unknown> {
   const resolved = resolveGateway(target.region, target.site);
   const gatewayBase = `https://${resolved.csGateway}`;
@@ -141,12 +145,7 @@ export async function callConsoleGateway(
   if (target.token) headers.Authorization = `Bearer ${target.token}`;
 
   const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
-  if (settings?.verbose) {
-    process.stderr.write(`> POST ${endpoint}\n`);
-    process.stderr.write(
-      `> payload ${JSON.stringify({ params: JSON.parse(params), region: target.region }, null, 2)}\n`,
-    );
-  }
+  debugRequest(diagnostics, "POST", endpoint, { api });
 
   const res = await httpTransport.fetch(endpoint, {
     method: "POST",
@@ -155,9 +154,7 @@ export async function callConsoleGateway(
     signal: AbortSignal.timeout(timeoutMs),
   });
 
-  if (settings?.verbose) {
-    process.stderr.write(`< ${res.status} ${res.statusText}\n`);
-  }
+  debugResponse(diagnostics, res);
 
   if (!res.ok) {
     const t = await res.text().catch(() => "");

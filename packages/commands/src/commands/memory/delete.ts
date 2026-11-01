@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  memoryEndpoint,
-  memoryNodePath,
-  detectOutputFormat,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { defineCommand, memoryEndpoint, memoryNodePath, type FlagsDef } from "bailian-cli-core";
 import { buildQuery } from "../shared/params.ts";
 import {
   MEMORY_LIBRARY_FLAG,
@@ -59,13 +52,13 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const nodeId = flags.nodeId;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), memoryNodePath(nodeId)) +
       buildQuery({ memory_library_id: flags.libraryId });
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "DELETE" }, format);
+      ctx.output.result({ endpoint: url, method: "DELETE" });
       return;
     }
 
@@ -74,10 +67,16 @@ export default defineCommand({
       method: "DELETE",
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Memory node ${nodeId} deleted.`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Memory node ${nodeId} deleted.`,
+              "zh-CN": `记忆节点 ${nodeId} 已删除。`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

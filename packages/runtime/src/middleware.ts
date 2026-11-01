@@ -1,5 +1,6 @@
 import type {
   AnyCommand,
+  CommandOutput,
   ApiKeyCredential,
   AuthStore,
   ConfigStore,
@@ -28,8 +29,6 @@ import {
   trackCommandExecution,
 } from "bailian-cli-core";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
-import { ansi } from "./output/color.ts";
-import { renderNoticeBox } from "./output/notice-box.ts";
 import { createTranslator } from "./i18n.ts";
 import {
   checkForUpdate,
@@ -50,6 +49,7 @@ export interface RunContext {
   prepared?: unknown;
   /** 静态产品身份(binName/version/npmPackage/clientName)。 */
   readonly identity: Identity;
+  readonly output: CommandOutput;
   /** The matched command path, e.g. ["speech","recognize"]. */
   readonly path: string[];
   readonly command: AnyCommand;
@@ -91,26 +91,16 @@ function formatApiKeyFallbackNotice(
 function writeApiKeyFallbackNotice(ctx: RunContext, fallbackFrom: string): void {
   const commandPath = ctx.path.join(" ");
   const message = formatApiKeyFallbackNotice(ctx, fallbackFrom, commandPath);
-  if (ctx.settings.output === "json") {
-    process.stderr.write(
-      JSON.stringify(
-        {
-          warning: {
-            code: "PROFILE_API_KEY_FALLBACK",
-            message,
-            profile: fallbackFrom,
-            command_path: ctx.path,
-            fallback_profile: "default",
-            credential_fields: ["api_key", "base_url"],
-          },
-        },
-        null,
-        2,
-      ) + "\n\n",
-    );
-    return;
-  }
-  process.stderr.write(`${message}\n`);
+  ctx.output.warning({
+    code: "PROFILE_API_KEY_FALLBACK",
+    message,
+    details: {
+      profile: fallbackFrom,
+      command_path: ctx.path,
+      fallback_profile: "default",
+      credential_fields: ["api_key", "base_url"],
+    },
+  });
 }
 
 function describeCredentialSourceLabel(
@@ -133,7 +123,7 @@ function formatModelConnectionMismatchNotice(
   ctx: RunContext,
   apiKeySource: CredentialSource,
   baseUrlSource: CredentialSource,
-): { title: string; lines: string[]; message: string } {
+): string {
   const language = ctx.sources.file.language ?? DEFAULT_LANGUAGE;
   const translator = createTranslator(language);
   const configPath = ctx.sources.configPath ?? ctx.settings.configPath ?? "~/.bailian/config.json";
@@ -144,26 +134,22 @@ function formatModelConnectionMismatchNotice(
     configPath,
     language,
   );
-  const title = translator.localize({ "en-US": "warning", "zh-CN": "警告" });
-  const lines = translator
-    .localize({
-      "en-US": [
-        "api_key and base_url are resolved from different sources.",
-        `api_key ← ${apiKeyLabel}`,
-        `base_url ← ${baseUrlLabel}`,
-        "These may not match. The request will continue.",
-        `Set both from the same source, or run ${ctx.identity.binName} config show to view effective configuration.`,
-      ].join("\n"),
-      "zh-CN": [
-        "api_key 和 base_url 来自不同配置源。",
-        `api_key ← ${apiKeyLabel}`,
-        `base_url ← ${baseUrlLabel}`,
-        "两者可能不匹配，请求仍会继续。",
-        `建议设为同一来源，或运行 ${ctx.identity.binName} config show 查看生效配置。`,
-      ].join("\n"),
-    })
-    .split("\n");
-  return { title, lines, message: lines.join("\n") };
+  return translator.localize({
+    "en-US": [
+      "api_key and base_url are resolved from different sources.",
+      `api_key ← ${apiKeyLabel}`,
+      `base_url ← ${baseUrlLabel}`,
+      "These may not match. The request will continue.",
+      `Set both from the same source, or run ${ctx.identity.binName} config show to view effective configuration.`,
+    ].join("\n"),
+    "zh-CN": [
+      "api_key 和 base_url 来自不同配置源。",
+      `api_key ← ${apiKeyLabel}`,
+      `base_url ← ${baseUrlLabel}`,
+      "两者可能不匹配，请求仍会继续。",
+      `建议设为同一来源，或运行 ${ctx.identity.binName} config show 查看生效配置。`,
+    ].join("\n"),
+  });
 }
 
 function writeModelConnectionMismatchNotice(
@@ -171,25 +157,11 @@ function writeModelConnectionMismatchNotice(
   apiKeySource: CredentialSource,
   baseUrlSource: CredentialSource,
 ): void {
-  const notice = formatModelConnectionMismatchNotice(ctx, apiKeySource, baseUrlSource);
-  if (ctx.settings.output === "json") {
-    process.stderr.write(
-      JSON.stringify(
-        {
-          warning: {
-            code: "API_KEY_BASE_URL_SOURCE_MISMATCH",
-            message: notice.message,
-            api_key_source: apiKeySource,
-            base_url_source: baseUrlSource,
-          },
-        },
-        null,
-        2,
-      ) + "\n\n",
-    );
-    return;
-  }
-  process.stderr.write(`${renderNoticeBox(notice.title, notice.lines)}\n`);
+  ctx.output.warning({
+    code: "API_KEY_BASE_URL_SOURCE_MISMATCH",
+    message: formatModelConnectionMismatchNotice(ctx, apiKeySource, baseUrlSource),
+    details: { api_key_source: apiKeySource, base_url_source: baseUrlSource },
+  });
 }
 
 /** Fold a middleware list into a single runnable function. */
@@ -215,18 +187,18 @@ export const authStage: Middleware = async (ctx, next) => {
   const base = {
     identity: ctx.identity,
     settings,
+    debug: (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic),
     ...resolveModelBaseUrlState(sources),
   };
   if (command.auth === "apiKey") {
     const capability = ctx.path.join(".");
     const selection = selectApiKeyResolutionSources(sources, capability);
     const apiSources = selection.sources;
-    if (selection.fallbackFrom && !settings.quiet) {
+    if (selection.fallbackFrom) {
       writeApiKeyFallbackNotice(ctx, selection.fallbackFrom);
     }
     const provenance = resolveModelConnectionProvenance(apiSources);
     if (
-      !settings.quiet &&
       isModelConnectionSourceMismatch(provenance) &&
       provenance.apiKeySource &&
       provenance.baseUrlSource
@@ -244,7 +216,7 @@ export const authStage: Middleware = async (ctx, next) => {
       ...resolveModelBaseUrlState(apiSources),
       apiCred: cred,
     });
-    if (cred && !command.prepare) maybeShowStatusBar(settings, cred.token, cred);
+    if (cred && !command.prepare) maybeShowStatusBar(settings, cred.token, cred, ctx.output);
   } else if (command.auth === "console") {
     let cred: ConsoleCredential | undefined;
     try {
@@ -301,7 +273,7 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
 
   const isUpdateCommand = ctx.path.length === 1 && ctx.path[0] === "update";
   const newVersion = getPendingUpdateNotification();
-  if (newVersion && !ctx.settings.quiet && !isUpdateCommand) {
+  if (newVersion && !isUpdateCommand) {
     if (shouldAutoUpdate(newVersion, ctx.identity.version)) {
       // 大版本差距且目标为稳定版,自动更新
       await performAutoUpdate(
@@ -309,13 +281,21 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
         newVersion,
         ctx.identity.npmPackage,
         ctx.identity.clientName,
+        { output: ctx.output, binName: ctx.identity.binName },
       );
     } else {
-      const color = ansi(process.stderr);
-      process.stderr.write(
-        `\n  ${color.yellow(`Update available: ${ctx.identity.version} → ${newVersion}`)}\n`,
-      );
-      process.stderr.write(`  Run ${color.cyan(`${ctx.identity.binName} update`)} to upgrade\n\n`);
+      ctx.output.warning({
+        code: "UPDATE_AVAILABLE",
+        message: {
+          "en-US": `Update available: ${ctx.identity.version} → ${newVersion}. Run ${ctx.identity.binName} update to upgrade.`,
+          "zh-CN": `发现新版本：${ctx.identity.version} → ${newVersion}。运行 ${ctx.identity.binName} update 升级。`,
+        },
+        details: {
+          current_version: ctx.identity.version,
+          latest_version: newVersion,
+          upgrade_command: `${ctx.identity.binName} update`,
+        },
+      });
     }
   }
 };

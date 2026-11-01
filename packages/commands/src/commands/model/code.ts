@@ -3,13 +3,11 @@ import {
   ExitCode,
   anonymousConsoleCall,
   defineCommand,
-  detectOutputFormat,
   fetchModelDetail,
   type ModelGroupItem,
   type ModelSampleCodeV2,
   type ModelSampleSnippet,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { pickTrunkItems } from "./shared.ts";
 
 /** `--api` values map onto the API-style keys used inside `sampleCodeV2`. */
@@ -136,6 +134,7 @@ export default defineCommand({
     "zh-CN": "打印调用指定模型的 SDK 示例代码",
   },
   auth: "none",
+  defaultOutput: "text",
   usageArgs: "--model <model> [--sdk <sdk>] [--api <style>] [--lang <lang>]",
   flags: {
     model: {
@@ -201,20 +200,19 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "text";
-    const call = anonymousConsoleCall(settings);
+    const format = settings.output;
+    const call = anonymousConsoleCall(settings, {
+      debug: (diagnostic) => ctx.output.debug(diagnostic),
+    });
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "model.code",
-          model: flags.model,
-          sdk: flags.sdk,
-          api: flags.api,
-          lang: flags.lang,
-        },
-        format,
-      );
+      ctx.output.result({
+        action: "model.code",
+        model: flags.model,
+        sdk: flags.sdk,
+        api: flags.api,
+        lang: flags.lang,
+      });
       return;
     }
 
@@ -242,22 +240,17 @@ export default defineCommand({
       lang: flags.lang,
     });
 
-    if (format === "json") {
-      emitResult(
-        {
-          model: item.model,
-          requestedModel: flags.model,
-          sdk: sample.sdk,
-          apiStyle: sample.apiStyle,
-          lang: sample.lang,
-          available: describeSampleAvailability(item.sampleCodeV2),
-          code: sample.code,
-        },
-        format,
-      );
-      return;
-    }
-
-    emitBare(sample.code);
+    ctx.output.result(
+      {
+        model: item.model,
+        requestedModel: flags.model,
+        sdk: sample.sdk,
+        apiStyle: sample.apiStyle,
+        lang: sample.lang,
+        available: describeSampleAvailability(item.sampleCodeV2),
+        code: sample.code,
+      },
+      format === "text" ? { text: sample.code } : undefined,
+    );
   },
 });

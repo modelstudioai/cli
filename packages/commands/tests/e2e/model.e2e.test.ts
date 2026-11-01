@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, expect, test } from "vite-plus/test";
 import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
 import { MODEL_ROUTES } from "./topic-routes.ts";
@@ -158,3 +161,33 @@ describe("e2e: model", () => {
     expect(data.lang).toBe("java");
   });
 });
+
+// Exercise runtime default selection before reporter construction, not only command.run.
+test.each([
+  { name: "list", args: ["list"], profile: "text", expected: "text" },
+  { name: "search", args: ["search", "--keyword", "qwen"], profile: "text", expected: "text" },
+  { name: "code", args: ["code", "--model", "qwen-fixture"], profile: "json", expected: "json" },
+])(
+  "model $name preserves the profile over its command fallback",
+  async ({ args, profile, expected }) => {
+    const directory = mkdtempSync(join(tmpdir(), "model-output-default-"));
+    try {
+      writeFileSync(
+        join(directory, "config.json"),
+        JSON.stringify({ output: profile, language: "en-US" }),
+      );
+      const result = await runCommandE2e(MODEL_ROUTES, ["model", ...args, "--dry-run", "--quiet"], {
+        BAILIAN_CONFIG_DIR: directory,
+        DASHSCOPE_OUTPUT: "",
+      });
+      expect(result.exitCode, result.stderr).toBe(0);
+      if (expected === "json") expect(JSON.parse(result.stdout).action).toContain("model.");
+      else {
+        expect(result.stdout).toContain(`model.${args[0]}`);
+        expect(() => JSON.parse(result.stdout)).toThrow();
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  },
+);

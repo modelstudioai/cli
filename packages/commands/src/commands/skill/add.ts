@@ -11,7 +11,7 @@ import {
   runWithConcurrency,
   writeSkillLock,
 } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { formatTable } from "bailian-cli-runtime";
 import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
 
 interface AddOutcome {
@@ -31,6 +31,7 @@ export default defineCommand({
     "zh-CN": "将百炼 Skill Registry 中的 Skill 安装到本地 Agent",
   },
   auth: "none",
+  defaultOutput: "json",
   usageArgs: "--all | --name <name,...>",
   flags: {
     all: {
@@ -57,7 +58,6 @@ export default defineCommand({
   },
   exampleArgs: ["--all", "--name spark-video,bailian-model-recommend"],
   async run(ctx) {
-    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     const index = await fetchSkillsIndex();
     const remoteNames = Object.keys(index.skills);
     const parsed = ctx.flags.all ? "all" : parseSkillNames(ctx.flags.name, false);
@@ -82,15 +82,12 @@ export default defineCommand({
         };
       });
 
-      emitResult(
-        {
-          action: "skill.add",
-          registry: getSkillRegistryBaseUrl(),
-          agents: summarizeAgents(agents),
-          skills,
-        },
-        format,
-      );
+      ctx.output.result({
+        action: "skill.add",
+        registry: getSkillRegistryBaseUrl(),
+        agents: summarizeAgents(agents),
+        skills,
+      });
 
       const failed = skills.filter((skill) => skill.status === "failed");
       if (failed.length > 0) {
@@ -137,28 +134,26 @@ export default defineCommand({
     const results = await runWithConcurrency(tasks, INSTALL_CONCURRENCY);
     writeSkillLock(lock);
 
-    if (format === "json") {
-      emitResult(
-        {
-          registry: getSkillRegistryBaseUrl(),
-          agents: agents.map((agent) => agent.id),
-          skills: results,
-        },
-        format,
-      );
-    } else if (results.length === 0) {
-      emitBare("Skill registry is empty; no skills to install.");
-    } else {
-      const rows = results.map((result) => [
-        result.name,
-        result.status,
-        result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
-        result.status === "installed" ? result.agents?.join(", ") || "-" : (result.reason ?? "-"),
-      ]);
-      for (const line of formatTable(["NAME", "STATUS", "PUBLISHED", "AGENTS / REASON"], rows)) {
-        emitBare(line);
-      }
-    }
+    const payload = {
+      registry: getSkillRegistryBaseUrl(),
+      agents: agents.map((agent) => agent.id),
+      skills: results,
+    };
+    const rows = results.map((result) => [
+      result.name,
+      result.status,
+      result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
+      result.status === "installed" ? result.agents?.join(", ") || "-" : (result.reason ?? "-"),
+    ]);
+    ctx.output.result(payload, {
+      text:
+        results.length === 0
+          ? ctx.localize({
+              "en-US": "Skill registry is empty; no skills to install.",
+              "zh-CN": "Skill Registry 为空，没有可安装的 Skill。",
+            })
+          : formatTable(["NAME", "STATUS", "PUBLISHED", "AGENTS / REASON"], rows).join("\n"),
+    });
 
     const failed = results.filter((result) => result.status === "failed");
     if (failed.length > 0) {

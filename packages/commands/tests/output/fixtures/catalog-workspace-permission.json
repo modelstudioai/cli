@@ -1,0 +1,371 @@
+{
+  "model list": {
+    "text": "NAME     PROVIDER  CAPABILITIES  MODELS  MAX_CONTEXT  PRICE                \nFixture  alibaba   TG            2       4096         input:0/per 1k tokens\n\nTotal: 2\n1 offline models hidden — use --include-deprecated to include them.\n",
+    "json": {
+      "items": [
+        {
+          "model": "qwen-fixture",
+          "name": "Fixture",
+          "description": "Fixture family",
+          "provider": "alibaba",
+          "capabilities": ["TG"],
+          "modelCount": 2,
+          "maxContextWindow": 4096,
+          "prices": [
+            {
+              "type": "input",
+              "price": 0,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "output",
+              "price": 1.5,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "input",
+              "price": 0,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "output",
+              "price": 1.5,
+              "priceUnit": "per 1k tokens"
+            }
+          ],
+          "qpmInfo": {
+            "free": {
+              "count_limit": 0,
+              "count_limit_period": 60,
+              "usage_limit": 0,
+              "usage_limit_period": 60,
+              "usage_limit_field": "total_tokens"
+            }
+          }
+        }
+      ],
+      "total": 2
+    }
+  },
+  "model detail": {
+    "text": "Fixture\n  Fixture family\n  Updated: 2026-01-02\n\nMODEL                    PROVIDER  CAPABILITIES  CONTEXT  OUTPUT  CATEGORY  PRICE                \nqwen-fixture             alibaba   TG            4096     1024    latest    input:0/per 1k tokens\nqwen-fixture-2024-09-19  alibaba   TG            4096     1024    snapshot  input:0/per 1k tokens\n\nTotal: 2 models (1 trunk, 1 snapshots)\n\n── Pricing: qwen-fixture ──\nTYPE    PRICE  UNIT         \ninput   0      per 1k tokens\noutput  1.5    per 1k tokens\n\n── Rate Limits: qwen-fixture ──\nTIER  RPM  TPM  TPM_FIELD   \nfree  -    -    total_tokens\n",
+    "json": {
+      "model": "group-qwen-fixture",
+      "name": "Fixture",
+      "description": "Fixture family",
+      "updateAt": "2026-01-02",
+      "items": [
+        {
+          "model": "qwen-fixture",
+          "name": "Fixture Qwen",
+          "provider": "alibaba",
+          "capabilities": ["TG"],
+          "features": ["function-calling"],
+          "contextWindow": 4096,
+          "maxOutputTokens": 1024,
+          "maxInputTokens": 4096,
+          "category": "latest",
+          "openSource": false,
+          "modalities": {
+            "input": [],
+            "output": []
+          },
+          "prices": [
+            {
+              "type": "input",
+              "price": 0,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "output",
+              "price": 1.5,
+              "priceUnit": "per 1k tokens"
+            }
+          ],
+          "qpmInfo": {
+            "free": {
+              "count_limit": 0,
+              "count_limit_period": 60,
+              "usage_limit": 0,
+              "usage_limit_period": 60,
+              "usage_limit_field": "total_tokens"
+            }
+          }
+        },
+        {
+          "model": "qwen-fixture-2024-09-19",
+          "name": "Fixture Qwen",
+          "provider": "alibaba",
+          "capabilities": ["TG"],
+          "features": ["function-calling"],
+          "contextWindow": 4096,
+          "maxOutputTokens": 1024,
+          "maxInputTokens": 4096,
+          "category": "snapshot",
+          "openSource": false,
+          "modalities": {
+            "input": [],
+            "output": []
+          },
+          "prices": [
+            {
+              "type": "input",
+              "price": 0,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "output",
+              "price": 1.5,
+              "priceUnit": "per 1k tokens"
+            }
+          ],
+          "qpmInfo": {
+            "free": {
+              "count_limit": 0,
+              "count_limit_period": 60,
+              "usage_limit": 0,
+              "usage_limit_period": 60,
+              "usage_limit_field": "total_tokens"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "model enrich": {
+    "text": "Fixture\n  Fixture family\n  Updated: 2026-01-02\n\nMODEL                    PROVIDER  CAPABILITIES  CONTEXT  OUTPUT  CATEGORY  PRICE                \nqwen-fixture             alibaba   TG            4096     1024    latest    input:0/per 1k tokens\nqwen-fixture-2024-09-19  alibaba   TG            4096     1024    snapshot  input:0/per 1k tokens\n\nTotal: 2 models (1 trunk, 1 snapshots)\n\n── Pricing: qwen-fixture ──\nTYPE    PRICE  UNIT         \ninput   0      per 1k tokens\noutput  1.5    per 1k tokens\n\n── Rate Limits: qwen-fixture ──\nTIER  RPM  TPM  TPM_FIELD   \nfree  -    -    total_tokens\n\n── predictConfig: qwen-fixture ──\nPARAM        KEY          DEFAULT  RANGE\nTemperature  temperature  0        [0,2]\nStream       stream       false    null \n",
+    "json": {
+      "model": "group-qwen-fixture",
+      "name": "Fixture",
+      "description": "Fixture family",
+      "updateAt": "2026-01-02",
+      "items": [
+        {
+          "model": "qwen-fixture",
+          "name": "Fixture Qwen",
+          "provider": "alibaba",
+          "capabilities": ["TG"],
+          "features": ["function-calling"],
+          "contextWindow": 4096,
+          "maxOutputTokens": 1024,
+          "maxInputTokens": 4096,
+          "category": "latest",
+          "openSource": false,
+          "modalities": {
+            "input": [],
+            "output": []
+          },
+          "prices": [
+            {
+              "type": "input",
+              "price": 0,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "output",
+              "price": 1.5,
+              "priceUnit": "per 1k tokens"
+            }
+          ],
+          "qpmInfo": {
+            "free": {
+              "count_limit": 0,
+              "count_limit_period": 60,
+              "usage_limit": 0,
+              "usage_limit_period": 60,
+              "usage_limit_field": "total_tokens"
+            }
+          },
+          "predictConfig": [
+            {
+              "name": "Temperature",
+              "key": "temperature",
+              "default": 0,
+              "tip": "fixture",
+              "range": [0, 2]
+            },
+            {
+              "name": "Stream",
+              "key": "stream",
+              "default": false,
+              "range": null
+            }
+          ]
+        },
+        {
+          "model": "qwen-fixture-2024-09-19",
+          "name": "Fixture Qwen",
+          "provider": "alibaba",
+          "capabilities": ["TG"],
+          "features": ["function-calling"],
+          "contextWindow": 4096,
+          "maxOutputTokens": 1024,
+          "maxInputTokens": 4096,
+          "category": "snapshot",
+          "openSource": false,
+          "modalities": {
+            "input": [],
+            "output": []
+          },
+          "prices": [
+            {
+              "type": "input",
+              "price": 0,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "output",
+              "price": 1.5,
+              "priceUnit": "per 1k tokens"
+            }
+          ],
+          "qpmInfo": {
+            "free": {
+              "count_limit": 0,
+              "count_limit_period": 60,
+              "usage_limit": 0,
+              "usage_limit_period": 60,
+              "usage_limit_field": "total_tokens"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "model search": {
+    "text": "MODEL                    PROVIDER  CAPABILITIES  CONTEXT  PRICE                \nqwen-fixture             alibaba   TG            4096     input:0/per 1k tokens\nqwen-fixture-2024-09-19  alibaba   TG            4096     input:0/per 1k tokens\n\nMatches: 2\n1 offline models hidden — use --include-deprecated to include them.\n",
+    "json": {
+      "keyword": "qwen fixture",
+      "total": 2,
+      "hiddenOffline": 1,
+      "items": [
+        {
+          "model": "qwen-fixture",
+          "name": "Fixture Qwen",
+          "provider": "alibaba",
+          "capabilities": ["TG"],
+          "features": ["function-calling"],
+          "category": "latest",
+          "contextWindow": 4096,
+          "maxOutputTokens": 1024,
+          "modalities": {
+            "input": [],
+            "output": []
+          },
+          "prices": [
+            {
+              "type": "input",
+              "price": 0,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "output",
+              "price": 1.5,
+              "priceUnit": "per 1k tokens"
+            }
+          ],
+          "score": 105
+        },
+        {
+          "model": "qwen-fixture-2024-09-19",
+          "name": "Fixture Qwen",
+          "provider": "alibaba",
+          "capabilities": ["TG"],
+          "features": ["function-calling"],
+          "category": "snapshot",
+          "contextWindow": 4096,
+          "maxOutputTokens": 1024,
+          "modalities": {
+            "input": [],
+            "output": []
+          },
+          "prices": [
+            {
+              "type": "input",
+              "price": 0,
+              "priceUnit": "per 1k tokens"
+            },
+            {
+              "type": "output",
+              "price": 1.5,
+              "priceUnit": "per 1k tokens"
+            }
+          ],
+          "score": 100
+        }
+      ]
+    }
+  },
+  "model code": {
+    "text": "print(\"hello\")\n\n",
+    "json": {
+      "model": "qwen-fixture",
+      "requestedModel": "qwen-fixture",
+      "sdk": "openai",
+      "apiStyle": "completionsAPI",
+      "lang": "python",
+      "available": "openai (completionsAPI: python)",
+      "code": "print(\"hello\")\n"
+    }
+  },
+  "workspace list": {
+    "text": "Name   Workspace ID  Default\n────────────────────────────\nDemo   ws-one        Yes    \nOther  ws-two        -      \n\nTotal: 2\n",
+    "json": [
+      {
+        "workspaceId": "ws-one",
+        "name": "Demo",
+        "default": true
+      },
+      {
+        "workspaceId": "ws-two",
+        "name": "Other",
+        "default": false
+      }
+    ]
+  },
+  "workspace init": {
+    "text": "status: ready\nactiveServices:\n  - svc-one\n",
+    "json": {
+      "status": "ready",
+      "activeServices": ["svc-one"]
+    }
+  },
+  "permission list": {
+    "text": " Model        │ Name    │ Inference │ Fine-tune │ Deploy \n qwen-fixture │ Fixture │       yes │        no │      -\n\nTotal: 0\n",
+    "json": {
+      "items": [
+        {
+          "model": "qwen-fixture",
+          "name": "Fixture",
+          "permissions": {
+            "inference": true,
+            "fine_tune": false,
+            "deploy": null
+          },
+          "future": {
+            "values": [false, 0, null, []]
+          }
+        }
+      ],
+      "total": 0
+    }
+  },
+  "permission grant": {
+    "text": "Permissions granted (inference, deploy): qwen-fixture, model-two\n",
+    "json": {
+      "models": ["qwen-fixture", "model-two"],
+      "actions": ["inference", "deploy"],
+      "granted": true,
+      "request_id": "permission-request"
+    }
+  },
+  "permission revoke": {
+    "text": "Permissions revoked (inference, deploy): qwen-fixture, model-two\n",
+    "json": {
+      "models": ["qwen-fixture", "model-two"],
+      "actions": ["inference", "deploy"],
+      "revoked": true,
+      "request_id": "permission-request"
+    }
+  }
+}

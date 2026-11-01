@@ -492,10 +492,12 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "auto",
         "--url",
         "https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_female2.wav",
+        "--output",
+        "json",
       ]);
       expect(exitCode, stderr).toBe(0);
-      // The auto ASR branch emits bare transcript lines on stdout.
-      expect(stdout).toContain("hello world");
+      const data = parseStdoutJson<{ results: string[] }>(stdout);
+      expect(data.results.join("\n")).toContain("hello world");
     }, 300_000);
   },
 );

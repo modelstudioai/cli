@@ -10,6 +10,7 @@ const updateMocks = vi.hoisted(() => ({
 vi.mock("../src/utils/update-checker.ts", () => updateMocks);
 
 import { versionCheckStage, type RunContext } from "../src/middleware.ts";
+import { createOutputReporter } from "../src/output/reporter.ts";
 
 function makeContext(): RunContext {
   return {
@@ -22,6 +23,8 @@ function makeContext(): RunContext {
     path: ["auth", "login"],
     command: { auth: "none", description: "Test command", async run() {} },
     settings: { quiet: false },
+    output: createOutputReporter({ settings: { output: "json", quiet: false, verbose: false } })
+      .output,
   } as unknown as RunContext;
 }
 
@@ -70,6 +73,7 @@ test.each([undefined, "0"])(
       "2.2.1",
       "bailian-cli",
       "bailian-cli-test",
+      { output: expect.any(Object), binName: "bl" },
     );
   },
 );

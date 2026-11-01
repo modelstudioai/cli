@@ -36,8 +36,12 @@ test.skipIf(process.platform === "win32").each([false, true])(
       env: { ...process.env, NODE_NO_WARNINGS: "1" },
     });
     const text = result.stdout.replaceAll("\r", "");
-    if (quiet) expect(text.trim()).toBe("最终答案");
-    else {
+    if (quiet) {
+      expect(text.match(/最终答案/g)).toHaveLength(1);
+      expect(text).not.toContain("[Planning]");
+      expect(text).toContain("Sources:");
+      expect(text).toContain("https://example.com/video.mp4");
+    } else {
       expect(text).toContain("[Planning]");
       expect(text).toContain("[Answer]");
       expect(text).toContain("https://example.com/video.mp4");

@@ -12,7 +12,7 @@ import {
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+
 import {
   CAPACITY_FLAGS,
   PREPAID_FLAGS,
@@ -226,23 +226,29 @@ async function runCreate(
 
   // A dry strategy resolution must precede any catalog lookup or write.
   if (settings.dryRun) {
-    emitResult({ action: "deploy.create", body: await resolveBody(true) }, "json");
+    const resultData1 = { action: "deploy.create", body: await resolveBody(true) };
+    ctx.output.result(
+      resultData1,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+    );
     return;
   }
 
   const response = await createDeployment(ctx.client, await resolveBody(false));
   const deployment = response.output ?? response.data;
   if (plan === "ptu") {
-    await finishMutation(ctx.client, deployment?.deployed_model, response, flags);
-  } else if (settings.quiet) {
-    emitBare(deployment?.deployed_model ?? "");
+    await finishMutation(ctx, deployment?.deployed_model, response, flags);
   } else {
-    emitResult(response, "json");
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   }
 }
 
 /** `bl deploy text create` — deploy a text model. */
 export const deployTextCreate = defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "Create a text model deployment", "zh-CN": "创建文本模型部署" },
   auth: "apiKey",
   risk: CREATE_RISK,
@@ -262,6 +268,7 @@ export const deployTextCreate = defineCommand({
 
 /** `bl deploy audio create` — deploy an audio (TTS) model. Defaults to plan=mu. */
 export const deployAudioCreate = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Create an audio (TTS) model deployment",
     "zh-CN": "创建音频（TTS）模型部署",
@@ -282,6 +289,7 @@ export const deployAudioCreate = defineCommand({
 
 /** `bl deploy image create` — deploy an image generation model. */
 export const deployImageCreate = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Create an image generation model deployment",
     "zh-CN": "创建图片生成模型部署",

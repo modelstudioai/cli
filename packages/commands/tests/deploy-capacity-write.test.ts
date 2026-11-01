@@ -1,3 +1,4 @@
+import { withCommandOutput } from "./output/command-context.ts";
 import { httpTransport } from "bailian-cli-core";
 import {
   BailianError,
@@ -150,17 +151,19 @@ async function run(
       ExitCode.USAGE,
     );
   // Only settings/flags/client are exercised. No auth/config store or runtime startup is invoked.
-  await command.run({
-    identity: {
-      binName: "test-cli",
-      version: "test",
-      npmPackage: "test-cli",
-      clientName: "test-cli",
-    },
-    settings: { ...SETTINGS, ...settings },
-    flags,
-    client,
-  } as Parameters<AnyCommand["run"]>[0]);
+  await command.run(
+    withCommandOutput({
+      identity: {
+        binName: "test-cli",
+        version: "test",
+        npmPackage: "test-cli",
+        clientName: "test-cli",
+      },
+      settings: { ...SETTINGS, ...settings },
+      flags,
+      client,
+    }) as Parameters<AnyCommand["run"]>[0],
+  );
 }
 
 function requests(mock: ReturnType<typeof mockClient>) {
@@ -824,7 +827,7 @@ describe.each(MUTATIONS)("$name wait lifecycle", (mutation) => {
       deployment,
       client_request_id: REQUEST_ID,
     });
-    expect(JSON.parse(stderr)).toEqual({
+    expect(JSON.parse(stderr).warning.details).toEqual({
       submitted: true,
       deployed_model: MODEL_CODE,
       operation_id: OPERATION_ID,
@@ -849,7 +852,10 @@ describe.each(MUTATIONS)("$name wait lifecycle", (mutation) => {
       deployment,
       client_request_id: REQUEST_ID,
     });
-    expect(JSON.parse(stderr)).toMatchObject({ submitted: true, operation_id: OPERATION_ID });
+    expect(JSON.parse(stderr).warning.details).toMatchObject({
+      submitted: true,
+      operation_id: OPERATION_ID,
+    });
   });
 
   test("preserves submitted operation ID even when poll response omits its echo", async () => {
@@ -885,7 +891,7 @@ describe.each(MUTATIONS)("$name wait lifecycle", (mutation) => {
     );
     const rejection = expect(result).rejects.toMatchObject({ exitCode: ExitCode.TIMEOUT });
     await Promise.all([rejection, vi.advanceTimersByTimeAsync(3000)]);
-    expect(JSON.parse(stderr)).toMatchObject({
+    expect(JSON.parse(stderr).warning.details).toMatchObject({
       submitted: true,
       operation_id: OPERATION_ID,
       client_request_id: REQUEST_ID,
@@ -907,7 +913,10 @@ describe.each(MUTATIONS)("$name wait lifecycle", (mutation) => {
     const result = run(mutation.command, { ...mutation.flags, wait: true }, mock.client);
     const rejection = expect(result).rejects.toBe(failure);
     await Promise.all([rejection, vi.advanceTimersByTimeAsync(10_000)]);
-    expect(JSON.parse(stderr)).toMatchObject({ submitted: true, operation_id: OPERATION_ID });
+    expect(JSON.parse(stderr).warning.details).toMatchObject({
+      submitted: true,
+      operation_id: OPERATION_ID,
+    });
     expect(stdout).toBe("");
     expectSingleSubmission(mock, mutation);
   });

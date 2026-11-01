@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -149,6 +150,8 @@ async function fixture() {
     const preparation = await prepareKnowledgeInit(options);
     return runKnowledgeInit({
       ...options,
+      output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+        .output,
       prepared: preparation.data,
       settings: { timeout: 0.2, quiet: true } as Settings,
       pollInterval: 0.005,
@@ -295,6 +298,8 @@ test("state changes between prepare and execution stop before any cloud mutation
   await expect(
     runKnowledgeInit({
       ...options,
+      output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+        .output,
       prepared: preparation.data,
       settings: { timeout: 1, quiet: true } as Settings,
       pollInterval: 0.01,

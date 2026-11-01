@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import {
@@ -10,28 +10,122 @@ import {
   getConfigDir,
   getUpdateInstallMethod,
   type InstallMethod,
+  type CommandOutput,
 } from "bailian-cli-core";
 import {
-  ansi,
   fetchLatestVersion,
   fetchBinaryChannelVersion,
   isValidUpdateTargetVersion,
   normalizeBinaryVersion,
   performBinaryUpdate,
-  type AnsiStyles,
 } from "bailian-cli-runtime";
 
 const SKILL_UPDATE_CMD = "bl skill update";
 
-function updateAgentSkill(color: AnsiStyles): void {
-  process.stderr.write("\nUpdating agent skill...\n");
-  try {
-    execSync(SKILL_UPDATE_CMD, { stdio: "inherit" });
-    process.stderr.write(`${color.green("\u2713 Agent skill updated.")}\n`);
-  } catch {
-    process.stderr.write(
-      `${color.yellow(`Agent skill update skipped. Run manually: ${SKILL_UPDATE_CMD}`)}\n`,
+/** Own nested output so installer and skill subprocesses cannot corrupt stdout. */
+function runUpdateCommand(command: string, output: CommandOutput, jsonDiagnostics = false): Buffer {
+  const child = spawnSync(command, { shell: true, stdio: ["inherit", "pipe", "pipe"] });
+  const stderr = child.stderr?.toString() ?? "";
+  let childFailure: Record<string, unknown> | undefined;
+  for (const line of stderr.split("\n").filter(Boolean)) {
+    if (jsonDiagnostics) {
+      let record: Record<string, unknown> | undefined;
+      try {
+        const parsed: unknown = JSON.parse(line);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+          record = parsed as Record<string, unknown>;
+      } catch {
+        /* Older installed CLIs may emit text. */
+      }
+      if (record?.warning) {
+        output.warning(record.warning as Parameters<CommandOutput["warning"]>[0]);
+        continue;
+      }
+      if (record?.debug) {
+        output.debug(record.debug as Parameters<CommandOutput["debug"]>[0]);
+        continue;
+      }
+      if (record?.error) {
+        if (typeof record.error === "object") {
+          const failure = record.error as Record<string, unknown>;
+          childFailure = Object.fromEntries(
+            ["code", "message", "request_id"]
+              .filter((key) => typeof failure[key] === "string" || typeof failure[key] === "number")
+              .map((key) => [key, failure[key]]),
+          );
+        }
+        output.debug({
+          message: { "en-US": "Nested skill update failed.", "zh-CN": "嵌套 Skill 更新失败。" },
+          code: "SKILL_UPDATE_ERROR",
+          details: childFailure,
+        });
+        continue;
+      }
+    }
+    if (/^npm warn\b/i.test(line)) output.warning({ message: line, code: "NPM_WARNING" });
+    else output.info(line);
+  }
+  if (child.error || child.status !== 0) {
+    throw Object.assign(
+      child.error ??
+        new Error(`Command failed: ${command}${stderr ? `\n${stderr.trimEnd()}` : ""}`),
+      {
+        stdout: child.stdout,
+        stderr: child.stderr,
+        status: child.status,
+        signal: child.signal,
+        diagnostic: childFailure,
+      },
     );
+  }
+  return child.stdout ?? Buffer.alloc(0);
+}
+
+function skillUpdateResult(value: unknown): unknown {
+  if (typeof value !== "string" && !Buffer.isBuffer(value)) return undefined;
+  try {
+    return JSON.parse(value.toString());
+  } catch {
+    return undefined;
+  }
+}
+
+function updateAgentSkill(output: CommandOutput): {
+  status: "updated" | "skipped";
+  result?: unknown;
+  exit_code?: number | null;
+} {
+  output.progress({ "en-US": "Updating agent skill...", "zh-CN": "正在更新 Agent Skill..." });
+  try {
+    // Capture the nested command's result so this invocation owns stdout.
+    const childOutput = runUpdateCommand(`${SKILL_UPDATE_CMD} --output json`, output, true);
+    output.info({ "en-US": "✓ Agent skill updated.", "zh-CN": "✓ Agent Skill 已更新。" });
+    return { status: "updated", result: skillUpdateResult(childOutput) };
+  } catch (error) {
+    const failure =
+      error && typeof error === "object"
+        ? (error as {
+            status?: number | null;
+            signal?: unknown;
+            diagnostic?: unknown;
+            stdout?: unknown;
+          })
+        : undefined;
+    output.warning({
+      message: {
+        "en-US": `Agent skill update skipped. Run manually: ${SKILL_UPDATE_CMD}`,
+        "zh-CN": `已跳过 Agent Skill 更新。请手动运行：${SKILL_UPDATE_CMD}`,
+      },
+      code: "SKILL_UPDATE_SKIPPED",
+      details: { exit_code: failure?.status, signal: failure?.signal, error: failure?.diagnostic },
+    });
+    const childOutput =
+      error && typeof error === "object" && "stdout" in error ? error.stdout : undefined;
+    return {
+      status: "skipped",
+      exit_code: failure?.status,
+      result: skillUpdateResult(childOutput),
+    };
   }
 }
 
@@ -92,106 +186,164 @@ export default defineCommand({
     const npmPackage = identity.npmPackage;
     const binName = identity.binName;
     const currentVersion = identity.version;
-    const color = ansi(process.stderr);
     const method = getUpdateInstallMethod(identity);
     const requestedTo = ctx.flags.to?.trim();
     const pinnedVersion = requestedTo ? normalizeBinaryVersion(requestedTo) : undefined;
-
-    process.stderr.write(`Current version: ${color.yellow(currentVersion)}\n`);
-    process.stderr.write(`Install method: ${color.dim(method)}\n`);
-    if (pinnedVersion) {
-      process.stderr.write(`Target version: ${color.green(pinnedVersion)}\n`);
-    } else {
-      process.stderr.write("Checking for updates...\n");
-    }
+    const info = (english: string, chinese: string) =>
+      ctx.output.info({ "en-US": english, "zh-CN": chinese });
+    info(`Current version: ${currentVersion}`, `当前版本：${currentVersion}`);
+    info(`Install method: ${method}`, `安装方式：${method}`);
+    if (pinnedVersion) info(`Target version: ${pinnedVersion}`, `目标版本：${pinnedVersion}`);
+    else ctx.output.progress({ "en-US": "Checking for updates...", "zh-CN": "正在检查更新..." });
 
     if (method === "brew" || method === "winget") {
-      const cmd =
+      const command =
         method === "brew" ? "brew upgrade bailian-cli" : "winget upgrade Aliyun.BailianCLI";
-      process.stderr.write(
-        `${color.yellow(`This CLI was installed via ${method}. Update with:`)}\n  ${cmd}\n`,
-      );
-      if (pinnedVersion) {
-        process.stderr.write(
-          `${color.dim(`Note: --to is not supported for ${method} installs.`)}\n`,
+      const lines = [
+        ctx.localize({
+          "en-US": `This CLI was installed via ${method}. Update with:`,
+          "zh-CN": `此 CLI 通过 ${method} 安装。请使用以下命令更新：`,
+        }),
+        `  ${command}`,
+      ];
+      if (pinnedVersion)
+        lines.push(
+          ctx.localize({
+            "en-US": `Note: --to is not supported for ${method} installs.`,
+            "zh-CN": `注意：${method} 安装不支持 --to。`,
+          }),
         );
-      }
+      ctx.output.result(
+        {
+          status: "manual",
+          current_version: currentVersion,
+          install_method: method,
+          upgrade_command: command,
+          ...(pinnedVersion ? { target_version: pinnedVersion } : {}),
+        },
+        { text: lines.join("\n") },
+      );
       return;
     }
 
     const targetVersion = pinnedVersion ?? (await resolveLatest(method, npmPackage));
-
-    if (!targetVersion) {
+    if (!targetVersion)
       throw new BailianError(
-        "Could not determine the latest version.",
+        ctx.localize({
+          "en-US": "Could not determine the latest version.",
+          "zh-CN": "无法确定最新版本。",
+        }),
         ExitCode.GENERAL,
-        "Check network access, or pass --to <version>.",
+        ctx.localize({
+          "en-US": "Check network access, or pass --to <version>.",
+          "zh-CN": "请检查网络连接，或传入 --to <version>。",
+        }),
       );
-    }
-
     if (targetVersion === currentVersion) {
-      const message = pinnedVersion
-        ? `\u2713 Already at ${currentVersion}.`
-        : `\u2713 Already up to date (${currentVersion}).`;
-      process.stderr.write(`${color.green(message)}\n`);
-      if (method === "npm") updateAgentSkill(color);
+      const message = ctx.localize(
+        pinnedVersion
+          ? {
+              "en-US": `✓ Already at ${currentVersion}.`,
+              "zh-CN": `✓ 当前已是 ${currentVersion}。`,
+            }
+          : {
+              "en-US": `✓ Already up to date (${currentVersion}).`,
+              "zh-CN": `✓ 当前已是最新版本（${currentVersion}）。`,
+            },
+      );
+      const skillUpdate = method === "npm" ? updateAgentSkill(ctx.output) : undefined;
+      ctx.output.result(
+        {
+          status: "up-to-date",
+          current_version: currentVersion,
+          target_version: targetVersion,
+          install_method: method,
+          ...(skillUpdate ? { skill_update: skillUpdate } : {}),
+        },
+        { text: message },
+      );
       return;
     }
 
-    if (!pinnedVersion) {
-      process.stderr.write(`Latest version: ${color.green(targetVersion)}\n\n`);
-    } else {
-      process.stderr.write("\n");
-    }
-
+    if (!pinnedVersion) info(`Latest version: ${targetVersion}`, `最新版本：${targetVersion}`);
+    let installedVersion: string | undefined;
     if (method === "binary") {
-      process.stderr.write(`Updating via binary channel...\n\n`);
+      ctx.output.progress({
+        "en-US": "Updating via binary channel...",
+        "zh-CN": "正在通过二进制渠道更新...",
+      });
       try {
-        const newVer = await performBinaryUpdate(targetVersion);
-        process.stderr.write(
-          `\n${color.green(`\u2713 Update complete: ${currentVersion} \u2192 ${newVer}`)}\n`,
-        );
-        writeUpdateState(newVer);
-        updateAgentSkill(color);
+        installedVersion = await performBinaryUpdate(targetVersion);
+        writeUpdateState(installedVersion);
       } catch (error) {
         const reinstall =
           error instanceof BailianError && error.hint
             ? error.hint.replace(/^Re-run:\s*/i, "")
             : binaryReinstallHint().trim();
         throw new BailianError(
-          "Automatic binary update failed.",
+          ctx.localize({
+            "en-US": "Automatic binary update failed.",
+            "zh-CN": "自动二进制更新失败。",
+          }),
           ExitCode.GENERAL,
-          `Re-run the install script:\n  ${reinstall}`,
+          ctx.localize({
+            "en-US": `Re-run the install script:\n  ${reinstall}`,
+            "zh-CN": `请重新运行安装脚本：\n  ${reinstall}`,
+          }),
           { cause: error },
         );
       }
-      return;
-    }
-
-    const npmSpec = pinnedVersion ? `${npmPackage}@${pinnedVersion}` : `${npmPackage}@latest`;
-    const cmd = `npm install -g ${npmSpec}`;
-    process.stderr.write(`Updating ${npmPackage} via npm...\n\n`);
-
-    try {
-      execSync(cmd, { stdio: "inherit" });
+    } else {
+      const npmSpec = pinnedVersion ? `${npmPackage}@${pinnedVersion}` : `${npmPackage}@latest`;
+      const command = `npm install -g ${npmSpec}`;
+      ctx.output.progress({
+        "en-US": `Updating ${npmPackage} via npm...`,
+        "zh-CN": `正在通过 npm 更新 ${npmPackage}...`,
+      });
       try {
-        const rawVer = execSync(`${binName} --version 2>/dev/null`, { encoding: "utf-8" }).trim();
-        const newVer = rawVer.replace(new RegExp(`^${binName}\\s+`), "");
-        process.stderr.write(
-          `\n${color.green(`\u2713 Update complete: ${currentVersion} \u2192 ${newVer}`)}\n`,
+        const childOutput = runUpdateCommand(command, ctx.output);
+        if (childOutput?.length) ctx.output.info(childOutput.toString().trimEnd());
+        try {
+          const rawVersion = execSync(`${binName} --version 2>/dev/null`, {
+            encoding: "utf-8",
+          }).trim();
+          installedVersion = rawVersion.replace(new RegExp(`^${binName}\\s+`), "");
+          writeUpdateState(installedVersion);
+        } catch {
+          /* Version lookup has always been best effort. */
+        }
+      } catch (error) {
+        throw new BailianError(
+          ctx.localize({ "en-US": "Automatic update failed.", "zh-CN": "自动更新失败。" }),
+          ExitCode.GENERAL,
+          ctx.localize({
+            "en-US": `Please run manually:\n  ${command}`,
+            "zh-CN": `请手动运行：\n  ${command}`,
+          }),
+          { cause: error },
         );
-        writeUpdateState(newVer);
-      } catch {
-        process.stderr.write(`\n${color.green("\u2713 Update complete.")}\n`);
       }
-      updateAgentSkill(color);
-    } catch (error) {
-      throw new BailianError(
-        "Automatic update failed.",
-        ExitCode.GENERAL,
-        `Please run manually:\n  ${cmd}`,
-        { cause: error },
-      );
     }
+    const skillUpdate = updateAgentSkill(ctx.output);
+    ctx.output.result(
+      {
+        status: "updated",
+        current_version: currentVersion,
+        target_version: targetVersion,
+        ...(installedVersion ? { version: installedVersion } : {}),
+        install_method: method,
+        skill_update: skillUpdate,
+      },
+      {
+        text: ctx.localize(
+          installedVersion
+            ? {
+                "en-US": `✓ Update complete: ${currentVersion} → ${installedVersion}`,
+                "zh-CN": `✓ 更新完成：${currentVersion} → ${installedVersion}`,
+              }
+            : { "en-US": "✓ Update complete.", "zh-CN": "✓ 更新完成。" },
+        ),
+      },
+    );
   },
 });

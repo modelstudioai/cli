@@ -1,0 +1,488 @@
+{
+  "instance create:text": {
+    "stdout": "sandboxID: sandbox/fixture\ntemplateID: template-fixture\nstate: running\ncpuCount: 1\nmemoryMB: 2048\nstartedAt: start\nendAt: end\nenvdAccessToken: \"[REDACTED]\"\nconnection:\n  trafficAccessToken: \"[REDACTED]\"\n  hostname: fixture.invalid\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes",
+        "method": "POST",
+        "body": {
+          "templateID": "template-fixture",
+          "envVars": {
+            "SECRET": "fixture"
+          }
+        }
+      }
+    ]
+  },
+  "instance create:json": {
+    "stdout": "{\n  \"sandboxID\": \"sandbox/fixture\",\n  \"templateID\": \"template-fixture\",\n  \"state\": \"running\",\n  \"cpuCount\": 1,\n  \"memoryMB\": 2048,\n  \"startedAt\": \"start\",\n  \"endAt\": \"end\",\n  \"envdAccessToken\": \"[REDACTED]\",\n  \"connection\": {\n    \"trafficAccessToken\": \"[REDACTED]\",\n    \"hostname\": \"fixture.invalid\"\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes",
+        "method": "POST",
+        "body": {
+          "templateID": "template-fixture",
+          "envVars": {
+            "SECRET": "fixture"
+          }
+        }
+      }
+    ]
+  },
+  "instance get:text": {
+    "stdout": "sandboxID: sandbox/fixture\ntemplateID: template-fixture\nstate: running\ncpuCount: 1\nmemoryMB: 2048\nstartedAt: start\nendAt: end\nenvdAccessToken: \"[REDACTED]\"\nconnection:\n  trafficAccessToken: \"[REDACTED]\"\n  hostname: fixture.invalid\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "instance get:json": {
+    "stdout": "{\n  \"sandboxID\": \"sandbox/fixture\",\n  \"templateID\": \"template-fixture\",\n  \"state\": \"running\",\n  \"cpuCount\": 1,\n  \"memoryMB\": 2048,\n  \"startedAt\": \"start\",\n  \"endAt\": \"end\",\n  \"envdAccessToken\": \"[REDACTED]\",\n  \"connection\": {\n    \"trafficAccessToken\": \"[REDACTED]\",\n    \"hostname\": \"fixture.invalid\"\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "instance get credentials:text": {
+    "stdout": "sandboxID: sandbox/fixture\ntemplateID: template-fixture\nstate: running\ncpuCount: 1\nmemoryMB: 2048\nstartedAt: start\nendAt: end\nenvdAccessToken: envd-fixture-secret\nconnection:\n  trafficAccessToken: traffic-fixture-secret\n  hostname: fixture.invalid\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "instance get credentials:json": {
+    "stdout": "{\n  \"sandboxID\": \"sandbox/fixture\",\n  \"templateID\": \"template-fixture\",\n  \"state\": \"running\",\n  \"cpuCount\": 1,\n  \"memoryMB\": 2048,\n  \"startedAt\": \"start\",\n  \"endAt\": \"end\",\n  \"envdAccessToken\": \"envd-fixture-secret\",\n  \"connection\": {\n    \"trafficAccessToken\": \"traffic-fixture-secret\",\n    \"hostname\": \"fixture.invalid\"\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "instance list:text": {
+    "stdout": "ID               TEMPLATE          STATE    CPU  MEMORY_MB  STARTED_AT  END_AT\nsandbox/fixture  template-fixture  running  1    2048       start       end   \n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v2/sandboxes?templateID=template-fixture&sandboxID=sandbox%2Ffixture&state=running&limit=5",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "instance list:json": {
+    "stdout": "[\n  {\n    \"sandboxID\": \"sandbox/fixture\",\n    \"templateID\": \"template-fixture\",\n    \"state\": \"running\",\n    \"cpuCount\": 1,\n    \"memoryMB\": 2048,\n    \"startedAt\": \"start\",\n    \"endAt\": \"end\",\n    \"envdAccessToken\": \"envd-fixture-secret\",\n    \"connection\": {\n      \"trafficAccessToken\": \"traffic-fixture-secret\",\n      \"hostname\": \"fixture.invalid\"\n    },\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n]\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v2/sandboxes?templateID=template-fixture&sandboxID=sandbox%2Ffixture&state=running&limit=5",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "instance list empty:text": {
+    "stdout": "No Sandbox instances found.\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v2/sandboxes",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "instance list empty:json": {
+    "stdout": "[]\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v2/sandboxes",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "instance connect:text": {
+    "stdout": "sandboxID: sandbox/fixture\ntemplateID: template-fixture\nstate: running\ncpuCount: 1\nmemoryMB: 2048\nstartedAt: start\nendAt: end\nenvdAccessToken: \"[REDACTED]\"\nconnection:\n  trafficAccessToken: \"[REDACTED]\"\n  hostname: fixture.invalid\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture/connect",
+        "method": "POST",
+        "body": {
+          "timeout": 900
+        }
+      }
+    ]
+  },
+  "instance connect:json": {
+    "stdout": "{\n  \"sandboxID\": \"sandbox/fixture\",\n  \"templateID\": \"template-fixture\",\n  \"state\": \"running\",\n  \"cpuCount\": 1,\n  \"memoryMB\": 2048,\n  \"startedAt\": \"start\",\n  \"endAt\": \"end\",\n  \"envdAccessToken\": \"[REDACTED]\",\n  \"connection\": {\n    \"trafficAccessToken\": \"[REDACTED]\",\n    \"hostname\": \"fixture.invalid\"\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture/connect",
+        "method": "POST",
+        "body": {
+          "timeout": 900
+        }
+      }
+    ]
+  },
+  "instance resume:text": {
+    "stdout": "sandboxID: sandbox/fixture\ntemplateID: template-fixture\nstate: running\ncpuCount: 1\nmemoryMB: 2048\nstartedAt: start\nendAt: end\nenvdAccessToken: \"[REDACTED]\"\nconnection:\n  trafficAccessToken: \"[REDACTED]\"\n  hostname: fixture.invalid\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture/resume",
+        "method": "POST",
+        "body": null
+      }
+    ]
+  },
+  "instance resume:json": {
+    "stdout": "{\n  \"sandboxID\": \"sandbox/fixture\",\n  \"templateID\": \"template-fixture\",\n  \"state\": \"running\",\n  \"cpuCount\": 1,\n  \"memoryMB\": 2048,\n  \"startedAt\": \"start\",\n  \"endAt\": \"end\",\n  \"envdAccessToken\": \"[REDACTED]\",\n  \"connection\": {\n    \"trafficAccessToken\": \"[REDACTED]\",\n    \"hostname\": \"fixture.invalid\"\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture/resume",
+        "method": "POST",
+        "body": null
+      }
+    ]
+  },
+  "instance pause:text": {
+    "stdout": "sandboxID: sandbox/fixture\npaused: true\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture/pause",
+        "method": "POST",
+        "body": null
+      }
+    ]
+  },
+  "instance pause:json": {
+    "stdout": "{\n  \"sandboxID\": \"sandbox/fixture\",\n  \"paused\": true\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture/pause",
+        "method": "POST",
+        "body": null
+      }
+    ]
+  },
+  "instance delete:text": {
+    "stdout": "sandboxID: sandbox/fixture\ndeleted: true\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture",
+        "method": "DELETE",
+        "body": null
+      }
+    ]
+  },
+  "instance delete:json": {
+    "stdout": "{\n  \"sandboxID\": \"sandbox/fixture\",\n  \"deleted\": true\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/sandboxes/sandbox%2Ffixture",
+        "method": "DELETE",
+        "body": null
+      }
+    ]
+  },
+  "template create async:text": {
+    "stdout": "templateID: template/fixture\nbuildID: build fixture\nbuildStatus: building\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v3/templates",
+        "method": "POST",
+        "body": {
+          "name": "Fixture",
+          "cpuCount": 1,
+          "memoryMB": 2048,
+          "envConfig": {
+            "SECRET": "fixture"
+          }
+        }
+      }
+    ]
+  },
+  "template create async:json": {
+    "stdout": "{\n  \"templateID\": \"template/fixture\",\n  \"buildID\": \"build fixture\",\n  \"buildStatus\": \"building\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v3/templates",
+        "method": "POST",
+        "body": {
+          "name": "Fixture",
+          "cpuCount": 1,
+          "memoryMB": 2048,
+          "envConfig": {
+            "SECRET": "fixture"
+          }
+        }
+      }
+    ]
+  },
+  "template create wait:text": {
+    "stdout": "template:\n  templateID: template/fixture\n  buildID: build fixture\n  buildStatus: building\n  future:\n    values:\n      - false\n      - 0\n      - null\n      - []\nbuild:\n  templateID: template/fixture\n  buildID: build fixture\n  status: ready\n  future:\n    values:\n      - false\n      - 0\n      - null\n      - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v3/templates",
+        "method": "POST",
+        "body": {
+          "name": "Fixture",
+          "cpuCount": 1,
+          "memoryMB": 2048
+        }
+      },
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template%2Ffixture/builds/build%20fixture/status",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template create wait:json": {
+    "stdout": "{\n  \"template\": {\n    \"templateID\": \"template/fixture\",\n    \"buildID\": \"build fixture\",\n    \"buildStatus\": \"building\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  },\n  \"build\": {\n    \"templateID\": \"template/fixture\",\n    \"buildID\": \"build fixture\",\n    \"status\": \"ready\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v3/templates",
+        "method": "POST",
+        "body": {
+          "name": "Fixture",
+          "cpuCount": 1,
+          "memoryMB": 2048
+        }
+      },
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template%2Ffixture/builds/build%20fixture/status",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template update async:text": {
+    "stdout": "templateID: template/fixture\nbuildID: build fixture\nbuildStatus: building\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture",
+        "method": "PUT",
+        "body": {
+          "description": "changed"
+        }
+      }
+    ]
+  },
+  "template update async:json": {
+    "stdout": "{\n  \"templateID\": \"template/fixture\",\n  \"buildID\": \"build fixture\",\n  \"buildStatus\": \"building\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture",
+        "method": "PUT",
+        "body": {
+          "description": "changed"
+        }
+      }
+    ]
+  },
+  "template update wait:text": {
+    "stdout": "template:\n  templateID: template/fixture\n  buildID: build fixture\n  buildStatus: building\n  future:\n    values:\n      - false\n      - 0\n      - null\n      - []\nbuild:\n  templateID: template/fixture\n  buildID: build fixture\n  status: ready\n  future:\n    values:\n      - false\n      - 0\n      - null\n      - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture",
+        "method": "PUT",
+        "body": {
+          "description": "changed"
+        }
+      },
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template%2Ffixture/builds/build%20fixture/status",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template update wait:json": {
+    "stdout": "{\n  \"template\": {\n    \"templateID\": \"template/fixture\",\n    \"buildID\": \"build fixture\",\n    \"buildStatus\": \"building\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  },\n  \"build\": {\n    \"templateID\": \"template/fixture\",\n    \"buildID\": \"build fixture\",\n    \"status\": \"ready\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture",
+        "method": "PUT",
+        "body": {
+          "description": "changed"
+        }
+      },
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template%2Ffixture/builds/build%20fixture/status",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template list:text": {
+    "stdout": "ID                NAME     CPU  MEMORY_MB  INSTANCES  BUILDS  UPDATED_AT\ntemplate-fixture  Fixture  1    2048       0          2       updated   \n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v2/templates?limit=10&cursor=cursor%2Ffixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template list:json": {
+    "stdout": "[\n  {\n    \"templateID\": \"template-fixture\",\n    \"templateName\": \"Fixture\",\n    \"cpuCount\": 1,\n    \"memoryMB\": 2048,\n    \"spawnCount\": 0,\n    \"buildCount\": 2,\n    \"updatedAt\": \"updated\",\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n]\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v2/templates?limit=10&cursor=cursor%2Ffixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template list empty:text": {
+    "stdout": "No Sandbox templates found.\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v2/templates",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template list empty:json": {
+    "stdout": "[]\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/v2/templates",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template get:text": {
+    "stdout": "templateID: template-fixture\ntemplateName: Fixture\ncpuCount: 1\nmemoryMB: 2048\nspawnCount: 0\nbuildCount: 2\nupdatedAt: updated\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template get:json": {
+    "stdout": "{\n  \"templateID\": \"template-fixture\",\n  \"templateName\": \"Fixture\",\n  \"cpuCount\": 1,\n  \"memoryMB\": 2048,\n  \"spawnCount\": 0,\n  \"buildCount\": 2,\n  \"updatedAt\": \"updated\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template build status:text": {
+    "stdout": "templateID: template/fixture\nbuildID: build fixture\nstatus: ready\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture/builds/build%2Ffixture/status",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template build status:json": {
+    "stdout": "{\n  \"templateID\": \"template/fixture\",\n  \"buildID\": \"build fixture\",\n  \"status\": \"ready\",\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture/builds/build%2Ffixture/status",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template build failed status:text": {
+    "stdout": "status: error\nreason:\n  message: original build failure\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture/builds/build%2Ffixture/status",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template build failed status:json": {
+    "stdout": "{\n  \"status\": \"error\",\n  \"reason\": {\n    \"message\": \"original build failure\"\n  },\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture/builds/build%2Ffixture/status",
+        "method": "GET",
+        "body": null
+      }
+    ]
+  },
+  "template delete:text": {
+    "stdout": "templateID: template-fixture\ndeleted: true\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture",
+        "method": "DELETE",
+        "body": null
+      }
+    ]
+  },
+  "template delete:json": {
+    "stdout": "{\n  \"templateID\": \"template-fixture\",\n  \"deleted\": true\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/sandbox/templates/template-fixture",
+        "method": "DELETE",
+        "body": null
+      }
+    ]
+  },
+  "file upload:text": {
+    "stdout": "id: file-fixture\nfilename: fixture.bin\nstatus: checking\ntoken: \"[REDACTED]\"\nsize_bytes: 5\nfuture:\n  values:\n    - false\n    - 0\n    - null\n    - []\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/files",
+        "method": "POST",
+        "body": {
+          "source": "sandbox_template",
+          "file": {
+            "name": "fixture.bin",
+            "type": "application/octet-stream",
+            "bytes": [0, 255, 13, 10, 65]
+          }
+        }
+      }
+    ]
+  },
+  "file upload:json": {
+    "stdout": "{\n  \"id\": \"file-fixture\",\n  \"filename\": \"fixture.bin\",\n  \"status\": \"checking\",\n  \"token\": \"[REDACTED]\",\n  \"size_bytes\": 5,\n  \"future\": {\n    \"values\": [\n      false,\n      0,\n      null,\n      []\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "url": "https://gateway.fixture.invalid/api/v1/agentstudio/files",
+        "method": "POST",
+        "body": {
+          "source": "sandbox_template",
+          "file": {
+            "name": "fixture.bin",
+            "type": "application/octet-stream",
+            "bytes": [0, 255, 13, 10, 65]
+          }
+        }
+      }
+    ]
+  },
+  "official images:text": {
+    "stdout": "code-interpreter (代码解释器)\n  fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/code-interpreter-v1:v0.0.44\n  Python / Node.js runtimes with common data-processing libraries / Python / Node.js 运行时+常用数据处理库\nbrowser (浏览器)\n  fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/browser:v0.0.44\n  Chromium and a visual desktop for clicking, filling forms, and screenshots / Chromium +可视化桌面，支持点击/ 填表/截图\nall-in-one (全能型)\n  fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/all-in-one:v0.0.44\n  Code execution and browser capabilities together / 代码执行＋浏览器双能力\n",
+    "requests": []
+  },
+  "official images:json": {
+    "stdout": "[\n  {\n    \"id\": \"code-interpreter\",\n    \"imageName\": \"代码解释器\",\n    \"imageUrl\": \"fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/code-interpreter-v1:v0.0.44\",\n    \"icon\": \"https://img.alicdn.com/imgextra/i2/O1CN01iX8RH9ckFvC093x2_!!6000000000905-2-tps-72-72.png\",\n    \"description\": {\n      \"en-US\": \"Python / Node.js runtimes with common data-processing libraries\",\n      \"zh-CN\": \"Python / Node.js 运行时+常用数据处理库\"\n    }\n  },\n  {\n    \"id\": \"browser\",\n    \"imageName\": \"浏览器\",\n    \"imageUrl\": \"fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/browser:v0.0.44\",\n    \"icon\": \"https://img.alicdn.com/imgextra/i4/O1CN01ShCbPEunrRI093x2_!!6000000000155-2-tps-72-72.png\",\n    \"description\": {\n      \"en-US\": \"Chromium and a visual desktop for clicking, filling forms, and screenshots\",\n      \"zh-CN\": \"Chromium +可视化桌面，支持点击/ 填表/截图\"\n    }\n  },\n  {\n    \"id\": \"all-in-one\",\n    \"imageName\": \"全能型\",\n    \"imageUrl\": \"fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/all-in-one:v0.0.44\",\n    \"icon\": \"https://img.alicdn.com/imgextra/i1/O1CN01smhklUahsyE093x2_!!6000000006657-2-tps-72-72.png\",\n    \"description\": {\n      \"en-US\": \"Code execution and browser capabilities together\",\n      \"zh-CN\": \"代码执行＋浏览器双能力\"\n    }\n  }\n]\n",
+    "requests": []
+  }
+}

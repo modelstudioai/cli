@@ -1,5 +1,4 @@
-import { BailianError, ExitCode, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { BailianError, ExitCode, unwrapResponse } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import {
   ensureAlertReady,
@@ -101,27 +100,24 @@ export default defineTelemetryCommand({
   validate: (flags) => validateTemplateConditions(flags.condition, Boolean(flags.from)),
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const conditions = flags.condition?.length ? flags.condition.map(parseCondition) : undefined;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: CREATE_TEMPLATE_API,
-          data: {
-            reqDTO: {
-              templateName: flags.name,
-              resourceType: "model",
-              logicalOperator: flags.logicalOperator ?? "or",
-              srcTemplateId: flags.from,
-              conditions: conditions ?? "(copied from --from template)",
-            },
+      ctx.output.result({
+        api: CREATE_TEMPLATE_API,
+        data: {
+          reqDTO: {
+            templateName: flags.name,
+            resourceType: "model",
+            logicalOperator: flags.logicalOperator ?? "or",
+            srcTemplateId: flags.from,
+            conditions: conditions ?? "(copied from --from template)",
           },
-          ...telemetryGatewayPreview(settings),
         },
-        format,
-      );
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -139,11 +135,16 @@ export default defineTelemetryCommand({
     const resp = unwrapResponse(raw as Record<string, unknown>);
     const templateId = (resp.data ?? resp.templateId ?? resp) as string | undefined;
 
-    if (format === "json") {
-      emitResult({ created: true, templateId }, format);
-      return;
-    }
-
-    process.stdout.write(`Alert template created${templateId ? `: ${templateId}` : "."}\n`);
+    ctx.output.result(
+      { created: true, templateId },
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Alert template created${templateId ? `: ${templateId}` : "."}`,
+              "zh-CN": `告警模板已创建${templateId ? `: ${templateId}` : "。"}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });
