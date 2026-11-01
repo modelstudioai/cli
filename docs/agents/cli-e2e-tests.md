@@ -93,6 +93,14 @@ pnpm exec vp test packages/commands/tests/e2e/managed-agent-webhook.e2e.test.ts 
 
 需要三轮对比时为每轮分别命名 `before-1/2/3` 和 `after-1/2/3`，从报告读取套件耗时与总墙钟；worker 数可按环境选择，但前后必须一致。
 
+### D. CI 分片与汇总门槛
+
+- [ ] `.github/workflows/ci.yml` 使用 4 个独立 runner 的原生 `--shard=N/4`，保留完整测试范围、默认文件隔离、既有门控及每片相同的 Node/Bun 版本；不能用新增 skip、文件过滤或同一 checkout 多进程共享全局状态替代分片
+- [ ] 质量检查与测试矩阵并行；矩阵 `fail-fast: false`，失败时仍上传已有报告。每片输出独立命名的 blob + JSON 报告，保留 3 天
+- [ ] `jobs.check` 和名称 `lint + typecheck + test` 保持现有 required check 身份；汇总 job 用 `always()` 执行，并显式要求质量检查和整个测试矩阵均成功，不能让失败、取消或整个 job 跳过变成绿灯
+- [ ] `tools/ci/verify-shard-reports.mjs` 在合并前核对 4 片报告完整，动态发现的全部测试文件恰好出现一次，报告及用例没有失败；缺报告、漏跑、重复或元数据不一致必须使门槛失败。不要硬编码文件数或用例数
+- [ ] 用 `--mergeReports` 汇总 blob 报告；即使校验失败仍尽可能合并已有报告以便诊断，合并成功不能覆盖前面的失败结果。调整该链路时验证成功路径与失败/取消/跳过、缺报告、漏跑和重复路径
+
 ## 离线与真实集成分组
 
 ```ts

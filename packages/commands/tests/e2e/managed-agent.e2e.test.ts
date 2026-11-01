@@ -148,8 +148,47 @@ async function seedTrackedResources(
  */
 
 describe("e2e: managed-agent", () => {
+  test.each([
+    {
+      label: "SDK validation result",
+      args: ["managed-agent", "validate", "--file", AGENTS_DEPLOYMENT_YAML],
+      exitCode: 0,
+    },
+    {
+      label: "required flag error",
+      args: ["managed-agent", "session", "delete", "--quiet"],
+      exitCode: 2,
+    },
+    {
+      label: "confirmation before authentication",
+      args: ["managed-agent", "session", "delete", "--session-id", "sess_e2e"],
+      exitCode: 7,
+    },
+  ])("$label preserves subprocess bytes and exit code", async ({ args, exitCode }) => {
+    const commandArgs = [...args, "--output", "json"];
+    const environment = {
+      NODE_OPTIONS: "",
+      NODE_USE_ENV_PROXY: "0",
+      HTTP_PROXY: "",
+      HTTPS_PROXY: "",
+      ALL_PROXY: "",
+      http_proxy: "",
+      https_proxy: "",
+      all_proxy: "",
+      DASHSCOPE_API_KEY: "",
+      BAILIAN_API_KEY: "",
+      DASHSCOPE_OUTPUT: "",
+      DASHSCOPE_QUIET: "0",
+      DASHSCOPE_VERBOSE: "0",
+    };
+    const inProcess = await runCommandInProcess(MANAGED_AGENT_ROUTES, commandArgs, environment);
+    const subprocess = await runCommandE2e(MANAGED_AGENT_ROUTES, commandArgs, environment);
+    expect(subprocess.exitCode, subprocess.stderr).toBe(exitCode);
+    expect(inProcess).toEqual(subprocess);
+  });
+
   test("validate 接受原生 Bailian Deployment 配置", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "validate",
       "--file",
@@ -202,7 +241,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("validate 拒绝会产生空消息或无效挂载路径的 Bailian Deployment", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "validate",
       "--file",
@@ -285,7 +324,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent init 不再暴露 Git 仓库脚手架", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "init",
       "--help",
@@ -295,7 +334,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent project 暴露目录项目与共享版本管理子命令", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "project",
       "--help",
@@ -469,7 +508,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent project version preview 缺少 --version-id 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "project",
       "version",
@@ -481,7 +520,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent apply 计划失败时在最终错误中保留首条诊断和剩余数量", async () => {
-    const { stderr, exitCode } = await runCommandE2e(
+    const { stderr, exitCode } = await runCommandInProcess(
       MANAGED_AGENT_ROUTES,
       [
         "managed-agent",
@@ -589,7 +628,7 @@ agents:
   });
 
   test("managed-agent agent create 缺少 --name 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "agent",
       "create",
@@ -608,7 +647,7 @@ agents:
     ["--vault", /Vault 'missing' is not declared/],
   ])("managed-agent agent create 拒绝未声明的 %s key", async (flag, message) => {
     const configPath = await writeRuntimeBindingProject();
-    const { stderr, exitCode } = await runCommandE2e(
+    const { stderr, exitCode } = await runCommandInProcess(
       MANAGED_AGENT_ROUTES,
       [
         "managed-agent",
@@ -635,7 +674,7 @@ agents:
   });
 
   test("managed-agent agent create 拒绝空的 --mcp", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "agent",
       "create",
@@ -655,7 +694,7 @@ agents:
 
   test("managed-agent agent create --dry-run 回显运行时绑定且不改 YAML", async () => {
     const configPath = await writeRuntimeBindingProject();
-    const { stdout, stderr, exitCode } = await runCommandE2e(
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
       MANAGED_AGENT_ROUTES,
       [
         "managed-agent",
@@ -1036,7 +1075,7 @@ defaults:
     ],
     ["deployment create", ["deployment", "create"], /--name|--agent|--message|--yes/i],
   ])("managed-agent %s --help 展示资源参数", async (_label, commandArgs, expected) => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       ...commandArgs,
       "--help",
@@ -1053,7 +1092,7 @@ defaults:
     [["vault", "credential", "create"], /--vault|Missing required/i],
     [["deployment", "create"], /--name|Missing required/i],
   ])("managed-agent %s 缺少必填参数时退出为用法错误 (2)", async (commandArgs, expected) => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       ...commandArgs,
       "--quiet",
@@ -1064,7 +1103,7 @@ defaults:
 
   test("managed-agent agent create 默认只预览，不写 YAML", async () => {
     const sourceBefore = await readFile(AGENTS_YAML, "utf8");
-    const { stdout, stderr, exitCode } = await runCommandE2e(
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
       MANAGED_AGENT_ROUTES,
       [
         "managed-agent",
@@ -1402,7 +1441,7 @@ vaults:
     expect(invalidEvent.exitCode).toBe(2);
     expect(invalidEvent.stderr).toMatch(/user\.message or system\.message/i);
 
-    const incompleteSchedule = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const incompleteSchedule = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "deployment",
       "create",
@@ -1421,7 +1460,7 @@ vaults:
   });
 
   test.each(["apply", "destroy"])("managed-agent %s 无 --yes 返回确认请求 (7)", async (command) => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       command,
       "--file",
@@ -1446,7 +1485,7 @@ vaults:
     ["deployment pause", ["deployment", "pause"]],
     ["deployment unpause", ["deployment", "unpause"]],
   ])("managed-agent %s --help 展示 runtime 注入的 --yes", async (_commandName, commandPath) => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       ...commandPath,
       "--help",
@@ -1467,7 +1506,7 @@ vaults:
     ["deployment pause", ["deployment", "pause", "--deployment-id", "dep_e2e"]],
     ["deployment unpause", ["deployment", "unpause", "--deployment-id", "dep_e2e"]],
   ])("managed-agent %s 无 --yes 返回确认请求 (7)", async (_commandName, commandArgs) => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       ...commandArgs,
       "--output",
@@ -1480,7 +1519,7 @@ vaults:
   });
 
   test("managed-agent session delete 缺少 --session-id 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "session",
       "delete",
@@ -1491,7 +1530,7 @@ vaults:
   });
 
   test("managed-agent session send 缺少 --message 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "session",
       "send",
@@ -1515,7 +1554,7 @@ vaults:
   });
 
   test("managed-agent skill-list 非法 --source 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "skill-list",
       "--source",
@@ -1531,7 +1570,7 @@ vaults:
   test("managed-agent skill-list --source all 通过参数校验（缺配置文件时才失败）", async () => {
     // auth: "apiKey" 的凭证解析先于 run() 执行；注入假 key 让用例不依赖环境凭证，
     // 命令仍会在配置加载阶段因文件缺失短路，不产生任何网络请求。
-    const { stderr, exitCode } = await runCommandE2e(
+    const { stderr, exitCode } = await runCommandInProcess(
       MANAGED_AGENT_ROUTES,
       [
         "managed-agent",
@@ -1551,7 +1590,7 @@ vaults:
   });
 
   test("managed-agent skill versions --help 展示 cursor 分页选项", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "skill",
       "versions",

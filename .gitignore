@@ -46,6 +46,9 @@ tools/generated
 
 # Test & scene outputs
 /test/
+/.ci-test-results/
+/.ci-test-inventory.json
+/.ci-test-summary.json
 packages/cli/scene/**/outputs/
 
 # Environment variables (sensitive data)

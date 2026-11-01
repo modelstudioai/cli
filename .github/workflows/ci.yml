@@ -9,9 +9,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
-  check:
-    name: lint + typecheck + test
+  quality:
+    name: lint + typecheck + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -23,7 +27,32 @@ jobs:
           node-version: "22"
           cache: pnpm
 
-      # Keep native-fetch and compiled Binary tests on the release Bun version.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run sync:skill-assets
+
+      - run: pnpm -r --filter "./packages/*" build
+
+      - run: pnpm run check
+
+  test:
+    name: test shard ${{ matrix.shard }}/4
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      # Every shard keeps the real Node/Bun/compiled-binary coverage.
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.14"
@@ -34,6 +63,74 @@ jobs:
 
       - run: pnpm -r --filter "./packages/*" build
 
-      - run: pnpm run check
+      - name: Run test shard
+        run: >-
+          pnpm exec vp test --shard=${{ matrix.shard }}/4
+          --reporter=default --reporter=blob --reporter=json
+          --outputFile.blob=.ci-test-results/blob/shard-${{ matrix.shard }}.json
+          --outputFile.json=.ci-test-results/json/shard-${{ matrix.shard }}.json
 
-      - run: pnpm test
+      - name: Upload shard reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-shard-${{ matrix.shard }}
+          path: .ci-test-results/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  # Keep the existing required-check identity. Upstream failure/skip/cancellation
+  # must produce a failing check, rather than silently skipping the gate.
+  check:
+    name: lint + typecheck + test
+    if: ${{ always() }}
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Download shard reports
+        id: download
+        uses: actions/download-artifact@v8
+        with:
+          pattern: test-shard-*
+          path: .ci-test-results
+          merge-multiple: true
+
+      # list --filesOnly discovers the full inventory, independently of sharding.
+      - name: Discover complete test inventory
+        run: pnpm exec vp test list --filesOnly --json=.ci-test-inventory.json
+
+      - name: Verify complete shard coverage
+        if: ${{ always() }}
+        env:
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: >-
+          node tools/ci/verify-shard-reports.mjs
+          --reports .ci-test-results --inventory .ci-test-inventory.json --shards 4
+
+      - name: Merge test reports
+        if: ${{ always() && steps.download.outcome == 'success' }}
+        run: >-
+          pnpm exec vp test --mergeReports=.ci-test-results/blob
+          --reporter=default --reporter=json --outputFile.json=.ci-test-summary.json
+
+      - name: Upload merged report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-summary
+          path: .ci-test-summary.json
+          include-hidden-files: true
+          retention-days: 3
