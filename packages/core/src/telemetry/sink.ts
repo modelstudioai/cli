@@ -17,7 +17,12 @@ let remoteSendEvent: ((name: string, opts: Record<string, unknown>) => void) | u
 // 如果不追踪，CLI 在短命令或 SIGINT 场景下会在请求真正落网络前就退出。
 // 配合 tracker.js 中的 `keepalive: true`，await 这些 promise 可以在不阻塞
 // 主流程的前提下，尽最大努力把埋点送达。
-const inflightSends = new Set<Promise<unknown>>();
+const SEND_TIMEOUT_MS = 1000;
+interface PendingSend {
+  controller: AbortController;
+  promise: Promise<void>;
+}
+const inflightSends = new Set<PendingSend>();
 let remoteClient: any = undefined;
 
 try {
@@ -28,13 +33,24 @@ try {
   // 不修改 prototype，避免污染其他可能存在的 Tracker 使用方。
   const originalSend = client.send.bind(client);
   client.send = function (payload: string) {
-    const result = originalSend(payload);
-    if (result && typeof (result as Promise<unknown>).then === "function") {
-      const p = result as Promise<unknown>;
-      inflightSends.add(p);
-      void p.finally(() => inflightSends.delete(p));
-    }
-    return result;
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+    deadline.unref?.();
+    const pending: PendingSend = {
+      controller,
+      promise: Promise.resolve()
+        .then(() => originalSend(payload, { signal: controller.signal }))
+        .catch(() => {})
+        .finally(() => {
+          // Bun may resolve body.cancel() before stopping its underlying fetch.
+          // Finish this send's private scope before removing its deadline.
+          controller.abort();
+          clearTimeout(deadline);
+          inflightSends.delete(pending);
+        }),
+    };
+    inflightSends.add(pending);
+    return pending.promise;
   };
   remoteClient = client;
   remoteSendEvent = client.use(EventPlugin);
@@ -47,12 +63,13 @@ try {
  *
  * 1. 先调用 `_sendAll` 排空 tracker 内部的去抖队列，把还卡在 500ms 合并窗口里
  *    的事件立刻推上网络。
- * 2. 然后用硬超时 race 所有已追踪的 fetch promise。
+ * 2. 在预算内等待发送，预算耗尽时真正取消 DNS/HTTP/body 工作。
  *
  * 埋点永远不应阻塞 CLI：调用方应传入较短的超时（例如 1000ms），并始终与超时
  * race。错误与超时一律静默吞掉。
  */
 export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
+  let deadline: ReturnType<typeof setTimeout> | undefined;
   try {
     if (remoteClient) {
       try {
@@ -66,13 +83,20 @@ export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
       }
     }
     if (inflightSends.size === 0) return;
-    const pending = [...inflightSends].map((p) => p.catch(() => undefined));
     await Promise.race([
-      Promise.allSettled(pending),
-      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs).unref?.()),
+      Promise.allSettled([...inflightSends].map((pending) => pending.promise)),
+      new Promise<void>((resolve) => {
+        deadline = setTimeout(() => {
+          for (const pending of inflightSends) pending.controller.abort();
+          resolve();
+        }, timeoutMs);
+        deadline.unref?.();
+      }),
     ]);
   } catch {
     // 埋点逻辑任何异常都不能影响 CLI 主流程
+  } finally {
+    clearTimeout(deadline);
   }
 }
 

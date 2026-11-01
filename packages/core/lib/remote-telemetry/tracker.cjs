@@ -887,9 +887,6 @@ module.exports = (function (e) {
       },
     };
     var _ = y,
-      B = n(3),
-      S = n.n(B),
-      T = n(4),
       j = n(5),
       N = n.n(j);
     function w(e) {
@@ -1106,8 +1103,7 @@ module.exports = (function (e) {
           app_version: x,
           device_id: N.a.createHash("md5").update(E()).digest("hex"),
           platform: "node",
-        }),
-      I = Object(T.promisify)(S.a.resolve);
+        });
     function H(e) {
       ((this._offlineQueue = []),
         (e.endpoint = e.endpoint || "gm.mmstat.com"),
@@ -1116,27 +1112,58 @@ module.exports = (function (e) {
     }
     ((H.prototype = (((M = function () {}).prototype = _.prototype), new M())),
       (H.prototype.constructor = H),
-      (H.prototype.send = function (e) {
-        var t,
-          n = this;
-        return ((t = this._config.endpoint), I(t))
-          .then(function (t) {
-            return (
-              n._offlineQueue.forEach(function (e) {
-                n.send(e);
-              }),
-              (n._offlineQueue = []),
-              n._print("send", e),
-              a()(n._config.endpoint_url, {
-                method: "POST",
-                keepalive: true,
-                body: JSON.stringify({ gokey: encodeURIComponent(e), gmkey: "EXP" }),
-              }).catch(function () {})
-            );
-          })
-          .catch(function (t) {
-            (n._offlineQueue.length > 500 && n._offlineQueue.shift(), n._offlineQueue.push(e));
-          });
+      (H.prototype.send = async function (payload, options = {}) {
+        const signal = options.signal;
+        if (signal?.aborted) return;
+        // DNS follows the cancellable fetch; a separate preflight could outlive
+        // the CLI's flush budget and also bypass an explicitly configured proxy.
+        const payloads = [...this._offlineQueue.splice(0), payload];
+        // Undici request cancellation alone does not own an unfinished connector.
+        // Only telemetry gets this private dispatcher, including its proxy hops.
+        let dispatcher;
+        if (!process.versions.bun) {
+          const { Agent, EnvHttpProxyAgent } = require("undici");
+          const connect = { signal, timeout: 1000 };
+          const httpProxy = process.env.HTTP_PROXY?.trim() || undefined;
+          const httpsProxy = process.env.HTTPS_PROXY?.trim() || undefined;
+          dispatcher =
+            httpProxy || httpsProxy
+              ? new EnvHttpProxyAgent({
+                  httpProxy,
+                  httpsProxy,
+                  noProxy: process.env.NO_PROXY?.trim() || undefined,
+                  connect,
+                  requestTls: connect,
+                  proxyTls: connect,
+                })
+              : new Agent({ connect });
+        }
+        try {
+          await Promise.all(
+            payloads.map(async (eventPayload) => {
+              if (signal?.aborted) return;
+              try {
+                this._print("send", eventPayload);
+                const response = await a()(this._config.endpoint_url, {
+                  method: "POST",
+                  keepalive: true,
+                  signal,
+                  ...(dispatcher ? { dispatcher } : {}),
+                  body: JSON.stringify({ gokey: encodeURIComponent(eventPayload), gmkey: "EXP" }),
+                });
+                // Telemetry never uses response data. Release streaming bodies too.
+                await response.body?.cancel().catch(() => {});
+              } catch {
+                if (!signal?.aborted) {
+                  if (this._offlineQueue.length > 500) this._offlineQueue.shift();
+                  this._offlineQueue.push(eventPayload);
+                }
+              }
+            }),
+          );
+        } finally {
+          await dispatcher?.destroy().catch(() => {});
+        }
       }));
     t.default = H;
   },
