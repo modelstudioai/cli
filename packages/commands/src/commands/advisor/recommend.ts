@@ -1,6 +1,7 @@
 import {
   agentLoop,
   BailianError,
+  createInstrumentedFetch,
   createLLMClient,
   createReadlineInteraction,
   DEFAULT_LLM_MODEL,
@@ -133,8 +134,8 @@ const flags = {
   noThinking: {
     type: "switch",
     description: {
-      "en-US": "Disable thinking mode for intent analysis (on by default)",
-      "zh-CN": "关闭意图分析的思考模式（默认开启）",
+      "en-US": "Deprecated no-op: thinking is always disabled for advisor LLM calls",
+      "zh-CN": "已废弃且无效果：advisor 的 LLM 调用现已始终关闭思考模式",
     },
   },
 } as const;
@@ -209,11 +210,13 @@ export default defineCommand({
       llm: createLLMClient({
         baseUrl: ctx.client.baseUrl,
         apiKey: credential.token,
+        fetch: createInstrumentedFetch(ctx),
         defaultModel: runtimeFlags.model ?? DEFAULT_LLM_MODEL,
-        // Intent analysis is the only LLM call that decides the slate, so it
-        // gets thinking mode by default (--no-thinking to disable). Other
-        // stages stay in plain mode: thinking tokens are billed per call.
-        thinkingStages: runtimeFlags.noThinking ? [] : ["intent"],
+        // Disable thinking for every advisor LLM call. Intent analysis was the
+        // only thinking stage, but it dominated latency without improving
+        // clear recommendation requests. `--no-thinking` remains accepted as
+        // a deprecated no-op for existing scripts.
+        thinkingStages: [],
       }),
       catalog: () => loadCatalog(),
       families: () => loadFamilies(),

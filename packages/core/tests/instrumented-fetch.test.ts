@@ -1,5 +1,5 @@
 import { httpTransport } from "../src/client/transport.ts";
-import { expect, test } from "vite-plus/test";
+import { afterEach, expect, test, vi } from "vite-plus/test";
 import type { Identity, Settings } from "../src/index.ts";
 import { createInstrumentedFetch, sourceConfig } from "../src/index.ts";
 
@@ -11,6 +11,8 @@ const identity: Identity = {
 };
 
 const settings: Settings = { timeout: 60, verbose: false } as Settings;
+
+afterEach(() => vi.restoreAllMocks());
 
 interface CapturedRequest {
   url: string;
@@ -93,6 +95,71 @@ test("passes non-URL-parseable inputs through without tracking headers", async (
   expect(headers.get("x-dashscope-source-config")).toBeNull();
   expect(headers.get("x-dashscope-openapisource")).toBeNull();
   expect(headers.get("x-dashscope-service")).toBeNull();
+});
+
+test.each([200, 401])(
+  "verbose 将 endpoint、状态和 request_id 写入 stderr（HTTP %s）",
+  async (status) => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const response = new Response("原始正文", {
+      status,
+      headers: { "x-request-id": "transport-request" },
+    });
+    vi.spyOn(httpTransport, "fetch").mockResolvedValue(response);
+    const result = await createInstrumentedFetch({
+      identity,
+      settings: { ...settings, verbose: true },
+    })("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-secret-api-key" },
+      body: "敏感提示词",
+    });
+    expect(result).toBe(response);
+    expect(response.bodyUsed).toBe(false);
+    const output = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+    expect(output).toContain(
+      "> POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+    );
+    expect(output).toContain(`< ${status}`);
+    expect(output).toContain("request_id: transport-request");
+    expect(output).toContain("test...-key");
+    expect(output).not.toContain("test-secret-api-key");
+    expect(output).not.toContain("敏感提示词");
+    expect(stdout).not.toHaveBeenCalled();
+  },
+);
+
+test("未开启 verbose 时不输出诊断且保持响应与取消信号", async () => {
+  const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+  const response = new Response("data: [DONE]\n\n", {
+    headers: { "x-request-id": "silent-request" },
+  });
+  const transport = vi.spyOn(httpTransport, "fetch").mockResolvedValue(response);
+  const controller = new AbortController();
+  const result = await createInstrumentedFetch({ identity, settings })("https://example.invalid", {
+    signal: controller.signal,
+  });
+  expect(result).toBe(response);
+  expect(response.bodyUsed).toBe(false);
+  expect(transport.mock.calls[0][1]?.signal).toBe(controller.signal);
+  expect(stderr).not.toHaveBeenCalled();
+});
+
+test("kscli 传输使用宿主身份与版本生成渠道头", async () => {
+  const transport = vi.spyOn(httpTransport, "fetch").mockResolvedValue(new Response("{}"));
+  const ksIdentity = {
+    ...identity,
+    binName: "kscli",
+    clientName: "knowledge-studio-cli",
+    version: "9.8.7",
+  };
+  await createInstrumentedFetch({ identity: ksIdentity, settings })(
+    "https://dashscope.aliyuncs.com",
+  );
+  const headers = new Headers(transport.mock.calls[0][1]?.headers);
+  expect(headers.get("user-agent")).toBe("knowledge-studio-cli/9.8.7");
+  expect(headers.get("x-dashscope-source-config")).toBe(sourceConfig(ksIdentity));
 });
 
 test("uses kscli identity and version in source config", () => {

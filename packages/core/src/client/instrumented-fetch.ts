@@ -57,18 +57,18 @@ export function createInstrumentedFetch(deps: HttpDeps): FetchImplementation {
     }
 
     if (deps.settings.verbose) {
-      console.error(`> ${init.method ?? "GET"} ${url}`);
+      process.stderr.write(`> ${init.method ?? "GET"} ${url}\n`);
       const auth = headers.get("authorization");
-      if (auth) console.error(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}`);
+      if (auth) process.stderr.write(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}\n`);
     }
 
     const res = await httpTransport.fetch(input, { ...init, headers });
 
     if (deps.settings.verbose) {
-      console.error(`< ${res.status} ${res.statusText}`);
+      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
       const reqId = res.headers.get("x-request-id");
       if (reqId) {
-        console.error(`request_id: ${reqId}`);
+        process.stderr.write(`request_id: ${reqId}\n`);
       }
     }
 

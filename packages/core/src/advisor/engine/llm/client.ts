@@ -18,6 +18,8 @@ export const DEFAULT_LLM_MODEL = "qwen-flash-2025-07-28";
 export interface LLMClientOptions {
   baseUrl: string;
   apiKey: string;
+  /** 宿主注入带渠道标识与诊断的传输；独立使用时保留原生 fetch。 */
+  fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
   /** Default model for chat/chatJson calls. */
   defaultModel?: string;
   timeoutMs?: number;
@@ -54,7 +56,7 @@ interface ChatCompletionResponse {
 /**
  * Self-contained OpenAI-compatible LLM client over fetch.
  * Kept free of bailian-cli-core imports so the engine compiles standalone;
- * the command layer wires it up from ctx.client.baseUrl + credentials.
+ * 宿主通过选项注入连接凭证与传输，不改变引擎的超时、SSE 或错误语义。
  */
 export function createLLMClient(options: LLMClientOptions): LLMClient {
   const {
@@ -81,7 +83,7 @@ export function createLLMClient(options: LLMClientOptions): LLMClient {
     const signal = opts.signal ? AbortSignal.any([opts.signal, timeout.signal]) : timeout.signal;
     try {
       options.onRequest?.(opts.stage ?? "llm");
-      const res = await fetch(endpoint, {
+      const res = await (options.fetch ?? fetch)(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify(body),
