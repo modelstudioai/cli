@@ -1,5 +1,6 @@
 import dns from "node:dns";
 import { createRequire } from "node:module";
+import { performance } from "node:perf_hooks";
 import { httpTransport } from "../../../core/src/client/transport.ts";
 
 const [mode, origin, dnsServer, tlsOrigin] = process.argv.slice(2);
@@ -36,6 +37,7 @@ if (process.versions.bun) {
 }
 
 const { createCli } = await import("../../src/create-cli.ts");
+let outputCompletedAt = 0;
 await createCli(
   {
     probe: {
@@ -43,6 +45,7 @@ await createCli(
       auth: "none",
       async run(context) {
         context.output.result({ ok: true });
+        outputCompletedAt = performance.now();
       },
     },
   },
@@ -53,7 +56,8 @@ await createCli(
     npmPackage: "telemetry-fixture",
   },
 ).run(["probe", "--output", "json"]);
+const outputToRunMs = performance.now() - outputCompletedAt;
 
 // Inspect closure while this process is still alive: exit must not hide a leak.
 const status = await directFetch(new URL("/status", origin));
-process.stderr.write(JSON.stringify(await status.json()) + "\n");
+process.stderr.write(JSON.stringify({ ...(await status.json()), outputToRunMs }) + "\n");

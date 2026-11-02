@@ -1117,7 +1117,6 @@ module.exports = (function (e) {
         if (signal?.aborted) return;
         // DNS follows the cancellable fetch; a separate preflight could outlive
         // the CLI's flush budget and also bypass an explicitly configured proxy.
-        const payloads = [...this._offlineQueue.splice(0), payload];
         // Undici request cancellation alone does not own an unfinished connector.
         // Only telemetry gets this private dispatcher, including its proxy hops.
         let dispatcher;
@@ -1138,6 +1137,7 @@ module.exports = (function (e) {
                 })
               : new Agent({ connect });
         }
+        const payloads = [...this._offlineQueue.splice(0), payload];
         try {
           await Promise.all(
             payloads.map(async (eventPayload) => {

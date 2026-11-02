@@ -52,6 +52,38 @@ test("an aborted send neither opens a request nor replays queued events", async 
   expect(queued._offlineQueue).toEqual(["queued"]);
 });
 
+test.each(["HTTP_PROXY", "HTTPS_PROXY"])(
+  "dispatcher initialization failure preserves queued events (%s)",
+  async (proxyVariable) => {
+    vi.stubEnv("HTTP_PROXY", "");
+    vi.stubEnv("HTTPS_PROXY", "");
+    vi.stubEnv(proxyVariable, "not-a-url");
+    const tracker = new Tracker({ pid: "fixture-pid" });
+    const queued = tracker as unknown as { _offlineQueue: string[] };
+    queued._offlineQueue.push("old event");
+    const controller = new AbortController();
+    try {
+      await expect(tracker.send("new event", { signal: controller.signal })).rejects.toMatchObject({
+        code: "ERR_INVALID_URL",
+      });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(queued._offlineQueue).toEqual(["old event"]);
+
+      vi.stubEnv(proxyVariable, "");
+      await tracker.send("new event", { signal: controller.signal });
+      expect(fetchSpy.mock.calls.map(([, options]) => JSON.parse(options?.body as string))).toEqual(
+        [
+          { gokey: "old%20event", gmkey: "EXP" },
+          { gokey: "new%20event", gmkey: "EXP" },
+        ],
+      );
+      expect(queued._offlineQueue).toEqual([]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  },
+);
+
 test("queued retries share the current cancellation signal and retain event encoding", async () => {
   const tracker = new Tracker({ pid: "fixture-pid" });
   (tracker as unknown as { _offlineQueue: string[] })._offlineQueue.push("old event");

@@ -6,6 +6,7 @@ import { createServer as createTcpServer, type Socket } from "node:net";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { buildIsolatedCliEnv } from "e2e/isolation";
@@ -128,7 +129,7 @@ describe.each(["node", ...(hasBun ? ["bun"] : [])])(
       });
       try {
         // runNodeMain forces DO_NOT_TRACK=1; this test intentionally exercises telemetry.
-        const { stdout, stderr } = await execFileAsync(
+        const execution = execFileAsync(
           runtime === "node" ? process.execPath : bun,
           [
             ...(runtime === "node" ? ["--import", import.meta.resolve("tsx")] : []),
@@ -140,8 +141,27 @@ describe.each(["node", ...(hasBun ? ["bun"] : [])])(
           ],
           { cwd: runtimeRoot, env: isolated.env, timeout: 8_000, maxBuffer: 1024 * 1024 },
         );
+        let outputBuffer = "";
+        let outputCompletedAt: number | undefined;
+        execution.child.stdout?.on("data", (chunk: string) => {
+          outputBuffer += chunk;
+          if (outputCompletedAt === undefined && outputBuffer.trimEnd().endsWith("}")) {
+            outputCompletedAt = performance.now();
+          }
+        });
+        const { stdout, stderr } = await execution;
+        const exitedAt = performance.now();
         expect(JSON.parse(stdout)).toEqual({ ok: true });
-        expect(JSON.parse(stderr)).toEqual({ requests: disabled ? 0 : 1, closed: !disabled });
+        const { outputToRunMs, ...connectionStatus } = JSON.parse(stderr);
+        expect(connectionStatus).toEqual({ requests: disabled ? 0 : 1, closed: !disabled });
+        if (["fast", "headers", "body"].includes(mode)) {
+          expect(outputToRunMs).toBeGreaterThanOrEqual(0);
+          expect(outputToRunMs, "output completion to run() return").toBeLessThan(3_000);
+          expect(outputCompletedAt).toBeDefined();
+          expect(exitedAt - outputCompletedAt!, "output completion to process exit").toBeLessThan(
+            3_000,
+          );
+        }
         expect(dnsQueries).toBe(0);
         if (!disabled && !mode.startsWith("tls")) {
           expect(requests[0]?.method).toBe("POST");
