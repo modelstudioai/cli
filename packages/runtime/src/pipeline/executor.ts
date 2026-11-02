@@ -59,6 +59,7 @@ export async function* streamPipelineEvents(
   runtimeInput: Record<string, unknown> = {},
   options: Pick<
     ExecutePipelineOptions,
+    | "output"
     | "concurrency"
     | "basePath"
     | "dryRun"
@@ -134,7 +135,7 @@ async function executePipelineInternal(
     }
   }
 
-  const blEnv = buildPipelineEnv();
+  const blEnv = buildPipelineEnv(options.output);
   const plan = buildExecutionPlan(pipeline);
   const concurrency = normalizeConcurrency(options.concurrency);
   const reports: PipelineStepReport[] = [];

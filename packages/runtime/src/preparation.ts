@@ -1,7 +1,5 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import type { RunContext } from "./middleware.ts";
 import { ConfirmationRequiredError, confirmationHint } from "./confirm.ts";
-import { emitResult } from "./output/output.ts";
 
 /** Returns false when the read-only preview has completed the invocation. */
 export async function prepareCommand(context: RunContext): Promise<boolean> {
@@ -12,10 +10,7 @@ export async function prepareCommand(context: RunContext): Promise<boolean> {
     message: context.localize(notice.message),
   }));
   if (context.settings.dryRun) {
-    emitResult(
-      { plan: preparation.preview, risk: preparation.risk, notices },
-      detectOutputFormat(context.settings.output),
-    );
+    context.output.result({ plan: preparation.preview, risk: preparation.risk, notices });
     return false;
   }
   if (preparation.risk && !context.confirmed) {
@@ -27,11 +22,11 @@ export async function prepareCommand(context: RunContext): Promise<boolean> {
     });
   }
   for (const notice of notices) {
-    process.stderr.write(
-      context.settings.output === "json"
-        ? JSON.stringify({ warning: notice }) + "\n\n"
-        : `${notice.message}${notice.url ? `\n${notice.url}` : ""}\n`,
-    );
+    context.output.warning({
+      code: notice.code,
+      message: notice.message,
+      ...(notice.url ? { details: { url: notice.url } } : {}),
+    });
   }
   context.prepared = preparation.data;
   return true;

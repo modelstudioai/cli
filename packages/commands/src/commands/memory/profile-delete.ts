@@ -2,10 +2,8 @@ import {
   defineCommand,
   memoryEndpoint,
   profileSchemaItemPath,
-  detectOutputFormat,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
 import {
   MEMORY_LIBRARY_FLAG,
@@ -59,13 +57,13 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaItemPath(flags.schemaId)) +
       buildQuery({ memory_library_id: flags.libraryId });
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "DELETE" }, format);
+      ctx.output.result({ endpoint: url, method: "DELETE" });
       return;
     }
 
@@ -74,10 +72,16 @@ export default defineCommand({
       method: "DELETE",
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Profile schema ${flags.schemaId} deleted.`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Profile schema ${flags.schemaId} deleted.`,
+              "zh-CN": `画像模板 ${flags.schemaId} 已删除。`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

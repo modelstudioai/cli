@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, expect, test } from "vite-plus/test";
 import type { CollectedSessionEvents, ProviderSessionEvent } from "@openagentpack/sdk";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { BailianError, ExitCode, buildSettings } from "bailian-cli-core";
 import {
   renderCollectedEvents,
   streamAndRenderEvents,
 } from "../src/commands/managed-agent/_engine/session-render.ts";
+
+import { withCommandOutput } from "./output/command-context.ts";
+
+const host = (output: "text" | "json") =>
+  withCommandOutput({ settings: buildSettings({ flags: { output }, env: {}, file: {} }) });
 
 /**
  * `--output json` 会话信封契约：stdout 恰好一个合法 JSON，且信封头部携带
@@ -94,7 +99,7 @@ async function catchSessionFailure(run: () => Promise<void> | void): Promise<Bai
 }
 
 test("stream json:信封携带 session_id/provider/agent + events", async () => {
-  await streamAndRenderEvents(fakeEventStream(), true, {
+  await streamAndRenderEvents(host("json"), fakeEventStream(), {
     session_id: "sess_stream",
     provider: "bailian",
     agent: "assistant",
@@ -109,7 +114,7 @@ test("stream json:信封携带 session_id/provider/agent + events", async () => 
 
 test("streaming failed:保留 JSON 信封并以服务端 error 消息抛 GENERAL", async () => {
   const error = await catchSessionFailure(() =>
-    streamAndRenderEvents(fakeFailedEventStream(), true, {
+    streamAndRenderEvents(host("json"), fakeFailedEventStream(), {
       session_id: "sess_failed_stream",
       provider: "bailian",
       agent: "assistant",
@@ -124,7 +129,7 @@ test("streaming failed:保留 JSON 信封并以服务端 error 消息抛 GENERAL
 });
 
 test("polling json:信封携带 session_id/provider/agent，并保留 has_more/next_page", () => {
-  renderCollectedEvents(fakeCollected(), true, {
+  renderCollectedEvents(host("json"), fakeCollected(), {
     session_id: "sess_poll",
     provider: "claude",
     agent: "assistant",
@@ -139,7 +144,7 @@ test("polling json:信封携带 session_id/provider/agent，并保留 has_more/n
 
 test("polling failed:保留 JSON 信封并以服务端 error 消息抛 GENERAL", async () => {
   const error = await catchSessionFailure(() =>
-    renderCollectedEvents(fakeFailedCollected(), true, {
+    renderCollectedEvents(host("json"), fakeFailedCollected(), {
       session_id: "sess_failed_poll",
       provider: "claude",
       agent: "assistant",
@@ -154,17 +159,17 @@ test("polling failed:保留 JSON 信封并以服务端 error 消息抛 GENERAL",
 });
 
 test("json:不传 context 时信封形状不变(无 session_id 键)", () => {
-  renderCollectedEvents(fakeCollected(), true);
+  renderCollectedEvents(host("json"), fakeCollected());
   const data = capturedJson();
   expect("session_id" in data).toBe(false);
   expect(Array.isArray(data.events)).toBe(true);
 });
 
 test("text 模式:context 不影响 stdout(仍只输出助手文本)", async () => {
-  await streamAndRenderEvents(fakeEventStream(), false, {
+  await streamAndRenderEvents(host("text"), fakeEventStream(), {
     session_id: "sess_text",
   });
   const output = stdoutChunks.join("");
-  expect(output).toBe("hi");
+  expect(output).toBe("hi\n");
   expect(output).not.toContain("sess_text");
 });

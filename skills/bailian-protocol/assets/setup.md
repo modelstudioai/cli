@@ -102,8 +102,9 @@ A named Profile can limit the API Key commands it supports through `api_key_capa
   selected Profile.
 - An explicit API Key or Base URL from flags or environment variables disables fallback for that
   command.
-- Unless `--quiet` is used, the CLI reports fallback on stderr. With `--output json`, it emits a
-  structured warning.
+- The CLI reports fallback as a warning on stderr, including with `--quiet`. With `--output json`,
+  each warning is a single JSON line (JSONL), without blank lines between records. Parse stderr
+  separately from the final business result on stdout.
 
 Profiles opt in only by defining `api_key_capabilities`. A missing field disables fallback, while
 `[]` makes every API Key command fall back to `default`. This applies to the built-in `token-plan`

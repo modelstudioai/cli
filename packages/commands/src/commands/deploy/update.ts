@@ -1,5 +1,4 @@
 import { defineCommand, updateDeployment, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const UPDATE_FLAGS = {
   deployedModel: {
@@ -30,6 +29,7 @@ const UPDATE_FLAGS = {
  * Body: at least one of `rpm_limit` (requests/min) or `tpm_limit` (tokens/min).
  */
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Update a deployment's rate limits (rpm_limit / tpm_limit)",
     "zh-CN": "更新部署的限流配置（rpm_limit / tpm_limit）",
@@ -60,16 +60,19 @@ export default defineCommand({
     if (flags.tpmLimit !== undefined) body.tpm_limit = flags.tpmLimit;
 
     if (settings.dryRun) {
-      emitResult({ action: "deploy.update", deployed_model: deployedModel, body }, "json");
+      const resultData1 = { action: "deploy.update", deployed_model: deployedModel, body };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
     const response = await updateDeployment(ctx.client, deployedModel, body);
 
-    if (settings.quiet) {
-      emitBare(deployedModel);
-    } else {
-      emitResult(response, "json");
-    }
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

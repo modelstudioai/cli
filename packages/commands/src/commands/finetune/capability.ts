@@ -9,11 +9,11 @@ import {
   TRAINING_TYPES_CLI,
   anonymousConsoleCall,
   UsageError,
+  type HttpDeps,
   type Settings,
   type ModelCapability,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 /**
  * Page through every foundation-model page (listFoundationModels, public — no
@@ -21,8 +21,11 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
  * records so capability fields (`supports` / `trainingTypes`) are preserved
  * for filtering.
  */
-async function fetchAllFoundationModels(settings: Settings): Promise<ModelCapability[]> {
-  const all = await fetchModelListAll(anonymousConsoleCall(settings));
+async function fetchAllFoundationModels(
+  settings: Settings,
+  diagnostics: Pick<HttpDeps, "debug">,
+): Promise<ModelCapability[]> {
+  const all = await fetchModelListAll(anonymousConsoleCall(settings, diagnostics));
   return all as ModelCapability[];
 }
 
@@ -46,6 +49,7 @@ const CAPABILITY_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US":
       "Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it)",
@@ -85,41 +89,49 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
+    const diagnostics: Pick<HttpDeps, "debug"> = {
+      debug: (diagnostic) => ctx.output.debug(diagnostic),
+    };
     const model = flags.baseModel || undefined;
     const trainingType = flags.trainingType || undefined;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "finetune.capability",
-          model,
-          training_type: trainingType,
-        },
-        "json",
+      const resultData1 = {
+        action: "finetune.capability",
+        model,
+        training_type: trainingType,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
 
     // Direction 1: by model → which training types it supports.
     if (model) {
-      const capability = await fetchModelCapability(settings, model);
+      const capability = await fetchModelCapability(settings, model, diagnostics);
       if (!capability) {
-        emitResult({ model, error: `No foundation model found matching "${model}".` }, "json");
+        const resultData2 = { model, error: `No foundation model found matching "${model}".` };
+        ctx.output.result(
+          resultData2,
+          ctx.settings.output === "text"
+            ? { text: JSON.stringify(resultData2, null, 2) }
+            : undefined,
+        );
         return;
       }
       const supported = listSupportedTrainingTypes(capability);
-      if (settings.quiet) {
-        for (const value of supported) emitBare(value);
-        return;
-      }
-      emitResult(
-        {
-          model: capability.model ?? model,
-          supported,
-          supports: capability.supports,
-          trainingTypes: capability.trainingTypes,
-        },
-        "json",
+
+      const resultData3 = {
+        model: capability.model ?? model,
+        supported,
+        supports: capability.supports,
+        trainingTypes: capability.trainingTypes,
+      };
+      ctx.output.result(
+        resultData3,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData3, null, 2) } : undefined,
       );
       return;
     }
@@ -131,7 +143,7 @@ export default defineCommand({
       );
     }
     const { method, variant } = trainingTypeMethodVariant(trainingType);
-    const all = await fetchAllFoundationModels(settings);
+    const all = await fetchAllFoundationModels(settings, diagnostics);
     const matched = all
       .filter((record) => modelSupportsTrainingType(record, trainingType))
       .map((record) => ({
@@ -141,19 +153,16 @@ export default defineCommand({
       .filter((entry) => Boolean(entry.model))
       .sort((left, right) => left.model.localeCompare(right.model));
 
-    if (settings.quiet) {
-      for (const entry of matched) emitBare(entry.model);
-      return;
-    }
-    emitResult(
-      {
-        training_type: trainingType,
-        method,
-        variant,
-        count: matched.length,
-        models: matched,
-      },
-      "json",
+    const resultData4 = {
+      training_type: trainingType,
+      method,
+      variant,
+      count: matched.length,
+      models: matched,
+    };
+    ctx.output.result(
+      resultData4,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData4, null, 2) } : undefined,
     );
   },
 });

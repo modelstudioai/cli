@@ -1,17 +1,16 @@
 import {
   defineCommand,
   taskPath,
-  detectOutputFormat,
   resolveOutputDir,
   generateFilename,
   stripUndefined,
+  type CommandOutput,
   type Client,
   type DashScopeImageRequest,
   type DashScopeImageSyncResponse,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
   type FlagsDef,
-  type OutputFormat,
   type ParsedFlags,
   type Settings,
   ExitCode,
@@ -22,14 +21,27 @@ import {
   ASYNC_FLAG,
   CONCURRENT_FLAG,
   redactDataUri,
+  bailianMcpPath,
+  AIGC_MCP_SERVER,
+  AIGC_MCP_TOOL,
+  buildImageEditArgs,
+  parseAigcImageResults,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { join } from "path";
 import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
+import {
+  isAutoModel,
+  assertAutoMcpAvailable,
+  assertMcpCompatible,
+  withAigcMcpSession,
+  resolveAutoImageInput,
+  mcpSingleImageOnlyError,
+  type Localize,
+} from "../shared/aigc-mcp.ts";
 
 const EDIT_FLAGS = {
   image: {
@@ -181,6 +193,14 @@ export default defineCommand({
       "zh-CN": '--image ./photo.png --prompt "将背景替换为海滩" --watermark false',
     },
   ],
+  notes: [
+    {
+      "en-US":
+        'Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST. Auto edit accepts a single --image only.',
+      "zh-CN":
+        '模型 "auto"（通过 --model auto 或将配置默认模型设为 "auto"）改走百炼官方 MCP，参数面更小；MCP 不支持的参数会直接报用法错误，而不回退 REST。auto 编辑仅支持单个 --image。',
+    },
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     // Normalize --image to string array (supports both single and repeated flags)
@@ -192,7 +212,13 @@ export default defineCommand({
     }
     const prompt = flags.prompt;
 
-    const model = flags.model || settings.defaultImageModel || "qwen-image-3.0";
+    const resolvedModel = flags.model || settings.defaultImageModel;
+    if (isAutoModel(resolvedModel)) {
+      await handleAutoMcpMode(ctx.client, ctx.output, ctx.localize, settings, flags, rawImages);
+      return;
+    }
+
+    const model = resolvedModel || "qwen-image-3.0";
     const route = resolveImageEditApi(model);
 
     // Auto-upload local files (resolve all images in parallel)
@@ -270,8 +296,6 @@ export default defineCommand({
     // Remove undefined parameters
     stripUndefined(body.parameters as Record<string, unknown>);
 
-    const format = detectOutputFormat(settings.output);
-
     if (settings.dryRun) {
       let previewBody: DashScopeImageRequest = body;
       if ("messages" in body.input) {
@@ -306,39 +330,101 @@ export default defineCommand({
           },
         };
       }
-      emitResult(
-        { request: previewBody, mode: route.useSync ? "sync" : "async", path: route.path },
-        format,
-      );
+      ctx.output.result({
+        request: previewBody,
+        mode: route.useSync ? "sync" : "async",
+        path: route.path,
+      });
       return;
     }
 
-    if (!settings.quiet) {
-      process.stderr.write(
-        `[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}] [Images: ${resolvedImages.length}]\n`,
-      );
-    }
+    ctx.output.info({
+      "en-US": `[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}] [Images: ${resolvedImages.length}]`,
+      "zh-CN": `[模型：${model}] [模式：${route.useSync ? "同步" : "异步"}] [图片：${resolvedImages.length}]`,
+    });
 
     const concurrent = getConcurrency(flags);
 
     if (route.useSync) {
-      await handleSyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
+      await handleSyncMode(ctx.client, ctx.output, settings, route.path, body, flags, concurrent);
     } else {
-      await handleAsyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
+      await handleAsyncMode(ctx.client, ctx.output, settings, route.path, body, flags, concurrent);
     }
   },
 });
 
+async function handleAutoMcpMode(
+  client: Client,
+  commandOutput: CommandOutput,
+  localize: Localize,
+  settings: Settings,
+  flags: EditFlags,
+  rawImages: string[],
+): Promise<void> {
+  assertAutoMcpAvailable(client, localize);
+  assertMcpCompatible("imageEdit", flags, localize);
+
+  // bailian_image_edit takes a single source image; bailian_image_fusion is out
+  // of scope, so multi-image merge is rejected in auto mode.
+  if (rawImages.length > 1) {
+    throw mcpSingleImageOnlyError(localize);
+  }
+  const source = rawImages[0];
+  if (!source) {
+    throw new BailianError("Provide one --image to edit.", ExitCode.USAGE);
+  }
+
+  const imageUrl = resolveAutoImageInput(source);
+  const concurrent = getConcurrency(flags);
+  const args = buildImageEditArgs({
+    imageUrl,
+    prompt: flags.prompt,
+    negativePrompt: flags.negativePrompt || undefined,
+  });
+
+  if (settings.dryRun) {
+    commandOutput.result({
+      server: AIGC_MCP_SERVER.image,
+      url: client.url(bailianMcpPath(AIGC_MCP_SERVER.image)),
+      tool: AIGC_MCP_TOOL.imageEdit,
+      arguments: { ...args, image_url: redactDataUri(imageUrl) },
+      mode: "mcp",
+      concurrent,
+    });
+    return;
+  }
+
+  commandOutput.info({
+    "en-US": "[Model: auto] [Mode: mcp] [Images: 1]",
+    "zh-CN": "[模型：auto] [模式：mcp] [图片：1]",
+  });
+
+  // One shared MCP session; --concurrent fans out parallel tools/call on it.
+  await withAigcMcpSession(client, AIGC_MCP_SERVER.image, localize, async (callTool) => {
+    const perRequest = await runConcurrent(concurrent, commandOutput, async () => {
+      const inner = await callTool(AIGC_MCP_TOOL.imageEdit, args);
+      return parseAigcImageResults(inner);
+    });
+
+    const imageUrls = perRequest.flat();
+    if (imageUrls.length === 0) {
+      throw new BailianError("Edit completed but no images returned.", ExitCode.GENERAL);
+    }
+
+    await saveImages(imageUrls, flags, settings, commandOutput);
+  });
+}
+
 async function handleSyncMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   path: string,
   body: DashScopeImageRequest,
   flags: EditFlags,
-  format: OutputFormat,
   concurrent: number,
 ): Promise<void> {
-  const results = await runConcurrent(concurrent, settings, () =>
+  const results = await runConcurrent(concurrent, commandOutput, () =>
     client.requestJson<DashScopeImageSyncResponse>({
       path,
       method: "POST",
@@ -356,21 +442,21 @@ async function handleSyncMode(
     throw new BailianError("Edit completed but no images returned.", ExitCode.GENERAL);
   }
 
-  await saveImages(imageUrls, flags, settings, format);
+  await saveImages(imageUrls, flags, settings, commandOutput);
 }
 
 async function handleAsyncMode(
   client: Client,
+  commandOutput: CommandOutput,
   settings: Settings,
   path: string,
   body: DashScopeImageRequest,
   flags: EditFlags,
-  format: OutputFormat,
   concurrent: number,
 ): Promise<void> {
   const responses = await runConcurrent(
     concurrent,
-    settings,
+    commandOutput,
     () =>
       client.requestJson<DashScopeAsyncResponse>({
         path,
@@ -383,13 +469,14 @@ async function handleAsyncMode(
   const taskIds = responses.map((response) => response.output.task_id);
 
   if (flags.async) {
-    emitResult({ task_ids: taskIds }, format);
+    commandOutput.result({ task_ids: taskIds });
     return;
   }
 
   const pollInterval = flags.pollInterval ?? 3;
   const pollPromises = taskIds.map((taskId) =>
-    poll<DashScopeTaskResponse>(client, settings, {
+    poll<DashScopeTaskResponse>(client, {
+      output: commandOutput,
       url: client.url(taskPath(taskId)),
       intervalSec: pollInterval,
       timeoutSec: settings.timeout,
@@ -426,14 +513,14 @@ async function handleAsyncMode(
     throw new BailianError("All tasks completed but no images returned.", ExitCode.GENERAL);
   }
 
-  await saveImages(imageUrls, flags, settings, format);
+  await saveImages(imageUrls, flags, settings, commandOutput);
 }
 
 async function saveImages(
   imageUrls: string[],
   flags: EditFlags,
   settings: Settings,
-  format: OutputFormat,
+  commandOutput: CommandOutput,
 ): Promise<void> {
   const outDir = resolveOutputDir(settings, {
     flagDir: flags.outDir,
@@ -451,11 +538,9 @@ async function saveImages(
         })
       : [{ url: imageUrls[0], destPath: join(outDir, `${prefix}.png`) }];
 
-  const saved = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
+  const saved = await downloadParallel(items, downloadFile, {
+    quiet: settings.quiet || settings.output === "json",
+  });
 
-  if (settings.quiet) {
-    emitBare(saved.join("\n"));
-  } else {
-    emitResult({ urls: imageUrls, saved, total: imageUrls.length }, format);
-  }
+  commandOutput.result({ urls: imageUrls, saved, total: imageUrls.length });
 }

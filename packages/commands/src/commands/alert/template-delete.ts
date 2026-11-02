@@ -1,5 +1,4 @@
-import { detectOutputFormat, unwrapResponse } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { unwrapResponse } from "bailian-cli-core";
 import { parseCommaList } from "../shared/params.ts";
 import { ensureAlertReady } from "./shared.ts";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
@@ -40,19 +39,16 @@ export default defineTelemetryCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const reqDTO = { templateIds: parseCommaList(flags.templateId) };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: DELETE_TEMPLATES_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: DELETE_TEMPLATES_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -61,11 +57,16 @@ export default defineTelemetryCommand({
     const raw = await ctx.client.console(DELETE_TEMPLATES_API, { reqDTO });
     const resp = unwrapResponse(raw as Record<string, unknown>);
 
-    if (format === "json") {
-      emitResult({ deleted: reqDTO.templateIds, result: resp }, format);
-      return;
-    }
-
-    process.stdout.write(`Deleted ${reqDTO.templateIds.length} alert template(s).\n`);
+    ctx.output.result(
+      { deleted: reqDTO.templateIds, result: resp },
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Deleted ${reqDTO.templateIds.length} alert template(s).`,
+              "zh-CN": `已删除 ${reqDTO.templateIds.length} 个告警模板。`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

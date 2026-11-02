@@ -1,5 +1,5 @@
 import { listRemoteSkills } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import {
   emitCollection,
   matchesQuery,
@@ -20,10 +20,9 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   validate: validateLimitAndPageLimit,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const source = (ctx.flags.source as SkillSource | undefined) ?? "custom";
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         const searchCatalog = (catalog: Exclude<SkillSource, "all">) =>
           searchCursorPages(
@@ -57,8 +56,7 @@ export default defineCommand({
         };
       }),
     );
-    emitCollection({
-      format,
+    emitCollection(ctx, {
       key: "skills",
       items: result.items,
       headers: ["ID", "NAME", "SOURCE", "STATUS", "VERSION", "UPDATED"],

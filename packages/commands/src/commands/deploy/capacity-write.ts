@@ -14,7 +14,7 @@ import {
   hasPrepaidFlags,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { CAPACITY_INSTANCE_FLAG, DEPLOYED_MODEL_FLAG, validateQueryIds } from "./query-shared.ts";
 import {
   CAPACITY_FLAGS,
@@ -46,6 +46,7 @@ const CREATE_FLAGS = {
 } satisfies FlagsDef;
 
 export const deployCapacityCreate = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Purchase an additional capacity instance for a ModelCode",
     "zh-CN": "为已有 ModelCode 叠加购买容量实例",
@@ -93,15 +94,16 @@ export const deployCapacityCreate = defineCommand({
       ...(prepaid ? { pre_paid_info: prepaid } : {}),
     };
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.capacity.create",
-          deployed_model: flags.deployedModel,
-          body,
-          client_request_id: flags.requestId ?? "<generated UUID>",
-          wait: flags.wait,
-        },
-        "json",
+      const resultData1 = {
+        action: "deploy.capacity.create",
+        deployed_model: flags.deployedModel,
+        body,
+        client_request_id: flags.requestId ?? "<generated UUID>",
+        wait: flags.wait,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -111,7 +113,7 @@ export const deployCapacityCreate = defineCommand({
         requestId,
       }),
     );
-    await finishMutation(ctx.client, flags.deployedModel, response, flags, requestId, true);
+    await finishMutation(ctx, flags.deployedModel, response, flags, requestId, true);
   },
 });
 
@@ -125,6 +127,7 @@ const SCALE_FLAGS = {
 } satisfies FlagsDef;
 
 export const deployCapacityScale = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Scale the absolute capacity of one reservation instance",
     "zh-CN": "调整单个预留实例的绝对容量",
@@ -168,17 +171,18 @@ export const deployCapacityScale = defineCommand({
       ...(prepaid ? { pre_paid_info: prepaid } : {}),
     };
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.capacity.scale",
-          deployed_model: flags.deployedModel,
-          instance_id: flags.instanceId,
-          body,
-          client_request_id: flags.requestId ?? "<generated UUID>",
-          precheck: "can_scale",
-          wait: flags.wait,
-        },
-        "json",
+      const resultData2 = {
+        action: "deploy.capacity.scale",
+        deployed_model: flags.deployedModel,
+        instance_id: flags.instanceId,
+        body,
+        client_request_id: flags.requestId ?? "<generated UUID>",
+        precheck: "can_scale",
+        wait: flags.wait,
+      };
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
       );
       return;
     }
@@ -202,7 +206,7 @@ export const deployCapacityScale = defineCommand({
     const response = await submitCapacityWrite(requestId, () =>
       scaleCapacityInstance(ctx.client, flags.deployedModel, flags.instanceId, body, { requestId }),
     );
-    await finishMutation(ctx.client, flags.deployedModel, response, flags, requestId, true);
+    await finishMutation(ctx, flags.deployedModel, response, flags, requestId, true);
   },
 });
 
@@ -223,6 +227,7 @@ const RENEW_FLAGS = {
 } satisfies FlagsDef;
 
 export const deployCapacityRenew = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Renew a prepaid capacity instance, optionally changing capacity",
     "zh-CN": "续订预付费容量实例，可同时变更容量",
@@ -265,17 +270,18 @@ export const deployCapacityRenew = defineCommand({
       ...(capacity ? { ptu_capacity: capacity } : {}),
     };
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.capacity.renew",
-          deployed_model: flags.deployedModel,
-          instance_id: flags.instanceId,
-          body,
-          client_request_id: flags.requestId ?? "<generated UUID>",
-          precheck: "can_renew/pre_paid/configured_capacity",
-          wait: flags.wait,
-        },
-        "json",
+      const resultData3 = {
+        action: "deploy.capacity.renew",
+        deployed_model: flags.deployedModel,
+        instance_id: flags.instanceId,
+        body,
+        client_request_id: flags.requestId ?? "<generated UUID>",
+        precheck: "can_renew/pre_paid/configured_capacity",
+        wait: flags.wait,
+      };
+      ctx.output.result(
+        resultData3,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData3, null, 2) } : undefined,
       );
       return;
     }
@@ -305,7 +311,7 @@ export const deployCapacityRenew = defineCommand({
     const response = await submitCapacityWrite(requestId, () =>
       renewCapacityInstance(ctx.client, flags.deployedModel, flags.instanceId, body, { requestId }),
     );
-    await finishMutation(ctx.client, flags.deployedModel, response, flags, requestId, true);
+    await finishMutation(ctx, flags.deployedModel, response, flags, requestId, true);
   },
 });
 
@@ -324,6 +330,7 @@ const DELETE_FLAGS = {
 } satisfies FlagsDef;
 
 export const deployCapacityDelete = defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Release a capacity instance without deleting its ModelCode",
     "zh-CN": "释放容量实例，保留所属 ModelCode",
@@ -354,17 +361,18 @@ export const deployCapacityDelete = defineCommand({
   async run(ctx) {
     const { flags, settings } = ctx;
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.capacity.delete",
-          deployed_model: flags.deployedModel,
-          instance_id: flags.instanceId,
-          query: flags.reason === undefined ? {} : { reason: flags.reason },
-          client_request_id: flags.requestId ?? "<generated UUID>",
-          precheck: "can_delete/prepaid_unsubscribe",
-          wait: flags.wait,
-        },
-        "json",
+      const resultData4 = {
+        action: "deploy.capacity.delete",
+        deployed_model: flags.deployedModel,
+        instance_id: flags.instanceId,
+        query: flags.reason === undefined ? {} : { reason: flags.reason },
+        client_request_id: flags.requestId ?? "<generated UUID>",
+        precheck: "can_delete/prepaid_unsubscribe",
+        wait: flags.wait,
+      };
+      ctx.output.result(
+        resultData4,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData4, null, 2) } : undefined,
       );
       return;
     }
@@ -392,7 +400,7 @@ export const deployCapacityDelete = defineCommand({
       }),
     );
     await finishMutation(
-      ctx.client,
+      ctx,
       flags.deployedModel,
       response,
       flags,

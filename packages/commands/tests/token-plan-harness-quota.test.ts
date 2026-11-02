@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import harnessQuota from "../src/commands/token-plan/harness-quota.ts";
 
@@ -49,6 +50,12 @@ async function runHarnessQuota(
   options: { output?: string; type?: string } = {},
 ): Promise<Record<string, unknown>[]> {
   const calls: Record<string, unknown>[] = [];
+  const settings = {
+    dryRun: false,
+    output: options.output === "json" ? ("json" as const) : ("text" as const),
+    quiet: false,
+    verbose: false,
+  };
   await harnessQuota.run({
     client: {
       console: vi.fn().mockImplementation((api: string, data: Record<string, unknown>) => {
@@ -61,7 +68,10 @@ async function runHarnessQuota(
       }),
     },
     flags: options.type ? { type: options.type } : {},
-    settings: { dryRun: false, output: options.output },
+    settings,
+    output: createOutputReporter({ settings }).output,
+    localize: (text: string | { "en-US": string }) =>
+      typeof text === "string" ? text : text["en-US"],
   } as never);
   return calls;
 }

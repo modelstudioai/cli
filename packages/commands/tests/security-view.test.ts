@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import type { LocalizedText } from "bailian-cli-core";
+import { createOutputReporter } from "bailian-cli-runtime";
 import overview from "../src/commands/security/overview.ts";
 import alerts from "../src/commands/security/alerts.ts";
 
 // View-layer tests for the Agent security commands. They lock in two fixes:
-//   - P2-3: `--quiet` wins over `output=json` (bare alert IDs, not a JSON doc).
+//   - quiet retains the complete result selected by output=json.
 //   - P3: text output is localized en-US / zh-CN instead of hardcoded.
 // Envelope parsing and exit codes live in core/tests/security-envelope.test.ts.
 
@@ -42,12 +43,21 @@ function makeCtx(
   language: "en-US" | "zh-CN",
   settings: Record<string, unknown> = {},
 ) {
+  const outputSettings = {
+    dryRun: false,
+    output: "text" as "text" | "json",
+    quiet: false,
+    verbose: false,
+    ...settings,
+  };
   return {
+    output: createOutputReporter({ settings: outputSettings, localize: localizeWith(language) })
+      .output,
     client,
     localize: localizeWith(language),
     flags: {},
     identity: { binName: "bl" },
-    settings: { dryRun: false, output: "text", quiet: false, ...settings },
+    settings: outputSettings,
   } as never;
 }
 
@@ -113,10 +123,9 @@ describe("security overview text output is localized (P3)", () => {
 });
 
 describe("security alerts output (P2-3 + P3)", () => {
-  test("--quiet wins over output=json: bare alert IDs, not a JSON document", async () => {
+  test("--quiet preserves the full JSON alert payload", async () => {
     const rendered = await renderAlerts("en-US", { quiet: true, output: "json" });
-    expect(rendered).toBe("a1\n");
-    expect(rendered).not.toContain("{");
+    expect(JSON.parse(rendered)).toEqual(ALERTS_BODY);
   });
 
   test("text output localizes stats and field labels per language", async () => {

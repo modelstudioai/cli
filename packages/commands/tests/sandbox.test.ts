@@ -1,10 +1,11 @@
-import { httpTransport } from "bailian-cli-core";
+import { buildSettings, httpTransport } from "bailian-cli-core";
 import { getEventListeners } from "node:events";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BailianError, Client, ExitCode, type AnyCommand, type Settings } from "bailian-cli-core";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
+import { withCommandOutput } from "./output/command-context.ts";
 import {
   buildSandboxCreateBody,
   sandboxConnect,
@@ -36,16 +37,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const SETTINGS: Settings = {
-  output: "json",
-  outputExplicit: true,
-  timeout: 30,
-  watermark: true,
-  verbose: false,
-  quiet: true,
-  dryRun: false,
-  telemetry: false,
-};
+const SETTINGS: Settings = buildSettings({
+  flags: { output: "json", quiet: true, timeout: 30 },
+  env: {},
+  file: {},
+});
 
 interface RecordedRequest {
   path: string;
@@ -81,17 +77,19 @@ async function runCommand(
     void requestOptions;
     return new Response(null, { status: 204 });
   });
-  await command.run({
-    identity: {
-      binName: "bl",
-      version: "test",
-      npmPackage: "bailian-cli",
-      clientName: "bailian-cli",
-    },
-    settings: SETTINGS,
-    flags,
-    client: { requestJson, request, url: createUrlResolver(baseUrl) },
-  } as never);
+  await command.run(
+    withCommandOutput({
+      identity: {
+        binName: "bl",
+        version: "test",
+        npmPackage: "bailian-cli",
+        clientName: "bailian-cli",
+      },
+      settings: SETTINGS,
+      flags,
+      client: { requestJson, request, url: createUrlResolver(baseUrl) },
+    }) as never,
+  );
 
   const recorded = requestJson.mock.calls[0]?.[0] ?? request.mock.calls[0]?.[0];
   if (!recorded) throw new Error("Expected the command to issue one request.");
@@ -381,22 +379,24 @@ describe("Sandbox command transport", () => {
       stdout += String(chunk);
       return true;
     });
-    await sandboxGet.run({
-      identity: { binName: "bl" },
-      settings: { ...SETTINGS, quiet: false },
-      flags: {
-        workspaceId: "ws-test",
-        sandboxId: "sandbox-test",
-        showCredentials: testCase.showCredentials,
-      },
-      client: {
-        url: createUrlResolver(),
-        requestJson: async () => ({
-          sandboxID: "sandbox-test",
-          envdAccessToken: "envd-secret",
-        }),
-      },
-    } as never);
+    await sandboxGet.run(
+      withCommandOutput({
+        identity: { binName: "bl" },
+        settings: { ...SETTINGS, quiet: false },
+        flags: {
+          workspaceId: "ws-test",
+          sandboxId: "sandbox-test",
+          showCredentials: testCase.showCredentials,
+        },
+        client: {
+          url: createUrlResolver(),
+          requestJson: async () => ({
+            sandboxID: "sandbox-test",
+            envdAccessToken: "envd-secret",
+          }),
+        },
+      }) as never,
+    );
     expect(JSON.parse(stdout)).toMatchObject({ envdAccessToken: testCase.expectedToken });
   });
 });
@@ -412,6 +412,7 @@ describe("Sandbox template build polling", () => {
       SETTINGS,
       "https://example.test/build/status",
       0,
+      withCommandOutput({ settings: SETTINGS }).output,
     );
     expect(result).toMatchObject({ status: "ready", buildID: "build-test" });
     expect(requestJson).toHaveBeenCalledTimes(2);
@@ -428,6 +429,7 @@ describe("Sandbox template build polling", () => {
         SETTINGS,
         "https://example.test/build/status",
         0,
+        withCommandOutput({ settings: SETTINGS }).output,
       ),
     ).rejects.toMatchObject({
       message: "image download failed",
@@ -443,6 +445,7 @@ describe("Sandbox template build polling", () => {
         { ...SETTINGS, timeout: 0 },
         "https://example.test/build/status",
         1,
+        withCommandOutput({ settings: SETTINGS }).output,
       ),
     ).rejects.toEqual(expect.objectContaining({ exitCode: ExitCode.TIMEOUT }));
     expect(requestJson).not.toHaveBeenCalled();
@@ -480,23 +483,26 @@ describe("Sandbox template build polling", () => {
       },
     ];
     const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     for (const scenario of scenarios) {
       const requestJson = vi.fn().mockResolvedValueOnce(submission);
       if (scenario.error) requestJson.mockRejectedValue(scenario.error);
       else requestJson.mockResolvedValue(scenario.response);
-      const operation = command.run({
-        identity: { binName: "bl" },
-        settings: { ...SETTINGS, timeout: scenario.timeout },
-        flags: {
-          workspaceId: "ws-test",
-          templateId: "template-test",
-          name: "python",
-          cpuCount: 1,
-          memoryMb: 2048,
-          async: false,
-        },
-        client: { requestJson, url: createUrlResolver() },
-      } as never);
+      const operation = command.run(
+        withCommandOutput({
+          identity: { binName: "bl" },
+          settings: { ...SETTINGS, timeout: scenario.timeout },
+          flags: {
+            workspaceId: "ws-test",
+            templateId: "template-test",
+            name: "python",
+            cpuCount: 1,
+            memoryMb: 2048,
+            async: false,
+          },
+          client: { requestJson, url: createUrlResolver() },
+        }) as never,
+      );
       await expect(operation).rejects.toMatchObject({
         message: scenario.message,
         exitCode: scenario.exitCode,
@@ -515,6 +521,7 @@ describe("Sandbox template build polling", () => {
       );
     }
     expect(stdout).not.toHaveBeenCalled();
+    expect(stderr).toHaveBeenCalledTimes(scenarios.length);
   });
 
   test.each(["json", "text"] as const)(
@@ -531,23 +538,27 @@ describe("Sandbox template build polling", () => {
         return true;
       });
       await expect(
-        sandboxTemplateCreate.run({
-          identity: { binName: "bl" },
-          settings: { ...SETTINGS, output },
-          flags: {
-            workspaceId: "ws-test",
-            name: "python",
-            cpuCount: 1,
-            memoryMb: 2048,
-            async: false,
-          },
-          client: { requestJson, url: createUrlResolver() },
-        } as never),
+        sandboxTemplateCreate.run(
+          withCommandOutput({
+            identity: { binName: "bl" },
+            settings: { ...SETTINGS, output },
+            flags: {
+              workspaceId: "ws-test",
+              name: "python",
+              cpuCount: 1,
+              memoryMb: 2048,
+              async: false,
+            },
+            client: { requestJson, url: createUrlResolver() },
+          }) as never,
+        ),
       ).rejects.toBe(failure);
       if (output === "json") {
         expect(JSON.parse(stderr)).toMatchObject({
-          templateID: "template-test",
-          buildID: "build-test",
+          warning: {
+            code: "SANDBOX_TEMPLATE_BUILD_SUBMITTED",
+            details: { templateID: "template-test", buildID: "build-test" },
+          },
         });
       } else {
         expect(stderr).toContain("templateID=template-test, buildID=build-test");
@@ -566,20 +577,26 @@ describe("Sandbox template build polling", () => {
       buildID: "build-test",
       buildStatus: "building",
     });
-    await sandboxTemplateCreate.run({
-      identity: { binName: "bl" },
-      settings: SETTINGS,
-      flags: {
-        workspaceId: "ws-test",
-        name: "python",
-        cpuCount: 1,
-        memoryMb: 2048,
-        async: true,
-      },
-      client: { requestJson, url: createUrlResolver() },
-    } as never);
+    await sandboxTemplateCreate.run(
+      withCommandOutput({
+        identity: { binName: "bl" },
+        settings: SETTINGS,
+        flags: {
+          workspaceId: "ws-test",
+          name: "python",
+          cpuCount: 1,
+          memoryMb: 2048,
+          async: true,
+        },
+        client: { requestJson, url: createUrlResolver() },
+      }) as never,
+    );
     expect(requestJson).toHaveBeenCalledTimes(1);
-    expect(stdout).toBe("template-test\tbuild-test\n");
+    expect(JSON.parse(stdout)).toEqual({
+      templateID: "template-test",
+      buildID: "build-test",
+      buildStatus: "building",
+    });
   });
 
   test.each([undefined, "https://gateway.example.test"])(
@@ -602,19 +619,21 @@ describe("Sandbox template build polling", () => {
           buildID: "build-test",
           status: "ready",
         });
-      await sandboxTemplateCreate.run({
-        identity: { binName: "bl" },
-        settings: { ...SETTINGS, quiet: false },
-        flags: {
-          workspaceId: "ws-test",
-          name: "python",
-          cpuCount: 1,
-          memoryMb: 2048,
-          async: false,
-          pollInterval: 1,
-        },
-        client: { requestJson, url: createUrlResolver(baseUrl) },
-      } as never);
+      await sandboxTemplateCreate.run(
+        withCommandOutput({
+          identity: { binName: "bl" },
+          settings: { ...SETTINGS, quiet: false },
+          flags: {
+            workspaceId: "ws-test",
+            name: "python",
+            cpuCount: 1,
+            memoryMb: 2048,
+            async: false,
+            pollInterval: 1,
+          },
+          client: { requestJson, url: createUrlResolver(baseUrl) },
+        }) as never,
+      );
 
       expect(requestJson).toHaveBeenCalledTimes(2);
       expect(requestJson.mock.calls[1]?.[0]).toMatchObject({
@@ -677,12 +696,14 @@ describe("Sandbox unused response cleanup", () => {
         },
       });
       const fetchMock = vi.spyOn(httpTransport, "fetch").mockResolvedValue(new Response(body));
-      await command.run({
-        identity: { binName: "bl" },
-        settings: SETTINGS,
-        flags: { workspaceId: "ws-test", ...flags },
-        client,
-      } as never);
+      await command.run(
+        withCommandOutput({
+          identity: { binName: "bl" },
+          settings: SETTINGS,
+          flags: { workspaceId: "ws-test", ...flags },
+          client,
+        }) as never,
+      );
       const signal = fetchMock.mock.calls[0][1]!.signal!;
       expect(signal.aborted).toBe(true);
       expect(getEventListeners(signal, "abort")).toHaveLength(0);

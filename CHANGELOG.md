@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.7.2] - 2026-10-30
+
+### Added
+
+- **AIGC auto mode**: `bl image generate` / `bl image edit` / `bl video generate` / `bl speech synthesize` / `bl speech recognize` add `--model auto`, routing AIGC models automatically via Bailian's self-developed MCP.
+
+### Changed
+
+- **MCP client migration**: Replace the hand-rolled SSE MCP client with the official MCP SDK.
+
 ## [2.7.1] - 2026-10-29
 
 ### Fixed

@@ -9,7 +9,6 @@ import {
   runWithConcurrency,
   writeSkillLock,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
 
 /** Prefix used to identify first-party Bailian skills in the registry. */
@@ -17,9 +16,6 @@ const BAILIAN_PREFIX = "bailian-";
 
 /** Max number of skills downloading/installing at the same time. */
 const INIT_CONCURRENCY = 3;
-
-/** Default output format when user does not pass --output explicitly. */
-const DEFAULT_FORMAT = "json";
 
 /** All status values used by skill init (per-skill outcome + aggregate result). */
 const STATUS = {
@@ -40,6 +36,7 @@ export default defineCommand({
     "zh-CN": "安装全部 bailian-* Skill（用于新环境的一次性初始化）",
   },
   auth: "none",
+  defaultOutput: "json",
   usageArgs: "",
   exampleArgs: [""],
   notes: [
@@ -54,7 +51,6 @@ export default defineCommand({
     },
   ],
   async run(ctx) {
-    const format = ctx.settings.outputExplicit ? ctx.settings.output : DEFAULT_FORMAT;
     const index = await fetchSkillsIndex();
 
     // Discover all bailian-* skills from the live registry index
@@ -62,17 +58,14 @@ export default defineCommand({
     const agents = detectInstalledAgents();
 
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          action: "skill.init",
-          skills: names.map((name) => ({
-            name,
-            links: planFanoutLinks(name, agents),
-          })),
-          agents: summarizeAgents(agents),
-        },
-        format,
-      );
+      ctx.output.result({
+        action: "skill.init",
+        skills: names.map((name) => ({
+          name,
+          links: planFanoutLinks(name, agents),
+        })),
+        agents: summarizeAgents(agents),
+      });
       return;
     }
 
@@ -110,35 +103,44 @@ export default defineCommand({
           ? STATUS.failed
           : STATUS.partial;
 
-    if (format === DEFAULT_FORMAT) {
-      const agentIds = agents.map((agent) => agent.id);
-      const payload: Record<string, unknown> = {
-        status,
-        skills: installed.map((result) => result.name),
-      };
-      if (failed.length > 0) {
-        payload.failed = failed.map((result) => ({
-          name: result.name,
-          reason: result.reason,
-          agents: agentIds,
-        }));
-      }
-      emitResult(payload, format);
-    } else if (results.length === 0) {
-      emitBare("No bailian-* skills found in the registry.");
-    } else {
-      emitBare(
-        status === STATUS.success
-          ? `Installed ${installed.length} bailian-* skills.`
-          : `Installed ${installed.length}/${results.length} bailian-* skills.`,
+    const agentIds = agents.map((agent) => agent.id);
+    const payload: Record<string, unknown> = {
+      status,
+      skills: installed.map((result) => result.name),
+    };
+    if (failed.length > 0)
+      payload.failed = failed.map((result) => ({
+        name: result.name,
+        reason: result.reason,
+        agents: agentIds,
+      }));
+    const lines =
+      results.length === 0
+        ? [
+            ctx.localize({
+              "en-US": "No bailian-* skills found in the registry.",
+              "zh-CN": "Registry 中未找到 bailian-* Skill。",
+            }),
+          ]
+        : [
+            ctx.localize(
+              status === STATUS.success
+                ? {
+                    "en-US": `Installed ${installed.length} bailian-* skills.`,
+                    "zh-CN": `已安装 ${installed.length} 个 bailian-* Skill。`,
+                  }
+                : {
+                    "en-US": `Installed ${installed.length}/${results.length} bailian-* skills.`,
+                    "zh-CN": `已安装 ${installed.length}/${results.length} 个 bailian-* Skill。`,
+                  },
+            ),
+          ];
+    if (failed.length > 0)
+      lines.push(
+        ctx.localize({ "en-US": "Failed:", "zh-CN": "失败：" }),
+        ...failed.map((item) => `  ${item.name}: ${item.reason}`),
       );
-      if (failed.length > 0) {
-        emitBare("Failed:");
-        for (const item of failed) {
-          emitBare(`  ${item.name}: ${item.reason}`);
-        }
-      }
-    }
+    ctx.output.result(payload, { text: lines.join("\n") });
 
     if (failed.length > 0) {
       throw new BailianError(

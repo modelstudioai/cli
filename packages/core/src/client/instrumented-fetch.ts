@@ -1,5 +1,5 @@
+import { debugRequest, debugResponse } from "./diagnostics.ts";
 import { httpTransport } from "./transport.ts";
-import { maskToken } from "../utils/token.ts";
 import type { HttpDeps } from "./http.ts";
 import { trackingHeaders } from "./headers.ts";
 
@@ -56,21 +56,11 @@ export function createInstrumentedFetch(deps: HttpDeps): FetchImplementation {
       }
     }
 
-    if (deps.settings.verbose) {
-      process.stderr.write(`> ${init.method ?? "GET"} ${url}\n`);
-      const auth = headers.get("authorization");
-      if (auth) process.stderr.write(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}\n`);
-    }
+    debugRequest(deps, init.method ?? (input instanceof Request ? input.method : "GET"), url);
 
     const res = await httpTransport.fetch(input, { ...init, headers });
 
-    if (deps.settings.verbose) {
-      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
-      const reqId = res.headers.get("x-request-id");
-      if (reqId) {
-        process.stderr.write(`request_id: ${reqId}\n`);
-      }
-    }
+    debugResponse(deps, res);
 
     return res;
   };

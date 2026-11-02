@@ -1,3 +1,5 @@
+import { debugRequest, debugResponse } from "../client/diagnostics.ts";
+import type { HttpDeps } from "../client/http.ts";
 import { httpTransport } from "../client/transport.ts";
 import type { Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
@@ -72,10 +74,8 @@ export type ConsoleCall = (api: string, data: Record<string, unknown>) => Promis
  * as `listFoundationModels` — no console login required.
  */
 export function anonymousConsoleCall(
-  config: Pick<
-    Settings,
-    "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout" | "verbose" | "output"
-  >,
+  config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout">,
+  diagnostics: Pick<HttpDeps, "debug"> = {},
 ): ConsoleCall {
   const eff = effectiveConsoleGatewayConfig(config);
   return (api, data) =>
@@ -83,7 +83,7 @@ export function anonymousConsoleCall(
       { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
       config.timeout,
       { api, data },
-      config,
+      diagnostics,
     );
 }
 
@@ -128,7 +128,7 @@ export async function callConsoleGateway(
   target: ConsoleGatewayTarget,
   timeoutSec: number,
   { api, data }: ConsoleGatewayRequest,
-  settings?: Pick<Settings, "verbose"> & Partial<Pick<Settings, "output">>,
+  diagnostics: Pick<HttpDeps, "debug"> = {},
 ): Promise<unknown> {
   const resolved = resolveGateway(target.region, target.site);
   const gatewayBase = `https://${resolved.csGateway}`;
@@ -145,22 +145,7 @@ export async function callConsoleGateway(
   if (target.token) headers.Authorization = `Bearer ${target.token}`;
 
   const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
-  if (settings?.verbose) {
-    const requestDebug = {
-      type: "request",
-      method: "POST",
-      endpoint,
-      api,
-      region: target.region,
-    };
-    if (settings.output === "json") {
-      process.stderr.write(`${JSON.stringify({ debug: requestDebug })}\n`);
-    } else {
-      process.stderr.write(`> POST ${endpoint}\n`);
-      process.stderr.write(`> api ${api}\n`);
-      process.stderr.write(`> region ${target.region}\n`);
-    }
-  }
+  debugRequest(diagnostics, "POST", endpoint, { api, region: target.region });
 
   const res = await httpTransport.fetch(endpoint, {
     method: "POST",
@@ -169,20 +154,7 @@ export async function callConsoleGateway(
     signal: AbortSignal.timeout(timeoutMs),
   });
 
-  if (settings?.verbose) {
-    const requestId = res.headers.get("x-request-id") ?? undefined;
-    const responseDebug = {
-      type: "response",
-      status: res.status,
-      statusText: res.statusText,
-      ...(requestId ? { requestId } : {}),
-    };
-    if (settings.output === "json") {
-      process.stderr.write(`${JSON.stringify({ debug: responseDebug })}\n`);
-    } else {
-      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
-    }
-  }
+  debugResponse(diagnostics, res);
 
   if (!res.ok) {
     const t = await res.text().catch(() => "");

@@ -1,3 +1,4 @@
+import type { HttpDeps } from "./http.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import { Client, type OpenApiResponse } from "./client.ts";
 
@@ -24,12 +25,14 @@ export interface BailianControlAuth {
   accessKeyId: string;
   accessKeySecret: string;
   securityToken?: string;
+  debug?: HttpDeps["debug"];
 }
 
 function bailianControlClient(auth: BailianControlAuth): Client {
   return new Client({
     identity: auth.identity,
     settings: auth.settings,
+    debug: auth.debug,
     baseUrl: auth.baseUrl,
     openApiCred: {
       accessKeyId: auth.accessKeyId,

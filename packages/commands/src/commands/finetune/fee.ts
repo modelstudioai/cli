@@ -13,6 +13,7 @@ import {
   effectiveConsoleGatewayConfig,
   unwrapResponse,
   MODEL_LIST_API,
+  type HttpDeps,
   type Settings,
   type ModelPriceInfo,
 } from "bailian-cli-core";
@@ -31,6 +32,7 @@ export interface ActualFee {
 async function fetchTrainingPrice(
   settings: Settings,
   model: string,
+  diagnostics: Pick<HttpDeps, "debug">,
 ): Promise<ModelPriceInfo | null> {
   const eff = effectiveConsoleGatewayConfig(settings);
   const result = await callConsoleGateway(
@@ -55,7 +57,7 @@ async function fetchTrainingPrice(
         },
       },
     },
-    settings,
+    diagnostics,
   );
   const responseData = unwrapResponse(result as Record<string, unknown>);
   const list = (responseData.list as Record<string, unknown>[]) ?? [];
@@ -91,9 +93,10 @@ export async function computeActualFee(
   settings: Settings,
   model: string,
   usageTokens: number,
+  diagnostics: Pick<HttpDeps, "debug"> = {},
 ): Promise<ActualFee | null> {
   try {
-    const ftEntry = await fetchTrainingPrice(settings, model);
+    const ftEntry = await fetchTrainingPrice(settings, model, diagnostics);
     const unitPrice = Number(ftEntry?.price);
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
     const priceUnit = ftEntry?.priceUnit ?? "每百万tokens";

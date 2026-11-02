@@ -1,3 +1,4 @@
+import type { HttpDeps } from "../client/http.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
@@ -52,12 +53,13 @@ export function resolveCLIAccessTokenTarget(
 export async function validateConsoleAccessToken(
   target: ConsoleGatewayTarget,
   settings: Settings,
+  diagnostics: Pick<HttpDeps, "debug"> = {},
 ): Promise<void> {
   const response = (await callConsoleGateway(
     target,
     settings.timeout,
     { api: "zeldaEasy.cornerstone-portal.cs-console.loginInfo", data: {} },
-    settings,
+    diagnostics,
   )) as { data?: { success?: boolean } } | null;
   if (response?.data?.success !== true) {
     throw new BailianError(
@@ -72,6 +74,7 @@ export async function validateConsoleAccessToken(
 export async function generateCLIAccessToken(opts: {
   identity: Identity;
   settings: Settings;
+  debug?: HttpDeps["debug"];
   baseUrl: string;
   accessKeyId: string;
   accessKeySecret: string;
@@ -82,6 +85,7 @@ export async function generateCLIAccessToken(opts: {
   const client = new Client({
     identity,
     settings,
+    debug: opts.debug,
     baseUrl,
     openApiCred: { accessKeyId, accessKeySecret, securityToken, source: "flag" },
   });
@@ -113,6 +117,7 @@ export async function generateCLIAccessToken(opts: {
 export async function refreshAccessToken(opts: {
   identity: Identity;
   settings: Settings;
+  debug?: HttpDeps["debug"];
   baseUrl: string;
   /** 重试原请求作为验证；独立调用时默认通过只读 loginInfo 校验。 */
   validateToken?: (token: string) => Promise<void>;
@@ -123,13 +128,12 @@ export async function refreshAccessToken(opts: {
   const accessKeySecret = config.access_key_secret;
   if (!accessKeyId || !accessKeySecret) return null;
 
-  if (opts.settings.verbose) {
-    process.stderr.write("Refreshing access token...\n");
-  }
+  opts.debug?.({ message: { "en-US": "Refreshing access token", "zh-CN": "正在刷新访问令牌" } });
 
   const resp = await generateCLIAccessToken({
     identity: opts.identity,
     settings: opts.settings,
+    debug: opts.debug,
     baseUrl: opts.baseUrl,
     accessKeyId,
     accessKeySecret,
@@ -143,6 +147,7 @@ export async function refreshAccessToken(opts: {
     await validateConsoleAccessToken(
       { ...resolveCLIAccessTokenTarget(opts.settings, opts.baseUrl), token },
       opts.settings,
+      { debug: opts.debug },
     );
   }
 

@@ -9,8 +9,7 @@ import {
   type ProviderSessionInfo,
 } from "@openagentpack/sdk";
 import { sanitizeSessionEvents } from "@openagentpack/sdk/session-events";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import { API_TARGET_FLAGS } from "./_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -268,23 +267,28 @@ export const managedAgentSessionDebug = defineCommand({
   exampleArgs: ["--session-id sess_abc", "--session-id sess_abc --output json"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const bundle = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return collectSessionDiagnostics(runtime, ctx.flags.sessionId, "bailian");
       }),
     );
     const redacted = redactSensitiveValues(bundle);
-    if (format === "json") {
-      emitResult(redacted, format);
-      return;
-    }
-    emitBare(`Session:      ${bundle.session.id} (${bundle.session.status})`);
-    emitBare(`Events:       ${bundle.events.length}`);
-    emitBare(`Scoped files: ${bundle.files.length}`);
-    emitBare(`Partial errors: ${bundle.errors.length}`);
-    for (const error of bundle.errors) emitBare(`  ${error.component}: ${error.message}`);
+    ctx.output.result(redacted, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              lines.push(`Session:      ${bundle.session.id} (${bundle.session.status})`);
+              lines.push(`Events:       ${bundle.events.length}`);
+              lines.push(`Scoped files: ${bundle.files.length}`);
+              lines.push(`Partial errors: ${bundle.errors.length}`);
+              for (const error of bundle.errors)
+                lines.push(`  ${error.component}: ${error.message}`);
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
   },
 });
 
@@ -306,16 +310,15 @@ export const managedAgentSessionExport = defineCommand({
     },
   ],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult(
-        { would_export_session: ctx.flags.sessionId, output_file: ctx.flags.outputFile },
-        format,
-      );
+      ctx.output.result({
+        would_export_session: ctx.flags.sessionId,
+        output_file: ctx.flags.outputFile,
+      });
       return;
     }
     const bundle = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return collectSessionDiagnostics(runtime, ctx.flags.sessionId, "bailian");
       }),
@@ -342,15 +345,14 @@ export const managedAgentSessionExport = defineCommand({
       { name: "errors.json", content: jsonBytes(bundle.errors) },
     ]);
     const outputFile = await writeOutputFile(ctx.flags.outputFile, zip, ctx.flags.force);
-    if (format === "json") {
-      emitResult(
-        { exported: bundle.session.id, output_file: outputFile, partial: manifest.partial },
-        format,
-      );
-    } else {
-      emitBare(
-        `Session diagnostics exported to ${outputFile}${manifest.partial ? " (partial)" : ""}`,
-      );
-    }
+    ctx.output.result(
+      { exported: bundle.session.id, output_file: outputFile, partial: manifest.partial },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? `Session diagnostics exported to ${outputFile}${manifest.partial ? " (partial)" : ""}`
+            : undefined,
+      },
+    );
   },
 });

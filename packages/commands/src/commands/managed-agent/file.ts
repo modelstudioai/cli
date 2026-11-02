@@ -7,8 +7,7 @@ import {
   listRemoteFiles,
   uploadFile,
 } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import {
   API_TARGET_FLAGS,
   CURSOR_FLAGS,
@@ -106,21 +105,17 @@ export const managedAgentFileUpload = defineCommand({
   exampleArgs: ["--path ./report.pdf"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          would_upload_file: ctx.flags.path,
-          filename: ctx.flags.filename ?? basename(ctx.flags.path),
-          mime_type: ctx.flags.mimeType ?? inferMimeType(ctx.flags.path),
-        },
-        format,
-      );
+      ctx.output.result({
+        would_upload_file: ctx.flags.path,
+        filename: ctx.flags.filename ?? basename(ctx.flags.path),
+        mime_type: ctx.flags.mimeType ?? inferMimeType(ctx.flags.path),
+      });
       return;
     }
     const content = await readInputFile(ctx.flags.path);
     const file = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return uploadFile(runtime, content, ctx.flags.filename ?? basename(ctx.flags.path), {
           provider: "bailian",
@@ -128,8 +123,10 @@ export const managedAgentFileUpload = defineCommand({
         });
       }),
     );
-    if (format === "json") emitResult(file, format);
-    else emitBare(`File uploaded: ${file.id} (${file.filename})`);
+    ctx.output.result(file, {
+      text:
+        ctx.settings.output === "text" ? `File uploaded: ${file.id} (${file.filename})` : undefined,
+    });
   },
 });
 
@@ -142,9 +139,8 @@ export const managedAgentFileList = defineCommand({
   notes: CREDENTIALS_NOTE,
   validate: validateLimitAndPageLimit,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return fetchAllPages(
           async (page) => {
@@ -165,8 +161,7 @@ export const managedAgentFileList = defineCommand({
         );
       }),
     );
-    emitCollection({
-      format,
+    emitCollection(ctx, {
       key: "files",
       items: result.items,
       headers: ["ID", "FILENAME", "STATUS", "BYTES", "SCOPE", "CREATED"],
@@ -186,22 +181,25 @@ export const managedAgentFileGet = defineCommand({
   exampleArgs: ["--file-id file_abc"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const file = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getFileInfo(runtime, ctx.flags.fileId, { provider: "bailian" });
       }),
     );
-    if (format === "json") emitResult(file, format);
-    else {
-      emitBare(`ID:       ${file.id}`);
-      emitBare(`Filename: ${file.filename}`);
-      emitBare(`MIME:     ${file.mime_type}`);
-      emitBare(`Bytes:    ${file.size_bytes}`);
-      emitBare(`Status:   ${displayValue(file.status)}`);
-      emitBare(`Scope:    ${displayValue(file.scope?.id)}`);
-    }
+    ctx.output.result(file, {
+      text:
+        ctx.settings.output === "text"
+          ? [
+              `ID:       ${file.id}`,
+              `Filename: ${file.filename}`,
+              `MIME:     ${file.mime_type}`,
+              `Bytes:    ${file.size_bytes}`,
+              `Status:   ${displayValue(file.status)}`,
+              `Scope:    ${displayValue(file.scope?.id)}`,
+            ].join("\n")
+          : undefined,
+    });
   },
 });
 
@@ -214,9 +212,8 @@ export const managedAgentFileSearch = defineCommand({
   notes: CREDENTIALS_NOTE,
   validate: validateLimitAndPageLimit,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return searchCursorPages(
           async (page) => {
@@ -237,8 +234,7 @@ export const managedAgentFileSearch = defineCommand({
         );
       }),
     );
-    emitCollection({
-      format,
+    emitCollection(ctx, {
       key: "files",
       items: result.items,
       headers: ["ID", "FILENAME", "STATUS", "BYTES", "SCOPE", "CREATED"],
@@ -263,24 +259,24 @@ export const managedAgentFileDownload = defineCommand({
   exampleArgs: ["--file-id file_abc --output-file ./artifact.pdf"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult(
-        { would_download_file: ctx.flags.fileId, output_file: ctx.flags.outputFile },
-        format,
-      );
+      ctx.output.result({
+        would_download_file: ctx.flags.fileId,
+        output_file: ctx.flags.outputFile,
+      });
       return;
     }
     const content = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return downloadRemoteFile(runtime, ctx.flags.fileId, { provider: "bailian" });
       }),
     );
     const outputFile = await writeOutputFile(ctx.flags.outputFile, content, ctx.flags.force);
-    if (format === "json")
-      emitResult({ downloaded: ctx.flags.fileId, output_file: outputFile }, format);
-    else emitBare(`File downloaded to ${outputFile}`);
+    ctx.output.result(
+      { downloaded: ctx.flags.fileId, output_file: outputFile },
+      { text: ctx.settings.output === "text" ? `File downloaded to ${outputFile}` : undefined },
+    );
   },
 });
 
@@ -299,18 +295,19 @@ export const managedAgentFileDelete = defineCommand({
   exampleArgs: ["--file-id file_abc --dry-run", "--file-id file_abc --yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult({ would_delete_file: ctx.flags.fileId }, format);
+      ctx.output.result({ would_delete_file: ctx.flags.fileId });
       return;
     }
     await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         await deleteFile(runtime, ctx.flags.fileId, { provider: "bailian" });
       }),
     );
-    if (format === "json") emitResult({ deleted: ctx.flags.fileId }, format);
-    else emitBare(`File ${ctx.flags.fileId} deleted.`);
+    ctx.output.result(
+      { deleted: ctx.flags.fileId },
+      { text: ctx.settings.output === "text" ? `File ${ctx.flags.fileId} deleted.` : undefined },
+    );
   },
 });

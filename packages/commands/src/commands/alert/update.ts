@@ -1,6 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { emitResult } from "bailian-cli-runtime";
 import {
   ALERT_RULE_WRITE_FLAGS,
   buildAlertRuleReqDTO,
@@ -37,7 +35,7 @@ export default defineTelemetryCommand({
   validate: (flags) => validateAlertRuleFlags(flags),
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const reqDTO = {
       ...(settings.workspaceId ? { workspaceId: settings.workspaceId } : {}),
@@ -46,14 +44,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: UPDATE_RULE_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: UPDATE_RULE_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -61,11 +56,16 @@ export default defineTelemetryCommand({
 
     await ctx.client.console(UPDATE_RULE_API, { reqDTO });
 
-    if (format === "json") {
-      emitResult({ updated: true, ruleId: flags.ruleId }, format);
-      return;
-    }
-
-    process.stdout.write(`Alert rule updated: ${flags.ruleId}\n`);
+    ctx.output.result(
+      { updated: true, ruleId: flags.ruleId },
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Alert rule updated: ${flags.ruleId}`,
+              "zh-CN": `告警规则已更新: ${flags.ruleId}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

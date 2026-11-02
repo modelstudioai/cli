@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,6 +24,8 @@ async function preview(command: AnyCommand, flags: Record<string, unknown>) {
   await command.run({
     flags: { workspaceId: "ws_test", ...flags },
     settings: { dryRun: true, output: "json" },
+    output: createOutputReporter({ settings: { output: "json", quiet: false, verbose: false } })
+      .output,
     localize: (text: string | { "en-US": string }) =>
       typeof text === "string" ? text : text["en-US"],
     client,

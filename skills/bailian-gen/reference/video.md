@@ -131,6 +131,7 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 
 #### Notes
 
+- Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.
 - Prime mode requires an explicit model.
 - Prime endpoint: configured --base-url, DASHSCOPE_BASE_URL, or profile base_url takes precedence; otherwise workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
 

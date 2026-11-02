@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef } from "bailian-cli-core";
+import { formatTable } from "bailian-cli-runtime";
 import { listSessionSummaries } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -72,8 +72,8 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   validate: validateLimitAndPageLimit,
   async run(ctx) {
-    const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const { flags } = ctx;
+
     const file = flags.file ?? "agents.yaml";
 
     const {
@@ -81,7 +81,7 @@ export default defineCommand({
       hasMore,
       nextPage,
     } = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         return fetchAllPages(
           async (page) => {
@@ -109,30 +109,35 @@ export default defineCommand({
     );
 
     const sessions = summaries.map((summary) => summary.session);
-    if (format === "json") {
-      emitResult({ sessions, has_more: hasMore, next_page: nextPage }, format);
-      return;
-    }
-    if (sessions.length === 0) {
-      emitBare("No sessions found.");
-      return;
-    }
+    const text =
+      ctx.settings.output === "text"
+        ? (() => {
+            const lines: string[] = [];
+            if (sessions.length === 0) {
+              lines.push("No sessions found.");
+              return lines.join("\n");
+            }
 
-    const agentNames = new Map(
-      summaries
-        .filter((summary) => summary.agentName)
-        .map((summary) => [summary.session.id, summary.agentName!]),
-    );
-    const headers = ["ID", "TITLE", "AGENT", "STATUS", "CREATED"];
-    const rows = sessions.map((session) => [
-      session.id,
-      (session.title ?? "").slice(0, 20),
-      agentNames.get(session.id) ?? session.agent_id.slice(0, 12),
-      session.status,
-      session.created_at,
-    ]);
-    for (const line of formatTable(headers, rows)) emitBare(line);
-    emitBare(`\nTotal: ${sessions.length}`);
-    if (hasMore) emitBare("More sessions available. Use --all to fetch all.");
+            const agentNames = new Map(
+              summaries
+                .filter((summary) => summary.agentName)
+                .map((summary) => [summary.session.id, summary.agentName!]),
+            );
+            const headers = ["ID", "TITLE", "AGENT", "STATUS", "CREATED"];
+            const rows = sessions.map((session) => [
+              session.id,
+              (session.title ?? "").slice(0, 20),
+              agentNames.get(session.id) ?? session.agent_id.slice(0, 12),
+              session.status,
+              session.created_at,
+            ]);
+            for (const line of formatTable(headers, rows)) lines.push(line);
+            lines.push(`\nTotal: ${sessions.length}`);
+            if (hasMore) lines.push("More sessions available. Use --all to fetch all.");
+
+            return lines.join("\n");
+          })()
+        : undefined;
+    ctx.output.result({ sessions, has_more: hasMore, next_page: nextPage }, { text });
   },
 });

@@ -2,11 +2,9 @@ import {
   defineCommand,
   memoryEndpoint,
   profileSchemaItemPath,
-  detectOutputFormat,
   type FlagsDef,
   type ProfileSchemaDetailResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
 import {
   MEMORY_LIBRARY_FLAG,
@@ -55,13 +53,13 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaItemPath(flags.schemaId)) +
       buildQuery({ memory_library_id: flags.libraryId });
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+      ctx.output.result({ endpoint: url, method: "GET" });
       return;
     }
 
@@ -70,23 +68,42 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Name: ${response.name ?? "(none)"}`);
-      if (response.description) emitBare(`Description: ${response.description}`);
+    let text: string | undefined;
+    if (format === "text") {
+      const name = response.name ?? ctx.localize({ "en-US": "(none)", "zh-CN": "（无）" });
+      const lines = [ctx.localize({ "en-US": `Name: ${name}`, "zh-CN": `名称: ${name}` })];
+      if (response.description)
+        lines.push(
+          ctx.localize({
+            "en-US": `Description: ${response.description}`,
+            "zh-CN": `描述: ${response.description}`,
+          }),
+        );
       const attributes = response.attributes ?? [];
       if (attributes.length === 0) {
-        emitBare("No attributes.");
+        lines.push(ctx.localize({ "en-US": "No attributes.", "zh-CN": "暂无属性。" }));
       } else {
-        emitBare("Attributes:");
+        lines.push(ctx.localize({ "en-US": "Attributes:", "zh-CN": "属性:" }));
         for (const attribute of attributes) {
-          emitBare(`  [${attribute.attribute_id}] ${attribute.name}`);
-          if (attribute.description) emitBare(`    desc: ${attribute.description}`);
+          lines.push(`  [${attribute.attribute_id}] ${attribute.name}`);
+          if (attribute.description)
+            lines.push(
+              ctx.localize({
+                "en-US": `    desc: ${attribute.description}`,
+                "zh-CN": `    描述: ${attribute.description}`,
+              }),
+            );
           if (attribute.default_value !== undefined)
-            emitBare(`    default: ${attribute.default_value}`);
+            lines.push(
+              ctx.localize({
+                "en-US": `    default: ${attribute.default_value}`,
+                "zh-CN": `    默认值: ${attribute.default_value}`,
+              }),
+            );
         }
       }
-    } else {
-      emitResult(response, format);
+      text = lines.join("\n");
     }
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

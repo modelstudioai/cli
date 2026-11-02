@@ -1,5 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
-import { ansi, emitResult, displayWidth, padEnd } from "bailian-cli-runtime";
+import { ansi, displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatDateTime } from "../shared/format.ts";
 import {
   defineTelemetryCommand,
@@ -16,12 +15,14 @@ const SERVICE_TYPE = "ModelMonitor";
 /** Delivery switch telemetryType; distinct from the activate serviceType above. */
 const MONITOR_GROUP_TYPE = "Monitor";
 
-function printStatus(
+function renderStatus(
   cmsSlrAuthorized: boolean,
   status: TelemetryServiceStatus,
   deliverySwitch: boolean | null,
   binName: string,
-): void {
+): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
   const rows: [string, string][] = [
@@ -45,14 +46,16 @@ function printStatus(
 
   const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
   for (const [label, value] of rows) {
-    process.stdout.write(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
+    textChunks.push(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
   }
 
   if (!status.openStatus || deliverySwitch !== true) {
-    process.stdout.write(
-      color.dim(`\nRun \`${binName} monitor delivery enable\` to activate monitoring delivery.\n`),
+    textChunks.push(
+      color.dim(`\nRun \`${binName} monitor delivery enable\` to activate monitoring delivery.`),
     );
   }
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 export default defineTelemetryCommand({
@@ -65,27 +68,24 @@ export default defineTelemetryCommand({
   exampleArgs: ["", "--output json"],
   async run(ctx) {
     const { settings, identity } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          apis: [
-            "zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus",
-            TELEMETRY_SERVICE_STATUS_API,
-            "zeldaEasy.bailian-telemetry.telemetryGroup.getTelemetryGroupStatus",
-          ],
-          data: {
-            reqDTO: {
-              workspaceId: settings.workspaceId,
-              serviceType: SERVICE_TYPE,
-              telemetryType: MONITOR_GROUP_TYPE,
-            },
+      ctx.output.result({
+        apis: [
+          "zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus",
+          TELEMETRY_SERVICE_STATUS_API,
+          "zeldaEasy.bailian-telemetry.telemetryGroup.getTelemetryGroupStatus",
+        ],
+        data: {
+          reqDTO: {
+            workspaceId: settings.workspaceId,
+            serviceType: SERVICE_TYPE,
+            telemetryType: MONITOR_GROUP_TYPE,
           },
-          ...telemetryGatewayPreview(settings),
         },
-        format,
-      );
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -97,11 +97,16 @@ export default defineTelemetryCommand({
       getTelemetryGroupSwitch(ctx.client, MONITOR_GROUP_TYPE, settings.workspaceId),
     ]);
 
-    if (format === "json") {
-      emitResult({ cmsSlrAuthorized, deliverySwitch, ...status }, format);
-      return;
-    }
+    let text: string | undefined;
+    if (format === "text") {
+      const textChunks: string[] = [];
 
-    printStatus(cmsSlrAuthorized, status, deliverySwitch, identity.binName);
+      textChunks.push(
+        renderStatus(cmsSlrAuthorized, status, deliverySwitch, identity.binName) + "\n",
+      );
+
+      text = textChunks.join("").replace(/\n$/, "");
+    }
+    ctx.output.result({ cmsSlrAuthorized, deliverySwitch, ...status }, { text });
   },
 });

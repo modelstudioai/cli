@@ -1,3 +1,4 @@
+import { readServiceMutationField } from "./service-response.ts";
 // service group, 7 commands: the static group covers help/missing-args/dry-run per
 // command; the live group runs the full lifecycle (create → scalar update → get
 // assertion → search --agent-version beta smoke → deploy → copy → delete×2).
@@ -14,6 +15,11 @@ import {
 } from "../helpers.ts";
 import { KNOWLEDGE_SERVICE_ROUTES } from "../topic-routes.ts";
 import { pickDifferentAgentModel } from "./verified-models.ts";
+
+function readServiceIds(stdout: string): Array<string | undefined> {
+  const response = parseStdoutJson<{ data?: { rows?: Array<{ agent_id?: string }> } }>(stdout);
+  return (response.data?.rows ?? []).map((row) => row.agent_id);
+}
 
 interface DryRunBody {
   endpoint?: string;
@@ -561,9 +567,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 生命周期 (live
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(createRun.exitCode, createRun.stderr).toBe(0);
-    const agentId = createRun.stdout.trim().split("\n").pop()!;
+    const agentId = readServiceMutationField(createRun.stdout, "agent_id");
     expect(agentId).toMatch(/^aid-/);
 
     // 1.5) list asserts the new agent shows up (filtered by agent_id)
@@ -578,9 +586,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 生命周期 (live
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(listRun.exitCode, listRun.stderr).toBe(0);
-    expect(listRun.stdout.trim().split("\n")).toContain(agentId);
+    expect(readServiceIds(listRun.stdout)).toContain(agentId);
 
     // 2) scalar update (read-merge-write onto the beta draft)
     const updateRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
@@ -627,9 +637,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 生命周期 (live
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(deployRun.exitCode, deployRun.stderr).toBe(0);
-    expect(deployRun.stdout.trim().split("\n").pop()).toBe("1");
+    expect(readServiceMutationField(deployRun.stdout, "agent_version")).toBe("1");
 
     // 4.5) bare get (no --agent-version) returns all versions: beta draft + published 1
     const allVersionsRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
@@ -661,9 +673,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 生命周期 (live
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
     expect(copyRun.exitCode, copyRun.stderr).toBe(0);
-    const copiedAgentId = copyRun.stdout.trim().split("\n").pop()!;
+    const copiedAgentId = readServiceMutationField(copyRun.stdout, "agent_id");
     expect(copiedAgentId).toMatch(/^aid-/);
     expect(copiedAgentId).not.toBe(agentId);
 
@@ -696,16 +710,18 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 生命周期 (live
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(postDeleteListRun.exitCode, postDeleteListRun.stderr).toBe(0);
-      expect(postDeleteListRun.stdout.trim()).toBe("");
+      expect(readServiceIds(postDeleteListRun.stdout)).toEqual([]);
     }
   }, 300_000);
 });
 
 // Live parameter coverage: every write parameter gets a read-back assertion
 // via `service get --output json`. Read-back fields are confirmed present in
-// the get response by the existing lifecycle test and printDetail().
+// the get response by the existing lifecycle test and service detail rendering.
 describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (live, 自清理)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
@@ -728,9 +744,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(createRun.exitCode, createRun.stderr).toBe(0);
-      agentId = createRun.stdout.trim().split("\n").pop()!;
+      agentId = readServiceMutationField(createRun.stdout, "agent_id");
       expect(agentId).toMatch(/^aid-/);
 
       // get 读回验证 --description (agent_desc)
@@ -765,9 +783,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listDraftRun.exitCode, listDraftRun.stderr).toBe(0);
-      expect(listDraftRun.stdout.trim().split("\n")).toContain(agentId);
+      expect(readServiceIds(listDraftRun.stdout)).toContain(agentId);
 
       // ── P1: list --scene search (live 合法值) ──
       const listSearchSceneRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
@@ -779,6 +799,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listSearchSceneRun.exitCode, listSearchSceneRun.stderr).toBe(0);
 
@@ -794,9 +816,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listNameRun.exitCode, listNameRun.stderr).toBe(0);
-      expect(listNameRun.stdout.trim().split("\n")).toContain(agentId);
+      expect(readServiceIds(listNameRun.stdout)).toContain(agentId);
 
       // ── P1: list --index-id (不报错验证; 无 kb fixture) ──
       const listIndexIdRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
@@ -810,6 +834,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listIndexIdRun.exitCode, listIndexIdRun.stderr).toBe(0);
 
@@ -977,6 +1003,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(deployRun.exitCode, deployRun.stderr).toBe(0);
 
@@ -993,9 +1021,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listDeployedRun.exitCode, listDeployedRun.stderr).toBe(0);
-      expect(listDeployedRun.stdout.trim().split("\n")).toContain(agentId);
+      expect(readServiceIds(listDeployedRun.stdout)).toContain(agentId);
 
       // ── P0 组4: update --agent-version 1 --version-desc (published version) ──
       const updatePublishedRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
@@ -1061,12 +1091,14 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(listDeletedRun.exitCode, listDeletedRun.stderr).toBe(0);
       // 软验证: deleted 状态下 agent 应出现在列表中;
       // 若服务端不返回 deleted 列表则仅验证不报错
-      if (listDeletedRun.stdout.trim()) {
-        expect(listDeletedRun.stdout.trim().split("\n")).toContain(agentId);
+      if (readServiceIds(listDeletedRun.stdout).length > 0) {
+        expect(readServiceIds(listDeletedRun.stdout)).toContain(agentId);
       }
     } finally {
       // 兜底清理

@@ -2,11 +2,9 @@ import {
   defineCommand,
   memoryEndpoint,
   profileSchemaPath,
-  detectOutputFormat,
   type FlagsDef,
   type ProfileSchemaListResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
 import {
   MEMORY_LIBRARY_FLAG,
@@ -53,7 +51,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaPath()) +
       buildQuery({
@@ -63,7 +61,7 @@ export default defineCommand({
       });
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+      ctx.output.result({ endpoint: url, method: "GET" });
       return;
     }
 
@@ -72,22 +70,30 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (settings.quiet || format === "text") {
+    let text: string | undefined;
+    if (format === "text") {
       const schemas = response.profile_schemas ?? [];
+      const lines: string[] = [];
       if (schemas.length === 0) {
-        emitBare("No profile schemas found.");
+        lines.push(
+          ctx.localize({ "en-US": "No profile schemas found.", "zh-CN": "未找到画像模板。" }),
+        );
       } else {
         for (const schema of schemas) {
           const planSuffix = schema.plan_version ? ` (${schema.plan_version})` : "";
-          emitBare(`[${schema.profile_schema_id}] ${schema.name}${planSuffix}`);
-          if (schema.description) emitBare(`  ${schema.description}`);
+          lines.push(`[${schema.profile_schema_id}] ${schema.name}${planSuffix}`);
+          if (schema.description) lines.push(`  ${schema.description}`);
         }
-        if (response.total !== undefined) {
-          emitBare(`\nTotal: ${response.total}`);
-        }
+        if (response.total !== undefined)
+          lines.push(
+            ctx.localize({
+              "en-US": `\nTotal: ${response.total}`,
+              "zh-CN": `\n总数: ${response.total}`,
+            }),
+          );
       }
-    } else {
-      emitResult(response, format);
+      text = lines.join("\n");
     }
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

@@ -159,13 +159,15 @@ export interface FreeTierTableOptions {
   moreHint?: string;
 }
 
-/** Print a free-tier quota table with a highlighted header and Quota Left gauge. */
-export function printFreeTierTable(options: FreeTierTableOptions): void {
+/** Render a free-tier quota table with a highlighted header and Quota Left gauge. */
+export function renderFreeTierTable(options: FreeTierTableOptions): string {
+  const textChunks: string[] = [];
+
   const { quotas, stopMap, typeMap } = options;
   const color = ansi(process.stdout);
 
   if (options.title) {
-    process.stdout.write(color.purple(options.title) + "\n");
+    textChunks.push(color.purple(options.title) + "\n");
   }
 
   const headers = ["Model", "Type", "Remaining", "Total", "Quota Left", "Auto-Stop"];
@@ -211,11 +213,13 @@ export function printFreeTierTable(options: FreeTierTableOptions): void {
     },
   });
 
-  for (const line of lines) process.stdout.write(line + "\n");
+  for (const line of lines) textChunks.push(line + "\n");
 
   if (options.moreHint) {
-    process.stdout.write(color.dim(options.moreHint) + "\n");
+    textChunks.push(color.dim(options.moreHint) + "\n");
   }
+
+  return textChunks.join("").replace(/\n$/, "");
 }
 
 // ---------------------------------------------------------------------------
@@ -333,17 +337,19 @@ export function formatUsageLabel(key: string): string {
   return `${label.en}${unitSuffix}`;
 }
 
-/** Print the account usage overview as an aligned key-value block. */
-export function printUsageOverview(
+/** Render the account usage overview as an aligned key-value block. */
+export function renderUsageOverview(
   stat: OverviewStatistic,
   startTime: number,
   endTime: number,
   days: number,
   title = "Usage Overview",
-): void {
+): string {
+  const textChunks: string[] = [];
+
   const color = ansi(process.stdout);
 
-  process.stdout.write(
+  textChunks.push(
     `${color.purple(title)} ${color.dim("·")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${color.dim(`(${days} days)`)}\n`,
   );
 
@@ -358,6 +364,8 @@ export function printUsageOverview(
 
   const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
   for (const [label, value] of rows) {
-    process.stdout.write(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
+    textChunks.push(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
   }
+
+  return textChunks.join("").replace(/\n$/, "");
 }

@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagDescribeFileResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const FILE_GET_FLAGS = {
@@ -31,13 +29,13 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body = { fileId: flags.fileId };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.describeFile);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -48,23 +46,23 @@ export default defineCommand({
     });
 
     const file = response.data;
-    if (settings.quiet) {
-      emitBare(file?.fileId ?? "");
-      return;
+
+    ctx.output.result(response, format === "text" ? { text: renderText() } : undefined);
+    function renderText(): string {
+      const lines: string[] = [];
+
+      lines.push(`id: ${file?.fileId ?? "-"}`);
+      lines.push(`name: ${file?.fileName ?? "-"}`);
+      lines.push(`type: ${file?.fileType ?? "-"}`);
+      lines.push(`size: ${file?.sizeBytes ?? "-"}`);
+      lines.push(`status: ${file?.status ?? "-"}`);
+      lines.push(`parser: ${file?.parser ?? "-"}`);
+      lines.push(`category: ${file?.category ?? "-"}`);
+      lines.push(`uploaded: ${file?.uploadTime ?? "-"}`);
+      const tags = Array.isArray(file?.tags) ? file.tags.join(", ") : (file?.tags ?? "-");
+      lines.push(`tags: ${tags || "-"}`);
+
+      return lines.join("\n");
     }
-    if (format !== "text") {
-      emitResult(response, format);
-      return;
-    }
-    emitBare(`id: ${file?.fileId ?? "-"}`);
-    emitBare(`name: ${file?.fileName ?? "-"}`);
-    emitBare(`type: ${file?.fileType ?? "-"}`);
-    emitBare(`size: ${file?.sizeBytes ?? "-"}`);
-    emitBare(`status: ${file?.status ?? "-"}`);
-    emitBare(`parser: ${file?.parser ?? "-"}`);
-    emitBare(`category: ${file?.category ?? "-"}`);
-    emitBare(`uploaded: ${file?.uploadTime ?? "-"}`);
-    const tags = Array.isArray(file?.tags) ? file.tags.join(", ") : (file?.tags ?? "-");
-    emitBare(`tags: ${tags || "-"}`);
   },
 });

@@ -47,6 +47,10 @@ Index: [index.md](index.md)
 | `--api-key <key>`           | string | no       | API key                                                                                                                                                                                                                                              |
 | `--base-url <url>`          | string | no       | API base URL                                                                                                                                                                                                                                         |
 
+#### Notes
+
+- Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set and simplified text output; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.
+
 #### Examples
 
 ```bash
@@ -117,10 +121,14 @@ bl speech recognize --url https://example.com/audio.mp3 --model qwen-audio-3.0-a
 | `--instruction <text>`           | string | no       | Natural language instruction to control speech style (e.g. "Use a gentle tone"）                                                                            |
 | `--enable-ssml`                  | switch | no       | Enable SSML markup parsing in input text                                                                                                                    |
 | `--out <path>`                   | string | no       | Save audio to file (default: auto-generate in temp dir)                                                                                                     |
-| `--stream`                       | switch | no       | Stream raw PCM audio to stdout (pipe to player)                                                                                                             |
+| `--stream`                       | switch | no       | Stream raw PCM audio to stdout (pipe to player); JSON output requires --out                                                                                 |
 | `--concurrent <n>`               | number | no       | Run N parallel requests (default: 1)                                                                                                                        |
 | `--api-key <key>`                | string | no       | API key                                                                                                                                                     |
 | `--base-url <url>`               | string | no       | API base URL                                                                                                                                                |
+
+#### Notes
+
+- Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.
 
 #### Examples
 

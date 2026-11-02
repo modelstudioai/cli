@@ -1,3 +1,4 @@
+import { parseModelStreamEvent } from "../shared/model-stream.ts";
 import {
   defineCommand,
   resolveBatchChatEndpoint,
@@ -5,7 +6,6 @@ import {
   chatPath,
   responsesPath,
   parseSSE,
-  detectOutputFormat,
   readTextFromPathOrStdin,
   type ChatMessage,
   type ChatRequest,
@@ -17,7 +17,7 @@ import {
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
+import { ansi } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
 import {
   assertResponsesStreamCompleted,
@@ -260,7 +260,7 @@ export default defineCommand({
     const api = flags.api ?? "chat";
     const model = flags.model || settings.defaultTextModel || "qwen3.8-max";
     const shouldStream = flags.batch ? false : flags.stream || process.stdout.isTTY;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     // Build messages array with system prompt
     const allMessages: ChatMessage[] = [];
@@ -317,13 +317,12 @@ export default defineCommand({
     }
 
     if (settings.dryRun) {
-      emitResult(
+      ctx.output.result(
         flags.batch
           ? { endpoint: requestPath, request: body, timeout: settings.timeout }
           : flags.prime
             ? { endpoint: requestPath, request: body }
             : { request: body },
-        format,
       );
       return;
     }
@@ -368,43 +367,36 @@ export default defineCommand({
           continue;
         }
 
-        try {
-          const parsed = JSON.parse(event.data) as StreamChunk;
+        const parsed = parseModelStreamEvent(event) as unknown as StreamChunk | undefined;
+        if (!parsed) continue;
 
-          for (const choice of parsed.choices) {
-            const delta = choice.delta;
+        for (const choice of parsed.choices ?? []) {
+          const delta = choice.delta;
 
-            // Handle thinking/reasoning content
-            if (delta.reasoning_content) {
-              if (writesStreamingStdout && !inThinking) {
-                inThinking = true;
-                statusOut.write(statusColor.dim("Thinking:\n"));
-              }
-              if (writesStreamingStdout) statusOut.write(delta.reasoning_content);
+          // Handle thinking/reasoning content
+          if (delta.reasoning_content) {
+            if (writesStreamingStdout && !inThinking) {
+              inThinking = true;
+              statusOut.write(statusColor.dim("Thinking:\n"));
             }
-
-            // Handle regular content
-            if (delta.content) {
-              if (writesStreamingStdout && inThinking) {
-                statusOut.write(`${statusColor.reset}\n\nResponse:\n`);
-                inThinking = false;
-              }
-              textContent += delta.content;
-              if (writesStreamingStdout) resultOut.write(delta.content);
-            }
+            if (writesStreamingStdout) statusOut.write(delta.reasoning_content);
           }
-        } catch {
-          // Skip unparseable chunks
+
+          // Handle regular content
+          if (delta.content) {
+            if (writesStreamingStdout && inThinking) {
+              statusOut.write(`${statusColor.reset}\n\nResponse:\n`);
+              inThinking = false;
+            }
+            textContent += delta.content;
+            if (writesStreamingStdout) resultOut.write(delta.content);
+          }
         }
       }
       if (api === "responses") assertResponsesStreamCompleted(responsesCompleted);
       if (inThinking) statusOut.write(statusColor.reset);
 
-      if (format === "json") {
-        emitResult({ content: textContent }, format);
-      } else {
-        resultOut.write("\n");
-      }
+      ctx.output.result({ content: textContent }, format === "text" ? { text: "" } : undefined);
     } else if (api === "responses") {
       const response = await ctx.client.requestJson<ResponsesResponse>({
         path: requestPath,
@@ -414,11 +406,7 @@ export default defineCommand({
 
       const text = extractResponsesText(response);
 
-      if (settings.quiet || format === "text") {
-        emitBare(text);
-      } else {
-        emitResult(response, format);
-      }
+      ctx.output.result(response, format === "text" ? { text } : undefined);
     } else {
       const response = await ctx.client.requestJson<ChatResponse>({
         path: requestPath,
@@ -428,11 +416,7 @@ export default defineCommand({
 
       const text = response.choices?.[0]?.message?.content ?? "";
 
-      if (settings.quiet || format === "text") {
-        emitBare(text);
-      } else {
-        emitResult(response, format);
-      }
+      ctx.output.result(response, format === "text" ? { text } : undefined);
     }
   },
 });

@@ -2,14 +2,13 @@ import {
   BailianError,
   ExitCode,
   defineCommand,
-  detectOutputFormat,
   followParsexResult,
   getParsexResult,
   parsexEndpoint,
   type ParsexOperation,
   type ParsexResultRequest,
 } from "bailian-cli-core";
-import { emitBare, emitResult, registerInterruptHandler } from "bailian-cli-runtime";
+import { registerInterruptHandler } from "bailian-cli-runtime";
 import {
   integer,
   nonEmpty,
@@ -135,12 +134,13 @@ export function createResultCommand(operation: ParsexOperation) {
         ...(flags.stepSize === undefined ? {} : { step_size: flags.stepSize as number }),
         ...(ossConfig === undefined ? {} : { oss_config: ossConfig }),
       };
-      const format = detectOutputFormat(settings.output);
       if (settings.dryRun) {
-        emitResult(
-          { endpoint, method: "POST", request: redactParsexRequest(body), follow: flags.follow },
-          format,
-        );
+        ctx.output.result({
+          endpoint,
+          method: "POST",
+          request: redactParsexRequest(body),
+          follow: flags.follow,
+        });
         return;
       }
       const controller = new AbortController();
@@ -165,12 +165,11 @@ export function createResultCommand(operation: ParsexOperation) {
               pollTimeout: flags.pollTimeout ?? 600,
               signal: controller.signal,
               progress: (current) => {
-                if (!settings.quiet) console.error(`${flags.bizId}: ${current.data.status}`);
+                ctx.output.progress(`${flags.bizId}: ${current.data.status}`);
               },
             })
           : await getParsexResult(ctx.client, baseUrl, operation, body);
-        if (settings.quiet) emitBare(response.data.status);
-        else emitResult(response, format);
+        ctx.output.result(response);
         if (flags.follow && response.data.status === "failed")
           throw new BailianError(
             typeof response.data.message === "string"

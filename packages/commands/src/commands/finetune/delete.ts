@@ -1,5 +1,4 @@
 import { defineCommand, deleteFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const DELETE_FLAGS = {
   jobId: {
@@ -11,6 +10,7 @@ const DELETE_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "Delete a fine-tune job record", "zh-CN": "删除微调任务记录" },
   auth: "apiKey",
   risk: {
@@ -39,16 +39,19 @@ export default defineCommand({
     const jobId = flags.jobId;
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.delete", job_id: jobId }, "json");
+      const resultData1 = { action: "finetune.delete", job_id: jobId };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
 
     const response = await deleteFineTune(ctx.client, jobId);
 
-    if (settings.quiet) {
-      emitBare(jobId);
-    } else {
-      emitResult(response, "json");
-    }
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

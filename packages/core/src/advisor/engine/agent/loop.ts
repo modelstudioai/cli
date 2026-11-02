@@ -123,8 +123,8 @@ export async function agentLoop(
           // burn more quota. Use the result we already have, or surface the error.
           if (!lastRecommend) throw llmErr;
           const fallback = toDegradation("agent", "agent-summary→engine-result", llmErr);
-          process.stderr.write(
-            `[recommend] agent loop failed (${llmErr.tag}), using the recommendation already computed\n`,
+          deps.onDiagnostic?.(
+            `[recommend] agent loop failed (${llmErr.tag}), using the recommendation already computed`,
           );
           record({ turn, type: "fallback", reason: "agent_error_existing_result" });
           return {
@@ -136,8 +136,8 @@ export async function agentLoop(
           };
         }
         // transient failure → degrade to a direct engine run
-        process.stderr.write(
-          `[recommend] agent loop failed (${llmErr.tag}), falling back to engine: ${llmErr.message}\n`,
+        deps.onDiagnostic?.(
+          `[recommend] agent loop failed (${llmErr.tag}), falling back to engine: ${llmErr.message}`,
         );
         const result = await recommend(buildEngineInput(session), deps);
         record({ turn, type: "fallback", reason: "agent_error_engine_rerun" });

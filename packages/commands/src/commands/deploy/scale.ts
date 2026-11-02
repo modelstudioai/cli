@@ -14,7 +14,7 @@ import {
   type FlagsDef,
   type ScaleDeploymentRequest,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+
 import {
   CAPACITY_FLAGS,
   PREPAID_FLAGS,
@@ -88,6 +88,7 @@ async function resolveInstanceId(client: Client, deployedModel: string): Promise
 }
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Scale a deployment's capacity",
     "zh-CN": "调整部署容量",
@@ -161,19 +162,20 @@ export default defineCommand({
       : { capacity: flags.capacity };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.scale",
-          deployed_model: deployedModel,
-          body,
-          ...(isPtu && flags.instanceId === undefined
-            ? {
-                instance_resolution:
-                  "Execution must resolve exactly one unreleased instance or require --instance-id. / 执行时须确认唯一未释放实例，否则必须指定 --instance-id。",
-              }
-            : {}),
-        },
-        "json",
+      const resultData1 = {
+        action: "deploy.scale",
+        deployed_model: deployedModel,
+        body,
+        ...(isPtu && flags.instanceId === undefined
+          ? {
+              instance_resolution:
+                "Execution must resolve exactly one unreleased instance or require --instance-id. / 执行时须确认唯一未释放实例，否则必须指定 --instance-id。",
+            }
+          : {}),
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -203,15 +205,14 @@ export default defineCommand({
       const response = await submitCapacityWrite(requestId, () =>
         scaleDeployment(ctx.client, deployedModel, body, undefined, requestId),
       );
-      await finishMutation(ctx.client, deployedModel, response, flags, requestId);
+      await finishMutation(ctx, deployedModel, response, flags, requestId);
       return;
     }
 
     const response = await scaleDeployment(ctx.client, deployedModel, body);
-    if (settings.quiet) {
-      emitBare(deployedModel);
-    } else {
-      emitResult(response, "json");
-    }
+    ctx.output.result(
+      response,
+      ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
+    );
   },
 });

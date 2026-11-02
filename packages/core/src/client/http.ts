@@ -4,8 +4,9 @@ import type { ApiErrorBody } from "../errors/api.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { mapApiError } from "../errors/api.ts";
-import { maskToken } from "../utils/token.ts";
-import { sourceConfig, trackingHeaders } from "./headers.ts";
+import type { OutputMessage } from "../types/output.ts";
+import { debugRequest, debugResponse } from "./diagnostics.ts";
+import { trackingHeaders } from "./headers.ts";
 import { Dispatcher, getGlobalDispatcher } from "undici";
 
 // Core owns the request deadline and body idle window. Override transport
@@ -18,6 +19,8 @@ const withoutTransportTimeouts: Dispatcher.DispatcherComposeInterceptor =
 export interface HttpDeps {
   identity: Identity;
   settings: Settings;
+  /** Optional diagnostic sink; core never writes to terminal streams. */
+  debug?: (diagnostic: OutputMessage) => void;
 }
 
 export interface RequestOpts {
@@ -83,12 +86,7 @@ async function performRequest(
     headers["X-DashScope-OssResourceResolve"] = "enable";
   }
 
-  if (deps.settings.verbose) {
-    console.error(`> ${opts.method ?? "GET"} ${opts.url}`);
-    const auth = headers["Authorization"];
-    if (auth) console.error(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}`);
-    console.error(`> x-dashscope-source-config: ${sourceConfig(deps.identity)}`);
-  }
+  debugRequest(deps, opts.method ?? "GET", opts.url);
 
   const requestInit = {
     method: opts.method ?? "GET",
@@ -112,13 +110,7 @@ async function performRequest(
   };
   const res = await httpTransport.fetch(opts.url, requestInit);
 
-  if (deps.settings.verbose) {
-    console.error(`< ${res.status} ${res.statusText}`);
-    const reqId = res.headers.get("x-request-id");
-    if (reqId) {
-      console.error(`request_id: ${reqId}`);
-    }
-  }
+  debugResponse(deps, res);
 
   if (!res.ok) {
     const raw = await res.text();

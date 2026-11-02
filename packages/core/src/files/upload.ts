@@ -212,8 +212,26 @@ const IMAGE_MIME_TYPES: Readonly<Record<string, string>> = {
   ".webp": "image/webp",
 };
 
-/** Encode a local image as a Data URI. */
-export function imageFileToDataUri(filePath: string): string {
+const AUDIO_MIME_TYPES: Readonly<Record<string, string>> = {
+  ".aac": "audio/aac",
+  ".amr": "audio/amr",
+  ".flac": "audio/flac",
+  ".m4a": "audio/mp4",
+  ".mp3": "audio/mpeg",
+  ".oga": "audio/ogg",
+  ".ogg": "audio/ogg",
+  ".opus": "audio/opus",
+  ".wav": "audio/wav",
+  ".weba": "audio/webm",
+  ".wma": "audio/x-ms-wma",
+};
+
+/** Encode a local file as a Data URI, validating its extension against a MIME table. */
+function fileToDataUri(
+  filePath: string,
+  mimeTypes: Readonly<Record<string, string>>,
+  kind: "image" | "audio",
+): string {
   if (!existsSync(filePath)) {
     throw new BailianError(`File not found: ${filePath}`, ExitCode.USAGE);
   }
@@ -224,17 +242,27 @@ export function imageFileToDataUri(filePath: string): string {
   }
 
   const extension = extname(filePath).toLowerCase();
-  const mimeType = IMAGE_MIME_TYPES[extension];
+  const mimeType = mimeTypes[extension];
   if (!mimeType) {
     throw new BailianError(
-      `Unsupported image format "${extension || "unknown"}".`,
+      `Unsupported ${kind} format "${extension || "unknown"}".`,
       ExitCode.USAGE,
-      "Use an image file with a recognized extension.",
+      `Use an ${kind} file with a recognized extension.`,
     );
   }
 
   const encoded = readFileSync(filePath).toString("base64");
   return `data:${mimeType};base64,${encoded}`;
+}
+
+/** Encode a local image as a Data URI. */
+export function imageFileToDataUri(filePath: string): string {
+  return fileToDataUri(filePath, IMAGE_MIME_TYPES, "image");
+}
+
+/** Encode a local audio file as a Data URI (used by ASR `auto`/MCP input). */
+export function audioFileToDataUri(filePath: string): string {
+  return fileToDataUri(filePath, AUDIO_MIME_TYPES, "audio");
 }
 
 /** Keep dry-run output readable and avoid echoing the complete inline image. */

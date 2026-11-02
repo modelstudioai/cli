@@ -1,13 +1,11 @@
 import {
   defineCommand,
-  detectOutputFormat,
   speechVocabularyPath,
   buildVocabularyRequest,
   updateVocabulary,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   VOCABULARY_ID_FLAG,
   VOCABULARY_BODY_FLAGS,
@@ -61,7 +59,6 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const vocabularyId = flags.id;
     const vocabulary = readVocabularyEntries(flags);
-    const format = detectOutputFormat(settings.output);
 
     const request = buildVocabularyRequest("update_vocabulary", {
       vocabulary_id: vocabularyId,
@@ -69,22 +66,17 @@ export default defineCommand({
     });
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          endpoint: ctx.client.url(speechVocabularyPath()),
-          request,
-        },
-        format,
-      );
+      ctx.output.result({
+        endpoint: ctx.client.url(speechVocabularyPath()),
+        request,
+      });
       return;
     }
 
     const response = await updateVocabulary(ctx.client, vocabularyId, vocabulary);
 
-    if (settings.quiet || format === "text") {
-      emitBare(vocabularyId);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(response, {
+      text: vocabularyId,
+    });
   },
 });

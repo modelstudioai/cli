@@ -1,6 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { emitResult } from "bailian-cli-runtime";
 import { ensureAlertReady } from "./shared.ts";
 
 const DISABLE_RULE_API = "zeldaEasy.bailian-telemetry.alertRule.disableAlertRule";
@@ -26,7 +24,7 @@ export default defineTelemetryCommand({
   exampleArgs: ["--rule-id 789", "--rule-id 789 --dry-run"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const reqDTO = {
       workspaceId: settings.workspaceId,
@@ -35,14 +33,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: DISABLE_RULE_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: DISABLE_RULE_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -50,11 +45,16 @@ export default defineTelemetryCommand({
 
     await ctx.client.console(DISABLE_RULE_API, { reqDTO });
 
-    if (format === "json") {
-      emitResult({ enabled: false, ruleId: flags.ruleId }, format);
-      return;
-    }
-
-    process.stdout.write(`Alert rule disabled: ${flags.ruleId}\n`);
+    ctx.output.result(
+      { enabled: false, ruleId: flags.ruleId },
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Alert rule disabled: ${flags.ruleId}`,
+              "zh-CN": `告警规则已停用: ${flags.ruleId}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

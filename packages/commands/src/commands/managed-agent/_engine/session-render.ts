@@ -4,16 +4,16 @@ import {
   type ProviderSessionEvent,
 } from "@openagentpack/sdk";
 import { sanitizeSessionEvents } from "@openagentpack/sdk/session-events";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { BailianError, ExitCode, type CommandContext } from "bailian-cli-core";
 
 /** Skip user echo + thinking noise in live rendering (mirrors OpenAgentPack CLI). */
 function shouldRenderLiveEvent(event: ProviderSessionEvent): boolean {
   return event.type !== "thinking" && !(event.type === "message" && event.role === "user");
 }
 
-function renderTerminalStatus(status: string, json: boolean): void {
-  if (json) return;
-  process.stderr.write(`\n[session ${status}]\n`);
+type RenderHost = Pick<CommandContext, "settings" | "output" | "localize">;
+function renderTerminalStatus(ctx: RenderHost, status: string): void {
+  ctx.output.info({ "en-US": `\n[session ${status}]`, "zh-CN": `\n[会话 ${status}]` });
 }
 
 function findLastSessionError(events: readonly ProviderSessionEvent[]): string | undefined {
@@ -24,9 +24,12 @@ function findLastSessionError(events: readonly ProviderSessionEvent[]): string |
   return undefined;
 }
 
-function throwIfSessionFailed(status: string | undefined, message?: string): void {
+function throwIfSessionFailed(ctx: RenderHost, status: string | undefined, message?: string): void {
   if (status !== "failed") return;
-  throw new BailianError(message ?? "Session failed.", ExitCode.GENERAL);
+  throw new BailianError(
+    message ?? ctx.localize({ "en-US": "Session failed.", "zh-CN": "会话失败。" }),
+    ExitCode.GENERAL,
+  );
 }
 
 /**
@@ -49,73 +52,85 @@ export interface SessionRenderContext {
  * prefixes the envelope with the session identity.
  */
 export async function streamAndRenderEvents(
+  ctx: RenderHost,
   events: AsyncIterable<ProviderSessionEvent>,
-  json: boolean,
   context: SessionRenderContext = {},
 ): Promise<void> {
   const collected: ProviderSessionEvent[] = [];
   let terminalStatus: string | undefined;
   let errorMessage: string | undefined;
-  for await (const event of events) {
-    if (json) collected.push(event);
-    else renderEvent(event);
-    if (event.type === "error" && event.content?.trim()) errorMessage = event.content;
-    if (event.type === "status" && isTerminalSessionStatus(event.status)) {
-      terminalStatus = event.status;
-      renderTerminalStatus(event.status ?? "", json);
-      break;
+  try {
+    for await (const event of events) {
+      collected.push(event);
+      renderEvent(ctx, event);
+      if (event.type === "error" && event.content?.trim()) errorMessage = event.content;
+      if (event.type === "status" && isTerminalSessionStatus(event.status)) {
+        terminalStatus = event.status;
+        renderTerminalStatus(ctx, event.status ?? "");
+        break;
+      }
     }
+  } catch (error) {
+    if (context.session_id)
+      ctx.output.warning({
+        code: "AGENT_SESSION_INTERRUPTED",
+        message: {
+          "en-US": `Session ${context.session_id} was created; reading its events was interrupted.`,
+          "zh-CN": `会话 ${context.session_id} 已创建，读取事件时中断。`,
+        },
+        details: context,
+      });
+    throw error;
   }
-  if (json) {
-    process.stdout.write(
-      `${JSON.stringify({ ...context, events: sanitizeSessionEvents(collected) }, null, 2)}\n`,
-    );
-  }
-  throwIfSessionFailed(terminalStatus, errorMessage);
+  ctx.output.result({ ...context, events: sanitizeSessionEvents(collected) }, { text: "" });
+  throwIfSessionFailed(ctx, terminalStatus, errorMessage);
 }
 
 /** Assistant text → stdout (data channel); everything else → stderr (diagnostics). */
-function renderEvent(event: ProviderSessionEvent): void {
+function renderEvent(ctx: RenderHost, event: ProviderSessionEvent): void {
   if (!shouldRenderLiveEvent(event)) return;
   if (event.type === "message" && event.content) {
-    process.stdout.write(event.content);
+    if (ctx.settings.output === "text") process.stdout.write(event.content);
   } else if (event.type === "tool_use") {
-    process.stderr.write(`\n[tool] ${event.tool_name}\n`);
+    ctx.output.info({
+      "en-US": `\n[tool] ${event.tool_name}`,
+      "zh-CN": `\n[工具] ${event.tool_name}`,
+    });
   } else if (event.type === "tool_result" && event.content) {
     const preview =
       event.content.length > 200 ? `${event.content.slice(0, 200)}...` : event.content;
-    process.stderr.write(`${preview}\n`);
+    ctx.output.info(preview);
   } else if (event.type === "status") {
-    if (event.status === "running") process.stderr.write("\n[session running]\n");
+    if (event.status === "running") renderTerminalStatus(ctx, "running");
   } else if (event.type === "error") {
-    process.stderr.write(`\n[error] ${event.content ?? "unknown error"}\n`);
+    ctx.output.warning({
+      code: "AGENT_SESSION_EVENT_ERROR",
+      message: event.content ?? {
+        "en-US": "Unknown session error",
+        "zh-CN": "未知会话错误",
+      },
+    });
   }
 }
 
 /** Render a polled (non-streaming) collected result. `context` prefixes the JSON envelope. */
 export function renderCollectedEvents(
+  ctx: RenderHost,
   result: CollectedSessionEvents,
-  json: boolean,
   context: SessionRenderContext = {},
 ): void {
-  if (json) {
-    process.stdout.write(
-      `${JSON.stringify(
-        {
-          ...context,
-          events: sanitizeSessionEvents(result.result.events),
-          has_more: result.result.has_more,
-          next_page: result.result.next_page,
-        },
-        null,
-        2,
-      )}\n`,
-    );
-  } else {
-    for (const event of result.result.events) renderEvent(event);
-    renderTerminalStatus(result.terminalStatus, json);
-  }
-  throwIfSessionFailed(result.terminalStatus, findLastSessionError(result.result.events));
+  for (const event of result.result.events) renderEvent(ctx, event);
+  renderTerminalStatus(ctx, result.terminalStatus);
+  ctx.output.result(
+    {
+      ...context,
+      events: sanitizeSessionEvents(result.result.events),
+      has_more: result.result.has_more,
+      next_page: result.result.next_page,
+    },
+    { text: "" },
+  );
+  throwIfSessionFailed(ctx, result.terminalStatus, findLastSessionError(result.result.events));
 }
 
 /** Split a comma-separated --memory-stores value. */

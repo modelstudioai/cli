@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, test } from "vite-plus/test";
@@ -294,4 +294,28 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: permission（DashScope）", () => 
     ]);
     expect(exitCode, stderr).toBe(0);
   });
+});
+
+test.each([
+  { name: "list", args: ["list"] },
+  { name: "grant", args: ["grant", "--model", "qwen-fixture"] },
+  { name: "revoke", args: ["revoke", "--model", "qwen-fixture"] },
+])("permission $name preserves a text profile over its JSON fallback", async ({ args }) => {
+  const directory = mkdtempSync(join(tmpdir(), "permission-output-profile-"));
+  try {
+    writeFileSync(
+      join(directory, "config.json"),
+      JSON.stringify({ output: "text", language: "en-US" }),
+    );
+    const result = await runCommandE2e(
+      PERMISSION_ROUTES,
+      ["permission", ...args, "--dry-run", "--quiet"],
+      { BAILIAN_CONFIG_DIR: directory, DASHSCOPE_OUTPUT: "" },
+    );
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(result.stdout).toContain(`method: ${args[0] === "list" ? "GET" : "POST"}`);
+    expect(() => JSON.parse(result.stdout)).toThrow();
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

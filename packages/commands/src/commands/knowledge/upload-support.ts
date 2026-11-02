@@ -205,7 +205,10 @@ export function checkUploadFile(
     }
     return {
       sizeBytes,
-      warning: `${basename(filePath)} exceeds the recommended 10 MB for ${extension}; the server may reject or truncate it.`,
+      warning: localize({
+        "en-US": `${basename(filePath)} exceeds the recommended 10 MB for ${extension}; the server may reject or truncate it.`,
+        "zh-CN": `${basename(filePath)} 超过 ${extension} 的建议 10 MB 大小；服务端可能拒绝或截断该文件。`,
+      }),
     };
   }
   return { sizeBytes };

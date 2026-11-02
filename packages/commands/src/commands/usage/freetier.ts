@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, unwrapResponse } from "bailian-cli-core";
 import {
   FREE_TIER_ONLY_STATUS_API,
   extractFreeTierOnlyStatuses,
@@ -56,13 +55,13 @@ export default defineCommand({
     "--off --model qwen3-max",
     "--off --all",
   ],
-  validate: (f) =>
-    !f.model && !f.all ? "Provide --model <model>[,model2,...] or --all." : undefined,
+  validate: (flags) =>
+    !flags.model && !flags.all ? "Provide --model <model>[,model2,...] or --all." : undefined,
   async run(ctx) {
     const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const off = Boolean(flags.off);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     let models: string[];
     if (modelFlag) {
@@ -84,13 +83,10 @@ export default defineCommand({
       : "BatchActivateFreeTierOnlyRequest";
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api,
-          data: { [requestKey]: { models } },
-        },
-        format,
-      );
+      ctx.output.result({
+        api,
+        data: { [requestKey]: { models } },
+      });
       return;
     }
 
@@ -98,48 +94,78 @@ export default defineCommand({
       models = (await fetchAllModels(ctx.client)).map((model) => model.name);
     }
 
+    const skipped: string[] = [];
+    const processed: { model: string; result: unknown }[] = [];
+    const textLines: string[] = [];
+    let stopMap = new Map<string, boolean>();
     if (off) {
       const stopResult = await ctx.client.console(FREE_TIER_ONLY_STATUS_API, {
         queryFreeTierOnlyStatusRequest: { models },
       });
-
       const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
-      const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
-
-      for (const name of models) {
-        if (stopMap.get(name) === false) {
-          process.stderr.write(`Auto-stop is already disabled for "${name}".\n`);
-          continue;
-        }
-        await pollFreeTierBatch(ctx.client, api, requestKey, [name]);
-        process.stdout.write(`Disabled auto-stop for "${name}".\n`);
-      }
-      return;
+      stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
     }
 
-    const jsonResults: unknown[] = [];
     for (const name of models) {
-      const result = await pollFreeTierBatch(ctx.client, api, requestKey, [name]);
-      if (format === "json") {
-        jsonResults.push(result);
+      if (off && stopMap.get(name) === false) {
+        skipped.push(name);
+        ctx.output.info({
+          "en-US": `Auto-stop is already disabled for "${name}".`,
+          "zh-CN": `模型 "${name}" 已停用自动停止。`,
+        });
         continue;
       }
-      if (result) {
-        const resultData = unwrapResponse(result as Record<string, unknown>);
-        const failureModels = (resultData.failureModels as BatchResultFailure[]) ?? [];
-        if (failureModels.length > 0) {
-          process.stderr.write(
-            `Failed to enable auto-stop for "${name}" (${failureModels[0].errorCode}).\n`,
-          );
-        } else {
-          process.stdout.write(`Enabled auto-stop for "${name}".\n`);
-        }
-      } else {
-        process.stderr.write(`Warning: operation timed out for "${name}".\n`);
+      const result = await pollFreeTierBatch(ctx.client, api, requestKey, [name]);
+      processed.push({ model: name, result });
+      const resultData = result ? unwrapResponse(result as Record<string, unknown>) : undefined;
+      const failureModels = (resultData?.failureModels as BatchResultFailure[] | undefined) ?? [];
+      if (!result) {
+        ctx.output.warning({
+          code: "FREETIER_OPERATION_TIMEOUT",
+          message: {
+            "en-US": `Operation timed out for "${name}".`,
+            "zh-CN": `模型 "${name}" 的操作超时。`,
+          },
+          details: { model: name },
+        });
+      } else if (failureModels.length > 0) {
+        const errorCode = failureModels[0].errorCode;
+        ctx.output.warning({
+          code: "FREETIER_OPERATION_FAILED",
+          message: off
+            ? {
+                "en-US": `Failed to disable auto-stop for "${name}" (${errorCode}).`,
+                "zh-CN": `模型 "${name}" 停用自动停止失败（${errorCode}）。`,
+              }
+            : {
+                "en-US": `Failed to enable auto-stop for "${name}" (${errorCode}).`,
+                "zh-CN": `模型 "${name}" 启用自动停止失败（${errorCode}）。`,
+              },
+          details: { model: name, error_code: errorCode },
+        });
+      }
+      // Keep the existing disable response policy; the JSON report retains the raw response.
+      if (off || (result && failureModels.length === 0)) {
+        textLines.push(
+          ctx.localize(
+            off
+              ? {
+                  "en-US": `Disabled auto-stop for "${name}".`,
+                  "zh-CN": `已为模型 "${name}" 停用自动停止。`,
+                }
+              : {
+                  "en-US": `Enabled auto-stop for "${name}".`,
+                  "zh-CN": `已为模型 "${name}" 启用自动停止。`,
+                },
+          ),
+        );
       }
     }
-    if (format === "json") {
-      emitResult(jsonResults, format);
+    if (format === "json" || textLines.length > 0) {
+      ctx.output.result(
+        off ? { processed, skipped } : processed.map((item) => item.result),
+        format === "text" ? { text: textLines.join("\n") } : undefined,
+      );
     }
   },
 });

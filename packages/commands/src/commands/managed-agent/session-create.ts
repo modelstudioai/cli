@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef } from "bailian-cli-core";
 import { createSessionForAgent } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -82,33 +81,30 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const file = flags.file ?? "agents.yaml";
     const environmentVariables = parseEnvironmentVariables(flags.environment_variables);
     const resources = await readSessionResources(flags.resource);
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          would_create_session: {
-            agent: flags.agent ?? "auto",
-            provider: "bailian",
-            environment: flags.environment,
-            environment_variables: redactEnvironmentVariables(environmentVariables),
-            vault: flags.vault,
-            memory_stores: parseMemoryStores(flags.memoryStores),
-            resources,
-            title: flags.title,
-          },
-          config_file: file,
+      ctx.output.result({
+        would_create_session: {
+          agent: flags.agent ?? "auto",
+          provider: "bailian",
+          environment: flags.environment,
+          environment_variables: redactEnvironmentVariables(environmentVariables),
+          vault: flags.vault,
+          memory_stores: parseMemoryStores(flags.memoryStores),
+          resources,
+          title: flags.title,
         },
-        format,
-      );
+        config_file: file,
+      });
       return;
     }
 
     const run = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         return createSessionForAgent(runtime, {
           agent: flags.agent,
@@ -124,17 +120,26 @@ export default defineCommand({
     );
 
     const { agentName, session } = run;
-    if (format === "json") {
-      emitResult({ agent: agentName, session }, format);
-      return;
-    }
-    emitBare(`Session created: ${session.id}`);
-    emitBare(`  Agent:       ${agentName}`);
-    emitBare(`  Environment: ${session.environment_id}`);
-    emitBare(`  Status:      ${session.status}`);
-    if (session.vault_ids.length) emitBare(`  Vaults:      ${session.vault_ids.join(", ")}`);
-    if (session.memory_store_ids.length) {
-      emitBare(`  Memory:      ${session.memory_store_ids.join(", ")}`);
-    }
+    ctx.output.result(
+      { agent: agentName, session },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? (() => {
+                const lines: string[] = [];
+                lines.push(`Session created: ${session.id}`);
+                lines.push(`  Agent:       ${agentName}`);
+                lines.push(`  Environment: ${session.environment_id}`);
+                lines.push(`  Status:      ${session.status}`);
+                if (session.vault_ids.length)
+                  lines.push(`  Vaults:      ${session.vault_ids.join(", ")}`);
+                if (session.memory_store_ids.length) {
+                  lines.push(`  Memory:      ${session.memory_store_ids.join(", ")}`);
+                }
+                return lines.join("\n");
+              })()
+            : undefined,
+      },
+    );
   },
 });

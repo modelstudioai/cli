@@ -32,7 +32,8 @@ export function initCreatedResources(stdout: string, stderr: string): InitCreate
   for (const line of stderr.split(/\r?\n/)) {
     try {
       const record = JSON.parse(line);
-      if (record?.code === "KNOWLEDGE_INIT_RESOURCE") collect(record.resource);
+      if (record?.warning?.code === "KNOWLEDGE_INIT_RESOURCE")
+        collect(record.warning.details?.resource);
     } catch {
       /* Ignore progress text and truncated diagnostics. */
     }

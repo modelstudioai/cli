@@ -1,5 +1,5 @@
 import { defineCommand, getCompressJobLogs, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { COMPRESS_JOB_ID_FLAGS } from "./compress-shared.ts";
 
 const LOG_FLAGS = {
@@ -28,6 +28,7 @@ const LOG_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "Get compression job logs", "zh-CN": "获取压缩任务日志" },
   auth: "apiKey",
   usageArgs: "--job-id <id> [--offset <n>] [--lines <n> | --tail <n>]",
@@ -57,15 +58,16 @@ export default defineCommand({
   async run(ctx) {
     const jobId = ctx.flags.jobId;
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          action: "finetune.compress.logs",
-          job_id: jobId,
-          offset: ctx.flags.offset,
-          line: ctx.flags.lines,
-          tail: ctx.flags.tail,
-        },
-        "json",
+      const resultData1 = {
+        action: "finetune.compress.logs",
+        job_id: jobId,
+        offset: ctx.flags.offset,
+        line: ctx.flags.lines,
+        tail: ctx.flags.tail,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -73,18 +75,23 @@ export default defineCommand({
       const first = await getCompressJobLogs(ctx.client, jobId, { offset: 0, line: 1 });
       const total = first.output?.total ?? 0;
       const offset = Math.max(0, total - ctx.flags.tail);
-      emitResult(
-        await getCompressJobLogs(ctx.client, jobId, { offset, line: ctx.flags.tail }),
-        "json",
+      const resultData2 = await getCompressJobLogs(ctx.client, jobId, {
+        offset,
+        line: ctx.flags.tail,
+      });
+      ctx.output.result(
+        resultData2,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
       );
       return;
     }
-    emitResult(
-      await getCompressJobLogs(ctx.client, jobId, {
-        offset: ctx.flags.offset,
-        line: ctx.flags.lines,
-      }),
-      "json",
+    const resultData3 = await getCompressJobLogs(ctx.client, jobId, {
+      offset: ctx.flags.offset,
+      line: ctx.flags.lines,
+    });
+    ctx.output.result(
+      resultData3,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData3, null, 2) } : undefined,
     );
   },
 });

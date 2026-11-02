@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
+import { formatTable } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: {
@@ -10,13 +10,16 @@ export default defineCommand({
   exampleArgs: ["", "--output json"],
   async run(ctx) {
     const reports = await ctx.commandPacks.list();
-    const format = detectOutputFormat(ctx.settings.output);
-    if (format === "json") {
-      emitResult({ command_packs: reports }, format);
-      return;
-    }
     if (reports.length === 0) {
-      emitBare("No Command Packs installed.");
+      ctx.output.result(
+        { command_packs: reports },
+        {
+          text: ctx.localize({
+            "en-US": "No Command Packs installed.",
+            "zh-CN": "尚未安装 Command Pack。",
+          }),
+        },
+      );
       return;
     }
     const rows = reports.map((report) => [
@@ -26,11 +29,10 @@ export default defineCommand({
       report.status,
       report.commands.join(", ") || report.error || "-",
     ]);
-    for (const line of formatTable(
+    const text = formatTable(
       ["NAME", "VERSION", "SOURCE", "STATUS", "COMMANDS / ERROR"],
       rows,
-    )) {
-      emitBare(line);
-    }
+    ).join("\n");
+    ctx.output.result({ command_packs: reports }, { text });
   },
 });

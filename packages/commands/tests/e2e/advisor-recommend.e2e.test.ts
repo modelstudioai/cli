@@ -108,11 +108,20 @@ describe("e2e: advisor recommend 传输（离线）", () => {
       expect(stdout).not.toContain("request_id:");
       expect(stderr).not.toContain("test-advisor-secret-key");
       if (verbose) {
-        expect(stderr).toContain(`> POST ${endpoint}`);
-        expect(stderr).toContain("< 200");
-        expect(stderr).toContain("request_id: advisor-success-request");
+        const debugLines = stderr
+          .trim()
+          .split("\n")
+          .filter((line) => line.startsWith('{"debug":'));
+        expect(debugLines.length).toBeGreaterThanOrEqual(4);
+        const requestDebug = JSON.parse(debugLines[0]!).debug;
+        const responseDebug = JSON.parse(debugLines[1]!).debug;
+        expect(requestDebug.details).toMatchObject({ method: "POST", url: endpoint });
+        expect(responseDebug.details).toMatchObject({
+          status: 200,
+          request_id: "advisor-success-request",
+        });
       } else {
-        expect(stderr).not.toContain("> POST");
+        expect(stderr).not.toContain('{"debug":');
         expect(stderr).not.toContain("request_id:");
       }
     },

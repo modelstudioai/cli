@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef } from "bailian-cli-core";
 import { sendSessionMessagePolling, sendSessionMessageStreaming } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -53,34 +52,30 @@ export default defineCommand({
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const file = flags.file ?? "agents.yaml";
-    const asJson = format === "json";
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          would_send: {
-            session_id: flags.sessionId,
-            message: flags.message,
-            provider: "bailian",
-            mode: flags.noStream ? "polling" : "streaming",
-          },
-          config_file: file,
+      ctx.output.result({
+        would_send: {
+          session_id: flags.sessionId,
+          message: flags.message,
+          provider: "bailian",
+          mode: flags.noStream ? "polling" : "streaming",
         },
-        format,
-      );
+        config_file: file,
+      });
       return;
     }
 
     await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         if (flags.noStream) {
           const result = await sendSessionMessagePolling(runtime, flags.sessionId, flags.message, {
             provider: "bailian",
           });
-          renderCollectedEvents(result, asJson, {
+          renderCollectedEvents(ctx, result, {
             session_id: flags.sessionId,
           });
         } else {
@@ -92,7 +87,7 @@ export default defineCommand({
               provider: "bailian",
             },
           );
-          await streamAndRenderEvents(events, asJson, {
+          await streamAndRenderEvents(ctx, events, {
             session_id: flags.sessionId,
           });
         }

@@ -1,11 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { parseStateAddress } from "@openagentpack/sdk";
 import { buildAgentRuntime, OFFLINE_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -42,12 +35,12 @@ export default defineCommand({
   exampleArgs: ["--address bailian.agent.assistant"],
   notes: OFFLINE_NOTE,
   async run(ctx) {
-    const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const { flags } = ctx;
+
     const file = flags.file ?? "agents.yaml";
 
     const found = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, file, {
           credentials: "none",
         });
@@ -62,7 +55,8 @@ export default defineCommand({
       throw new BailianError(`Resource not found: ${flags.address}`, ExitCode.GENERAL);
     }
 
-    if (format === "json") emitResult(found, format);
-    else emitBare(JSON.stringify(found, null, 2));
+    ctx.output.result(found, {
+      text: ctx.settings.output === "text" ? JSON.stringify(found, null, 2) : undefined,
+    });
   },
 });

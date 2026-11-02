@@ -97,40 +97,38 @@ test("passes non-URL-parseable inputs through without tracking headers", async (
   expect(headers.get("x-dashscope-service")).toBeNull();
 });
 
-test.each([200, 401])(
-  "verbose 将 endpoint、状态和 request_id 写入 stderr（HTTP %s）",
-  async (status) => {
-    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const response = new Response("原始正文", {
-      status,
-      headers: { "x-request-id": "transport-request" },
-    });
-    vi.spyOn(httpTransport, "fetch").mockResolvedValue(response);
-    const result = await createInstrumentedFetch({
-      identity,
-      settings: { ...settings, verbose: true },
-    })("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: "Bearer test-secret-api-key" },
-      body: "敏感提示词",
-    });
-    expect(result).toBe(response);
-    expect(response.bodyUsed).toBe(false);
-    const output = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
-    expect(output).toContain(
-      "> POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-    );
-    expect(output).toContain(`< ${status}`);
-    expect(output).toContain("request_id: transport-request");
-    expect(output).toContain("test...-key");
-    expect(output).not.toContain("test-secret-api-key");
-    expect(output).not.toContain("敏感提示词");
-    expect(stdout).not.toHaveBeenCalled();
-  },
-);
+test.each([200, 401])("emits safe request and response diagnostics（HTTP %s）", async (status) => {
+  const diagnostics: unknown[] = [];
+  const response = new Response("原始正文", {
+    status,
+    headers: { "x-request-id": "transport-request" },
+  });
+  vi.spyOn(httpTransport, "fetch").mockResolvedValue(response);
+  const result = await createInstrumentedFetch({
+    identity,
+    settings,
+    debug: (diagnostic) => diagnostics.push(diagnostic),
+  })("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: "Bearer test-secret-api-key" },
+    body: "敏感提示词",
+  });
+  expect(result).toBe(response);
+  expect(response.bodyUsed).toBe(false);
+  expect(diagnostics).toMatchObject([
+    {
+      details: {
+        method: "POST",
+        url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+      },
+    },
+    { details: { status, request_id: "transport-request" } },
+  ]);
+  expect(JSON.stringify(diagnostics)).not.toContain("test-secret-api-key");
+  expect(JSON.stringify(diagnostics)).not.toContain("敏感提示词");
+});
 
-test("未开启 verbose 时不输出诊断且保持响应与取消信号", async () => {
+test("omits diagnostics when no debug callback is injected and preserves cancellation", async () => {
   const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
   const response = new Response("data: [DONE]\n\n", {
     headers: { "x-request-id": "silent-request" },

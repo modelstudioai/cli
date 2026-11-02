@@ -1,10 +1,15 @@
 import type { RuntimeFeedbackEvent } from "@openagentpack/sdk";
+import type { CommandOutput } from "bailian-cli-core";
+import { writeSdkDiagnostic } from "./transport.ts";
 
-/**
- * Render SDK runtime feedback to stderr, keeping stdout a clean data channel.
- * Used as the `onFeedback` sink for plan/apply so progress messages don't mix
- * with structured output.
- */
-export function renderAgentFeedback(event: RuntimeFeedbackEvent): void {
-  process.stderr.write(`${event.message}\n`);
+export function renderAgentFeedback(output: CommandOutput, event: RuntimeFeedbackEvent): void {
+  writeSdkDiagnostic(() => {
+    if (event.level === "warning" || event.level === "error") {
+      output.warning({
+        code: "AGENT_RUNTIME_FEEDBACK",
+        message: event.message,
+        details: { type: event.type, resource: event.resource },
+      });
+    } else output.info(event.message);
+  });
 }

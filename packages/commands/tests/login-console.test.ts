@@ -1,8 +1,8 @@
-import { httpTransport } from "bailian-cli-core";
+import { httpTransport, buildSettings } from "bailian-cli-core";
 import http from "node:http";
 import { Readable } from "node:stream";
 import { expect, test, vi } from "vite-plus/test";
-import { ExitCode, type AuthStore, type Identity, type Settings } from "bailian-cli-core";
+import { ExitCode, type AuthStore, type Identity } from "bailian-cli-core";
 
 const openInBrowser = vi.hoisted(() => vi.fn<(url: string) => Promise<void>>());
 
@@ -13,6 +13,8 @@ vi.mock("../src/commands/shared/local-server.ts", async (importOriginal) => {
     openInBrowser: (url: string) => openInBrowser(url),
   };
 });
+
+import { createOutputReporter } from "bailian-cli-runtime";
 
 import {
   runConsoleLogin,
@@ -55,63 +57,70 @@ function postCallback(port: number, state: string, body: Record<string, string>)
   });
 }
 
-test("控制台回调只有会话、没有 API Key 时提示模型命令仍不可用", async () => {
-  const stderr: string[] = [];
-  const write = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-    stderr.push(String(chunk));
-    return true;
-  });
-  const saved: unknown[] = [];
-  let loginUrl = "";
-  openInBrowser.mockReset();
-  openInBrowser.mockImplementation(async (url) => {
-    loginUrl = url;
-  });
-
-  const pending = runConsoleLogin(
-    "https://bailian.console.aliyun.com",
-    {
-      identity: { binName: "bl" } as Identity,
-      settings: {} as Settings,
-      authStore: {
-        path: "/tmp/bailian/config.json",
-        login: async (patch: unknown) => {
-          saved.push(patch);
-        },
-      } as unknown as AuthStore,
-      localize: (text) => (typeof text === "string" ? text : text["zh-CN"]),
-    },
-    { needApiKey: true },
-  );
-
-  try {
-    await vi.waitFor(() => {
-      if (!loginUrl) throw new Error("waiting for login URL");
+test.each([false, true])(
+  "控制台回调只有会话、没有 API Key 时提示模型命令仍不可用 quiet=%s",
+  async (quiet) => {
+    const stderr: string[] = [];
+    const write = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      stderr.push(String(chunk));
+      return true;
     });
-    expect(loginUrl).toContain("&needapikey=true");
-    const target = callbackTarget(loginUrl);
-    const status = await postCallback(target.port, target.state, {
-      access_token: "console-token",
-      console_region: "cn-beijing",
-      console_site: "domestic",
+    const saved: unknown[] = [];
+    let loginUrl = "";
+    openInBrowser.mockReset();
+    openInBrowser.mockImplementation(async (url) => {
+      loginUrl = url;
     });
-    expect(status).toBe(200);
-    await pending;
-  } finally {
-    write.mockRestore();
-  }
 
-  expect(saved).toEqual([
-    expect.objectContaining({
-      access_token: "console-token",
-      console_region: "cn-beijing",
-      console_site: "domestic",
-    }),
-  ]);
-  expect(stderr.join("")).toContain("仅保存了控制台会话");
-  expect(stderr.join("")).toContain("bl auth login --api-key <key>");
-  expect(stderr.join("")).not.toContain("console-token");
-});
+    const pending = runConsoleLogin(
+      "https://bailian.console.aliyun.com",
+      {
+        identity: { binName: "bl" } as Identity,
+        settings: buildSettings({ flags: { output: "text", quiet }, file: {}, env: {} }),
+        output: createOutputReporter({
+          settings: buildSettings({ flags: { output: "text", quiet }, file: {}, env: {} }),
+          localize: (text) => (typeof text === "string" ? text : text["zh-CN"]),
+        }).output,
+        authStore: {
+          path: "/tmp/bailian/config.json",
+          login: async (patch: unknown) => {
+            saved.push(patch);
+          },
+        } as unknown as AuthStore,
+        localize: (text) => (typeof text === "string" ? text : text["zh-CN"]),
+      },
+      { needApiKey: true },
+    );
+
+    try {
+      await vi.waitFor(() => {
+        if (!loginUrl) throw new Error("waiting for login URL");
+      });
+      expect(loginUrl).toContain("&needapikey=true");
+      const target = callbackTarget(loginUrl);
+      const status = await postCallback(target.port, target.state, {
+        access_token: "console-token",
+        console_region: "cn-beijing",
+        console_site: "domestic",
+      });
+      expect(status).toBe(200);
+      await pending;
+    } finally {
+      write.mockRestore();
+    }
+
+    expect(saved).toEqual([
+      expect.objectContaining({
+        access_token: "console-token",
+        console_region: "cn-beijing",
+        console_site: "domestic",
+      }),
+    ]);
+    expect(stderr.join("")).toContain("仅保存了控制台会话");
+    expect(stderr.join("")).toContain("bl auth login --api-key <key>");
+    expect(stderr.join("")).not.toContain("console-token");
+  },
+);
 
 async function startLoginProbe(
   options: { noBrowser?: boolean } = {},
@@ -139,7 +148,11 @@ async function startLoginProbe(
     "https://modelstudio.console.alibabacloud.com",
     {
       identity: { binName: "bl" } as Identity,
-      settings: {} as Settings,
+      settings: buildSettings({ flags: { output: "text" }, file: {}, env: {} }),
+      output: createOutputReporter({
+        settings: buildSettings({ flags: { output: "text" }, file: {}, env: {} }),
+        localize: (text) => (typeof text === "string" ? text : text["zh-CN"]),
+      }).output,
       authStore: { path: "/unused/config.json", login: save } as unknown as AuthStore,
       localize: (text) => (typeof text === "string" ? text : text["zh-CN"]),
     },

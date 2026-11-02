@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, UsageError } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand, UsageError } from "bailian-cli-core";
 
 /** Pinned CLI presets, not a live catalog or a guarantee of regional availability. */
 export const SANDBOX_IMAGES = [
@@ -71,18 +70,12 @@ export const sandboxOfficialImages = defineCommand({
     ...SANDBOX_IMAGE_NOTES,
   ],
   async run(ctx) {
-    if (ctx.settings.quiet) {
-      for (const image of SANDBOX_IMAGES) emitBare(image.id);
-      return;
-    }
-    if (detectOutputFormat(ctx.settings.output) === "json") {
-      emitResult(SANDBOX_IMAGES, "json");
-      return;
-    }
-    for (const image of SANDBOX_IMAGES) {
-      emitBare(`${image.id} (${image.imageName})`);
-      emitBare(`  ${image.imageUrl}`);
-      emitBare(`  ${image.description["en-US"]} / ${image.description["zh-CN"]}`);
-    }
+    ctx.output.result(SANDBOX_IMAGES, {
+      text: SANDBOX_IMAGES.flatMap((image) => [
+        `${image.id} (${image.imageName})`,
+        `  ${image.imageUrl}`,
+        `  ${image.description["en-US"]} / ${image.description["zh-CN"]}`,
+      ]).join("\n"),
+    });
   },
 });

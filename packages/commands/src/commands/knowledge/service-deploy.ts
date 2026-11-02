@@ -2,11 +2,9 @@ import {
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
-  detectOutputFormat,
   type FlagsDef,
   type RagAgentMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_DEPLOY_FLAGS = {
@@ -68,7 +66,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body = {
       agent_id: flags.agentId,
@@ -77,7 +75,7 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentDeploy);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      ctx.output.result({ endpoint, request: body });
       return;
     }
 
@@ -87,15 +85,16 @@ export default defineCommand({
       body,
     });
 
-    const newVersion = agentMutationField(response, "agent_version");
-    if (settings.quiet) {
-      emitBare(newVersion ?? "");
-      return;
-    }
-    if (format === "text") {
-      emitBare(`deployed: ${flags.agentId}  version ${newVersion ?? "-"}`);
-      return;
-    }
-    emitResult(response, format);
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `deployed: ${flags.agentId}  version ${agentMutationField(response, "agent_version") ?? "-"}`,
+              "zh-CN": `已部署: ${flags.agentId}  版本 ${agentMutationField(response, "agent_version") ?? "-"}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

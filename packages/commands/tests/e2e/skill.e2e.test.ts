@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { createServer } from "node:http";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import { isBailianE2EEnabled, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
@@ -72,7 +73,7 @@ describe("e2e: skill", () => {
   });
 });
 
-// Local-only cases: auth "none" + validation / remove dry-run need no registry
+// Local-only cases: no credentials; update uses a loopback registry fixture.
 describe("e2e: skill (local, no credentials)", () => {
   test("skill add without --all or --name errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
@@ -180,19 +181,53 @@ describe("e2e: skill (local, no credentials)", () => {
   test("skill update --dry-run 未安装时退出码与真实一致 (1)", async () => {
     const configDir = makeTempConfigDir();
     const fakeHome = makeTempConfigDir();
-    const { stdout, exitCode } = await runCommandE2e(
-      SKILL_ROUTES,
-      ["skill", "update", "--name", "definitely-not-installed", "--dry-run", "--output", "json"],
-      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
-    );
-    expect(exitCode).toBe(1);
-    const data = parseStdoutJson<{
-      action?: string;
-      skills?: Array<{ name?: string; status?: string; reason?: string }>;
-    }>(stdout);
-    expect(data.action).toBe("skill.update");
-    expect(data.skills?.[0]?.status).toBe("failed");
-    expect(data.skills?.[0]?.reason).toMatch(/not installed/i);
+    const requests: string[] = [];
+    const registry = createServer((request, response) => {
+      requests.push(`${request.method} ${request.url}`);
+      if (request.url !== "/index.json") {
+        response.writeHead(404);
+        response.end();
+        return;
+      }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ skills: { "definitely-not-installed": {} } }));
+    });
+    await new Promise<void>((resolve, reject) => {
+      registry.once("error", reject);
+      registry.listen(0, "127.0.0.1", resolve);
+    });
+    try {
+      const address = registry.address();
+      if (!address || typeof address === "string")
+        throw new Error("Expected a local registry port.");
+      const registryUrl = `http://127.0.0.1:${address.port}`;
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        SKILL_ROUTES,
+        ["skill", "update", "--name", "definitely-not-installed", "--dry-run", "--output", "json"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          HOME: fakeHome,
+          USERPROFILE: fakeHome,
+          BAILIAN_SKILL_REGISTRY_URL: registryUrl,
+        },
+      );
+      expect(exitCode, stderr).toBe(1);
+      const data = parseStdoutJson<{
+        action?: string;
+        registry?: string;
+        skills?: Array<{ name?: string; status?: string; reason?: string }>;
+      }>(stdout);
+      expect(data.action).toBe("skill.update");
+      expect(data.registry).toBe(registryUrl);
+      expect(data.skills?.[0]?.status).toBe("failed");
+      expect(data.skills?.[0]?.reason).toMatch(/not installed/i);
+      expect(requests).toEqual(["GET /index.json"]);
+    } finally {
+      registry.closeAllConnections();
+      await new Promise<void>((resolve, reject) => {
+        registry.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
   }, 60_000);
 });
 

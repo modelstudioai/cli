@@ -1,27 +1,23 @@
 import { homedir } from "os";
-import { maskToken, type Settings, type ApiKeyCredential } from "bailian-cli-core";
-import { ansi, isTerminal } from "./color.ts";
-
-function tildePath(p: string): string {
-  return p.startsWith(homedir()) ? p.replace(homedir(), "~") : p;
-}
+import {
+  maskToken,
+  type Settings,
+  type ApiKeyCredential,
+  type CommandOutput,
+} from "bailian-cli-core";
+import { isTerminal } from "./color.ts";
 
 export function maybeShowStatusBar(
   settings: Settings,
   token: string,
   resolved: ApiKeyCredential,
+  output: CommandOutput,
 ): void {
-  if (settings.quiet || !isTerminal(process.stderr)) return;
-
-  const filePath = settings.configPath ? tildePath(settings.configPath) : "~/.bailian/config.json";
-  const authTag = `${resolved.source} · api-key`;
+  if (!isTerminal(process.stderr)) return;
+  const filePath = settings.configPath?.replace(homedir(), "~") ?? "~/.bailian/config.json";
   const maskedKey = maskToken(token);
-  const color = ansi(process.stderr);
-
-  process.stderr.write(
-    `${color.brandBlue("BAILIAN")} ` +
-      `${color.dim(filePath)} ` +
-      `${color.dim("|")} ` +
-      `${color.dim("Auth:")} ${color.keyPink(maskedKey)} ${color.dim(authTag)}\n`,
-  );
+  output.info({
+    "en-US": `BAILIAN ${filePath} | Auth: ${maskedKey} ${resolved.source} · api-key`,
+    "zh-CN": `BAILIAN ${filePath} | 鉴权：${maskedKey} ${resolved.source} · api-key`,
+  });
 }

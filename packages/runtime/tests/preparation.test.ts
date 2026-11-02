@@ -10,6 +10,7 @@ import {
 } from "../src/middleware.ts";
 import { checkForUpdate } from "../src/utils/update-checker.ts";
 import { handleError } from "../src/error-handler.ts";
+import { createOutputReporter } from "../src/output/reporter.ts";
 
 vi.mock("../src/utils/update-checker.ts", () => ({
   checkForUpdate: vi.fn(async () => {}),
@@ -40,6 +41,8 @@ function fixture(
     confirmed: options.confirmed ?? false,
     flags: {},
     settings: { dryRun: options.dryRun ?? false, output: "json", quiet: true },
+    output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
+      .output,
     localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
   } as unknown as RunContext;
   return { data, prepare, run, context };
@@ -56,6 +59,12 @@ test("read-only plan is included in confirmation error before execution", async 
     exitCode: 7,
   });
   expect(prepare).toHaveBeenCalledOnce();
+  expect(prepare).toHaveBeenCalledWith(
+    expect.objectContaining({
+      output: context.output,
+      prepared: undefined,
+    }),
+  );
   expect(run).not.toHaveBeenCalled();
   try {
     await runCommandStage(context, async () => {});
@@ -147,9 +156,32 @@ test("human confirmation output includes the actual plan and notices", async () 
   try {
     await runCommandStage(context, async () => {});
   } catch (error) {
-    expect(() => handleError(error, "fixture")).toThrow("exit-confirmation");
+    expect(() =>
+      handleError(
+        error,
+        createOutputReporter({
+          settings: { output: "text", quiet: true, verbose: false },
+          binName: "fixture",
+        }),
+      ),
+    ).toThrow("exit-confirmation");
   }
   expect(output.join("")).toContain("creates");
   expect(output.join("")).toContain("index");
   expect(output.join("")).toContain("BILLING");
+});
+
+test("confirmed preparation keeps billing notices as JSONL under quiet", async () => {
+  const stderr: string[] = [];
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  const { context, run } = fixture({ confirmed: true });
+  await runCommandStage(context, async () => {});
+  expect(run).toHaveBeenCalledOnce();
+  expect(stderr.join("").split("\n")).toHaveLength(2);
+  expect(JSON.parse(stderr.join(""))).toEqual({
+    warning: { code: "BILLING", message: "Creates a billed resource" },
+  });
 });

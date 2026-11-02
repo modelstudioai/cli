@@ -1,5 +1,4 @@
 import { defineCommand, listCompressJobs, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   status: {
@@ -82,6 +81,7 @@ const LIST_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "List model compression jobs", "zh-CN": "列出模型压缩任务" },
   auth: "apiKey",
   usageArgs: "[filters] [--page <n>] [--page-size <n>]",
@@ -120,7 +120,11 @@ export default defineCommand({
       pageSize: ctx.flags.pageSize,
     };
     if (ctx.settings.dryRun) {
-      emitResult({ action: "finetune.compress.list", ...params }, "json");
+      const resultData1 = { action: "finetune.compress.list", ...params };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
+      );
       return;
     }
     const response = await listCompressJobs(ctx.client, params);
@@ -134,15 +138,16 @@ export default defineCommand({
       quantized_output: job.quantized_output ?? "",
       create_time: job.create_time ?? "",
     }));
-    emitResult(
-      {
-        items,
-        total: output?.total,
-        page_no: output?.page_no,
-        page_size: output?.page_size,
-        request_id: response.request_id,
-      },
-      "json",
+    const resultData2 = {
+      items,
+      total: output?.total,
+      page_no: output?.page_no,
+      page_size: output?.page_size,
+      request_id: response.request_id,
+    };
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
     );
   },
 });

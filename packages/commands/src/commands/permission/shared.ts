@@ -1,10 +1,4 @@
-import {
-  detectOutputFormat,
-  modelsPermissionsPath,
-  type Client,
-  type Settings,
-} from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { modelsPermissionsPath, type CommandContext } from "bailian-cli-core";
 import { parseCommaList } from "../shared/params.ts";
 
 // POST /api/v1/models/permissions accepts at most 20 models per call.
@@ -56,11 +50,11 @@ export function validatePermissionChange(flags: {
  * (mutual exclusion, action values, model count) has already run.
  */
 export async function runPermissionChange(
-  ctx: { settings: Settings; client: Client },
+  ctx: Pick<CommandContext, "settings" | "client" | "output" | "localize">,
   flags: { model?: string; action?: string; all: boolean },
   grant: boolean,
 ): Promise<void> {
-  const format = ctx.settings.outputExplicit ? detectOutputFormat(ctx.settings.output) : "json";
+  const format = ctx.settings.output;
   const actions = parsePermissionActions(flags.action) as PermissionAction[];
   const models = flags.model ? parseCommaList(flags.model) : [];
 
@@ -75,10 +69,11 @@ export async function runPermissionChange(
       };
 
   if (ctx.settings.dryRun) {
-    emitResult(
-      { endpoint: ctx.client.url(modelsPermissionsPath()), method: "POST", request: body },
-      format,
-    );
+    ctx.output.result({
+      endpoint: ctx.client.url(modelsPermissionsPath()),
+      method: "POST",
+      request: body,
+    });
     return;
   }
 
@@ -89,21 +84,38 @@ export async function runPermissionChange(
   });
 
   const verb = grant ? "granted" : "revoked";
-  if (format === "json") {
-    const summary: Record<string, unknown> = flags.all
-      ? { all: true, action: "inference" }
-      : { models, actions };
-    emitResult({ ...summary, [verb]: true, request_id: result.request_id }, format);
-    return;
+  const summary: Record<string, unknown> = flags.all
+    ? { all: true, action: "inference" }
+    : { models, actions };
+  let text: string | undefined;
+  if (format === "text") {
+    text = flags.all
+      ? ctx.localize(
+          grant
+            ? {
+                "en-US":
+                  "Inference permission granted for all models in the workspace (including future ones).",
+                "zh-CN": "已授予工作空间内所有模型（包括未来新增模型）的推理权限。",
+              }
+            : {
+                "en-US": "One-key authorization closed; historical inference grants cleared.",
+                "zh-CN": "已关闭一键授权；历史推理授权已清除。",
+              },
+        )
+      : ctx.localize(
+          grant
+            ? {
+                "en-US": `Permissions granted (${actions.join(", ")}): ${models.join(", ")}`,
+                "zh-CN": `已授予权限 (${actions.join(", ")}): ${models.join(", ")}`,
+              }
+            : {
+                "en-US": `Permissions revoked (${actions.join(", ")}): ${models.join(", ")}`,
+                "zh-CN": `已撤销权限 (${actions.join(", ")}): ${models.join(", ")}`,
+              },
+        );
   }
-
-  if (flags.all) {
-    process.stdout.write(
-      grant
-        ? "Inference permission granted for all models in the workspace (including future ones).\n"
-        : "One-key authorization closed; historical inference grants cleared.\n",
-    );
-    return;
-  }
-  process.stdout.write(`Permissions ${verb} (${actions.join(", ")}): ${models.join(", ")}\n`);
+  ctx.output.result(
+    { ...summary, [verb]: true, request_id: result.request_id },
+    text === undefined ? undefined : { text },
+  );
 }

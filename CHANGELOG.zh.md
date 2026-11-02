@@ -6,6 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.7.2] - 2026-10-30
+
+### 新增
+
+- **AIGC 命令新增 auto 模式**：`bl image generate` / `bl image edit` / `bl video generate` / `bl speech synthesize` / `bl speech recognize` 新增 `--model auto` 通过百炼自研 MCP 实现 AIGC 模型自动路由。
+
+### 变更
+
+- **MCP 客户端迁移**：自研 SSE MCP 客户端替换为官方 MCP SDK。
+
 ## [2.7.1] - 2026-10-29
 
 ### 修复

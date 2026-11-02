@@ -1,3 +1,4 @@
+import { createOutputReporter } from "bailian-cli-runtime";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import type { LocalizedText } from "bailian-cli-core";
 import create, { buildDataSourceFields } from "../../src/commands/knowledge/kb-create.ts";
@@ -57,6 +58,8 @@ test.each([
         workspaceId: "ws_test",
       },
       settings: { dryRun: true, output: "json" },
+      output: createOutputReporter({ settings: { output: "json", quiet: false, verbose: false } })
+        .output,
       localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
       client: { requestJson },
     } as unknown as Parameters<typeof create.run>[0]);

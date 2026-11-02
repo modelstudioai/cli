@@ -104,7 +104,7 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb list (live)", () => {
     expect(Array.isArray(data.data.rows)).toBe(true);
   });
 
-  test("--quiet 输出行数与 rows 数一致", async () => {
+  test("--quiet 保留 JSON 中的完整知识库列表", async () => {
     const jsonRun = await runCommandE2e(KNOWLEDGE_KB_LIST_ROUTES, [
       "knowledge",
       "list",
@@ -120,9 +120,11 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb list (live)", () => {
       "--workspace-id",
       workspaceId,
       "--quiet",
+      "--output",
+      "json",
     ]);
-    const lines = quietRun.stdout.trim().split("\n").filter(Boolean);
-    expect(lines.length).toBe(rows.length);
+    const quietRows = parseStdoutJson<KbListResponse>(quietRun.stdout).data.rows;
+    expect(quietRows.map((row) => row.id)).toEqual(rows.map((row) => row.id));
   });
 
   test("--name 过滤 + --page-number/--page-size 分页", async () => {

@@ -64,6 +64,7 @@
 - `channel` 与 `t1` 是当前固定口径
 - `User-Agent` 是独立标识：`bl` 为 `bailian-cli/<version>`，`kscli` 为 `knowledge-studio-cli/<version>`
 - `X-Dashscope-Service: bailian-cli` 与 source-config 一起由 `trackingHeaders()` 注入；凡走该函数的百炼 / DashScope 请求（含 MCP 注册与 JSON-RPC）都会带上。OSS、结果文件下载、npm / Skill 仍不发送。
+- **AIGC auto MCP 例外**：AIGC 命令解析出的模型为保留值 `auto` 时，经 `withAigcMcpSession` 调用的 4 个生成类 MCP server（TextGenerateImage / VideoGenerate / TextGenerateSpeech / SpeechGenerateText）把 `X-Dashscope-Service` 覆写为 `bailian-cli-call`（常量 `MCP_CALL_SERVICE`），供网关单独归因 CLI 发起的 MCP 生成流量；此时 `source-config` 的 `channel` 仍是 `bailian-cli`，只有 Service 头变。其它 MCP 命令（`search web`、`mcp tools`、`mcp call`）与所有 REST 请求保持 `bailian-cli`。覆写经 `connectBailianMcp(serverCode, urlOverride?, serviceSource?)` → `connectBailianMcpWithFallback` → `SdkMcpAdapter` → `trackingHeaders(identity, service = CHANNEL)` 逐层透传，未传时回落默认 `CHANNEL`。
 
 source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网络传输：
 

@@ -11,7 +11,6 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
 import { BATCH_ID_FLAGS, FORCE_FLAGS, DRY_RUN_NOTE } from "./shared.ts";
 const DOWNLOAD_FLAGS = {
   ...BATCH_ID_FLAGS,
@@ -61,27 +60,25 @@ export default defineCommand({
         join("batch-results", encodeURIComponent(ctx.flags.batchId).replace(/\./g, "%2E")),
     );
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          action: "batch.download",
-          batch_id: ctx.flags.batchId,
-          out_dir: directory,
-          planned_files: [
-            ctx.localize({
-              "en-US": "result.jsonl (if available)",
-              "zh-CN": "result.jsonl（若可用）",
-            }),
-            ctx.localize({
-              "en-US": "error.jsonl (if available)",
-              "zh-CN": "error.jsonl（若可用）",
-            }),
-            ...(ctx.flags.csv ? ["result.csv"] : []),
-          ],
-          csv: ctx.flags.csv,
-          force: ctx.flags.force,
-        },
-        "json",
-      );
+      const preview = {
+        action: "batch.download",
+        batch_id: ctx.flags.batchId,
+        out_dir: directory,
+        planned_files: [
+          ctx.localize({
+            "en-US": "result.jsonl (if available)",
+            "zh-CN": "result.jsonl（若可用）",
+          }),
+          ctx.localize({
+            "en-US": "error.jsonl (if available)",
+            "zh-CN": "error.jsonl（若可用）",
+          }),
+          ...(ctx.flags.csv ? ["result.csv"] : []),
+        ],
+        csv: ctx.flags.csv,
+        force: ctx.flags.force,
+      };
+      ctx.output.result(preview, { text: JSON.stringify(preview, null, 2) });
       return;
     }
     const job = await getBatch(ctx.client, ctx.flags.batchId);
@@ -154,28 +151,33 @@ export default defineCommand({
         csvReport = await exportBatchCsv(saved, target, ctx.flags.force);
         saved.push(target);
         if (csvReport.unknown_records)
-          console.error(
-            ctx.localize({
+          ctx.output.warning({
+            code: "BATCH_CSV_UNKNOWN_RECORDS",
+            message: {
               "en-US": `${csvReport.unknown_records} unrecognized result envelopes; inspect original JSONL.`,
               "zh-CN": `${csvReport.unknown_records} 条结果包络无法识别，请检查原始 JSONL。`,
-            }),
-          );
+            },
+            details: { unknown_records: csvReport.unknown_records },
+          });
       }
     } catch (error) {
       if (saved.length)
-        console.error(
-          ctx.localize({
+        ctx.output.warning({
+          code: "BATCH_DOWNLOAD_PARTIAL",
+          message: {
             "en-US": `Failed at ${stage}. Preserved files: ${saved.join(", ")}. Rerun batch download with --force to download and convert again.`,
             "zh-CN": `${stage} 阶段失败。已保留文件：${saved.join("，")}。可用 --force 重跑 batch download 重新下载转换。`,
-          }),
-        );
+          },
+          details: { stage, files: saved },
+        });
       throw error;
     }
-    if (ctx.settings.quiet) emitBare(saved.join("\n"));
-    else
-      emitResult(
-        { batch_id: job.id, status: job.status, files: saved, line_counts: counts, csv: csvReport },
-        ctx.settings.output === "text" ? "text" : "json",
-      );
+    ctx.output.result({
+      batch_id: job.id,
+      status: job.status,
+      files: saved,
+      line_counts: counts,
+      csv: csvReport,
+    });
   },
 });

@@ -1,3 +1,4 @@
+import { readServiceMutationField } from "../service-response.ts";
 // J4 service tuning: draft (beta) usable → config change persisted → released version carries the change after deploy.
 // create + service create (search, initial draft/beta) → search --agent-version beta recalls (hard)
 // → service update --description/--temperature (scalar merge path) → get (beta) asserts (hard)
@@ -50,10 +51,12 @@ describe.skipIf(!isKbAdminE2EReady())("journey J4: 问答服务调优 (live, 自
           "--workspace-id",
           workspaceId,
           "--quiet",
+          "--output",
+          "json",
         ],
       );
       expect(createServiceRun.exitCode, createServiceRun.stderr).toBe(0);
-      agentId = createServiceRun.stdout.trim().split("\n").pop()!;
+      agentId = readServiceMutationField(createServiceRun.stdout, "agent_id");
       expect(agentId).toMatch(/^aid-/);
       reporter.trackResource("service", agentId);
 
@@ -213,9 +216,11 @@ describe.skipIf(!isKbAdminE2EReady())("journey J4: 问答服务调优 (live, 自
         "--workspace-id",
         workspaceId,
         "--quiet",
+        "--output",
+        "json",
       ]);
       expect(deployRun.exitCode, deployRun.stderr).toBe(0);
-      const deployedVersion = deployRun.stdout.trim().split("\n").pop() ?? "";
+      const deployedVersion = readServiceMutationField(deployRun.stdout, "agent_version");
       expect(deployedVersion, "deploy 应输出新版本号").toBeTruthy();
       reporter.recordNote(`deploy 版本号: ${deployedVersion}`);
 

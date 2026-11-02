@@ -1,8 +1,9 @@
 import { defineCommand, getCapacityInstance } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+
 import { CAPACITY_INSTANCE_FLAG, DEPLOYED_MODEL_FLAG, validateQueryIds } from "./query-shared.ts";
 
 export default defineCommand({
+  defaultOutput: "json",
   description: {
     "en-US": "Get a throughput reservation capacity instance",
     "zh-CN": "查询吞吐预留容量实例详情",
@@ -23,19 +24,25 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     if (settings.dryRun) {
-      emitResult(
-        {
-          action: "deploy.capacity.get",
-          deployed_model: flags.deployedModel,
-          instance_id: flags.instanceId,
-        },
-        "json",
+      const resultData1 = {
+        action: "deploy.capacity.get",
+        deployed_model: flags.deployedModel,
+        instance_id: flags.instanceId,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
-    emitResult(
-      await getCapacityInstance(ctx.client, flags.deployedModel, flags.instanceId),
-      "json",
+    const resultData2 = await getCapacityInstance(
+      ctx.client,
+      flags.deployedModel,
+      flags.instanceId,
+    );
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
     );
   },
 });

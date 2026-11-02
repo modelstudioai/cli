@@ -1,5 +1,4 @@
 import { defineCommand, detectOutputFormat, maskToken } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { API_KEY_PAGE } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -48,62 +47,70 @@ export default defineCommand({
         });
 
     if (!authenticated) {
-      emitResult(
-        {
-          authenticated: false,
-          config: configName,
-          config_file: configFile,
-          message: "Not authenticated.",
-          hint: [
-            `API key (model):   ${identity.binName} auth login --api-key <key> or DASHSCOPE_API_KEY`,
-            `Console gateway:   ${identity.binName} auth login --console`,
-            `OpenAPI (AK/SK):   ${identity.binName} auth login --open-api --access-key-id <id> --access-key-secret <secret>`,
-            `Get API Key: ${API_KEY_PAGE}`,
-          ].join("\n"),
-        },
-        format,
-      );
+      ctx.output.result({
+        authenticated: false,
+        config: configName,
+        config_file: configFile,
+        message: "Not authenticated.",
+        hint: [
+          `API key (model):   ${identity.binName} auth login --api-key <key> or DASHSCOPE_API_KEY`,
+          `Console gateway:   ${identity.binName} auth login --console`,
+          `OpenAPI (AK/SK):   ${identity.binName} auth login --open-api --access-key-id <id> --access-key-secret <secret>`,
+          `Get API Key: ${API_KEY_PAGE}`,
+        ].join("\n"),
+      });
       return;
     }
 
     if (format !== "text") {
-      emitResult(
-        {
-          authenticated: true,
-          config: configName,
-          config_file: configFile,
-          api_key: apiKey,
-          console: consoleCred,
-          openapi,
-          ...(modelKeyHint ? { hint: modelKeyHint } : {}),
-        },
-        format,
-      );
+      ctx.output.result({
+        authenticated: true,
+        config: configName,
+        config_file: configFile,
+        api_key: apiKey,
+        console: consoleCred,
+        openapi,
+        ...(modelKeyHint ? { hint: modelKeyHint } : {}),
+      });
       return;
     }
 
-    emitBare(`Config: ${configName}`);
-    emitBare(`Config file: ${configFile}`);
-    emitBare("Authentication Status:");
+    const lines = [`Config: ${configName}`];
+    lines.push(`Config file: ${configFile}`);
+    lines.push("Authentication Status:");
     if (apiKey) {
-      emitBare(`  API key (model):  ${apiKey.source}  ${apiKey.masked}`);
+      lines.push(`  API key (model):  ${apiKey.source}  ${apiKey.masked}`);
     } else {
-      emitBare("  API key (model):  not configured");
-      if (modelKeyHint) emitBare(`  ${modelKeyHint}`);
+      lines.push("  API key (model):  not configured");
+      if (modelKeyHint) lines.push(`  ${modelKeyHint}`);
     }
     if (consoleCred) {
-      emitBare(
+      lines.push(
         `  Console gateway:  ${consoleCred.source}  ${consoleCred.masked}  (${consoleCred.region}, ${consoleCred.site})`,
       );
     } else {
-      emitBare(`  Console gateway:  not configured (run ${identity.binName} auth login --console)`);
+      lines.push(
+        `  Console gateway:  not configured (run ${identity.binName} auth login --console)`,
+      );
     }
     if (openapi) {
-      emitBare(`  OpenAPI (AK/SK):  ${openapi.source}  ${openapi.access_key_id}`);
+      lines.push(`  OpenAPI (AK/SK):  ${openapi.source}  ${openapi.access_key_id}`);
     } else {
-      emitBare(
+      lines.push(
         `  OpenAPI (AK/SK):  not configured (run ${identity.binName} auth login --open-api)`,
       );
     }
+    ctx.output.result(
+      {
+        authenticated: true,
+        config: configName,
+        config_file: configFile,
+        api_key: apiKey,
+        console: consoleCred,
+        openapi,
+        ...(modelKeyHint ? { hint: modelKeyHint } : {}),
+      },
+      { text: lines.join("\n") },
+    );
   },
 });

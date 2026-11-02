@@ -39,6 +39,14 @@
 - [ ] 单包失败必须 fail-open：保留内置命令和其他合法 pack。
 - [ ] 破坏协议前优先在适配层兼容；确实无法兼容时才提升 `apiVersion`。
 
+## 输出边界
+
+- 管理命令通过本次 `ctx.output.result` 提交完整结果；npm 日志由显式注入的 `CommandOutput` 分帧，普通日志走 info，npm warning/error 行走 warning，JSON stderr 不直接写入子进程原始文本。
+- API 1 继续支持 `result/line/write`。适配层仅在当前 invocation 内收集输出：显式 result 的数据保持原样，line/write 是其 text 呈现；只调用 line/write 的命令在 JSON 下返回收集后的字符串，不增加 envelope。
+- 多次提交 result 是包的协议错误（GENERAL），不输出部分文档；一次显式提交的报告在后续异常时仍先输出，再由 runtime 处理原始异常。
+- text 仍按原顺序呈现片段；统一 result writer 会为末尾没有换行的文本补一个 LF。包直接调用 process/console 的输出不属于 host API，不做进程级拦截。
+- Pipeline 的普通 run/validate 输出一次最终报告，失败报告后抛错。显式 `--output text --events jsonl` 保留原始生命周期事件协议；有效 JSON 输出（含 env/Profile）与 `--events jsonl` 冲突时，在读取工作流文件及执行前拒绝。
+
 ## 测试与文档
 
 - [ ] `packages/runtime/tests/command-packs.test.ts` 覆盖产品 policy、安装目录隔离、协议版本、前缀和导出契约。

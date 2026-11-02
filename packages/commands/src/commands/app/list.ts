@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 
 const APP_LIST_API = "zeldaEasy.broadscope-bailian.app-control.list";
 
@@ -41,7 +40,6 @@ export default defineCommand({
     const name = flags.name || "";
     const pageNo = flags.page || 1;
     const pageSize = flags.pageSize || 30;
-    const format = detectOutputFormat(settings.output);
 
     const data = {
       reqDTO: {
@@ -55,7 +53,7 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult({ api: APP_LIST_API, data }, format);
+      ctx.output.result({ api: APP_LIST_API, data });
       return;
     }
 
@@ -70,6 +68,6 @@ export default defineCommand({
       user_prompt_params: item.config?.user_prompt_params ?? [],
     }));
 
-    emitResult({ total, apps }, format);
+    ctx.output.result({ total, apps });
   },
 });

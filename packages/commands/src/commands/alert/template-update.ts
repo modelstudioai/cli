@@ -1,6 +1,4 @@
-import { detectOutputFormat } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
-import { emitResult } from "bailian-cli-runtime";
 import { ensureAlertReady, parseCondition, validateTemplateConditions } from "./shared.ts";
 
 const UPDATE_TEMPLATE_API = "zeldaEasy.bailian-telemetry.alertTemplate.updateAlertTemplate";
@@ -59,7 +57,7 @@ export default defineTelemetryCommand({
   validate: (flags) => validateTemplateConditions(flags.condition, false),
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const reqDTO = {
       templateId: flags.templateId,
@@ -70,14 +68,11 @@ export default defineTelemetryCommand({
     };
 
     if (settings.dryRun) {
-      emitResult(
-        {
-          api: UPDATE_TEMPLATE_API,
-          data: { reqDTO },
-          ...telemetryGatewayPreview(settings),
-        },
-        format,
-      );
+      ctx.output.result({
+        api: UPDATE_TEMPLATE_API,
+        data: { reqDTO },
+        ...telemetryGatewayPreview(settings),
+      });
       return;
     }
 
@@ -85,11 +80,16 @@ export default defineTelemetryCommand({
 
     await ctx.client.console(UPDATE_TEMPLATE_API, { reqDTO });
 
-    if (format === "json") {
-      emitResult({ updated: true, templateId: flags.templateId }, format);
-      return;
-    }
-
-    process.stdout.write(`Alert template updated: ${flags.templateId}\n`);
+    ctx.output.result(
+      { updated: true, templateId: flags.templateId },
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Alert template updated: ${flags.templateId}`,
+              "zh-CN": `告警模板已更新: ${flags.templateId}`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

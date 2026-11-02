@@ -1,5 +1,4 @@
-import { defineCommand, detectOutputFormat, modelsLimitsPath } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, modelsLimitsPath } from "bailian-cli-core";
 
 export default defineCommand({
   description: {
@@ -32,15 +31,15 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const modelName = flags.model;
-    const format = detectOutputFormat(settings.output);
 
     const body = { models: [{ model: modelName, operation_type: "DELETE" }] };
 
     if (settings.dryRun) {
-      emitResult(
-        { endpoint: ctx.client.url(modelsLimitsPath()), method: "POST", request: body },
-        format,
-      );
+      ctx.output.result({
+        endpoint: ctx.client.url(modelsLimitsPath()),
+        method: "POST",
+        request: body,
+      });
       return;
     }
 
@@ -50,10 +49,14 @@ export default defineCommand({
       body,
     });
 
-    if (format === "json") {
-      emitResult({ model: modelName, ...result }, format);
-      return;
-    }
-    process.stdout.write(`Rate limits cleared for "${modelName}".\n`);
+    ctx.output.result(
+      { model: modelName, ...result },
+      {
+        text: ctx.localize({
+          "en-US": `Rate limits cleared for "${modelName}".`,
+          "zh-CN": `模型“${modelName}”的限流配置已清除。`,
+        }),
+      },
+    );
   },
 });

@@ -4,10 +4,9 @@ import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { LocalFileStateBackend, StateManager } from "@openagentpack/sdk";
-import { runNodeMain } from "e2e/runner";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 import { parse } from "yaml";
-import { commandsPackageRoot, parseStdoutJson, runCommandHelp } from "./helpers.ts";
+import { parseStdoutJson, runCommandE2e, runCommandHelp, runCommandInProcess } from "./helpers.ts";
 import { MANAGED_AGENT_MEMORY_ROUTES as ROUTES } from "./topic-routes.ts";
 
 const directories: string[] = [];
@@ -175,6 +174,10 @@ function setup(config: Record<string, unknown> = {}) {
       BAILIAN_BASE_URL: "",
       BAILIAN_WORKSPACE_ID: "",
       BAILIAN_E2E: "0",
+      NODE_OPTIONS: "",
+      NODE_USE_ENV_PROXY: "0",
+      DASHSCOPE_QUIET: "0",
+      DASHSCOPE_VERBOSE: "0",
       HTTP_PROXY: "",
       HTTPS_PROXY: "",
       ALL_PROXY: "",
@@ -186,19 +189,12 @@ function setup(config: Record<string, unknown> = {}) {
   };
 }
 function run(args: string[], environment: ReturnType<typeof setup>) {
-  return runNodeMain(
-    join(commandsPackageRoot, "tests/e2e/harness/main.ts"),
-    [...args, "--output", "json"],
-    {
-      cwd: environment.directory,
-      env: {
-        ...environment.env,
-        BAILIAN_E2E_ROUTES: JSON.stringify(
-          Object.entries(ROUTES).map(([path, exportName]) => ({ path, export: exportName })),
-        ),
-      },
-    },
-  );
+  // Store creation exercises YAML persistence and cross-process initialization recovery.
+  const runner =
+    args[1] === "memory-store" && args[2] === "create" ? runCommandE2e : runCommandInProcess;
+  return runner(ROUTES, [...args, "--output", "json"], environment.env, {
+    cwd: environment.directory,
+  });
 }
 async function gateway(body: unknown, status = 200) {
   const received: { method?: string; path?: string; body: string; authorization?: string }[] = [];
@@ -736,6 +732,40 @@ describe("e2e: managed-agent memory offline preview and confirmation", () => {
 });
 
 describe("e2e: managed-agent memory SDK HTTP protocol", () => {
+  test("memory update matches subprocess stdout, stderr and exit code exactly", async () => {
+    const response = { id: MEMORY_ID, type: "memory", content: "" };
+    const { origin, received } = await gateway(response);
+    const environment = setup({ base_url: origin, api_key: "test-key" });
+    const args = [
+      "managed-agent",
+      "memory-store",
+      "memories",
+      "update",
+      ...MEMORY_ARGS,
+      "--content",
+      "",
+      "--expected-content-sha256",
+      SHA,
+      "--yes",
+    ];
+    const inProcess = await run(args, environment);
+    const subprocess = await runCommandE2e(ROUTES, [...args, "--output", "json"], environment.env, {
+      cwd: environment.directory,
+    });
+    expect(inProcess).toEqual(subprocess);
+    expect(inProcess.exitCode, inProcess.stderr).toBe(0);
+    expect(parseStdoutJson(inProcess.stdout)).toEqual(response);
+    expect(received).toHaveLength(2);
+    for (const request of received) {
+      expect(request.method).toBe("POST");
+      expect(request.path).toBe(`${STORE_PATH}/memories/${encodeURIComponent(MEMORY_ID)}`);
+      expect(JSON.parse(request.body)).toEqual({
+        content: "",
+        precondition: { type: "content_sha256", content_sha256: SHA },
+      });
+    }
+  });
+
   test.each(OPERATIONS)(
     "$action sends SDK method, path and fields and preserves response",
     async ({ action, args, method, path, query, body, response, write }) => {

@@ -1,5 +1,4 @@
 import { defineCommand, listFineTunes, type FlagsDef } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   page: {
@@ -34,6 +33,7 @@ const LIST_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
+  defaultOutput: "json",
   description: { "en-US": "List fine-tune jobs", "zh-CN": "列出微调任务" },
   auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--status <s>] [--base-model <model>]",
@@ -47,9 +47,16 @@ export default defineCommand({
     const model = flags.baseModel || undefined;
 
     if (settings.dryRun) {
-      emitResult(
-        { action: "finetune.list", page: pageNo, page_size: pageSize, status, model },
-        "json",
+      const resultData1 = {
+        action: "finetune.list",
+        page: pageNo,
+        page_size: pageSize,
+        status,
+        model,
+      };
+      ctx.output.result(
+        resultData1,
+        ctx.settings.output === "text" ? { text: JSON.stringify(resultData1, null, 2) } : undefined,
       );
       return;
     }
@@ -68,6 +75,10 @@ export default defineCommand({
       created_at: job.create_time ?? job.gmt_create ?? "",
     }));
 
-    emitResult({ items, total, request_id: response.request_id }, "json");
+    const resultData2 = { items, total, request_id: response.request_id };
+    ctx.output.result(
+      resultData2,
+      ctx.settings.output === "text" ? { text: JSON.stringify(resultData2, null, 2) } : undefined,
+    );
   },
 });

@@ -122,7 +122,9 @@ describe("e2e: pipeline", () => {
       "json",
     ]);
     expect(exitCode).toBe(1);
-    expect(stderr).toBe("");
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 1, message: "Pipeline validation failed." },
+    });
     const data = parseStdoutJson<{ valid?: boolean; issues?: string[] }>(stdout);
     expect(data.valid).toBe(false);
     expect(data.issues?.join("\n")).toMatch(/pipeline graph contains cycle/i);
@@ -209,6 +211,8 @@ describe("e2e: pipeline", () => {
       "--dry-run",
       "--events",
       "jsonl",
+      "--output",
+      "text",
     ]);
     expect(exitCode, stderr).toBe(0);
     const events = stdout
@@ -225,6 +229,49 @@ describe("e2e: pipeline", () => {
     ]);
     expect(events[1]?.step).toMatchObject({ id: "chat", type: "text/chat" });
   });
+
+  test.each(["flag", "environment", "profile"] as const)(
+    "pipeline rejects JSON/event conflicts from %s before reading workflow",
+    async (source) => {
+      const configDir = await mkdtemp(join(tmpdir(), "bl-pipeline-events-json-"));
+      try {
+        await writeFile(
+          join(configDir, "config.json"),
+          JSON.stringify({
+            language: "en-US",
+            ...(source === "profile" ? { output: "json" } : {}),
+          }),
+        );
+        const result = await runCommandE2e(
+          PIPELINE_ROUTES,
+          [
+            "pipeline",
+            "run",
+            "--file",
+            "/does/not/exist/pipeline.json",
+            "--events",
+            "jsonl",
+            ...(source === "flag" ? ["--output", "json"] : []),
+          ],
+          {
+            BAILIAN_CONFIG_DIR: configDir,
+            DASHSCOPE_OUTPUT: source === "environment" ? "json" : "",
+          },
+        );
+        expect(result.exitCode).toBe(2);
+        expect(result.stdout).toBe("");
+        expect(JSON.parse(result.stderr)).toMatchObject({
+          error: {
+            code: 2,
+            message: "Lifecycle events cannot be combined with JSON result output.",
+            hint: "Use --output text --events jsonl for the lifecycle stream, or --output json without --events for the final report.",
+          },
+        });
+      } finally {
+        await rm(configDir, { recursive: true, force: true });
+      }
+    },
+  );
 
   test("pipeline run 拒绝未知 events format", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [

@@ -504,7 +504,7 @@ describe("e2e: auth", () => {
       },
     );
     expect(login.exitCode, login.stderr).toBe(0);
-    expect(login.stderr).toMatch(/API key validated and saved to/);
+    expect(login.stdout).toMatch(/API key validated and saved to/);
 
     const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
       string,
@@ -1039,7 +1039,7 @@ describe("e2e: auth", () => {
       "120",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Would validate and save API key.");
+    expect(parseStdoutJson(stdout)).toMatchObject({ action: "auth.login", method: "api_key" });
   });
 
   test("auth login 缺少密钥且 --output json 时报用法错误并退出 (2)", async () => {
@@ -1086,7 +1086,11 @@ describe("e2e: auth", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("No changes made.");
+    expect(parseStdoutJson(stdout)).toMatchObject({
+      action: "auth.logout",
+      scope: "all",
+      would_clear: false,
+    });
     expect(stderr).not.toContain("Cleared api_key");
   });
 
@@ -1150,11 +1154,15 @@ describe("e2e: auth", () => {
       ) + "\n",
     );
 
-    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "logout"], {
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "logout"], {
       BAILIAN_CONFIG_DIR: configDir,
     });
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toContain("api_key / base_url / access_token");
+    expect(parseStdoutJson(stdout)).toMatchObject({
+      action: "auth.logout",
+      scope: "all",
+      cleared: true,
+    });
 
     const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
       string,
@@ -1269,7 +1277,7 @@ describe("e2e: auth", () => {
           env,
         );
         expect(login.exitCode, login.stderr).toBe(0);
-        expect(login.stderr).toMatch(/OpenAPI credentials saved/);
+        expect(login.stdout).toMatch(/OpenAPI credentials saved/);
 
         const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
           string,
@@ -1298,7 +1306,7 @@ describe("e2e: auth", () => {
 
         const logout = await runCommandE2e(AUTH_ROUTES, ["auth", "logout", "--open-api"], env);
         expect(logout.exitCode, logout.stderr).toBe(0);
-        expect(logout.stderr).toMatch(/Cleared access_key_id/);
+        expect(logout.stdout).toMatch(/Cleared access_key_id/);
 
         const after = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "json"], env);
         expect(after.exitCode, after.stderr).toBe(0);
@@ -1311,4 +1319,21 @@ describe("e2e: auth", () => {
       }
     },
   );
+});
+
+test("auth browser login JSON fails once before starting an interactive session", async () => {
+  const result = await runCommandE2e(AUTH_ROUTES, [
+    "auth",
+    "login",
+    "--console",
+    "--output",
+    "json",
+    "--quiet",
+  ]);
+  expect(result.exitCode, result.stderr).toBe(2);
+  expect(result.stdout).toBe("");
+  expect(result.stderr.trim().split("\n")).toHaveLength(1);
+  expect(JSON.parse(result.stderr)).toMatchObject({
+    error: { code: 2, message: expect.stringContaining("Browser login requires text output") },
+  });
 });

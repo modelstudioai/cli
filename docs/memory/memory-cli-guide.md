@@ -80,11 +80,11 @@ API Key可通过 `--api-key`、环境变量或配置提供。Workspace解析顺�
 | `--workspace-id <id>`             | 指定Memory所在工作空间                                    |
 | `--config <name>`                 | 使用指定配置profile                                       |
 | `--timeout <seconds>`             | 请求超时；与add的抽取等待预算wait不同                     |
-| `--quiet`                         | Memory命令通常沿用文本输出分支，并非统一“只返回ID”        |
+| `--quiet`                         | 仅隐藏过程提示，保留所选格式的完整最终结果                |
 | `--verbose`                       | 输出诊断信息；保存日志时注意内容和凭证保护                |
 | `--dry-run`                       | 预览endpoint、method和适用的request，不发送Memory业务请求 |
 
-text输出便于终端查看，格式按命令不同。json通常保留服务响应；add等待完成时输出提交request_id、event_id与轮询events的组合对象。不要把 `--quiet` 与 `--output json` 混用，quiet会优先进入文本输出分支。
+text输出便于终端查看，格式按命令不同。json通常保留服务响应；add等待完成时输出提交request_id、event_id与轮询events的组合对象。`--quiet` 可与 `--output json` 组合使用，不会改变 JSON 结构或裁剪最终结果。
 
 JSON参数接收参数文本，不支持 `@file`：messages、attributes、attributes-operations为对象数组；meta-data为对象。数组型flag（例如skill-tags）通过重复flag传递。示例以POSIX shell为准，参数中的尖括号ID必须替换。
 

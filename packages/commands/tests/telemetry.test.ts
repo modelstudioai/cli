@@ -7,6 +7,7 @@ import {
   type AnyCommand,
   type Settings,
 } from "bailian-cli-core";
+import { createOutputReporter } from "bailian-cli-runtime";
 import { loadRouteCommands } from "./e2e/harness/routes.ts";
 import { ALERT_ROUTES, LOG_ROUTES, MONITOR_ROUTES } from "./e2e/topic-routes.ts";
 import {
@@ -102,7 +103,15 @@ function mockTelemetryGateway(
 }
 
 async function runTelemetry(command: AnyCommand, ctx: ReturnType<typeof makeTelemetryContext>) {
-  await command.run(ctx as never);
+  const settings = { ...ctx.settings };
+  if (command.defaultOutput !== undefined) {
+    if (settings.outputSource !== "flag" && settings.outputSource !== "env") {
+      settings.output = command.defaultOutput;
+    }
+    settings.outputExplicit = true;
+  }
+  const output = createOutputReporter({ settings, localize: ctx.localize }).output;
+  await command.run({ ...ctx, settings, output } as never);
   return stdoutChunks.join("");
 }
 
@@ -124,6 +133,8 @@ describe("遥测命令的空间身份与默认 JSON", () => {
   test.each(Object.entries(telemetryCommands))(
     "%s 默认 JSON、dry-run 展示解析计划且零网络",
     async (_path, command) => {
+      expect(command.defaultOutput).toBe("json");
+      expect(command.defaultOutputOverridesProfile).toBe(true);
       const transport = mockTelemetryGateway();
       const ctx = makeTelemetryContext(
         { dryRun: true },

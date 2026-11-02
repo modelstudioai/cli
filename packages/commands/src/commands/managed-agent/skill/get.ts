@@ -1,6 +1,5 @@
 import { getRemoteSkill } from "@openagentpack/sdk";
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
 import { displayValue } from "../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
@@ -15,22 +14,26 @@ export default defineCommand({
   exampleArgs: ["--skill-id skill_abc"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
     const skill = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getRemoteSkill(runtime, ctx.flags.skillId, { provider: "bailian" });
       }),
     );
-    if (format === "json") {
-      emitResult(skill, format);
-      return;
-    }
-    emitBare(`ID:          ${skill.id}`);
-    emitBare(`Name:        ${skill.name}`);
-    emitBare(`Description: ${displayValue(skill.description, 120)}`);
-    emitBare(`Source:      ${skill.source}`);
-    emitBare(`Status:      ${skill.status}`);
-    emitBare(`Version:     ${displayValue(skill.latest_version)}`);
+    ctx.output.result(skill, {
+      text:
+        ctx.settings.output === "text"
+          ? (() => {
+              const lines: string[] = [];
+              lines.push(`ID:          ${skill.id}`);
+              lines.push(`Name:        ${skill.name}`);
+              lines.push(`Description: ${displayValue(skill.description, 120)}`);
+              lines.push(`Source:      ${skill.source}`);
+              lines.push(`Status:      ${skill.status}`);
+              lines.push(`Version:     ${displayValue(skill.latest_version)}`);
+              return lines.join("\n");
+            })()
+          : undefined,
+    });
   },
 });

@@ -3,13 +3,11 @@ import {
   UsageError,
   memoryEndpoint,
   profileSchemaItemPath,
-  detectOutputFormat,
   type FlagsDef,
   type MemoryPlanVersion,
   type ProfileSchemaAttributeOperation,
   type ProfileSchemaUpdateRequest,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
@@ -145,11 +143,11 @@ export default defineCommand({
     if (flags.extractScene) body.extract_scene = flags.extractScene;
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
     const url = memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaItemPath(flags.schemaId));
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, method: "PATCH", request: body }, format);
+      ctx.output.result({ endpoint: url, method: "PATCH", request: body });
       return;
     }
 
@@ -159,10 +157,16 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Profile schema ${flags.schemaId} updated.`);
-    } else {
-      emitResult(response, format);
-    }
+    ctx.output.result(
+      response,
+      format === "text"
+        ? {
+            text: ctx.localize({
+              "en-US": `Profile schema ${flags.schemaId} updated.`,
+              "zh-CN": `画像模板 ${flags.schemaId} 已更新。`,
+            }),
+          }
+        : undefined,
+    );
   },
 });

@@ -7,6 +7,7 @@ export default defineCommand({
     "zh-CN": "撤销模型权限（推理 / 微调 / 部署）",
   },
   auth: "apiKey",
+  defaultOutput: "json",
   risk: {
     level: "high",
     message: {

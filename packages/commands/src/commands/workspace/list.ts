@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
+import { defineCommand, type LocalizedText } from "bailian-cli-core";
+import { ansi } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 import {
@@ -8,15 +8,23 @@ import {
   type ConsoleWorkspaceInfo,
 } from "../shared/workspace.ts";
 
-function printTable(workspaces: ConsoleWorkspaceInfo[]): void {
+function workspaceTable(
+  workspaces: ConsoleWorkspaceInfo[],
+  localize: (text: LocalizedText) => string,
+): string {
   const color = ansi(process.stdout);
+  const positive = localize({ "en-US": "Yes", "zh-CN": "是" });
 
-  const headers = ["Name", "Workspace ID", "Default"];
+  const headers = [
+    localize({ "en-US": "Name", "zh-CN": "名称" }),
+    localize({ "en-US": "Workspace ID", "zh-CN": "工作空间 ID" }),
+    localize({ "en-US": "Default", "zh-CN": "默认" }),
+  ];
 
   const rows = workspaces.map((ws) => [
     ws.agentName,
     ws.workspaceId,
-    ws.defaultAgent ? "Yes" : "-",
+    ws.defaultAgent ? positive : "-",
   ]);
 
   const widths = headers.map((label, col) =>
@@ -26,18 +34,25 @@ function printTable(workspaces: ConsoleWorkspaceInfo[]): void {
   const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => color.dim("─".repeat(width))).join("──");
 
-  process.stdout.write(headerLine + "\n");
-  process.stdout.write(separator + "\n");
+  const lines = [headerLine, separator];
 
   for (const row of rows) {
     const cells = row.map((cell, col) => {
-      if (col === 2 && cell === "Yes") return color.green(padEnd(cell, widths[col]));
+      if (col === 2 && cell === positive) return color.green(padEnd(cell, widths[col]));
       return padEnd(cell, widths[col]);
     });
-    process.stdout.write(cells.join("  ") + "\n");
+    lines.push(cells.join("  "));
   }
 
-  process.stdout.write(color.dim(`\nTotal: ${workspaces.length}`) + "\n");
+  lines.push(
+    color.dim(
+      localize({
+        "en-US": `\nTotal: ${workspaces.length}`,
+        "zh-CN": `\n总计: ${workspaces.length}`,
+      }),
+    ),
+  );
+  return lines.join("\n");
 }
 
 export default defineCommand({
@@ -55,35 +70,32 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const limit = Number(flags.list) || 0;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     if (settings.dryRun) {
-      emitResult({ api: LIST_WORKSPACES_API, data: {} }, format);
+      ctx.output.result({ api: LIST_WORKSPACES_API, data: {} });
       return;
     }
 
     let workspaces = await listConsoleWorkspaces(ctx.client);
     if (workspaces.length === 0) {
-      if (format === "json") {
-        emitResult([], format);
-      } else {
-        process.stdout.write("No workspace found.\n");
-      }
+      ctx.output.result(
+        [],
+        format === "text"
+          ? { text: ctx.localize({ "en-US": "No workspace found.", "zh-CN": "未找到工作空间。" }) }
+          : undefined,
+      );
       return;
     }
-
     if (limit > 0) workspaces = workspaces.slice(0, limit);
-
-    if (format === "json") {
-      const items = workspaces.map((ws) => ({
-        workspaceId: ws.workspaceId,
-        name: ws.agentName,
-        default: ws.defaultAgent,
-      }));
-      emitResult(items, format);
-      return;
-    }
-
-    printTable(workspaces);
+    const items = workspaces.map((workspace) => ({
+      workspaceId: workspace.workspaceId,
+      name: workspace.agentName,
+      default: workspace.defaultAgent,
+    }));
+    ctx.output.result(
+      items,
+      format === "text" ? { text: workspaceTable(workspaces, ctx.localize) } : undefined,
+    );
   },
 });

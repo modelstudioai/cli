@@ -6,11 +6,9 @@ import {
   ExitCode,
   defineCommand,
   knowledgeSearchEndpoint,
-  detectOutputFormat,
   type FlagsDef,
   type KnowledgeSearchRequest,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SEARCH_FLAGS = {
@@ -120,7 +118,7 @@ export default defineCommand({
 
     const workspaceId = resolveWorkspaceId(ctx);
 
-    const format = detectOutputFormat(settings.output);
+    const format = settings.output;
 
     const body: KnowledgeSearchRequest = {
       query: flags.query ?? "",
@@ -181,28 +179,34 @@ export default defineCommand({
     const url = knowledgeSearchEndpoint(workspaceId);
 
     if (settings.dryRun) {
-      emitResult({ endpoint: url, request: body }, format);
+      ctx.output.result({ endpoint: url, request: body });
       return;
     }
 
     const response = await searchKnowledge(ctx.client, workspaceId, body);
 
-    const nodes = response.data?.nodes || [];
-    if (settings.quiet || format === "text") {
+    let text: string | undefined;
+    if (format === "text") {
+      const nodes = response.data?.nodes || [];
+      const lines: string[] = [];
       if (nodes.length === 0) {
-        emitBare("No results found.");
+        lines.push(ctx.localize({ "en-US": "No results found.", "zh-CN": "未找到结果。" }));
       } else {
         for (const [nodeIndex, node] of nodes.entries()) {
-          emitBare(`[${nodeIndex + 1}] (score: ${node.score.toFixed(4)})`);
-          emitBare(
+          lines.push(
+            ctx.localize({
+              "en-US": `[${nodeIndex + 1}] (score: ${node.score.toFixed(4)})`,
+              "zh-CN": `[${nodeIndex + 1}] (得分: ${node.score.toFixed(4)})`,
+            }),
+          );
+          lines.push(
             firstNonEmptyText(node.text, node.metadata?.content, node.metadata?.clip_description),
           );
-          for (const line of mediaSummary(node.metadata ?? {})) emitBare(line);
-          emitBare("");
+          lines.push(...mediaSummary(node.metadata ?? {}), "");
         }
       }
-    } else {
-      emitResult(response, format);
+      text = lines.join("\n");
     }
+    ctx.output.result(response, text === undefined ? undefined : { text });
   },
 });

@@ -1,4 +1,4 @@
-import { httpTransport, type Settings } from "bailian-cli-core";
+import { httpTransport, type HttpDeps, type Settings } from "bailian-cli-core";
 import { expect, test } from "vite-plus/test";
 import { computeActualFee } from "../src/commands/finetune/fee.ts";
 
@@ -13,10 +13,9 @@ const SETTINGS: Settings = {
   telemetry: false,
 };
 
-test("computeActualFee forwards verbose settings to the gateway", async () => {
+test("computeActualFee forwards diagnostics to the gateway", async () => {
   const originalFetch = httpTransport.fetch;
-  const originalWrite = process.stderr.write.bind(process.stderr);
-  let stderr = "";
+  const diagnostics: unknown[] = [];
   const responseBody = {
     data: {
       success: true,
@@ -45,30 +44,30 @@ test("computeActualFee forwards verbose settings to the gateway", async () => {
       statusText: "OK",
       headers: { "Content-Type": "application/json" },
     });
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += String(chunk);
-    return true;
-  }) as typeof process.stderr.write;
 
   try {
-    const fee = await computeActualFee({ ...SETTINGS, verbose: true }, "qwen3-8b", 1_000_000);
+    const fee = await computeActualFee(SETTINGS, "qwen3-8b", 1_000_000, {
+      debug: (diagnostic) => diagnostics.push(diagnostic),
+    } satisfies Pick<HttpDeps, "debug">);
     expect(fee).toEqual({ cost: 2, unitPrice: 2, priceUnit: "每百万tokens" });
   } finally {
     httpTransport.fetch = originalFetch;
-    process.stderr.write = originalWrite;
   }
 
-  const lines = stderr.trim().split("\n");
-  expect(lines).toHaveLength(2);
-  for (const line of lines) {
-    expect(JSON.parse(line)).toHaveProperty("debug");
-  }
-  expect(JSON.parse(lines[0]!).debug).toMatchObject({ type: "request", method: "POST" });
-  expect(JSON.parse(lines[1]!).debug).toMatchObject({ type: "response", status: 200 });
-  expect(JSON.parse(lines[0]!).debug).not.toHaveProperty("payload");
+  expect(diagnostics).toHaveLength(2);
+  expect(diagnostics).toMatchObject([
+    {
+      details: {
+        method: "POST",
+        api: "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels",
+      },
+    },
+    { details: { status: 200 } },
+  ]);
+  expect(JSON.stringify(diagnostics)).not.toContain("responseBody");
 });
 
-test("computeActualFee hides gateway diagnostics when verbose is disabled", async () => {
+test("computeActualFee omits gateway diagnostics when none are injected", async () => {
   const originalFetch = httpTransport.fetch;
   const originalWrite = process.stderr.write.bind(process.stderr);
   let stderr = "";

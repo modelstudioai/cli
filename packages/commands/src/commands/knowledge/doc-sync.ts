@@ -1,11 +1,4 @@
-import {
-  BailianError,
-  ExitCode,
-  defineCommand,
-  detectOutputFormat,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, ExitCode, defineCommand, type FlagsDef } from "bailian-cli-core";
 import { WORKSPACE_FLAG, resolveWorkspaceId } from "./shared.ts";
 import { prepareSync, type SyncPrepared } from "./sync/prepare.ts";
 import { executeSyncPlan } from "./sync/execute.ts";
@@ -157,6 +150,7 @@ export default defineCommand<typeof flags, SyncPrepared>({
         ExitCode.GENERAL,
       );
     const ports = createSyncExecutionPorts({
+      output: context.output,
       client: context.client,
       target: prepared.target,
       settings: context.settings,
@@ -186,9 +180,14 @@ export default defineCommand<typeof flags, SyncPrepared>({
       const checkpoint = await readStateFile(prepared.stateFile, context.localize).catch(
         () => undefined,
       );
-      process.stderr.write(
-        `${JSON.stringify({ code: "KNOWLEDGE_SYNC_INCOMPLETE", stateFile: prepared.stateFile, checkpoint })}\n`,
-      );
+      context.output.warning({
+        code: "KNOWLEDGE_SYNC_INCOMPLETE",
+        message: {
+          "en-US": "Synchronization did not complete; use the checkpoint for recovery.",
+          "zh-CN": "同步未完成；请使用恢复记录继续处理。",
+        },
+        details: { stateFile: prepared.stateFile, checkpoint },
+      });
       throw error;
     }
     const result = {
@@ -205,21 +204,25 @@ export default defineCommand<typeof flags, SyncPrepared>({
       requiresReplan: prepared.plan.requiresReplan,
       result: completed,
     };
-    const format = detectOutputFormat(context.settings.output);
-    if (format === "json") emitResult(result, format);
-    else {
-      emitBare(
-        context.localize(
-          prepared.plan.requiresReplan
-            ? {
-                "en-US": "Recovery completed. Preview remaining changes again before continuing.",
-                "zh-CN": "恢复完成。请重新预览剩余变更后继续。",
-              }
-            : { "en-US": "Synchronization completed.", "zh-CN": "同步完成。" },
-        ),
-      );
-      emitBare(JSON.stringify(result.summary));
-      emitBare(`stateFile: ${prepared.stateFile}`);
-    }
+    context.output.result(
+      result,
+      context.settings.output === "text"
+        ? {
+            text: [
+              context.localize(
+                prepared.plan.requiresReplan
+                  ? {
+                      "en-US":
+                        "Recovery completed. Preview remaining changes again before continuing.",
+                      "zh-CN": "恢复完成。请重新预览剩余变更后继续。",
+                    }
+                  : { "en-US": "Synchronization completed.", "zh-CN": "同步完成。" },
+              ),
+              JSON.stringify(result.summary),
+              `stateFile: ${prepared.stateFile}`,
+            ].join("\n"),
+          }
+        : undefined,
+    );
   },
 });

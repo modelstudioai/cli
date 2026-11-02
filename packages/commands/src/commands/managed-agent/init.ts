@@ -1,14 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitBare, emitResult } from "bailian-cli-runtime";
+import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 
 const GITIGNORE_ADDITIONS = `
 # agents
@@ -82,7 +75,7 @@ export default defineCommand({
   exampleArgs: ["", "--agent-name assistant"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+
     const agentName = flags.agentName ?? "assistant";
     const file = flags.file ?? "agents.yaml";
 
@@ -102,15 +95,12 @@ export default defineCommand({
         const content = await readFile(gitignorePath, "utf8");
         wouldUpdateGitignore = !content.includes("agents.state.json");
       }
-      emitResult(
-        {
-          would_create: file,
-          provider: "bailian",
-          agent: agentName,
-          would_update_gitignore: wouldUpdateGitignore,
-        },
-        format,
-      );
+      ctx.output.result({
+        would_create: file,
+        provider: "bailian",
+        agent: agentName,
+        would_update_gitignore: wouldUpdateGitignore,
+      });
       return;
     }
 
@@ -126,14 +116,24 @@ export default defineCommand({
       await writeFile(gitignorePath, `${GITIGNORE_ADDITIONS.trim()}\n`, "utf8");
     }
 
-    if (format === "json") {
-      emitResult({ created: file, provider: "bailian", agent: agentName }, format);
-    } else {
-      emitBare(`Created ${resolve(file)}`);
-      emitBare(
-        "Credentials: run `bl auth login --api-key <key> --base-url <url>`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.",
-      );
-      emitBare("Next: edit agents.yaml, then run `bl managed-agent plan`.");
-    }
+    ctx.output.result(
+      { created: file, provider: "bailian", agent: agentName },
+      {
+        text:
+          ctx.settings.output === "text"
+            ? (() => {
+                const lines: string[] = [];
+                {
+                  lines.push(`Created ${resolve(file)}`);
+                  lines.push(
+                    "Credentials: run `bl auth login --api-key <key> --base-url <url>`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.",
+                  );
+                  lines.push("Next: edit agents.yaml, then run `bl managed-agent plan`.");
+                }
+                return lines.join("\n");
+              })()
+            : undefined,
+      },
+    );
   },
 });

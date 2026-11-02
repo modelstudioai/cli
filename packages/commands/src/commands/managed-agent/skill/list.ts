@@ -1,6 +1,5 @@
 import { listRemoteSkills } from "@openagentpack/sdk";
 import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
 import { emitCollection, validateLimitAndPageLimit } from "../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
@@ -64,7 +63,7 @@ export default defineCommand({
     const format = detectOutputFormat(ctx.settings.output);
     const source = (ctx.flags.source as SkillSource | undefined) ?? "custom";
     const result = await withAgentErrors(() =>
-      withStdoutProtected(async () => {
+      withStdoutProtected(ctx, async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         if (source !== "all") {
           return listOneCatalog(runtime, source, {
@@ -91,11 +90,10 @@ export default defineCommand({
       }),
     );
     if (format === "json") {
-      emitResult(buildSkillListJsonResult(source, result), format);
+      ctx.output.result(buildSkillListJsonResult(source, result));
       return;
     }
-    emitCollection({
-      format,
+    emitCollection(ctx, {
       key: "skills",
       items: result.items,
       headers: ["ID", "NAME", "SOURCE", "STATUS", "VERSION", "UPDATED"],
