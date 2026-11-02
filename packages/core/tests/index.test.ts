@@ -7,6 +7,7 @@ import {
   ExitCode,
   McpClient,
   callConsoleGateway,
+  anonymousConsoleCall,
   mapApiError,
   request,
   sandboxEndpoint,
@@ -220,7 +221,7 @@ test("toJSON splits service-error metadata into structured fields", () => {
   });
 });
 
-test("callConsoleGateway verbose prints structured request payload", async () => {
+test("callConsoleGateway verbose prints a safe request summary", async () => {
   const originalFetch = httpTransport.fetch;
   const originalWrite = process.stderr.write.bind(process.stderr);
   let stderr = "";
@@ -260,15 +261,48 @@ test("callConsoleGateway verbose prints structured request payload", async () =>
   }
 
   expect(requestBody).toBeDefined();
-  expect(stderr).toContain('> payload {\n  "params": {');
-  expect(stderr).toContain('  "region": "ap-southeast-1"');
-  expect(stderr).toContain('    "Api": "test.api"');
-  expect(stderr).toContain('      "workspaceId": "ws-1"');
-  expect(stderr).toContain('        "switchUserType": 3');
-  expect(stderr).toContain('        "switchAgent": 123');
-  expect(stderr).toContain('        "custom": "value"');
+  expect(stderr).toContain("> POST https://");
+  expect(stderr).toContain("> api test.api");
+  expect(stderr).toContain("> region ap-southeast-1");
   expect(stderr).toContain("< 200 OK");
   expect(stderr).not.toContain("response-body");
+  expect(stderr).not.toContain("ws-1");
+  expect(stderr).not.toContain("switchAgent");
+  expect(stderr).not.toContain("custom");
+});
+
+test("anonymousConsoleCall forwards verbose settings to the gateway", async () => {
+  const originalFetch = httpTransport.fetch;
+  const originalWrite = process.stderr.write.bind(process.stderr);
+  let stderr = "";
+
+  httpTransport.fetch = async () =>
+    new Response(JSON.stringify({ data: { success: true } }), {
+      status: 200,
+      statusText: "OK",
+      headers: { "Content-Type": "application/json" },
+    });
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    stderr += String(chunk);
+    return true;
+  }) as typeof process.stderr.write;
+
+  try {
+    const settings = { ...testDeps().settings, verbose: true };
+    await anonymousConsoleCall(settings)("test.api", {});
+  } finally {
+    httpTransport.fetch = originalFetch;
+    process.stderr.write = originalWrite;
+  }
+
+  const lines = stderr.trim().split("\n");
+  expect(lines).toHaveLength(2);
+  for (const line of lines) {
+    expect(JSON.parse(line)).toHaveProperty("debug");
+  }
+  expect(JSON.parse(lines[0]!).debug).toMatchObject({ type: "request", method: "POST" });
+  expect(JSON.parse(lines[1]!).debug).toMatchObject({ type: "response", status: 200 });
+  expect(JSON.parse(lines[0]!).debug).not.toHaveProperty("payload");
 });
 
 test("callConsoleGateway keeps readable message and raw gateway response separately", async () => {

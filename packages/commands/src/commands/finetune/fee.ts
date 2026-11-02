@@ -55,6 +55,7 @@ async function fetchTrainingPrice(
         },
       },
     },
+    settings,
   );
   const responseData = unwrapResponse(result as Record<string, unknown>);
   const list = (responseData.list as Record<string, unknown>[]) ?? [];

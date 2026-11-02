@@ -72,7 +72,10 @@ export type ConsoleCall = (api: string, data: Record<string, unknown>) => Promis
  * as `listFoundationModels` — no console login required.
  */
 export function anonymousConsoleCall(
-  config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout">,
+  config: Pick<
+    Settings,
+    "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout" | "verbose" | "output"
+  >,
 ): ConsoleCall {
   const eff = effectiveConsoleGatewayConfig(config);
   return (api, data) =>
@@ -80,6 +83,7 @@ export function anonymousConsoleCall(
       { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
       config.timeout,
       { api, data },
+      config,
     );
 }
 
@@ -124,7 +128,7 @@ export async function callConsoleGateway(
   target: ConsoleGatewayTarget,
   timeoutSec: number,
   { api, data }: ConsoleGatewayRequest,
-  settings?: Pick<Settings, "verbose">,
+  settings?: Pick<Settings, "verbose"> & Partial<Pick<Settings, "output">>,
 ): Promise<unknown> {
   const resolved = resolveGateway(target.region, target.site);
   const gatewayBase = `https://${resolved.csGateway}`;
@@ -142,10 +146,20 @@ export async function callConsoleGateway(
 
   const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
   if (settings?.verbose) {
-    process.stderr.write(`> POST ${endpoint}\n`);
-    process.stderr.write(
-      `> payload ${JSON.stringify({ params: JSON.parse(params), region: target.region }, null, 2)}\n`,
-    );
+    const requestDebug = {
+      type: "request",
+      method: "POST",
+      endpoint,
+      api,
+      region: target.region,
+    };
+    if (settings.output === "json") {
+      process.stderr.write(`${JSON.stringify({ debug: requestDebug })}\n`);
+    } else {
+      process.stderr.write(`> POST ${endpoint}\n`);
+      process.stderr.write(`> api ${api}\n`);
+      process.stderr.write(`> region ${target.region}\n`);
+    }
   }
 
   const res = await httpTransport.fetch(endpoint, {
@@ -156,7 +170,18 @@ export async function callConsoleGateway(
   });
 
   if (settings?.verbose) {
-    process.stderr.write(`< ${res.status} ${res.statusText}\n`);
+    const requestId = res.headers.get("x-request-id") ?? undefined;
+    const responseDebug = {
+      type: "response",
+      status: res.status,
+      statusText: res.statusText,
+      ...(requestId ? { requestId } : {}),
+    };
+    if (settings.output === "json") {
+      process.stderr.write(`${JSON.stringify({ debug: responseDebug })}\n`);
+    } else {
+      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
+    }
   }
 
   if (!res.ok) {
