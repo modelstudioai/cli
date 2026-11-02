@@ -27,6 +27,9 @@ describe("e2e: token-plan", () => {
       TOKEN_PLAN_ROUTES,
       ["token-plan", "list-seats", "--dry-run", "--output", "json"],
       {
+        BAILIAN_ACCESS_KEY_ID: "",
+        BAILIAN_ACCESS_KEY_SECRET: "",
+        BAILIAN_SECURITY_TOKEN: "",
         ALIBABA_CLOUD_ACCESS_KEY_ID: "",
         ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
       },
@@ -44,6 +47,9 @@ describe("e2e: token-plan", () => {
       ["token-plan", "list-seats"],
       {
         BAILIAN_CONFIG_DIR: configDir,
+        BAILIAN_ACCESS_KEY_ID: "",
+        BAILIAN_ACCESS_KEY_SECRET: "",
+        BAILIAN_SECURITY_TOKEN: "",
         ALIBABA_CLOUD_ACCESS_KEY_ID: "",
         ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
       },

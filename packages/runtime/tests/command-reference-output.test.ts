@@ -119,11 +119,12 @@ test.each(["bl", "aliyun bl"])(
     expect(hints[0]).toContain(`${commandPrefix} auth status`);
     expect(hints[0]).toContain("Get API Key:");
     expect(hints[1]).toContain(`or run \`${commandPrefix} auth login --open-api\`.`);
+    expect(hints[1]).not.toMatch(/[\u4e00-\u9fff]/u);
     expect(hints[2]).toBe(
       "Pass both --access-key-id and --access-key-secret, or remove the partial flags to use env/config credentials.",
     );
     expect(hints[3]).toBe(
-      "Set both ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or unset the partial env vars to use config credentials.",
+      "Set both ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or unset the partial env vars.",
     );
     expect(hints[4]).toBe(
       `Run \`${commandPrefix} auth login --open-api --access-key-id <id> --access-key-secret <secret>\` again to save a complete pair.`,

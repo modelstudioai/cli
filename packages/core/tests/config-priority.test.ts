@@ -13,8 +13,8 @@ import {
 } from "../src/auth/resolver.ts";
 import { getModelProfilePreset } from "../src/config/profile-presets.ts";
 
-// 行为锁定:所有配置字段统一保持 flag>env>selected file>默认。`--config` 只选择
-// file block,不提升该 block 的字段优先级。Profile 预设只在登录写入阶段使用。
+// Settings 与模型凭证保持 flag>env>selected file>默认；OpenAPI 的专属来源顺序见下方用例。
+// `--config` 只选择 file block。Profile 预设只在登录写入阶段使用。
 // buildSettings 与 resolver 都是纯函数,sources 直接构造,无需环境隔离。
 
 function src(s: {
@@ -371,7 +371,7 @@ test("console 凭证:token 仅 file 源;目标 flag > file > 默认;无 token �
   expect(() => resolveConsole(src({}))).toThrow(/console access token/);
 });
 
-test("openapi 凭证:按来源成对解析,flag > env > file;缺 id 或 secret 抛 AUTH", () => {
+test("OpenAPI credentials resolve complete pairs; partial sources fail", () => {
   const all = src({
     flags: { accessKeyId: "ak-flag", accessKeySecret: "secret-flag" },
     env: {
@@ -440,7 +440,7 @@ test("openapi 凭证:按来源成对解析,flag > env > file;缺 id 或 secret �
   expect(() =>
     resolveOpenApi(
       src({
-        env: { ALIBABA_CLOUD_ACCESS_KEY_SECRET: "secret-env" },
+        env: { BAILIAN_ACCESS_KEY_SECRET: "secret-env" },
         file: {
           access_key_id: "ak-file",
           access_key_secret: "secret-file",
@@ -478,8 +478,8 @@ test("openapi 凭证:低优先级来源缺字段时不影响更高优先级成�
 
   const completeEnvCred = src({
     env: {
-      ALIBABA_CLOUD_ACCESS_KEY_ID: "ak-env",
-      ALIBABA_CLOUD_ACCESS_KEY_SECRET: "secret-env",
+      BAILIAN_ACCESS_KEY_ID: "ak-env",
+      BAILIAN_ACCESS_KEY_SECRET: "secret-env",
     },
     file: { access_key_id: "ak-file" },
   });
@@ -487,6 +487,87 @@ test("openapi 凭证:低优先级来源缺字段时不影响更高优先级成�
     accessKeyId: "ak-env",
     accessKeySecret: "secret-env",
     source: "env",
+  });
+});
+
+test.each(["flag", "bailian-env", "config", "aliyun-env"] as const)(
+  "OpenAPI priority is flags > Bailian env > config > Aliyun env: %s",
+  (winner) => {
+    const sources = src({
+      flags:
+        winner === "flag"
+          ? { accessKeyId: "flag-ak", accessKeySecret: "flag-sk", securityToken: "flag-sts" }
+          : {},
+      env: {
+        ...(["flag", "bailian-env"].includes(winner)
+          ? {
+              BAILIAN_ACCESS_KEY_ID: "bailian-ak",
+              BAILIAN_ACCESS_KEY_SECRET: "bailian-sk",
+              BAILIAN_SECURITY_TOKEN: "bailian-sts",
+            }
+          : {}),
+        ALIBABA_CLOUD_ACCESS_KEY_ID: "aliyun-ak",
+        ALIBABA_CLOUD_ACCESS_KEY_SECRET: "aliyun-sk",
+        ALIBABA_CLOUD_SECURITY_TOKEN: "aliyun-sts",
+      },
+      file:
+        winner === "aliyun-env"
+          ? {}
+          : {
+              access_key_id: "config-ak",
+              access_key_secret: "config-sk",
+              security_token: "config-sts",
+            },
+    });
+    const prefix =
+      winner === "bailian-env" ? "bailian" : winner === "aliyun-env" ? "aliyun" : winner;
+    expect(resolveOpenApi(sources)).toEqual({
+      accessKeyId: `${prefix}-ak`,
+      accessKeySecret: `${prefix}-sk`,
+      securityToken: `${prefix}-sts`,
+      source: winner.endsWith("env") ? "env" : winner,
+    });
+  },
+);
+
+test("OpenAPI skips blank Bailian env and never borrows a lower-priority STS token", () => {
+  expect(
+    resolveOpenApi(
+      src({
+        env: {
+          BAILIAN_ACCESS_KEY_ID: " ",
+          BAILIAN_ACCESS_KEY_SECRET: "",
+          BAILIAN_SECURITY_TOKEN: "unused",
+          ALIBABA_CLOUD_ACCESS_KEY_ID: "host-ak",
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET: "host-sk",
+          ALIBABA_CLOUD_SECURITY_TOKEN: "host-sts",
+        },
+        file: { access_key_id: "local-ak", access_key_secret: "local-sk" },
+      }),
+    ),
+  ).toEqual({
+    accessKeyId: "local-ak",
+    accessKeySecret: "local-sk",
+    securityToken: undefined,
+    source: "config",
+  });
+});
+
+test("partial Bailian env reports its own variable names without falling back", () => {
+  let failure: unknown;
+  try {
+    resolveOpenApi(
+      src({
+        env: { BAILIAN_ACCESS_KEY_ID: "partial" },
+        file: { access_key_id: "local-ak", access_key_secret: "local-sk" },
+      }),
+    );
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toMatchObject({
+    exitCode: 3,
+    hint: "Set both BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET, or unset the partial env vars.",
   });
 });
 

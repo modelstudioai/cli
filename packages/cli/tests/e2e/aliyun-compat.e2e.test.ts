@@ -1,7 +1,7 @@
 import { captureRegistryHelp } from "e2e/registry-smoke";
 import { buildIsolatedCliEnv } from "e2e/isolation";
 import { runInProcess } from "e2e/in-process";
-import { defineCommand, buildCommandInvocation } from "bailian-cli-core";
+import { defineCommand, buildCommandInvocation, maskToken } from "bailian-cli-core";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -103,6 +103,9 @@ function runCompatible(arguments_: string[], language = "en-US", compatibility =
     BAILIAN_CONFIG_DIR: configDirectory,
     ALIBABA_CLOUD_BL_COMPAT_MODE: compatibility,
     DASHSCOPE_API_KEY: "",
+    BAILIAN_ACCESS_KEY_ID: "",
+    BAILIAN_ACCESS_KEY_SECRET: "",
+    BAILIAN_SECURITY_TOKEN: "",
     ALIBABA_CLOUD_ACCESS_KEY_ID: "",
     ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
     ALIBABA_CLOUD_SECURITY_TOKEN: "",
@@ -133,6 +136,41 @@ test.each(
   const help = captureRegistryHelp(registry, path.split(" "));
   expect(help).toContain(`aliyun bl ${path}`);
   expect(help).not.toMatch(/(?<!aliyun )\bbl (?:auth|skill|managed-agent) /);
+});
+
+// Real entrypoint verifies inherited Bailian env names without making authentication requests.
+test("auth status reads Bailian env before config and host env without adding status fields", async () => {
+  writeFileSync(
+    join(configDirectory, "config.json"),
+    JSON.stringify({
+      language: "en-US",
+      access_key_id: "config-ak",
+      access_key_secret: "config-sk",
+    }),
+  );
+  const result = await runCli(["auth", "status", "--output", "json"], {
+    BAILIAN_CONFIG_DIR: configDirectory,
+    ALIBABA_CLOUD_BL_COMPAT_MODE: "aliyun bl",
+    BAILIAN_ACCESS_KEY_ID: "bailian-env-access-key",
+    BAILIAN_ACCESS_KEY_SECRET: "bailian-env-secret-key",
+    BAILIAN_SECURITY_TOKEN: "bailian-env-sts",
+    ALIBABA_CLOUD_ACCESS_KEY_ID: "host-ak",
+    ALIBABA_CLOUD_ACCESS_KEY_SECRET: "host-sk",
+    ALIBABA_CLOUD_SECURITY_TOKEN: "host-sts",
+    DASHSCOPE_API_KEY: "",
+    NO_UPDATE_NOTIFIER: "1",
+    DO_NOT_TRACK: "1",
+  });
+  expect(result.exitCode, result.stderr).toBe(0);
+  const state = JSON.parse(result.stdout);
+  expect(state.openapi).toEqual({
+    source: "env",
+    access_key_id: maskToken("bailian-env-access-key"),
+    access_key_secret: maskToken("bailian-env-secret-key"),
+  });
+  expect(state.console).toBeUndefined();
+  expect(result.stdout + result.stderr).not.toContain("bailian-env-secret-key");
+  expect(result.stdout + result.stderr).not.toContain("bailian-env-sts");
 });
 
 test("host introspection exports executable paths and examples from the real entrypoint", async () => {

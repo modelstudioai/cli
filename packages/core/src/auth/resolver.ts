@@ -101,7 +101,7 @@ export function resolveConsole(s: ResolutionSources): ConsoleCredential {
   };
 }
 
-/** Alibaba Cloud OpenAPI AK/SK credential. Priority: flags > env > config. */
+/** AK/SK priority: flags > Bailian env > selected config > Alibaba Cloud env. */
 export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
   const flagCred = resolveOpenApiPair(
     "flag",
@@ -114,13 +114,13 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
 
   const envCred = resolveOpenApiPair(
     "env",
-    s.env.ALIBABA_CLOUD_ACCESS_KEY_ID,
-    s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET,
+    s.env.BAILIAN_ACCESS_KEY_ID,
+    s.env.BAILIAN_ACCESS_KEY_SECRET,
     Boolean(
-      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_ID) ||
-      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET),
+      trimNonEmpty(s.env.BAILIAN_ACCESS_KEY_ID) || trimNonEmpty(s.env.BAILIAN_ACCESS_KEY_SECRET),
     ),
-    s.env.ALIBABA_CLOUD_SECURITY_TOKEN,
+    s.env.BAILIAN_SECURITY_TOKEN,
+    "BAILIAN",
   );
   if (envCred) return envCred;
 
@@ -133,10 +133,22 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
   );
   if (configCred) return configCred;
 
+  const aliyunCred = resolveOpenApiPair(
+    "env",
+    s.env.ALIBABA_CLOUD_ACCESS_KEY_ID,
+    s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET,
+    Boolean(
+      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_ID) ||
+      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET),
+    ),
+    s.env.ALIBABA_CLOUD_SECURITY_TOKEN,
+  );
+  if (aliyunCred) return aliyunCred;
+
   throw new CredentialError(
     "missing-openapi-pair",
     "No OpenAPI AK/SK credentials found.",
-    "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or pass --access-key-id and --access-key-secret.",
+    "Set BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET), or pass --access-key-id and --access-key-secret.",
   );
 }
 
@@ -146,6 +158,7 @@ function resolveOpenApiPair(
   rawAccessKeySecret: string | undefined,
   provided: boolean,
   rawSecurityToken?: string,
+  envPrefix = "ALIBABA_CLOUD",
 ): OpenApiCredential | undefined {
   if (!provided) return undefined;
 
@@ -156,7 +169,7 @@ function resolveOpenApiPair(
     throw new CredentialError(
       `incomplete-openapi-${source}`,
       "Incomplete OpenAPI AK/SK credentials found.",
-      openApiPairHint(source),
+      openApiPairHint(source, envPrefix),
     );
   }
 
@@ -169,12 +182,12 @@ function trimNonEmpty(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function openApiPairHint(source: OpenApiCredential["source"]): string {
+function openApiPairHint(source: OpenApiCredential["source"], envPrefix: string): string {
   if (source === "flag") {
     return "Pass both --access-key-id and --access-key-secret, or remove the partial flags to use env/config credentials.";
   }
   if (source === "env") {
-    return "Set both ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or unset the partial env vars to use config credentials.";
+    return `Set both ${envPrefix}_ACCESS_KEY_ID and ${envPrefix}_ACCESS_KEY_SECRET, or unset the partial env vars.`;
   }
   return "Save a complete AccessKey ID and secret pair in the selected configuration.";
 }

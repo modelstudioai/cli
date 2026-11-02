@@ -13,8 +13,7 @@ import {
   type McpConnectedClient,
 } from "./mcp.ts";
 import { SdkMcpAdapter } from "./mcp-sdk.ts";
-import { callConsoleGateway } from "../console/gateway.ts";
-import { refreshAccessToken } from "../auth/refresh-token.ts";
+import { ConsoleSession } from "./console-session.ts";
 import { debugRequest, debugResponse } from "./diagnostics.ts";
 import { getApiKeyLoginKind } from "../config/profile-presets.ts";
 import { trackingHeaders } from "./headers.ts";
@@ -30,6 +29,8 @@ export interface ClientDeps {
   baseUrlIsDefault?: boolean;
   apiCred?: ApiKeyCredential;
   consoleCred?: ConsoleCredential;
+  /** Lazily resolve AK/SK only when the Console token is missing or expired. */
+  resolveConsoleOpenApiCredential?: () => OpenApiCredential;
   /** Optional host-provided recovery text; core does not construct CLI instructions. */
   consoleRecoveryHint?: string;
   openApiCred?: OpenApiCredential;
@@ -71,11 +72,15 @@ export interface OpenApiResponse {
  * credential and base URL are already baked in, so commands never handle tokens
  * or baseUrl. Model methods (`request`/`requestJson`/`mcp`) need an api key;
  * `uploadFile` only needs one for local files, and passes URLs through without
- * credentials. `console` needs a console token; calling one without its
- * credential throws.
+ * credentials. `console` uses a Console token, obtaining one lazily from
+ * resolved AK/SK when needed. Concurrent calls share the exchange, not results.
  */
 export class Client {
-  constructor(private readonly deps: ClientDeps) {}
+  private consoleSession: ConsoleSession;
+
+  constructor(private readonly deps: ClientDeps) {
+    this.consoleSession = new ConsoleSession(deps);
+  }
 
   private get http(): HttpDeps {
     return { identity: this.deps.identity, settings: this.deps.settings, debug: this.deps.debug };
@@ -244,55 +249,16 @@ export class Client {
 
   /** 创建仅本次调用链使用的 Console 身份；不修改原 Client、Settings 或持久化配置。 */
   withConsoleSwitchAgent(switchAgent: number): Client {
-    return new Client({
+    const client = new Client({
       ...this.deps,
       settings: { ...this.deps.settings, consoleSwitchAgent: switchAgent },
-      consoleCred: this.deps.consoleCred ? { ...this.deps.consoleCred, switchAgent } : undefined,
     });
+    client.consoleSession = this.consoleSession.withSwitchAgent(switchAgent);
+    return client;
   }
 
-  async console<T>(api: string, data: Record<string, unknown>): Promise<T> {
-    if (!this.deps.consoleCred) {
-      throw new BailianError("This command needs a console access token.", ExitCode.AUTH);
-    }
-    const gwOpts = { api, data };
-    const { timeout } = this.deps.settings;
-    try {
-      return (await callConsoleGateway(this.deps.consoleCred, timeout, gwOpts, {
-        debug: this.deps.debug,
-        recoveryHint: this.deps.consoleRecoveryHint,
-      })) as T;
-    } catch (err) {
-      if (
-        !(err instanceof BailianError) ||
-        err.exitCode !== ExitCode.AUTH ||
-        !err.message.includes("not logged in")
-      ) {
-        throw err;
-      }
-      const credential = this.deps.consoleCred;
-      let retryResult: unknown;
-      const newToken = await refreshAccessToken({
-        identity: this.deps.identity,
-        settings: {
-          ...this.deps.settings,
-          consoleRegion: credential.region,
-          consoleSite: credential.site,
-          consoleSwitchAgent: credential.switchAgent,
-        },
-        debug: this.deps.debug,
-        baseUrl: this.deps.baseUrl,
-        validateToken: async (token) => {
-          retryResult = await callConsoleGateway({ ...credential, token }, timeout, gwOpts, {
-            debug: this.deps.debug,
-            recoveryHint: this.deps.consoleRecoveryHint,
-          });
-        },
-      });
-      if (!newToken) throw err;
-      this.deps.consoleCred = { ...credential, token: newToken };
-      return retryResult as T;
-    }
+  console<T>(api: string, data: Record<string, unknown>): Promise<T> {
+    return this.consoleSession.request<T>(api, data);
   }
 
   openApiQueryJson<T extends OpenApiResponse>(opts: ClientOpenApiQueryOpts): Promise<T> {

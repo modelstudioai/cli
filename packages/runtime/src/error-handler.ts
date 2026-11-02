@@ -51,7 +51,7 @@ export function errorHint(
       case "expired-console-session":
         return consoleRecoveryHint(commandPrefix);
       case "missing-openapi-pair":
-        return `Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, pass --access-key-id and --access-key-secret, or run \`${formatCommand(commandPrefix, "auth login --open-api")}\`.`;
+        return `Set BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET), pass --access-key-id and --access-key-secret, or run \`${formatCommand(commandPrefix, "auth login --open-api")}\`.`;
       case "incomplete-openapi-config":
         return `Run \`${formatCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>")}\` again to save a complete pair.`;
       case "incomplete-openapi-flag":

@@ -5,6 +5,7 @@ import { ExitCode } from "../errors/codes.ts";
 import { callConsoleGateway, type ConsoleGatewayTarget } from "../console/gateway.ts";
 import { readConfigFile, writeConfigFile } from "../config/loader.ts";
 import { Client } from "../client/client.ts";
+import type { OpenApiCredential } from "./types.ts";
 
 const API_VERSION = "2026-02-10";
 const API_ACTION = "GenerateCLIAccessToken";
@@ -111,7 +112,7 @@ export async function generateCLIAccessToken(opts: {
 }
 
 /**
- * Try to refresh the console access_token using stored AK/SK.
+ * Obtain a Console token using resolved AK/SK, or selected-config AK/SK for legacy callers.
  * Returns the new token on success, or null if AK/SK are not available.
  */
 export async function refreshAccessToken(opts: {
@@ -121,11 +122,15 @@ export async function refreshAccessToken(opts: {
   baseUrl: string;
   /** 重试原请求作为验证；独立调用时默认通过只读 loginInfo 校验。 */
   validateToken?: (token: string) => Promise<void>;
+  /** Already selected by the shared credential chain; legacy callers use the selected config. */
+  credential?: OpenApiCredential;
+  /** Defaults to persistence only for local config credentials; temporary credentials stay in memory. */
+  persist?: boolean;
 }): Promise<string | null> {
   const configName = opts.settings.configName;
-  const config = readConfigFile(configName);
-  const accessKeyId = config.access_key_id;
-  const accessKeySecret = config.access_key_secret;
+  const config = opts.credential ? undefined : readConfigFile(configName);
+  const accessKeyId = opts.credential?.accessKeyId ?? config?.access_key_id;
+  const accessKeySecret = opts.credential?.accessKeySecret ?? config?.access_key_secret;
   if (!accessKeyId || !accessKeySecret) return null;
 
   opts.debug?.({ message: { "en-US": "Refreshing access token", "zh-CN": "正在刷新访问令牌" } });
@@ -137,7 +142,7 @@ export async function refreshAccessToken(opts: {
     baseUrl: opts.baseUrl,
     accessKeyId,
     accessKeySecret,
-    securityToken: config.security_token,
+    securityToken: opts.credential ? opts.credential.securityToken : config?.security_token,
   });
 
   const token = resp.cliAccessToken;
@@ -151,9 +156,15 @@ export async function refreshAccessToken(opts: {
     );
   }
 
+  const persist = opts.persist ?? (!opts.credential || opts.credential.source === "config");
+  if (persist) await persistConsoleAccessToken(token, configName);
+
+  return token;
+}
+
+/** Called only after a successful Console validation or business request. */
+export async function persistConsoleAccessToken(token: string, configName?: string): Promise<void> {
   const existing = readConfigFile(configName) as Record<string, unknown>;
   existing.access_token = token;
   await writeConfigFile(existing, configName);
-
-  return token;
 }

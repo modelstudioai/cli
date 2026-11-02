@@ -17,6 +17,7 @@ import type {
   LocalizedText,
 } from "bailian-cli-core";
 import {
+  CredentialError,
   formatCommand,
   Client,
   DEFAULT_LANGUAGE,
@@ -222,12 +223,26 @@ export const authStage: Middleware = async (ctx, next) => {
     if (cred && !command.prepare) maybeShowStatusBar(settings, cred.token, cred, ctx.output);
   } else if (command.auth === "console") {
     let cred: ConsoleCredential | undefined;
+    let exchangeCredential: OpenApiCredential | undefined;
     try {
       cred = resolveConsole(sources);
-    } catch (err) {
-      if (!settings.dryRun || command.prepare) throw err;
+    } catch (error) {
+      try {
+        exchangeCredential = resolveOpenApi(sources);
+      } catch (credentialError) {
+        if (!settings.dryRun || command.prepare) {
+          throw credentialError instanceof CredentialError &&
+            credentialError.reason === "missing-openapi-pair"
+            ? error
+            : credentialError;
+        }
+      }
     }
-    if (cred) ctx.client = new Client({ ...base, consoleCred: cred });
+    ctx.client = new Client({
+      ...base,
+      consoleCred: cred,
+      resolveConsoleOpenApiCredential: () => exchangeCredential ?? resolveOpenApi(sources),
+    });
   } else if (command.auth === "openapi") {
     let cred: OpenApiCredential | undefined;
     try {
