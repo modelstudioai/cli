@@ -1,4 +1,4 @@
-import { defineCommand, getFineTune, type FlagsDef } from "bailian-cli-core";
+import { defineCommand, getFineTune, type HttpDeps, type FlagsDef } from "bailian-cli-core";
 
 import { computeActualFee } from "./fee.ts";
 
@@ -23,6 +23,9 @@ export default defineCommand({
   exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
+    const diagnostics: Pick<HttpDeps, "debug"> = {
+      debug: (diagnostic) => ctx.output.debug(diagnostic),
+    };
     const jobId = flags.jobId;
 
     if (settings.dryRun) {
@@ -77,7 +80,7 @@ export default defineCommand({
     // Actual fee: only when the platform reports a concrete token count
     // (SUCCEEDED / CANCELED). Best-effort — silently omitted on lookup failure.
     if (usageTokens !== undefined && usageTokens > 0 && job.model) {
-      const fee = await computeActualFee(settings, job.model, usageTokens);
+      const fee = await computeActualFee(settings, job.model, usageTokens, diagnostics);
       if (fee) {
         item.training_cost = fee.cost;
         item.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;

@@ -6,6 +6,7 @@ import {
   Client,
   ExitCode,
   callConsoleGateway,
+  anonymousConsoleCall,
   mapApiError,
   request,
   sandboxEndpoint,
@@ -270,6 +271,33 @@ test("callConsoleGateway emits injected diagnostics without printing request pay
     { details: { status: 200 } },
   ]);
   expect(JSON.stringify(diagnostics)).not.toContain("response-body");
+});
+
+test("anonymousConsoleCall forwards injected diagnostics to the gateway", async () => {
+  const originalFetch = httpTransport.fetch;
+  const diagnostics: unknown[] = [];
+
+  httpTransport.fetch = async () =>
+    new Response(JSON.stringify({ data: { success: true } }), {
+      status: 200,
+      statusText: "OK",
+    });
+
+  try {
+    const settings = testDeps().settings;
+    await anonymousConsoleCall(settings, {
+      debug: (diagnostic) => diagnostics.push(diagnostic),
+    })("test.api", {});
+  } finally {
+    httpTransport.fetch = originalFetch;
+  }
+
+  expect(diagnostics).toHaveLength(2);
+  expect(diagnostics).toMatchObject([
+    { details: { method: "POST", api: "test.api" } },
+    { details: { status: 200 } },
+  ]);
+  expect(JSON.stringify(diagnostics)).not.toContain("params");
 });
 
 test("callConsoleGateway keeps readable message and raw gateway response separately", async () => {

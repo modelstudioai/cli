@@ -3,6 +3,7 @@ import {
   getFineTune,
   BailianError,
   ExitCode,
+  type HttpDeps,
   type FlagsDef,
 } from "bailian-cli-core";
 
@@ -134,6 +135,9 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
+    const diagnostics: Pick<HttpDeps, "debug"> = {
+      debug: (diagnostic) => ctx.output.debug(diagnostic),
+    };
     const jobId = flags.jobId;
     const follow = flags.follow;
     const intervalSec = Math.max(MIN_INTERVAL_SEC, flags.interval ?? DEFAULT_INTERVAL_SEC);
@@ -175,7 +179,12 @@ export default defineCommand({
         const usageTokens = typeof job?.usage === "number" ? job.usage : undefined;
         if (terminal && usageTokens && usageTokens > 0 && job?.model) {
           output.usage_tokens = usageTokens;
-          const fee = await computeActualFee(settings, job.model as string, usageTokens);
+          const fee = await computeActualFee(
+            settings,
+            job.model as string,
+            usageTokens,
+            diagnostics,
+          );
           if (fee) {
             output.training_cost = fee.cost;
             output.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;
@@ -226,7 +235,12 @@ export default defineCommand({
             const usageTokens = typeof job?.usage === "number" ? job.usage : undefined;
             const enriched: Record<string, unknown> = { ...response };
             if (usageTokens && usageTokens > 0 && job?.model) {
-              const fee = await computeActualFee(settings, job.model as string, usageTokens);
+              const fee = await computeActualFee(
+                settings,
+                job.model as string,
+                usageTokens,
+                diagnostics,
+              );
               if (fee) {
                 enriched.training_cost = fee.cost;
                 enriched.usage_tokens = usageTokens;
