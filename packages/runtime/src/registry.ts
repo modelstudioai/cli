@@ -6,14 +6,17 @@ import type {
   FlagsDef,
   LocalizedText,
 } from "bailian-cli-core";
-import { UsageError } from "bailian-cli-core";
 import {
+  renderCommandText,
+  formatCommand,
+  UsageError,
   CONSOLE_AUTH_FLAGS,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
   OPENAPI_AUTH_FLAGS,
   credentialFlagDefs,
 } from "bailian-cli-core";
+
 import { camelToKebab } from "./args.ts";
 import type { Translator } from "./i18n.ts";
 import { printQuickStart, printWelcomeBanner } from "./output/banner.ts";
@@ -108,7 +111,10 @@ export class CommandRegistry {
   }
 
   private localize(text: LocalizedText): string {
-    return this.translator?.localize(text) ?? (typeof text === "string" ? text : text["en-US"]);
+    return renderCommandText(
+      this.translator?.localize(text) ?? (typeof text === "string" ? text : text["en-US"]),
+      this.cliName,
+    );
   }
 
   private register(path: string, command: AnyCommand): void {
@@ -459,7 +465,7 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
 
     // `<bin> <path>` prefix is rendered here, not stored in the command, so the
     // same command shows the right invocation under any product (bl / rag / …).
-    const prefix = [this.cliName, ...commandPath].join(" ");
+    const prefix = formatCommand(this.cliName, commandPath.join(" "));
 
     out.write(`\n${this.localize(cmd.description)}\n`);
     out.write(

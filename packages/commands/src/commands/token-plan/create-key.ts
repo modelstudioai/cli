@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineCommand, type FlagsDef, type ParsedFlags } from "bailian-cli-core";
 import { padEnd } from "bailian-cli-runtime";
 import type { CreateTokenPlanKeyResponse } from "./types.ts";
@@ -50,7 +51,7 @@ export default defineCommand({
     const { identity, settings, flags } = ctx;
     const format = settings.output;
 
-    const workspaceId = requireWorkspaceId(settings, flags, identity.binName);
+    const workspaceId = requireWorkspaceId(settings, flags, formatCommand(identity));
     const queryParams = buildQueryParams(flags, { accountId: flags.accountId, workspaceId });
 
     if (settings.dryRun) {

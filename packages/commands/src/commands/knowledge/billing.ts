@@ -1,3 +1,4 @@
+import { buildCommandInvocation } from "bailian-cli-core";
 import type { CommandContext, CommandNotice, CommandRisk } from "bailian-cli-core";
 import { KNOWLEDGE_BILLING_PAGE } from "bailian-cli-runtime";
 import deleteIndex from "./kb-delete.ts";
@@ -48,11 +49,12 @@ export function reportCreatedKnowledgeBase(
   const path = context.commandPath?.(deleteIndex);
   const command =
     path && context.identity
-      ? {
-          bin: context.identity.binName,
-          path,
-          args: ["--index-id", indexId, "--workspace-id", workspaceId],
-        }
+      ? buildCommandInvocation(context.identity, path, [
+          "--index-id",
+          indexId,
+          "--workspace-id",
+          workspaceId,
+        ])
       : undefined;
   const resource = {
     indexId,

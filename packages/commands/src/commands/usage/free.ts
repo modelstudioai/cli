@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineCommand, findModelByName } from "bailian-cli-core";
 import {
   FREE_TIER_API,
@@ -202,7 +203,7 @@ export default defineCommand({
                   title: `Free Tier Quota · ${quotas.length} models${titleSuffix}`,
                   moreHint:
                     remaining > 0
-                      ? `+ ${remaining} more · ${identity.binName} usage free --all to browse all`
+                      ? `+ ${remaining} more · ${formatCommand(identity, "usage free --all")} to browse all`
                       : undefined,
                 })
               : ctx.localize({ "en-US": "No free-tier quota found.", "zh-CN": "未找到免费额度。" }),

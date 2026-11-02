@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   defineCommand,
   uploadDataset,
   validateDataset,
@@ -130,7 +131,7 @@ export default defineCommand({
         }
         lines.push(
           "",
-          `Hint: re-run \`${identity.binName} dataset validate --file <path>\` for the full report,`,
+          `Hint: re-run \`${formatCommand(identity, "dataset validate --file <path>")}\` for the full report,`,
           "      or pass --no-validate to skip this check at your own risk.",
         );
         throw new BailianError(lines.join("\n"), ExitCode.GENERAL);

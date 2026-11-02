@@ -28,6 +28,19 @@ function makeContext(): RunContext {
   } as unknown as RunContext;
 }
 
+test("hosted auto-update keeps product identity and derives the display prefix", async () => {
+  const context = makeContext();
+  context.identity.commandInvocation = { bin: "aliyun", path: ["bl"] };
+  await versionCheckStage(context, async () => {});
+  expect(updateMocks.performAutoUpdate).toHaveBeenCalledWith(
+    "1.24.0",
+    "2.2.1",
+    "bailian-cli",
+    "bailian-cli-test",
+    { output: context.output, binName: "bl", commandPrefix: "aliyun bl" },
+  );
+});
+
 beforeEach(() => {
   vi.stubEnv("NO_UPDATE_NOTIFIER", undefined);
   updateMocks.checkForUpdate.mockResolvedValue(undefined);

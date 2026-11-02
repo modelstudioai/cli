@@ -28,6 +28,8 @@ function flagRows(flags: Record<string, FlagDef>, locale: Locale): string[] {
 /** Render declarative schema only; do not re-read command definitions or infer defaults. */
 export function renderKnowledgeReference(schema: CommandSchema, locale: Locale = "en-US"): string {
   const pick = (english: string, chinese: string) => (locale === "en-US" ? english : chinese);
+  // Global --version works at the inspected scope, including fixed host subcommands.
+  const versionCommand = [schema.bin, ...schema.scope, "--version"].join(" ");
   const lines = [
     `# ${schema.bin} ${pick("command reference", "命令参考")}`,
     "",
@@ -38,8 +40,8 @@ export function renderKnowledgeReference(schema: CommandSchema, locale: Locale =
     // Channel releases temporarily bump package versions before checking these tracked assets.
     `> ${pick("Schema version", "Schema 版本")}: ${schema.schema_version}.`,
     pick(
-      `> Query the installed CLI version with \`${schema.bin} --version\`.`,
-      `> 使用 \`${schema.bin} --version\` 查询已安装的 CLI 版本。`,
+      `> Query the installed CLI version with \`${versionCommand}\`.`,
+      `> 使用 \`${versionCommand}\` 查询已安装的 CLI 版本。`,
     ),
     "",
     pick(

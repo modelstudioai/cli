@@ -1,4 +1,5 @@
 export { BailianError, UsageError } from "./errors/base.ts";
+export { CredentialError, type CredentialFailure } from "./errors/credential.ts";
 export { mapApiError, type ApiErrorBody } from "./errors/api.ts";
 export { ExitCode } from "./errors/codes.ts";
 

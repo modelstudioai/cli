@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi } from "bailian-cli-runtime";
 import { formatNumber, formatDateTime } from "../shared/format.ts";
@@ -212,7 +213,7 @@ export default defineTelemetryCommand({
       if (parseCommaList(flags.metric).some((metricName) => FAILURE_METRICS.has(metricName))) {
         textChunks.push(
           ansi(process.stdout).dim(
-            `\nFor the error-code breakdown, run \`${ctx.identity.binName} monitor errors\`.`,
+            `\nFor the error-code breakdown, run \`${formatCommand(ctx.identity, "monitor errors")}\`.`,
           ),
         );
       }

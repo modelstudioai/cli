@@ -1,4 +1,4 @@
-import type { Language } from "bailian-cli-core";
+import { commandRef, renderCommandText, type Language } from "bailian-cli-core";
 
 /**
  * Curated "Playground" scenarios surfaced in the config UI.
@@ -32,8 +32,7 @@ export const SCENARIOS = [
     title: "文生图",
     description: "一键生成一张示例图片并保存到输出目录。",
     category: "图像",
-    prompt:
-      "请使用 bl 的图像生成能力（如 `bl image generate` 命令）生成一张示例图片：一只在雨中撑伞的柯基，水彩风格，光线柔和。保存到输出目录后告诉我文件路径。",
+    prompt: `请使用 bl 的图像生成能力（如 \`${commandRef("image generate")}\` 命令）生成一张示例图片：一只在雨中撑伞的柯基，水彩风格，光线柔和。保存到输出目录后告诉我文件路径。`,
   },
   {
     id: "image-describe",
@@ -65,8 +64,7 @@ export const SCENARIOS = [
     title: "文字转语音",
     description: "把一句示例文字合成为自然语音。",
     category: "音频",
-    prompt:
-      "请使用 bl 的语音合成能力（如 `bl speech` 相关命令）把下面这句话合成为自然语音，保存到输出目录，并告诉我音频文件路径：欢迎使用阿里云百炼命令行工具，让多模态创作更简单。",
+    prompt: `请使用 bl 的语音合成能力（如 \`${commandRef("speech")}\` 相关命令）把下面这句话合成为自然语音，保存到输出目录，并告诉我音频文件路径：欢迎使用阿里云百炼命令行工具，让多模态创作更简单。`,
   },
   {
     id: "audio-summarize",
@@ -82,8 +80,7 @@ export const SCENARIOS = [
     title: "文生视频",
     description: "一键生成一段示例短视频。",
     category: "视频",
-    prompt:
-      "请使用 bl 的视频生成能力（如 `bl video generate` 命令）生成一段示例短视频：日落时分海边奔跑的少年，电影质感，慢动作。保存到输出目录后告诉我视频文件路径。",
+    prompt: `请使用 bl 的视频生成能力（如 \`${commandRef("video generate")}\` 命令）生成一段示例短视频：日落时分海边奔跑的少年，电影质感，慢动作。保存到输出目录后告诉我视频文件路径。`,
   },
   {
     id: "video-storyboard",
@@ -162,8 +159,7 @@ const EN_US_SCENARIOS = {
     title: "Text to image",
     description: "Generate a sample image and save it to the output directory.",
     category: "Image",
-    prompt:
-      "Use bl's image generation capability (such as `bl image generate`) to create a sample image: a corgi holding an umbrella in the rain, watercolor style, with soft lighting. Save it to the output directory and tell me the file path.",
+    prompt: `Use bl's image generation capability (such as \`${commandRef("image generate")}\`) to create a sample image: a corgi holding an umbrella in the rain, watercolor style, with soft lighting. Save it to the output directory and tell me the file path.`,
   },
   "image-describe": {
     title: "Image understanding",
@@ -190,8 +186,7 @@ const EN_US_SCENARIOS = {
     title: "Text to speech",
     description: "Turn a sample sentence into natural speech.",
     category: "Audio",
-    prompt:
-      "Use bl's speech synthesis capability (such as a `bl speech` command) to turn this sentence into natural speech: Welcome to Alibaba Cloud Model Studio CLI, making multimodal creation easier. Save the audio to the output directory and tell me the file path.",
+    prompt: `Use bl's speech synthesis capability (such as a \`${commandRef("speech")}\` command) to turn this sentence into natural speech: Welcome to Alibaba Cloud Model Studio CLI, making multimodal creation easier. Save the audio to the output directory and tell me the file path.`,
   },
   "audio-summarize": {
     title: "Transcribe and summarize audio",
@@ -204,8 +199,7 @@ const EN_US_SCENARIOS = {
     title: "Text to video",
     description: "Generate a sample short video.",
     category: "Video",
-    prompt:
-      "Use bl's video generation capability (such as `bl video generate`) to create a sample short video: a teenager running along the beach at sunset, cinematic, in slow motion. Save it to the output directory and tell me the file path.",
+    prompt: `Use bl's video generation capability (such as \`${commandRef("video generate")}\`) to create a sample short video: a teenager running along the beach at sunset, cinematic, in slow motion. Save it to the output directory and tell me the file path.`,
   },
   "video-storyboard": {
     title: "Video storyboard",
@@ -266,18 +260,23 @@ const EN_US_SCENARIOS = {
   },
 } satisfies Record<ScenarioId, ScenarioTranslation>;
 
-export function localizeScenarios(language: Language): Scenario[] {
-  if (language === "zh-CN") return SCENARIOS.map((scenario) => ({ ...scenario }));
-
-  return SCENARIOS.map((scenario) => ({
-    ...scenario,
-    ...EN_US_SCENARIOS[scenario.id],
-  }));
+export function localizeScenarios(language: Language, invocation = "bl"): Scenario[] {
+  return SCENARIOS.map((scenario) => {
+    const localized = {
+      ...scenario,
+      ...(language === "en-US" ? EN_US_SCENARIOS[scenario.id] : {}),
+    };
+    return { ...localized, prompt: renderCommandText(localized.prompt, invocation) };
+  });
 }
 
 /** Look up a scenario by id, or undefined when unknown. */
-export function getScenario(id: string, language: Language): Scenario | undefined {
-  return localizeScenarios(language).find((scenario) => scenario.id === id);
+export function getScenario(
+  id: string,
+  language: Language,
+  invocation = "bl",
+): Scenario | undefined {
+  return localizeScenarios(language, invocation).find((scenario) => scenario.id === id);
 }
 
 /** Fill a scenario's `{{placeholder}}` tokens from user-provided values. */

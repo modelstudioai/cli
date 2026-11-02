@@ -171,7 +171,7 @@ describe("decision command helpers", () => {
   });
 
   test("Endpoint：默认按 workspace + region 拼接，显式 Base URL 优先", () => {
-    const base = { binName: "bl", localize };
+    const base = { commandPrefix: "bl", localize };
     expect(
       resolveDecisionEndpoint({
         ...base,

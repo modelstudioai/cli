@@ -2,7 +2,8 @@ import { chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildAgentDecl, StateManager } from "@openagentpack/sdk";
-import { expect, test } from "vite-plus/test";
+import { expect, expectTypeOf, test } from "vite-plus/test";
+import { formatCommand, type CommandFormatter } from "bailian-cli-core";
 import {
   buildAgentMcpBindings,
   buildAgentSkillRefs,
@@ -116,6 +117,9 @@ test("MCP server code 去重并默认启用全部工具", () => {
 });
 
 test("本地 Skill 来源复用同声明的待创建或已跟踪 key", () => {
+  expectTypeOf<
+    Parameters<typeof selectLocalSkillKey>[0]["command"]
+  >().toEqualTypeOf<CommandFormatter>();
   const declaration = {
     name: "local-report",
     source: "skills/local-report.zip",
@@ -125,6 +129,7 @@ test("本地 Skill 来源复用同声明的待创建或已跟踪 key", () => {
   const pendingState = StateManager.initialize("/tmp/bailian-cli-local-skill-pending.json");
   expect(
     selectLocalSkillKey({
+      command: (args) => formatCommand("bl", args),
       displayName: "local-report",
       provider: "bailian",
       declarations: { "local-report": declaration },
@@ -146,6 +151,7 @@ test("本地 Skill 来源复用同声明的待创建或已跟踪 key", () => {
   });
   expect(
     selectLocalSkillKey({
+      command: (args) => formatCommand("bl", args),
       displayName: "local-report",
       provider: "bailian",
       declarations: { "local-report": declaration },
@@ -160,6 +166,7 @@ test("本地 Skill 来源复用同声明的待创建或已跟踪 key", () => {
   });
   expect(() =>
     selectLocalSkillKey({
+      command: (args) => formatCommand("bl", args),
       displayName: "local-report",
       provider: "bailian",
       declarations: { "local-report": declaration },
@@ -168,6 +175,34 @@ test("本地 Skill 来源复用同声明的待创建或已跟踪 key", () => {
     }),
   ).toThrow(/already tracked with a different declaration/);
 });
+
+test.each(["bl", "aliyun bl"])(
+  "local Skill conflict uses the explicit formatter: %s",
+  (invocation) => {
+    const state = StateManager.initialize("/tmp/bailian-cli-local-skill-conflict.json");
+    state.setResource({
+      address: { type: "skill", name: "local-report", provider: "bailian" },
+      remote_id: "skill_local_report",
+      content_hash: "hash",
+    });
+    let failure: unknown;
+    try {
+      selectLocalSkillKey({
+        command: (args) => formatCommand(invocation, args),
+        displayName: "local-report",
+        provider: "bailian",
+        declarations: { "local-report": { name: "local-report", source: "old.zip" } },
+        candidate: { name: "local-report", source: "new.zip" },
+        state,
+      });
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toMatchObject({
+      hint: `Modify its existing YAML declaration and run full \`${invocation} managed-agent apply\`, or bind its remote ID with --skill.`,
+    });
+  },
+);
 
 test("YAML 替换校验原内容并保留文件权限", async () => {
   const directory = await mkdtemp(join(tmpdir(), "bailian-agent-create-"));

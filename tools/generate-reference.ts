@@ -22,6 +22,7 @@ import {
   MODEL_AUTH_FLAGS,
   OPENAPI_AUTH_FLAGS,
   credentialFlagDefs,
+  renderCommandText,
   type AnyCommand,
   type AuthRequirement,
   type FlagDef,
@@ -95,7 +96,7 @@ function escCell(s: string): string {
 
 /** Skill references are English artifacts; localized CLI text keeps English here. */
 function referenceText(text: LocalizedText): string {
-  return typeof text === "string" ? text : text["en-US"];
+  return renderCommandText(typeof text === "string" ? text : text["en-US"], "bl");
 }
 
 function topLevel(path: string): string {

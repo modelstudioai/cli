@@ -4,7 +4,8 @@ import {
   type ProjectRuntimeContext,
   resolveProjectConfig,
 } from "@openagentpack/sdk";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { formatCommand, type CommandFormatter, BailianError, ExitCode } from "bailian-cli-core";
+
 import {
   assertProviderCredentials,
   type CredentialHost,
@@ -64,9 +65,13 @@ export async function resolveAgentProjectConfig(
       overrideBaseUrl: options.overrideBailianBaseUrl,
     });
     scrubCredentialEnv();
-    assertBailianOnlyProviders(resolved.config.providers);
+    assertBailianOnlyProviders(resolved.config.providers, (args) =>
+      formatCommand(host.identity, args),
+    );
     if ((options.credentials ?? "all") !== "none") {
-      assertProviderCredentials(resolved.config.providers);
+      assertProviderCredentials(resolved.config.providers, (args) =>
+        formatCommand(host.identity, args),
+      );
     }
     return resolved;
   });
@@ -102,7 +107,10 @@ export async function buildAgentRuntime(
 }
 
 /** Enforce the bl product boundary while the shared SDK remains multi-provider capable. */
-export function assertBailianOnlyProviders(providers: Record<string, unknown>): void {
+export function assertBailianOnlyProviders(
+  providers: Record<string, unknown>,
+  command: CommandFormatter,
+): void {
   const configuredProviders = Object.keys(providers);
   const unsupportedProviders = configuredProviders.filter(
     (provider) => provider !== BAILIAN_PROVIDER,
@@ -110,13 +118,13 @@ export function assertBailianOnlyProviders(providers: Record<string, unknown>): 
   if (unsupportedProviders.length > 0) {
     const names = unsupportedProviders.join(", ");
     throw new BailianError(
-      `bl managed-agent only supports provider '${BAILIAN_PROVIDER}'; remove unsupported providers: ${names}. / bl managed-agent 仅支持 Provider '${BAILIAN_PROVIDER}'；请移除不支持的 Provider：${names}。`,
+      `${command("managed-agent")} only supports provider '${BAILIAN_PROVIDER}'; remove unsupported providers: ${names}. / ${command("managed-agent")} 仅支持 Provider '${BAILIAN_PROVIDER}'；请移除不支持的 Provider：${names}。`,
       ExitCode.USAGE,
     );
   }
   if (!(BAILIAN_PROVIDER in providers)) {
     throw new BailianError(
-      `bl managed-agent requires a '${BAILIAN_PROVIDER}' provider configuration. / bl managed-agent 需要配置 Provider '${BAILIAN_PROVIDER}'。`,
+      `${command("managed-agent")} requires a '${BAILIAN_PROVIDER}' provider configuration. / ${command("managed-agent")} 需要配置 Provider '${BAILIAN_PROVIDER}'。`,
       ExitCode.USAGE,
     );
   }

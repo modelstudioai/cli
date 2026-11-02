@@ -2,6 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { defineCommand } from "../packages/core/src/index.ts";
 import { CommandRegistry } from "../packages/runtime/src/registry.ts";
 import { buildCommandSchema } from "../packages/runtime/src/introspect.ts";
+import { resolve } from "../packages/runtime/src/resolve.ts";
 import {
   renderKnowledgeReference,
   renderKnowledgeReferenceIndex,
@@ -48,6 +49,32 @@ test("actual product paths are preserved with no prefix substitution", () => {
   expect(kscli).toContain("kscli init --mode");
   expect(kscli).not.toContain("kscli knowledge");
 });
+test.each([[], ["knowledge"], ["knowledge", "init"]])(
+  "hosted references use executable scope %j for version queries",
+  (...scope) => {
+    const registry = new CommandRegistry({ "knowledge init": command }, "aliyun bl");
+    const input = buildCommandSchema(
+      registry,
+      {
+        binName: "bl",
+        commandInvocation: { bin: "aliyun", path: ["bl"] },
+        version: "2.0.1",
+        npmPackage: "fixture",
+        clientName: "fixture",
+      },
+      scope,
+    );
+    // --version is supported at root, group and leaf; it skips required business flags.
+    expect(resolve([...scope, "--version"], registry)).toEqual({ kind: "version" });
+    for (const locale of ["en-US", "zh-CN"] as const) {
+      const output = renderKnowledgeReference(input, locale);
+      expect(output).toContain(`\`${["aliyun", "bl", ...scope].join(" ")} --version\``);
+      expect(output).toContain("## aliyun bl knowledge init");
+      expect(output).not.toContain("`aliyun --version`");
+      expect(output).not.toContain("aliyun bl bl");
+    }
+  },
+);
 test("required flags, choices, billing risk and runtime confirmation survive rendering", () => {
   const output = renderKnowledgeReference(schema("bl", "knowledge init"));
   expect(output).toContain("--mode");

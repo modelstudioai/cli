@@ -1,4 +1,4 @@
-import type { Language } from "bailian-cli-core";
+import { commandRef, type Language } from "bailian-cli-core";
 
 /**
  * Config UI is a self-contained HTML document, so this catalog is embedded in
@@ -21,8 +21,8 @@ const ZH_CN_REPLACEMENTS: ReadonlyArray<readonly [string, string]> = [
     "完成以下步骤以检查本地环境并完成首次配置：登录百炼、连接本地编程 Agent，并运行第一个任务。完成后，每个圆点会由灰色变为绿色。",
   ],
   [
-    'Pick a scenario to dispatch a preset task to a connected local coding agent, running in a new terminal. Tasks run in the directory where <code style="font-family:var(--mono)">bl config ui</code> was started.',
-    '选择一个场景，将预设任务发送给已连接的本地编程 Agent，并在新终端中运行。任务会在启动 <code style="font-family:var(--mono)">bl config ui</code> 的目录中执行。',
+    `Pick a scenario to dispatch a preset task to a connected local coding agent, running in a new terminal. Tasks run in the directory where <code style="font-family:var(--mono)">${commandRef("config ui")}</code> was started.`,
+    `选择一个场景，将预设任务发送给已连接的本地编程 Agent，并在新终端中运行。任务会在启动 <code style="font-family:var(--mono)">${commandRef("config ui")}</code> 的目录中执行。`,
   ],
   [
     "Pick a scenario to dispatch a preset task to a connected local coding agent, running in a new terminal. Tasks run in the directory where ",
@@ -78,8 +78,8 @@ const ZH_CN_REPLACEMENTS: ReadonlyArray<readonly [string, string]> = [
     "在 Claude Code、Codex、Qwen Code 或 OpenCode 中配置的 MCP 服务器会显示在这里。",
   ],
   [
-    "Assets from <code>bl image</code>, <code>bl video</code>, <code>bl speech</code> and <code>bl omni</code> will appear here.",
-    "通过 <code>bl image</code>、<code>bl video</code>、<code>bl speech</code> 和 <code>bl omni</code> 生成的资产会显示在这里。",
+    `Assets from <code>${commandRef("image")}</code>, <code>${commandRef("video")}</code>, <code>${commandRef("speech")}</code> and <code>${commandRef("omni")}</code> will appear here.`,
+    `通过 <code>${commandRef("image")}</code>、<code>${commandRef("video")}</code>、<code>${commandRef("speech")}</code> 和 <code>${commandRef("omni")}</code> 生成的资产会显示在这里。`,
   ],
   ["Remote agents loaded from a URL will appear here.", "通过 URL 加载的远程 Agent 会显示在这里。"],
   [
@@ -156,12 +156,12 @@ const ZH_CN_REPLACEMENTS: ReadonlyArray<readonly [string, string]> = [
   ["Available ", "可用的 "],
   [" models · click to use", " 模型 · 点击使用"],
   [
-    "Applies to <code>bl video generate</code> only (text/image-to-video). ",
-    "仅适用于 <code>bl video generate</code>（文生视频/图生视频）。",
+    `Applies to <code>${commandRef("video generate")}</code> only (text/image-to-video). `,
+    `仅适用于 <code>${commandRef("video generate")}</code>（文生视频/图生视频）。`,
   ],
   [
-    "<code>bl video ref</code> (multi-image) and <code>bl video edit</code> keep their own ",
-    "<code>bl video ref</code>（多图）和 <code>bl video edit</code> 仍使用各自的",
+    `<code>${commandRef("video ref")}</code> (multi-image) and <code>${commandRef("video edit")}</code> keep their own `,
+    `<code>${commandRef("video ref")}</code>（多图）和 <code>${commandRef("video edit")}</code> 仍使用各自的`,
   ],
   [
     "fixed models — pass <code>--model</code> to override those per run.",

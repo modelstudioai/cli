@@ -73,11 +73,23 @@ process.exit(err.exitCode)
 - ❌ 新增/改动时不写控制台 URL 或 region
 - ❌ 新增/改动时不写渠道追踪参数(`source_channel=xxx`)
 - ✅ 只描述抽象做法(如 `"Set DASHSCOPE_API_KEY environment variable, or pass --api-key."`)
-- 当前遗留:`packages/core/src/auth/resolver.ts` 仍含 `bl auth login` hint;触碰鉴权错误时迁到 runtime `errorHint`
+- 本地凭证错误用 `CredentialError.reason` 表达失败事实；resolver 的纯提示不含产品命令，runtime `errorHint` 保留原有登录指引。
 
 ### 4. runtime / 产品层可以使用入口名 + URL
 
-- `packages/runtime/src/error-handler.ts` 通过本次调用的 `binName` 渲染 `bl` / `kscli` 等入口名,不要硬编码
+- 用 `formatCommand(identity, "<path> [args]")` 生成用户操作提示；`identity.binName`
+  保持产品身份，用于渠道、安装包及独立入口默认名；宿主可执行信息另行声明。不要全局替换输出或服务端文本。
+- 可执行命令引用用 `buildCommandInvocation(identity, path, args)` 生成 `{ bin, path, args }`；
+  `identity.commandInvocation` 显式声明宿主 executable/固定子命令，不拆分展示字符串。
+  消费者使用 `spawn(bin, [...path, ...args], { shell: false })`，不隐式添加确认参数。
+- 静态 CLI 元数据使用 `commandRef("<path> [args]")` 声明命令引用，由 help、introspect
+  和 reference 生成器调用 `renderCommandText` 渲染；固定模板不可用于服务端文本或用户输入。
+- 动态错误在构造时生成完整字符串；helper 只接收必要的格式化函数或恢复提示。
+  `BailianError.message/hint/toJSON()` 不携带模板，也不要求调用方理解渲染协议。
+- Console 失效恢复提示由 runtime 提供给 client/gateway，在业务包装前完成；普通包装无需传播模板或凭证域状态。
+- 前缀适配只改变命令引用，不增删原有操作步骤、不重组鉴权提示、不改写周围文案。
+
+- `packages/runtime/src/error-handler.ts` 通过本次调用的 `commandPrefix` 渲染 `bl` / `kscli` 等入口名,不要硬编码
 - 产品入口 / README / E2E 可以写具体入口命令
 - shared command 实现不写 `bl` / `kscli` 前缀;`usageArgs` / `exampleArgs` 只写参数片段
 - URL 必须从 `packages/runtime/src/urls.ts` import,不能硬编码
@@ -93,13 +105,13 @@ process.exit(err.exitCode)
 ### B. runtime 增强(`errorHint`)
 
 - [ ] `packages/runtime/src/error-handler.ts:errorHint`:**当前只为 internal AUTH 增强**(因为 resolver / authStage 等内部位置会发 AUTH)
-- [ ] 命令名使用 `binName`,不要硬编码 `bl`
+- [ ] 命令名使用 `commandPrefix`,不要硬编码 `bl`
 - [ ] URL 必须是 `import { API_KEY_PAGE } from "./urls.ts"`
 
 ### C. command / runtime 直接抛错
 
-- [ ] runtime 层抛 BailianError 时,hint 里可以放 `binName` 渲染的入口命令,但 **URL 一律走 `urls.ts` import**
-- [ ] `packages/commands` 作为 shared command 库,默认不硬编码产品 bin;如果确需用户操作提示,优先依赖 runtime error handler 或 `ctx.identity.binName`
+- [ ] runtime 层抛 BailianError 时,hint 里可以放 `commandPrefix` 渲染的入口命令,但 **URL 一律走 `urls.ts` import**
+- [ ] `packages/commands` 作为 shared command 库,默认不硬编码产品 bin;如果确需用户操作提示,优先依赖 runtime error handler 或 `formatCommand(ctx.identity, args)`
 - [ ] 抛错位置如果**已经在调用服务端**,catch 时不要替换 message——重新评估是否需要 catch
 
 ### D. 文案一致性

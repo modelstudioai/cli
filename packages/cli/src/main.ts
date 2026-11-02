@@ -2,6 +2,7 @@ import { createCli } from "bailian-cli-runtime";
 import { commandAliases, commands } from "./commands.ts";
 import { commandPackPolicy } from "./command-pack-policy.ts";
 import pkg from "../package.json" with { type: "json" };
+import { resolveAliyunIntegration } from "./integrations/aliyun.ts";
 
 const quickStartTasks = [
   "帮我创建一个能够生成短片分镜和视频的 Managed Agent。\n   Help me create a Managed Agent that can generate short-film storyboards and videos.",
@@ -15,6 +16,7 @@ void createCli(
   { ...commands, ...commandAliases },
   {
     binName: "bl",
+    ...resolveAliyunIntegration(process.env),
     version: pkg.version,
     clientName: "bailian-cli",
     npmPackage: "bailian-cli",

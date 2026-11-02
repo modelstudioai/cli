@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { randomUUID } from "node:crypto";
 import { readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
@@ -145,7 +146,7 @@ export async function loadScopedCreateProject(
       throw new BailianError(
         `Config file not found: ${file}`,
         ExitCode.USAGE,
-        "Run `bl managed-agent init` first.",
+        `Run \`${formatCommand(host.identity, "managed-agent init")}\` first.`,
       );
     }
     throw error;
@@ -162,7 +163,12 @@ export async function loadScopedCreateProject(
     );
   }
   const provider = "bailian";
-  if (!host.settings.dryRun) assertProviderCredentials(loaded.config.providers, [provider]);
+  if (!host.settings.dryRun)
+    assertProviderCredentials(
+      loaded.config.providers,
+      (args) => formatCommand(host.identity, args),
+      [provider],
+    );
   installSdkTransport();
   const stateBackend = new LocalFileStateBackend({ configPath: loaded.configPath });
   return {

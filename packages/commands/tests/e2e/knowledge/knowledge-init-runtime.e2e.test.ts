@@ -108,6 +108,7 @@ test("confirmed init uses the full runtime and reuses the same resources on a se
     },
   });
   expect(payload.cleanup).toContainEqual({
+    bin: "bl",
     path: ["knowledge", "delete"],
     args: ["--index-id", "index-test", "--workspace-id", "ws-test"],
   });

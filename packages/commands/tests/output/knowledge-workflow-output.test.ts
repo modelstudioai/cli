@@ -338,6 +338,8 @@ test.each(["bl", "kscli"] as const)(
     const result = await invoke("init", { format: "json", quiet: true, binName });
     expect(result.exitCode, result.stderr).toBe(0);
     const data = JSON.parse(result.stdout);
+    expect(data.cleanup.every((action: { bin: string }) => action.bin === binName)).toBe(true);
+    expect(data.nextSearch.bin).toBe(binName);
     expect(data.cleanup.map((action: { path: string[] }) => action.path)).toEqual(
       binName === "bl"
         ? [
@@ -372,6 +374,7 @@ test.each([false, true])(
       resource: { kind: "knowledge-base", id: "index-one", created: true },
       cleanup: [
         {
+          bin: "bl",
           path: ["knowledge", "delete"],
           args: ["--index-id", "index-one", "--workspace-id", "ws-test"],
         },

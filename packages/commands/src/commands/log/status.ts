@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { ansi, displayWidth, padEnd } from "bailian-cli-runtime";
 import {
   defineTelemetryCommand,
@@ -120,12 +121,14 @@ export default defineTelemetryCommand({
 
       if (status.auditSwitch !== true) {
         textChunks.push(
-          color.dim(`\nRun \`${identity.binName} log audit enable\` to enable audit log delivery.`),
+          color.dim(
+            `\nRun \`${formatCommand(identity, "log audit enable")}\` to enable audit log delivery.`,
+          ),
         );
       } else if (status.inferenceSwitch !== true) {
         textChunks.push(
           color.dim(
-            `\nRun \`${identity.binName} log inference enable\` to enable inference log delivery.`,
+            `\nRun \`${formatCommand(identity, "log inference enable")}\` to enable inference log delivery.`,
           ),
         );
       }

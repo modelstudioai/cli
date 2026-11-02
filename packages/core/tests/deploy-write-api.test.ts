@@ -501,7 +501,14 @@ describe("shared prepaid information", () => {
 });
 
 function planContext(client: Client, flags: CreatePlanFlags = {}, dryRun = false): PlanContext {
-  return { client, flags, dryRun, model: "base-model", binName: "test-cli" };
+  return {
+    client,
+    flags,
+    dryRun,
+    model: "base-model",
+    modelUnavailableHint:
+      "Run `test-cli deploy models --source base` to inspect available models, or pass --deploy-spec explicitly.",
+  };
 }
 
 describe("PTU creation strategy", () => {

@@ -1,5 +1,12 @@
 import { AGENTS_PROVIDER_FIELDS, bootstrapRuntimeCredentialsSync } from "@openagentpack/sdk";
-import { BailianError, type Client, ExitCode, type Settings } from "bailian-cli-core";
+import {
+  commandRef,
+  type CommandFormatter,
+  BailianError,
+  type Client,
+  ExitCode,
+  type Settings,
+} from "bailian-cli-core";
 
 /**
  * AgentStudio API path the SDK's BailianClient serves resources under. bl's
@@ -28,16 +35,14 @@ const CREDENTIAL_ENV_KEYS = [
 
 /** How to obtain each provider's key, surfaced in the CLI's own AUTH error when it is missing. */
 const CREDENTIAL_HINTS: Record<string, string> = {
-  bailian: "Run `bl auth login --api-key <key>`, pass --api-key, or set DASHSCOPE_API_KEY.",
   claude: "Set ANTHROPIC_API_KEY (or CLAUDE_API_KEY) in your shell or .env.",
   ark: "Set ARK_API_KEY in your shell or .env.",
   qoder: "Set QODER_PAT (or QODER_API_KEY) in your shell or .env.",
 };
 
 const BAILIAN_ONLY_NOTE = {
-  "en-US":
-    "bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.",
-  "zh-CN": "bl managed-agent 仅支持百炼 Provider；包含其他 Provider 的配置会被拒绝。",
+  "en-US": `${commandRef("managed-agent")} supports the Bailian provider only; configurations containing other providers are rejected.`,
+  "zh-CN": `${commandRef("managed-agent")} 仅支持百炼 Provider；包含其他 Provider 的配置会被拒绝。`,
 } as const;
 
 /** The slice of CommandContext the credential pipeline needs: authStage-resolved client + settings. */
@@ -51,15 +56,13 @@ export interface CredentialHost {
  * credentials. Bailian goes through bl's own auth chain (commands declare
  * `auth: "apiKey"`). The resolved credential is injected into the SDK in-memory
  * and scrubbed from the environment. Attach to every command that loads
- * agents.yaml. `bl` prefix is safe: agent commands ship on `bl` only.
+ * agents.yaml. Command references are rendered by the current CLI host.
  */
 export const CREDENTIALS_NOTE = [
   BAILIAN_ONLY_NOTE,
   {
-    "en-US":
-      "Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).",
-    "zh-CN":
-      "百炼凭证来自 bl 鉴权链：--api-key > DASHSCOPE_API_KEY > `bl auth login`（当前激活的配置 Profile）。",
+    "en-US": `Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > \`${commandRef("auth login")}\` (active config profile).`,
+    "zh-CN": `百炼凭证来自 bl 鉴权链：--api-key > DASHSCOPE_API_KEY > \`${commandRef("auth login")}\`（当前激活的配置 Profile）。`,
   },
   {
     "en-US":
@@ -175,6 +178,7 @@ export function normalizeInterpolatedProviderBlocks(providers: Record<string, un
  */
 export function assertProviderCredentials(
   providers: Record<string, unknown>,
+  command: CommandFormatter,
   targetProviders?: readonly string[],
 ): void {
   for (const [name, raw] of Object.entries(providers)) {
@@ -187,7 +191,9 @@ export function assertProviderCredentials(
     throw new BailianError(
       `Provider '${name}' is configured but its API key is empty.`,
       ExitCode.AUTH,
-      CREDENTIAL_HINTS[name] ?? `Provide credentials for provider '${name}'.`,
+      name === "bailian"
+        ? `Run \`${command("auth login --api-key <key>")}\`, pass --api-key, or set DASHSCOPE_API_KEY.`
+        : (CREDENTIAL_HINTS[name] ?? `Provide credentials for provider '${name}'.`),
     );
   }
 }

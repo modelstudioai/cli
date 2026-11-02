@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineCommand, BailianError, ExitCode } from "bailian-cli-core";
 import { ansi } from "bailian-cli-runtime";
 import {
@@ -152,7 +153,7 @@ export default defineCommand({
             title: `Free Tier Quota · ${quotas.length} models · sorted by urgency`,
             moreHint:
               remaining > 0
-                ? `+ ${remaining} more · ${identity.binName} usage free to browse all`
+                ? `+ ${remaining} more · ${formatCommand(identity, "usage free")} to browse all`
                 : undefined,
           }) + "\n",
         );
@@ -163,7 +164,7 @@ export default defineCommand({
       if (!workspaceId) {
         textChunks.push(
           color.dim(
-            `Usage overview skipped · set --workspace-id or \`${identity.binName} config set workspace_id <id>\` to include it.`,
+            `Usage overview skipped · set --workspace-id or \`${formatCommand(identity, "config set workspace_id <id>")}\` to include it.`,
           ) + "\n",
         );
       } else if (!overview) {

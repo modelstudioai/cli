@@ -1,3 +1,4 @@
+import { CredentialError } from "../errors/credential.ts";
 import { debugRequest, debugResponse } from "../client/diagnostics.ts";
 import type { HttpDeps } from "../client/http.ts";
 import { httpTransport } from "../client/transport.ts";
@@ -75,7 +76,7 @@ export type ConsoleCall = (api: string, data: Record<string, unknown>) => Promis
  */
 export function anonymousConsoleCall(
   config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout">,
-  diagnostics: Pick<HttpDeps, "debug"> = {},
+  options: Pick<HttpDeps, "debug"> & { recoveryHint?: string } = {},
 ): ConsoleCall {
   const eff = effectiveConsoleGatewayConfig(config);
   return (api, data) =>
@@ -83,7 +84,7 @@ export function anonymousConsoleCall(
       { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
       config.timeout,
       { api, data },
-      diagnostics,
+      options,
     );
 }
 
@@ -128,7 +129,7 @@ export async function callConsoleGateway(
   target: ConsoleGatewayTarget,
   timeoutSec: number,
   { api, data }: ConsoleGatewayRequest,
-  diagnostics: Pick<HttpDeps, "debug"> = {},
+  options: Pick<HttpDeps, "debug"> & { recoveryHint?: string } = {},
 ): Promise<unknown> {
   const resolved = resolveGateway(target.region, target.site);
   const gatewayBase = `https://${resolved.csGateway}`;
@@ -145,7 +146,7 @@ export async function callConsoleGateway(
   if (target.token) headers.Authorization = `Bearer ${target.token}`;
 
   const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
-  debugRequest(diagnostics, "POST", endpoint, { api });
+  debugRequest(options, "POST", endpoint, { api });
 
   const res = await httpTransport.fetch(endpoint, {
     method: "POST",
@@ -154,7 +155,7 @@ export async function callConsoleGateway(
     signal: AbortSignal.timeout(timeoutMs),
   });
 
-  debugResponse(diagnostics, res);
+  debugResponse(options, res);
 
   if (!res.ok) {
     const t = await res.text().catch(() => "");
@@ -174,16 +175,17 @@ export async function callConsoleGateway(
     const errorCode =
       typeof rawErrorCode === "string" ? rawErrorCode : JSON.stringify(rawErrorCode);
     const notLogined = errorCode.includes("NotLogined");
-    throw new BailianError(
-      notLogined
-        ? "Console session is not logged in or has expired."
-        : `Console gateway error: ${errorCode}`,
-      notLogined ? ExitCode.AUTH : ExitCode.GENERAL,
-      notLogined
-        ? "Run `bl auth login --console` to sign in or refresh your console session."
-        : undefined,
-      { rawResponse },
-    );
+    if (notLogined) {
+      throw new CredentialError(
+        "expired-console-session",
+        "Console session is not logged in or has expired.",
+        options.recoveryHint,
+        { rawResponse },
+      );
+    }
+    throw new BailianError(`Console gateway error: ${errorCode}`, ExitCode.GENERAL, undefined, {
+      rawResponse,
+    });
   }
 
   return json;

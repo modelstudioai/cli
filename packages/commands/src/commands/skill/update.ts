@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   BailianError,
   ExitCode,
   defineCommand,
@@ -110,7 +111,10 @@ export default defineCommand({
           results.push({
             name,
             status: "failed",
-            reason: "not installed; run bl skill add --name " + name + " first",
+            reason:
+              `not installed; run ${formatCommand(ctx.identity, "skill add")} --name ` +
+              name +
+              " first",
           });
           continue;
         }
@@ -170,7 +174,7 @@ export default defineCommand({
         throw new BailianError(
           `${failed.length} skill(s) failed to update`,
           ExitCode.GENERAL,
-          "Check the reason for failed skills in the output; network failures can be retried with bl skill update",
+          `Check the reason for failed skills in the output; network failures can be retried with ${formatCommand(ctx.identity, "skill update")}`,
         );
       }
       return;
@@ -211,8 +215,8 @@ export default defineCommand({
       results.length === 0
         ? [
             ctx.localize({
-              "en-US": "No skills installed locally; run bl skill add first.",
-              "zh-CN": "本地未安装 Skill，请先运行 bl skill add。",
+              "en-US": `No skills installed locally; run ${formatCommand(ctx.identity, "skill add")} first.`,
+              "zh-CN": `本地未安装 Skill，请先运行 ${formatCommand(ctx.identity, "skill add")}。`,
             }),
           ]
         : formatTable(["NAME", "STATUS", "PUBLISHED"], rows);
@@ -231,7 +235,7 @@ export default defineCommand({
       throw new BailianError(
         `${failed.length} skill(s) failed to update`,
         ExitCode.GENERAL,
-        "Check the reason for failed skills in the output; network failures can be retried with bl skill update",
+        `Check the reason for failed skills in the output; network failures can be retried with ${formatCommand(ctx.identity, "skill update")}`,
       );
     }
   },

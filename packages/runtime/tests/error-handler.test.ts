@@ -8,7 +8,7 @@ function render(error: unknown, output: "text" | "json" = "json") {
   let stderr = "";
   const reporter = createOutputReporter({
     settings: { output, quiet: true, verbose: false },
-    binName: "kscli",
+    commandPrefix: "kscli",
     stderr: {
       write: (chunk) => {
         stderr += chunk;

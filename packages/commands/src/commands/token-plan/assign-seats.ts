@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineCommand, type FlagsDef, type ParsedFlags } from "bailian-cli-core";
 import type { BatchAssignSeatsResponse } from "./types.ts";
 import {
@@ -58,7 +59,7 @@ export default defineCommand({
   async run(ctx) {
     const { identity, settings, flags } = ctx;
 
-    const workspaceId = requireWorkspaceId(settings, flags, identity.binName);
+    const workspaceId = requireWorkspaceId(settings, flags, formatCommand(identity));
     const queryParams = buildQueryParams(flags, workspaceId);
 
     if (settings.dryRun) {

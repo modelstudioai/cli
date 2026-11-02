@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   BailianError,
   ExitCode,
   type Client,
@@ -266,7 +267,7 @@ export async function getLogSwitch(
 export async function requireAuditLogEnabled(
   client: Client,
   workspaceId: string | undefined,
-  binName: string,
+  commandPrefix: string,
 ): Promise<void> {
   let auditSwitch = await getLogSwitch(client, "audit", workspaceId);
   for (let attempt = 0; attempt < 3 && auditSwitch !== true; attempt += 1) {
@@ -277,7 +278,7 @@ export async function requireAuditLogEnabled(
   throw new BailianError(
     "Model audit log is not enabled yet.",
     ExitCode.USAGE,
-    `Inference log delivery requires the audit log. Run \`${binName} log audit enable\` first, then check \`${binName} log status\`.`,
+    `Inference log delivery requires the audit log. Run \`${formatCommand(commandPrefix, "log audit enable")}\` first, then check \`${formatCommand(commandPrefix, "log status")}\`.`,
   );
 }
 
@@ -293,7 +294,7 @@ export interface LogEnableContext {
   output: CommandOutput;
   client: Client;
   settings: Settings;
-  binName: string;
+  commandPrefix: string;
   noWait?: boolean;
 }
 
@@ -363,7 +364,7 @@ export async function enableLogDelivery(
     textChunks.push(`${kind === "audit" ? "Audit" : "Inference"} log delivery enabled.\n`);
     if (ctx.noWait) {
       textChunks.push(
-        `The SLS instance may still be initializing; check \`${ctx.binName} log status\` later.\n`,
+        `The SLS instance may still be initializing; check \`${formatCommand(ctx.commandPrefix, "log status")}\` later.\n`,
       );
     }
 
@@ -404,7 +405,7 @@ export async function disableLogDelivery(
       throw new BailianError(
         "The audit log cannot be disabled while the inference log is enabled.",
         ExitCode.USAGE,
-        `Run \`${ctx.binName} log inference disable\` first, then disable the audit log.`,
+        `Run \`${formatCommand(ctx.commandPrefix, "log inference disable")}\` first, then disable the audit log.`,
       );
     }
   }

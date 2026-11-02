@@ -58,6 +58,25 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+test("hosted update instructions use the prefix while skill execution uses the binary", async () => {
+  const output = { info: vi.fn(), warning: vi.fn() };
+  childProcessMocks.execSync.mockImplementationOnce(() => {
+    throw new Error("skill sync failed");
+  });
+  expect(
+    await performAutoUpdate("1.14.3", "2.0.0", "bailian-cli", "bailian-cli", {
+      output,
+      binName: "bl",
+      commandPrefix: "aliyun bl",
+    }),
+  ).toBe(true);
+  expect(JSON.stringify(output.info.mock.calls)).toContain("Run aliyun bl --version");
+  expect(JSON.stringify(output.warning.mock.calls)).toContain(
+    "Run aliyun bl skill update manually.",
+  );
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "pipe" });
+});
+
 test("parseVersion strips pre-release and build metadata", () => {
   expect(parseVersion("1.4.2")).toEqual([1, 4, 2]);
   expect(parseVersion("2.0.0-beta.1")).toEqual([2, 0, 0]);

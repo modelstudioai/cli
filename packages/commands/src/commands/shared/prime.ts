@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   BailianError,
   ExitCode,
   workspaceMaaSBaseUrl,
@@ -55,7 +56,7 @@ export function resolvePrimeEndpoint(
       throw new BailianError(
         "Workspace ID is required for the default Prime endpoint.",
         ExitCode.USAGE,
-        `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${ctx.identity.binName} config set workspace_id <id>. You can also override the endpoint with --base-url.`,
+        `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${formatCommand(ctx.identity, "config set workspace_id <id>")}. You can also override the endpoint with --base-url.`,
       );
     }
     return workspaceMaaSBaseUrl(workspaceId);

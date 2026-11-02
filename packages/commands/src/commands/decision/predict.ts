@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   defineCommand,
   DECISION_REGIONS,
   DEFAULT_DECISION_MODEL,
@@ -146,7 +147,7 @@ export default defineCommand({
     const endpoint = resolveDecisionEndpoint({
       workspaceId: flags.workspaceId || settings.workspaceId,
       region: flags.region ?? DEFAULT_DECISION_REGION,
-      binName: ctx.identity.binName,
+      commandPrefix: formatCommand(ctx.identity),
       client: ctx.client,
       localize: ctx.localize,
     });

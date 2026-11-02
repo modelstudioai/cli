@@ -100,19 +100,14 @@ export function retainAgentError(error: unknown, hint: string, fallback: string)
  * GENERAL (message passed through, per bl's "don't translate server errors"
  * boundary).
  */
-export async function withAgentErrors<T>(fn: () => Promise<T>): Promise<T> {
+export async function withAgentErrors<T>(fn: () => Promise<T>, timeoutHint?: string): Promise<T> {
   try {
     return await fn();
   } catch (error) {
     if (error instanceof BailianError) throw error;
     if (error instanceof UserError) {
       if (isSdkPollingTimeout(error)) {
-        throw new BailianError(
-          error.message,
-          ExitCode.TIMEOUT,
-          // `bl` prefix is safe: agent commands ship on `bl` only.
-          "The session may still be running — check `bl managed-agent session get --session-id <id>` or `session events`.",
-        );
+        throw new BailianError(error.message, ExitCode.TIMEOUT, timeoutHint);
       }
       throw new BailianError(error.message, ExitCode.USAGE);
     }

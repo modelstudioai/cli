@@ -30,6 +30,8 @@ export interface ClientDeps {
   baseUrlIsDefault?: boolean;
   apiCred?: ApiKeyCredential;
   consoleCred?: ConsoleCredential;
+  /** Optional host-provided recovery text; core does not construct CLI instructions. */
+  consoleRecoveryHint?: string;
   openApiCred?: OpenApiCredential;
 }
 
@@ -258,6 +260,7 @@ export class Client {
     try {
       return (await callConsoleGateway(this.deps.consoleCred, timeout, gwOpts, {
         debug: this.deps.debug,
+        recoveryHint: this.deps.consoleRecoveryHint,
       })) as T;
     } catch (err) {
       if (
@@ -282,6 +285,7 @@ export class Client {
         validateToken: async (token) => {
           retryResult = await callConsoleGateway({ ...credential, token }, timeout, gwOpts, {
             debug: this.deps.debug,
+            recoveryHint: this.deps.consoleRecoveryHint,
           });
         },
       });

@@ -1,3 +1,4 @@
+import { formatCommand, type CommandFormatter } from "bailian-cli-core";
 import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
 import { importResource, parseStateAddress } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -41,11 +42,11 @@ const STATE_IMPORT_FLAGS = {
   },
 } satisfies FlagsDef;
 
-function parseBailianStateAddress(address: string) {
+function parseBailianStateAddress(address: string, command: CommandFormatter) {
   const parsed = parseStateAddress(address, { requireProvider: true });
   if (parsed.provider !== "bailian") {
     throw new BailianError(
-      `bl managed-agent can import only Bailian resources; address provider was '${parsed.provider}'. / bl managed-agent 只能导入百炼资源；地址中的 Provider 为 '${parsed.provider}'。`,
+      `${command("managed-agent")} can import only Bailian resources; address provider was '${parsed.provider}'. / ${command("managed-agent")} 只能导入百炼资源；地址中的 Provider 为 '${parsed.provider}'。`,
       ExitCode.USAGE,
     );
   }
@@ -71,7 +72,7 @@ export default defineCommand({
     if (settings.dryRun) {
       // Validate the address shape locally so dry-run still catches usage errors.
       await withAgentErrors(async () => {
-        parseBailianStateAddress(flags.address);
+        parseBailianStateAddress(flags.address, (args) => formatCommand(ctx.identity, args));
       });
       ctx.output.result({
         would_import: flags.address,
@@ -85,7 +86,9 @@ export default defineCommand({
     await withAgentErrors(() =>
       withStdoutProtected(ctx, async () => {
         // Parse first so a malformed address fails fast, before any config I/O.
-        const parsed = parseBailianStateAddress(flags.address);
+        const parsed = parseBailianStateAddress(flags.address, (args) =>
+          formatCommand(ctx.identity, args),
+        );
         const runtime = await buildAgentRuntime(ctx, file);
         await importResource(runtime, parsed, flags.remoteId, {
           resourceVersion: flags.resourceVersion,
