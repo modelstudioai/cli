@@ -6,6 +6,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.7.3] - 2026-11-03
+
+### Added
+
+- **Custom model import**: Add `bl cmodel base-models/import/get/list/watch/delete` to import Bailian base models as custom models.
+  - `cmodel base-models` lists base models eligible for import (console API; import is currently available in the Beijing region only).
+  - `cmodel import` submits an import job with weight type, display name, and optional bucket/object-key, validating the base model against the console-supported import list before submission.
+  - `cmodel watch --job-id <id>` tracks import job progress with `--follow`, polling interval, and timeout options.
+  - `cmodel get/list/delete` query and remove imported custom models.
+
+### Changed
+
+- **Unified output contract**: Route every command family through one invocation output contract (result / progress / info / warning / debug). Progress and informational messages go to stderr and are hidden in quiet mode; warnings and errors are always preserved. In JSON mode, warnings and errors are emitted as single-line JSON on stderr. Quiet mode no longer trims result fields and gains a `DASHSCOPE_QUIET=1` environment variable.
+- **Advisor thinking disabled**: `bl advisor recommend` LLM calls no longer use thinking mode; intent analysis was the only thinking stage. `--no-thinking` remains accepted as a deprecated no-op for existing scripts.
+
+### Fixed
+
+- **Root help configuration**: Reuse the loaded configuration when rendering root help, preserving parsed flags, Profile selection, and credential precedence.
+- **Duplicate error messages**: Stop repeating the redundant normalization cause in text errors while preserving explicit causes, error codes, JSON details, and verbose stacks.
+- **SDK warnings and empty ASR results**: Preserve SDK warnings and empty ASR task results in managed-agent workflows and `bl speech recognize`.
+- **Finetune fee diagnostics**: `bl finetune fee` now emits gateway diagnostics for fee queries in verbose mode.
+
+### Internal
+
+- Instrument advisor LLM requests for telemetry.
+- Align all command tests and guidance with the output contract; optimize CLI test suites and shard CI test jobs.
+- Clarify quiet output behavior in the CLI and Knowledge Studio READMEs.
+
 ## [2.7.2] - 2026-10-30
 
 ### Added

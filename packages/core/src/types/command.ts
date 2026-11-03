@@ -230,8 +230,13 @@ export type SourceFlags = ParsedFlags<
 >;
 
 /** 该命令可见的凭证域 flag 定义。 */
-export function credentialFlagDefs(cmd: { auth: AuthRequirement }): FlagsDef {
-  if (cmd.auth === "apiKey") return MODEL_AUTH_FLAGS;
+export function credentialFlagDefs(cmd: {
+  auth: AuthRequirement;
+  optionalConsole?: boolean;
+}): FlagsDef {
+  if (cmd.auth === "apiKey") {
+    return cmd.optionalConsole ? { ...MODEL_AUTH_FLAGS, ...CONSOLE_AUTH_FLAGS } : MODEL_AUTH_FLAGS;
+  }
   if (cmd.auth === "console") return CONSOLE_AUTH_FLAGS;
   if (cmd.auth === "openapi") return OPENAPI_AUTH_FLAGS;
   return {};
@@ -313,6 +318,14 @@ export interface Command<F extends FlagsDef = FlagsDef, Prepared = undefined> {
   description: LocalizedText;
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;
+  /**
+   * Best-effort secondary console credential for `auth: "apiKey"` commands.
+   * When true, the runtime additionally resolves the console credential and
+   * injects it when available; a missing/expired console session never blocks
+   * the command. Console-domain flags become visible so the precheck target can
+   * be selected explicitly.
+   */
+  optionalConsole?: boolean;
   /**
    * Runtime-classified operation risk and its user-facing consequence message.
    * Omit for normal commands.

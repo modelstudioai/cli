@@ -526,10 +526,20 @@ for (const entry of mapping) {
           else if (nativeStream) {
             expect(result.strayOut).toBe(baseline.strayOut);
             expect(result.stdout).toBe("\n");
-          } else
-            expect(canonical(result.stdout, result.fixtureVersionId)).toBe(
-              canonical(baseline.stdout + baseline.strayOut, baseline.fixtureVersionId),
+          } else {
+            // Version IDs embed a random nonce; when the first 12 characters
+            // happen to match a YAML number pattern (e.g. `0x`), the text
+            // serializer quotes the scalar. Normalize both quote forms.
+            const normalizeScalarQuotes = (value: string) =>
+              value
+                .replaceAll('"<VERSION_ID>"', "<VERSION_ID>")
+                .replaceAll('"<SHORT_VERSION>"', "<SHORT_VERSION>");
+            expect(normalizeScalarQuotes(canonical(result.stdout, result.fixtureVersionId))).toBe(
+              normalizeScalarQuotes(
+                canonical(baseline.stdout + baseline.strayOut, baseline.fixtureVersionId),
+              ),
             );
+          }
           expect(result.calls).toEqual(baseline.calls);
           expect(result.stderr).not.toContain("fixture-api-key");
           expect(result.stderr).not.toContain("fixture-secret-value");

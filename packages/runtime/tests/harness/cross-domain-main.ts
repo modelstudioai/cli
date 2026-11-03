@@ -22,8 +22,17 @@ const mcpList = defineCommand({
   run: noop,
 });
 
+/** apiKey + optionalConsole stub：用于可选 console 预检 flag 可见性测试 */
+const cmodelImport = defineCommand({
+  description: "runtime e2e stub",
+  auth: "apiKey",
+  optionalConsole: true,
+  flags: {},
+  run: noop,
+});
+
 void createCli(
-  { "text chat": textChat, "mcp list": mcpList },
+  { "text chat": textChat, "mcp list": mcpList, "cmodel import": cmodelImport },
   {
     binName: "bl",
     version: pkg.version,
