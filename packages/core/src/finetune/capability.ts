@@ -1,4 +1,5 @@
 import type { Settings } from "../config/schema.ts";
+import type { HttpDeps } from "../client/http.ts";
 import { anonymousConsoleCall } from "../console/gateway.ts";
 import { findModelByName } from "../console/models.ts";
 
@@ -109,8 +110,9 @@ export function listSupportedTrainingTypes(
 export async function fetchModelCapability(
   settings: Settings,
   modelName: string,
+  diagnostics: Pick<HttpDeps, "debug"> = {},
 ): Promise<ModelCapability | null> {
   // Public model catalog — anonymous gateway call, no console token needed.
-  const match = await findModelByName(anonymousConsoleCall(settings), modelName);
+  const match = await findModelByName(anonymousConsoleCall(settings, diagnostics), modelName);
   return match as ModelCapability | null;
 }

@@ -32,7 +32,7 @@ Index: [index.md](index.md)
 | `--no-agent`       | switch | no       | Skip the agent loop and run the deterministic engine directly                           |
 | `--trace`          | switch | no       | Emit full routing/performance trace to stderr                                           |
 | `--think`          | switch | no       | Show the engine decision process to stderr                                              |
-| `--no-thinking`    | switch | no       | Disable thinking mode for intent analysis (on by default)                               |
+| `--no-thinking`    | switch | no       | Deprecated no-op: thinking is always disabled for advisor LLM calls                     |
 | `--api-key <key>`  | string | no       | API key                                                                                 |
 | `--base-url <url>` | string | no       | API base URL                                                                            |
 

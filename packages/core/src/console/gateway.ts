@@ -146,7 +146,7 @@ export async function callConsoleGateway(
   if (target.token) headers.Authorization = `Bearer ${target.token}`;
 
   const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
-  debugRequest(options, "POST", endpoint, { api });
+  debugRequest(options, "POST", endpoint, { api, region: target.region });
 
   const res = await httpTransport.fetch(endpoint, {
     method: "POST",

@@ -196,6 +196,112 @@ describe("流式响应生命周期", () => {
   });
 });
 
+describe("宿主传输注入", () => {
+  it("普通聊天、工具调用、SSE 与 JSON 重试均使用注入的 fetch", async () => {
+    const nativeFetch = vi.fn();
+    vi.stubGlobal("fetch", nativeFetch);
+    const transport = vi
+      .fn<(input: string | URL | Request, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: "普通聊天" } }] }))
+      .mockResolvedValueOnce(
+        Response.json({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    id: "tool-1",
+                    type: "function",
+                    function: { name: "recommend", arguments: "{}" },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(delta({ content: "流式聊天" }) + finish() + "data: [DONE]\n\n"),
+      )
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: "无效 JSON" } }] }))
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: '{"ok":true}' } }] }));
+    const onRequest = vi.fn();
+    const llm = createLLMClient({
+      baseUrl: "https://example.invalid/",
+      apiKey: "test-api-key",
+      fetch: transport,
+      thinkingStages: ["intent"],
+      onRequest,
+    });
+    await expect(llm.chat([], { stage: "explain" })).resolves.toBe("普通聊天");
+    await expect(llm.chatWithTools([], [])).resolves.toMatchObject({
+      toolCalls: [{ id: "tool-1" }],
+    });
+    await expect(llm.chat([], { stage: "intent" })).resolves.toBe("流式聊天");
+    await expect(llm.chatJson([], { stage: "holistic-score" })).resolves.toEqual({ ok: true });
+    expect(nativeFetch).not.toHaveBeenCalled();
+    expect(transport).toHaveBeenCalledTimes(5);
+    expect(onRequest.mock.calls.flat()).toEqual([
+      "explain",
+      "agent",
+      "intent",
+      "holistic-score",
+      "holistic-score",
+    ]);
+    for (const [url, init] of transport.mock.calls) {
+      expect(url).toBe("https://example.invalid/compatible-mode/v1/chat/completions");
+      expect(init?.method).toBe("POST");
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer test-api-key");
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+    }
+    const bodies = transport.mock.calls.map(([, init]) => JSON.parse(init?.body as string));
+    expect(bodies[1].tools).toEqual([]);
+    expect(bodies[2]).toMatchObject({ stream: true, enable_thinking: true });
+    expect(bodies[4].messages).toHaveLength(2);
+  });
+
+  it("注入传输仍保留 HTTP 错误与 request_id", async () => {
+    const transport = vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          { error: { code: "invalid_api_key", message: "原始服务端错误" } },
+          { status: 401, headers: { "x-request-id": "advisor-error-request" } },
+        ),
+      );
+    const llm = createLLMClient({
+      baseUrl: "https://example.invalid",
+      apiKey: "test",
+      fetch: transport,
+    });
+    await expect(llm.chat([])).rejects.toMatchObject({
+      kind: "auth",
+      status: 401,
+      code: "invalid_api_key",
+      requestId: "advisor-error-request",
+      message: "LLM request failed: 原始服务端错误",
+    });
+  });
+
+  it("调用方取消仍透传到注入传输", async () => {
+    const controller = new AbortController();
+    const transport = vi.fn().mockImplementation(async (_input: unknown, init?: RequestInit) => {
+      controller.abort();
+      expect(init?.signal?.aborted).toBe(true);
+      return Response.json({ choices: [{ message: { content: "不应返回" } }] });
+    });
+    const llm = createLLMClient({
+      baseUrl: "https://example.invalid",
+      apiKey: "test",
+      fetch: transport,
+    });
+    await expect(llm.chat([], { signal: controller.signal })).rejects.toMatchObject({
+      kind: "cancelled",
+    });
+    expect(transport).toHaveBeenCalledOnce();
+  });
+});
+
 describe("按阶段开启思考模式（thinkingStages）", () => {
   const sse = (content: string) =>
     `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content } }] })}\n\n` +

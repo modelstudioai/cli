@@ -1,5 +1,13 @@
-import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import * as core from "bailian-cli-core";
+import {
+  isDashScopeE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  runCommandInProcess,
+} from "./helpers.ts";
+import { E2E_HARNESS_IDENTITY } from "./harness/identity.ts";
 import { ADVISOR_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: advisor recommend", () => {
@@ -12,6 +20,112 @@ describe("e2e: advisor recommend", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/recommend|--message/i);
   });
+});
+
+describe("e2e: advisor recommend 传输（离线）", () => {
+  beforeEach(() => {
+    // 隔离目录、同步与原生网络，回归不读取真实目录或调用付费模型。
+    vi.spyOn(core, "maybeSyncWikiData").mockResolvedValue(false);
+    vi.spyOn(core, "loadCatalog").mockResolvedValue([]);
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("禁止原生网络请求")));
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  test.each([true, false])(
+    "真实命令注入统一传输且默认关闭 thinking，verbose=%s",
+    async (verbose) => {
+      const endpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+      const requests: RequestInit[] = [];
+      vi.spyOn(core.httpTransport, "fetch").mockImplementation(async (input, init) => {
+        expect(input).toBe(endpoint);
+        requests.push(init ?? {});
+        const body = JSON.parse(init?.body as string);
+        const content = JSON.stringify(
+          requests.length === 1
+            ? {
+                taskSummary: "文本生成",
+                inputModality: ["Text"],
+                outputModality: ["Text"],
+                requiredCapabilities: ["TG"],
+                matchedScenes: [],
+                sceneConfidence: 1,
+              }
+            : { scores: [] },
+        );
+        const headers = { "x-request-id": "advisor-success-request" };
+        return body.stream
+          ? new Response(
+              `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n`,
+              { headers },
+            )
+          : Response.json({ choices: [{ message: { content } }] }, { headers });
+      });
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
+        ADVISOR_ROUTES,
+        [
+          "advisor",
+          "recommend",
+          "--message",
+          "文本生成",
+          "--no-agent",
+          ...(verbose ? ["--verbose"] : ["--no-thinking"]),
+        ],
+        {
+          DASHSCOPE_API_KEY: "test-advisor-secret-key",
+          DASHSCOPE_BASE_URL: "https://dashscope.aliyuncs.com",
+          DO_NOT_TRACK: "1",
+          NODE_OPTIONS: "",
+          HTTP_PROXY: "",
+          HTTPS_PROXY: "",
+          http_proxy: "",
+          https_proxy: "",
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      expect(requests).toHaveLength(2);
+      for (const request of requests) {
+        const headers = new Headers(request.headers);
+        expect(headers.get("authorization")).toBe("Bearer test-advisor-secret-key");
+        expect(headers.get("user-agent")).toBe(
+          `${E2E_HARNESS_IDENTITY.clientName}/${E2E_HARNESS_IDENTITY.version}`,
+        );
+        expect(headers.get("x-dashscope-source-config")).toBe(
+          core.sourceConfig(E2E_HARNESS_IDENTITY),
+        );
+        expect(headers.get("x-dashscope-openapisource")).toBe("BailianCLI");
+        expect(headers.get("x-dashscope-service")).toBe("bailian-cli");
+        expect(JSON.parse(request.body as string).model).toBe(core.DEFAULT_LLM_MODEL);
+      }
+      expect(JSON.parse(requests[0].body as string).enable_thinking).toBeUndefined();
+      expect(JSON.parse(requests[0].body as string).stream).toBeUndefined();
+      expect(JSON.parse(requests[1].body as string).stream).toBeUndefined();
+      expect(parseStdoutJson<{ intent: { taskSummary: string } }>(stdout).intent.taskSummary).toBe(
+        "文本生成",
+      );
+      expect(stdout).not.toContain("request_id:");
+      expect(stderr).not.toContain("test-advisor-secret-key");
+      if (verbose) {
+        const debugLines = stderr
+          .trim()
+          .split("\n")
+          .filter((line) => line.startsWith('{"debug":'));
+        expect(debugLines.length).toBeGreaterThanOrEqual(4);
+        const requestDebug = JSON.parse(debugLines[0]!).debug;
+        const responseDebug = JSON.parse(debugLines[1]!).debug;
+        expect(requestDebug.details).toMatchObject({ method: "POST", url: endpoint });
+        expect(responseDebug.details).toMatchObject({
+          status: 200,
+          request_id: "advisor-success-request",
+        });
+      } else {
+        expect(stderr).not.toContain('{"debug":');
+        expect(stderr).not.toContain("request_id:");
+      }
+    },
+  );
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", () => {

@@ -9,6 +9,7 @@ import {
   TRAINING_TYPES_CLI,
   anonymousConsoleCall,
   UsageError,
+  type HttpDeps,
   type Settings,
   type ModelCapability,
   type FlagsDef,
@@ -20,8 +21,11 @@ import {
  * records so capability fields (`supports` / `trainingTypes`) are preserved
  * for filtering.
  */
-async function fetchAllFoundationModels(settings: Settings): Promise<ModelCapability[]> {
-  const all = await fetchModelListAll(anonymousConsoleCall(settings));
+async function fetchAllFoundationModels(
+  settings: Settings,
+  diagnostics: Pick<HttpDeps, "debug">,
+): Promise<ModelCapability[]> {
+  const all = await fetchModelListAll(anonymousConsoleCall(settings, diagnostics));
   return all as ModelCapability[];
 }
 
@@ -85,6 +89,9 @@ export default defineCommand({
   },
   async run(ctx) {
     const { settings, flags } = ctx;
+    const diagnostics: Pick<HttpDeps, "debug"> = {
+      debug: (diagnostic) => ctx.output.debug(diagnostic),
+    };
     const model = flags.baseModel || undefined;
     const trainingType = flags.trainingType || undefined;
 
@@ -103,7 +110,7 @@ export default defineCommand({
 
     // Direction 1: by model → which training types it supports.
     if (model) {
-      const capability = await fetchModelCapability(settings, model);
+      const capability = await fetchModelCapability(settings, model, diagnostics);
       if (!capability) {
         const resultData2 = { model, error: `No foundation model found matching "${model}".` };
         ctx.output.result(
@@ -136,7 +143,7 @@ export default defineCommand({
       );
     }
     const { method, variant } = trainingTypeMethodVariant(trainingType);
-    const all = await fetchAllFoundationModels(settings);
+    const all = await fetchAllFoundationModels(settings, diagnostics);
     const matched = all
       .filter((record) => modelSupportsTrainingType(record, trainingType))
       .map((record) => ({

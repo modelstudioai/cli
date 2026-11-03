@@ -15,6 +15,7 @@ import {
   formatIssue,
   BailianError,
   ExitCode,
+  type HttpDeps,
   type CommandContext,
   type CreateFineTuneRequest,
   type FineTuneHyperParameters,
@@ -562,6 +563,9 @@ async function runCreate<F extends FlagsDef>(
   ctx: CommandContext<F>,
 ): Promise<void> {
   const { settings } = ctx;
+  const diagnostics: Pick<HttpDeps, "debug"> = {
+    debug: (diagnostic) => ctx.output.debug(diagnostic),
+  };
   const flags = ctx.flags as Record<string, unknown>;
   const model = flags.baseModel as string;
   const datasetsRaw = flags.datasets as string;
@@ -818,7 +822,7 @@ async function runCreate<F extends FlagsDef>(
   if (!settings.dryRun && !profile.shouldSkipCapabilityCheck(modality)) {
     let capability: Awaited<ReturnType<typeof fetchModelCapability>> | undefined;
     try {
-      capability = await fetchModelCapability(settings, model);
+      capability = await fetchModelCapability(settings, model, diagnostics);
     } catch (error) {
       ctx.output.warning({
         code: "TRAINING_CAPABILITY_LOOKUP_FAILED",
