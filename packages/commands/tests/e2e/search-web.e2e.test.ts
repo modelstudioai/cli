@@ -23,7 +23,7 @@ describe("e2e: search web", () => {
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/web|--query|list-tools|count/i);
+    expect(stderr).toMatch(/web|--query|list-tools|count|--mode/i);
   });
 
   test("search web --dry-run --list-tools 无需 --query 也无需凭证即可干跑", async () => {
@@ -39,6 +39,128 @@ describe("e2e: search web", () => {
     const data = parseStdoutJson<{ action?: string }>(stdout);
     expect(data.action).toBe("tools/list");
   });
+
+  test("search web --mode model --dry-run 生成 enable_search 对话请求", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SEARCH_WEB_ROUTES,
+      ["search", "web", "--mode", "model", "--dry-run", "--output", "json", "--query", "干跑校验"],
+      {
+        DASHSCOPE_API_KEY: undefined,
+        DASHSCOPE_ACCESS_TOKEN: undefined,
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      endpoint?: string;
+      request?: {
+        model?: string;
+        messages?: Array<{ role?: string; content?: string }>;
+        enable_search?: boolean;
+        stream?: boolean;
+      };
+    }>(stdout);
+    expect(data.endpoint).toMatch(/\/chat\/completions$/);
+    expect(data.request?.model).toBe("qwen3.8-max");
+    expect(data.request?.messages).toEqual([{ role: "user", content: "干跑校验" }]);
+    expect(data.request?.enable_search).toBe(true);
+    expect(data.request?.stream).toBe(false);
+  });
+
+  test("search web --mode model 可用 --model 指定模型", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SEARCH_WEB_ROUTES,
+      [
+        "search",
+        "web",
+        "--mode",
+        "model",
+        "--model",
+        "qwen-max",
+        "--dry-run",
+        "--output",
+        "json",
+        "--query",
+        "干跑校验",
+      ],
+      {
+        DASHSCOPE_API_KEY: undefined,
+        DASHSCOPE_ACCESS_TOKEN: undefined,
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { model?: string } }>(stdout);
+    expect(data.request?.model).toBe("qwen-max");
+  });
+
+  test("search web --mode model 拒绝 --list-tools 与 --count", async () => {
+    const listTools = await runCommandE2e(SEARCH_WEB_ROUTES, [
+      "search",
+      "web",
+      "--mode",
+      "model",
+      "--list-tools",
+    ]);
+    expect(listTools.exitCode).toBe(2);
+    expect(listTools.stderr).toMatch(/--list-tools.*MCP/i);
+
+    const count = await runCommandE2e(SEARCH_WEB_ROUTES, [
+      "search",
+      "web",
+      "--mode",
+      "model",
+      "--query",
+      "hello",
+      "--count",
+      "3",
+    ]);
+    expect(count.exitCode).toBe(2);
+    expect(count.stderr).toMatch(/--count.*MCP/i);
+  });
+
+  test("search web 拒绝未知的 --mode 值", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SEARCH_WEB_ROUTES, [
+      "search",
+      "web",
+      "--mode",
+      "legacy",
+      "--query",
+      "hello",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--mode|mcp.*model/i);
+  });
+
+  test("search web 默认走 model：--dry-run 生成 enable_search 对话请求", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SEARCH_WEB_ROUTES,
+      ["search", "web", "--dry-run", "--output", "json", "--query", "干跑校验"],
+      {
+        DASHSCOPE_API_KEY: undefined,
+        DASHSCOPE_ACCESS_TOKEN: undefined,
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      endpoint?: string;
+      request?: { model?: string; enable_search?: boolean };
+    }>(stdout);
+    expect(data.endpoint).toMatch(/\/chat\/completions$/);
+    expect(data.request?.model).toBe("qwen3.8-max");
+    expect(data.request?.enable_search).toBe(true);
+  });
+
+  test("search web 默认 model 模式拒绝 --count", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SEARCH_WEB_ROUTES, [
+      "search",
+      "web",
+      "--query",
+      "hello",
+      "--count",
+      "3",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--count.*MCP/i);
+  });
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
@@ -52,10 +174,12 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
     expect(stderr).toMatch(/--query|Usage:/i);
   });
 
-  test("search web --dry-run 仅输出计划且不调 MCP", async () => {
+  test("search web --mode mcp --dry-run 仅输出 tools/call 计划", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SEARCH_WEB_ROUTES, [
       "search",
       "web",
+      "--mode",
+      "mcp",
       "--dry-run",
       "--output",
       "json",
@@ -76,10 +200,12 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
     expect(data.arguments?.count).toBe(5);
   });
 
-  test("联网搜索返回 JSON 且含搜索结果", async () => {
+  test("MCP 联网搜索返回 JSON 且含 pages", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SEARCH_WEB_ROUTES, [
       "search",
       "web",
+      "--mode",
+      "mcp",
       "--query",
       "阿里云百炼",
       "--count",
@@ -107,4 +233,23 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
     const data = parseStdoutJson<{ tools?: Array<{ name?: string }> }>(stdout);
     expect(data.tools?.some((tool) => tool.name === "bailian_web_search")).toBe(true);
   }, 60_000);
+
+  test("--mode model 真实调用模型联网搜索并返回 content 信封", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(SEARCH_WEB_ROUTES, [
+      "search",
+      "web",
+      "--mode",
+      "model",
+      "--query",
+      "阿里云百炼是什么？一句话回答",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    // 模型模式无 pages；content[].text 直接承载模型回答纯文本（非 JSON）。
+    const envelope = parseStdoutJson<{ content?: Array<{ type?: string; text?: string }> }>(stdout);
+    const text = envelope.content?.find((block) => block.type === "text")?.text ?? "";
+    expect(text.length).toBeGreaterThan(0);
+    expect(() => JSON.parse(text)).toThrow();
+  }, 120_000);
 });

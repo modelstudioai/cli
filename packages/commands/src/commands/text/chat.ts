@@ -26,6 +26,9 @@ import {
 } from "./responses.ts";
 import { PRIME_FLAGS, resolvePrimeEndpoint, validatePrimeFlags } from "../shared/prime.ts";
 
+/** Models that enable built-in web search by default on the Chat Completions API. */
+const SEARCH_BY_DEFAULT_MODELS = new Set(["qwen3.8-max"]);
+
 const CHAT_FLAGS = {
   api: {
     type: "string",
@@ -79,6 +82,15 @@ const CHAT_FLAGS = {
     type: "number",
     valueHint: "<n>",
     description: { "en-US": "Nucleus sampling threshold", "zh-CN": "核采样阈值" },
+  },
+  enableSearch: {
+    type: "boolean",
+    valueHint: "<true|false>",
+    description: {
+      "en-US":
+        "Enable built-in web search (Chat Completions API only; default: true for qwen3.8-max)",
+      "zh-CN": "启用模型内置联网搜索（仅 Chat Completions API；qwen3.8-max 默认开启）",
+    },
   },
   stream: {
     type: "switch",
@@ -204,6 +216,10 @@ export default defineCommand({
       "zh-CN": '--model qwq-plus --message "计算 1+1" --enable-thinking',
     },
     {
+      "en-US": '--enable-search true --message "Latest news about Alibaba Cloud"',
+      "zh-CN": '--enable-search true --message "阿里云最新新闻"',
+    },
+    {
       "en-US": '--prime --workspace-id <id> --model glm-5.3-prime --message "Explain this code"',
       "zh-CN": '--prime --workspace-id <id> --model glm-5.3-prime --message "解释这段代码"',
     },
@@ -230,6 +246,12 @@ export default defineCommand({
       "zh-CN":
         "Prime Endpoint：已配置的 --base-url、DASHSCOPE_BASE_URL 或 Profile base_url 优先；否则按 --workspace-id、BAILIAN_WORKSPACE_ID、配置项 workspace_id 解析工作空间。",
     },
+    {
+      "en-US":
+        '--enable-search maps to the Chat Completions enable_search parameter and requires a model with built-in web search support; whitelisted models (qwen3.8-max) enable it by default unless --enable-search false is passed; for the Responses API use --tool \'{"type":"web_search"}\' instead.',
+      "zh-CN":
+        '--enable-search 映射为 Chat Completions 的 enable_search 参数，需要模型支持内置联网搜索；白名单模型（qwen3.8-max）默认开启，可传 --enable-search false 显式关闭；Responses API 请改用 --tool \'{"type":"web_search"}\'。',
+    },
   ],
   validate: (flags) => {
     if (!flags.message && !flags.messagesFile) return "Provide --message or --messages-file.";
@@ -243,6 +265,9 @@ export default defineCommand({
     }
     if (flags.api === "responses" && flags.thinkingBudget !== undefined) {
       return "--thinking-budget is not supported by the Responses API.";
+    }
+    if (flags.api === "responses" && flags.enableSearch !== undefined) {
+      return '--enable-search is not supported by the Responses API; use --tool \'{"type":"web_search"}\' instead. / --enable-search 不支持 Responses API，请改用 --tool \'{"type":"web_search"}\'。';
     }
     return undefined;
   },
@@ -293,6 +318,15 @@ export default defineCommand({
       body.enable_thinking = true;
       if (api === "chat" && "messages" in body && flags.thinkingBudget !== undefined) {
         body.thinking_budget = flags.thinkingBudget;
+      }
+    }
+
+    if (api === "chat" && "messages" in body) {
+      if (flags.enableSearch !== undefined) {
+        body.enable_search = flags.enableSearch;
+      } else if (SEARCH_BY_DEFAULT_MODELS.has(model)) {
+        // Whitelisted models get built-in web search unless explicitly opted out.
+        body.enable_search = true;
       }
     }
 
