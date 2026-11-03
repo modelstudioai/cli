@@ -7,6 +7,7 @@ import {
   resolveProjectConfigFromObject,
 } from "@openagentpack/sdk";
 import {
+  formatCommand,
   BailianError,
   defineCommand,
   detectOutputFormat,
@@ -192,7 +193,7 @@ export default defineCommand({
         throw new BailianError(
           `Vault '${ctx.flags.vault}' already declares a different credential named '${rawCredential.name}'.`,
           ExitCode.USAGE,
-          "Modify the existing YAML declaration and run full `bl managed-agent apply`; create never overwrites it.",
+          `Modify the existing YAML declaration and run full \`${formatCommand(ctx.identity, "managed-agent apply")}\`; create never overwrites it.`,
         );
       }
       reusedPending = true;

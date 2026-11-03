@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import {
   buildGroupSwitchReqDTO,
@@ -150,8 +151,8 @@ export default defineTelemetryCommand({
       const result = { activated: false, submitted: true };
       ctx.output.result(result, {
         text: ctx.localize({
-          "en-US": `Activation submitted. Run \`${ctx.identity.binName} monitor delivery status\` to check progress.`,
-          "zh-CN": `开通请求已提交。运行 \`${ctx.identity.binName} monitor delivery status\` 查看进度。`,
+          "en-US": `Activation submitted. Run \`${formatCommand(ctx.identity, "monitor delivery status")}\` to check progress.`,
+          "zh-CN": `开通请求已提交。运行 \`${formatCommand(ctx.identity, "monitor delivery status")}\` 查看进度。`,
         }),
       });
       return;
@@ -187,8 +188,8 @@ export default defineTelemetryCommand({
             "zh-CN": `监控数据投递已开启。${after.instanceInfo ? `\n实例：${after.instanceInfo.instanceId}\nURL：${after.instanceInfo.instanceUrl}` : ""}`,
           })
         : ctx.localize({
-            "en-US": `Activation is still in progress. Run \`${ctx.identity.binName} monitor delivery status\` to check later.`,
-            "zh-CN": `服务仍在开通中。稍后运行 \`${ctx.identity.binName} monitor delivery status\` 查看状态。`,
+            "en-US": `Activation is still in progress. Run \`${formatCommand(ctx.identity, "monitor delivery status")}\` to check later.`,
+            "zh-CN": `服务仍在开通中。稍后运行 \`${formatCommand(ctx.identity, "monitor delivery status")}\` 查看状态。`,
           });
     }
     ctx.output.result({ activated: ready, ...after }, { text });

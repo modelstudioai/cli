@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineTelemetryCommand } from "../shared/telemetry.ts";
 import { LOG_NO_WAIT_FLAG, enableLogDelivery } from "./shared.ts";
 import { LOG_SERVICE_TYPES } from "./status.ts";
@@ -30,7 +31,7 @@ export default defineTelemetryCommand({
         client: ctx.client,
         output: ctx.output,
         settings: ctx.settings,
-        binName: ctx.identity.binName,
+        commandPrefix: formatCommand(ctx.identity),
         noWait: ctx.flags.noWait,
       },
       "audit",

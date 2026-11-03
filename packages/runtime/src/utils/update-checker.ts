@@ -1,7 +1,6 @@
-import { httpTransport } from "bailian-cli-core";
-import { join } from "path";
-import { readFileSync, writeFileSync } from "fs";
 import {
+  formatCommand,
+  httpTransport,
   BailianError,
   DEFAULT_INSTALL_PS1_URL,
   DEFAULT_INSTALL_SCRIPT_URL,
@@ -9,6 +8,9 @@ import {
   getUpdateInstallMethod,
   type CommandOutput,
 } from "bailian-cli-core";
+
+import { join } from "path";
+import { readFileSync, writeFileSync } from "fs";
 
 export const NPM_REGISTRY = "https://registry.npmjs.org";
 /** Default npm package; products override per-call via the `npmPackage` argument. */
@@ -213,7 +215,7 @@ function errorMessage(err: unknown): string {
 
 type UpdateOutput = Pick<CommandOutput, "info" | "warning">;
 
-async function syncAgentSkillsAfterUpdate(output: UpdateOutput): Promise<void> {
+async function syncAgentSkillsAfterUpdate(output: UpdateOutput, invocation: string): Promise<void> {
   try {
     output.info({ "en-US": "Syncing agent skills...", "zh-CN": "正在同步 Agent 技能……" });
     const { execSync } = await import("child_process");
@@ -223,8 +225,8 @@ async function syncAgentSkillsAfterUpdate(output: UpdateOutput): Promise<void> {
     output.warning({
       code: "SKILL_SYNC_FAILED",
       message: {
-        "en-US": `Agent skill sync failed: ${errorMessage(error)}. Run bl skill update manually.`,
-        "zh-CN": `Agent 技能同步失败：${errorMessage(error)}。请手动运行 bl skill update。`,
+        "en-US": `Agent skill sync failed: ${errorMessage(error)}. Run ${formatCommand(invocation, "skill update")} manually.`,
+        "zh-CN": `Agent 技能同步失败：${errorMessage(error)}。请手动运行 ${formatCommand(invocation, "skill update")}。`,
       },
     });
   }
@@ -236,9 +238,10 @@ export async function performAutoUpdate(
   latestVersion: string,
   npmPackage: string = NPM_PACKAGE,
   clientName: string = NPM_PACKAGE,
-  options: { output: UpdateOutput; binName: string },
+  options: { output: UpdateOutput; binName: string; commandPrefix?: string },
 ): Promise<boolean> {
-  const { output, binName } = options;
+  const { output, binName, commandPrefix } = options;
+  const invocation = commandPrefix ?? binName;
   const method = getUpdateInstallMethod({ clientName, npmPackage });
   if (method === "brew" || method === "winget") return false;
   output.info({
@@ -272,10 +275,10 @@ export async function performAutoUpdate(
     }
     writeState({ lastChecked: Date.now(), latestVersion: newVersion ?? latestVersion });
     output.info({
-      "en-US": `Update complete: ${currentVersion} → ${newVersion ?? latestVersion}. Run ${binName} --version to verify.`,
-      "zh-CN": `更新完成：${currentVersion} → ${newVersion ?? latestVersion}。运行 ${binName} --version 验证。`,
+      "en-US": `Update complete: ${currentVersion} → ${newVersion ?? latestVersion}. Run ${formatCommand(invocation, "--version")} to verify.`,
+      "zh-CN": `更新完成：${currentVersion} → ${newVersion ?? latestVersion}。运行 ${formatCommand(invocation, "--version")} 验证。`,
     });
-    await syncAgentSkillsAfterUpdate(output);
+    await syncAgentSkillsAfterUpdate(output, commandPrefix ?? "bl");
     pendingNotification = null;
     return true;
   } catch (error) {

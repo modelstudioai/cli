@@ -64,10 +64,22 @@ function runCommand(context: Parameters<typeof command.run>[0]) {
   return command.run({ ...context, output });
 }
 
-test.each(["kscli", "bl"])(
-  "success includes product-correct cleanup only for newly created resources: %s",
-  async (binName) => {
+const invocations = [
+  { binName: "kscli", commandInvocation: undefined, bin: "kscli", prefix: [] },
+  { binName: "bl", commandInvocation: undefined, bin: "bl", prefix: [] },
+  {
+    binName: "bl",
+    commandInvocation: { bin: "aliyun", path: ["bl"] },
+    bin: "aliyun",
+    prefix: ["bl"],
+  },
+];
+
+test.each(invocations)(
+  "success includes executable cleanup only for newly created resources: $bin",
+  async ({ binName, commandInvocation, bin, prefix }) => {
     const { context, stdout } = fixture(binName);
+    context.identity.commandInvocation = commandInvocation;
     const resources = [
       { kind: "knowledge-base", id: "index-1", created: true },
       { kind: "service", id: "agent-1", created: false },
@@ -88,36 +100,98 @@ test.each(["kscli", "bl"])(
     expect(output.sampleSearch).toEqual(sampleSearch);
     expect(output.cleanup).toEqual([
       {
-        path: binName === "kscli" ? ["kb", "delete"] : ["knowledge", "delete"],
+        bin,
+        path: [...prefix, ...(binName === "kscli" ? ["kb", "delete"] : ["knowledge", "delete"])],
         args: ["--index-id", "index-1", "--workspace-id", "ws-test"],
       },
     ]);
-    expect(output.nextSearch.path).toEqual(
-      binName === "kscli" ? ["search"] : ["knowledge", "search"],
-    );
+    expect(output.nextSearch.bin).toBe(bin);
+    expect(output.nextSearch.path).toEqual([
+      ...prefix,
+      ...(binName === "kscli" ? ["search"] : ["knowledge", "search"]),
+    ]);
     expect(output.nextSearch.args).toContain("beta");
+    expect(output.cleanup[0].args).not.toContain("--yes");
     expect(output.notices[0].message).toContain("720");
   },
 );
 
-test("failure after creation prints the billable ID and cleanup even in quiet mode", async () => {
-  const { context, stderr, stdout } = fixture();
-  const failure = new Error("raw failure");
-  vi.spyOn(workflow, "runKnowledgeInit").mockImplementation(async (options) => {
-    options.report({ kind: "knowledge-base", id: "billable-id", created: true });
-    throw failure;
+test.each(invocations)(
+  "failure preserves executable cleanup in quiet mode: $bin",
+  async ({ binName, commandInvocation, bin, prefix }) => {
+    const { context, stderr, stdout } = fixture(binName);
+    context.identity.commandInvocation = commandInvocation;
+    const failure = new Error("raw failure");
+    vi.spyOn(workflow, "runKnowledgeInit").mockImplementation(async (options) => {
+      options.report({ kind: "knowledge-base", id: "billable-id", created: true });
+      throw failure;
+    });
+    await expect(runCommand(context)).rejects.toBe(failure);
+    const warning = JSON.parse(
+      stderr.mock.calls
+        .map(([text]) => text)
+        .join("")
+        .trim(),
+    );
+    expect(warning.warning.details.resource).toMatchObject({ id: "billable-id", created: true });
+    expect(warning.warning.details.cleanup[0].args).toContain("billable-id");
+    expect(warning.warning.details.cleanup[0]).toMatchObject({
+      bin,
+      path: [...prefix, ...(binName === "kscli" ? ["kb", "delete"] : ["knowledge", "delete"])],
+    });
+    expect(warning.warning.details.cleanup[0].args).not.toContain("--yes");
+    expect(warning.warning.message).toContain("charges");
+    expect(stdout).not.toHaveBeenCalled();
+  },
+);
+
+test("hosted text renders the same executable cleanup and search as JSON, with quoted values", async () => {
+  const { context, stdout } = fixture("bl");
+  context.identity.commandInvocation = { bin: "aliyun", path: ["bl"] };
+  const indexId = "index space;$(literal)";
+  vi.spyOn(workflow, "runKnowledgeInit").mockResolvedValue({
+    indexId,
+    agentId: "agent-1",
+    fileId: "file-1",
+    agentVersion: "beta",
+    sampleMatched: true,
+    sampleSearch,
+    resources: [
+      { kind: "knowledge-base", id: indexId, created: true },
+      { kind: "file", id: "file-1", created: true },
+      { kind: "service", id: "agent-1", created: true },
+    ],
+    stateFile: "state.json",
+    timeToFirstValueMs: 1,
   });
-  await expect(runCommand(context)).rejects.toBe(failure);
-  const warning = JSON.parse(
-    stderr.mock.calls
-      .map(([text]) => text)
-      .join("")
-      .trim(),
+  await runCommand(context);
+  const json = JSON.parse(stdout.mock.calls.map(([text]) => text).join(""));
+  expect(
+    [...json.cleanup, json.nextSearch].every((action: { bin: string }) => action.bin === "aliyun"),
+  ).toBe(true);
+  expect(json.cleanup.map((action: { args: string[] }) => action.args[0])).toEqual([
+    "--agent-id",
+    "--index-id",
+    "--file-id",
+  ]);
+  expect(json.cleanup[1].args[1]).toBe(indexId);
+  stdout.mockClear();
+  context.settings.output = "text";
+  await runCommand(context);
+  const text = stdout.mock.calls.map(([chunk]) => chunk).join("");
+  expect(text.split("\n")).toContain(
+    "aliyun bl knowledge service delete --agent-id agent-1 --workspace-id ws-test",
   );
-  expect(warning.warning.details.resource).toMatchObject({ id: "billable-id", created: true });
-  expect(warning.warning.details.cleanup[0].args).toContain("billable-id");
-  expect(warning.warning.message).toContain("charges");
-  expect(stdout).not.toHaveBeenCalled();
+  expect(text.split("\n")).toContain(
+    "aliyun bl knowledge delete --index-id 'index space;$(literal)' --workspace-id ws-test",
+  );
+  expect(text.split("\n")).toContain(
+    "aliyun bl knowledge file delete --file-id file-1 --workspace-id ws-test",
+  );
+  expect(text.split("\n")).toContain(
+    "aliyun bl knowledge search --agent-id agent-1 --agent-version beta --workspace-id ws-test --query 'What is RAG?'",
+  );
+  expect(text).not.toContain("aliyun bl bl");
 });
 
 test("missing product route omits the command instead of inventing one", async () => {

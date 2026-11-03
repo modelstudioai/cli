@@ -53,7 +53,8 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - 显式 `auth login --config <name>` 在凭证落盘成功后自动激活目标 Profile；未传
   `--config` 时继续写当前激活项，失败和 dry-run 不切换
 - `resolveConsole()` — `auth: "console"` 命令;当前 token 来自 config `access_token`,region/site/switchAgent 来自 flag > config > 默认
-- `resolveOpenApi()` — `auth: "openapi"` 命令;优先级 `--access-key-id/--access-key-secret` > `ALIBABA_CLOUD_ACCESS_KEY_ID/ALIBABA_CLOUD_ACCESS_KEY_SECRET` > config `access_key_*`。兼容读取旧字段 `openapi_access_key_*`,新写入只写短字段
+- `resolveOpenApi()` — AK/SK 统一解析链：显式参数 > `BAILIAN_ACCESS_KEY_ID` / `BAILIAN_ACCESS_KEY_SECRET` > 当前 config `access_key_*` > `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET`。各层使用同组 `security_token` / `BAILIAN_SECURITY_TOKEN` / `ALIBABA_CLOUD_SECURITY_TOKEN`，缺少整组时继续查找，部分配置则报错，不跨来源拼接。兼容读取旧字段 `openapi_access_key_*`，新写入只写短字段。Aliyun 宿主凭证按标准环境变量处理，不读取或切换 Aliyun config。
+- 上述 AK/SK 参数优先级仅适用于开放这些参数的入口（如 `auth: "openapi"` 命令）。Console 业务命令不开放临时 AK/SK 参数，只使用提前准备好的凭证：百炼环境变量 > 当前百炼配置 > 阿里云环境变量。
 - `describeAuthState()` — `auth status` / banner / telemetry 使用的只读快照
 
 命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore` / `ctx.configStore` 的窄接口操作落盘。
@@ -67,9 +68,14 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 ### Console token 签发与刷新
 
+- `packages/core/src/client/console-session.ts` 集中管理 Console 凭证、换票、重试、并发协调及落盘；`Client.console()` 委托给该内部模块，对外调用方式不变。
 - `resolveCLIAccessTokenTarget()` 优先采用有效 `consoleRegion`；地域缺省时识别国内/新加坡 DashScope 和对应 `*.maas.aliyuncs.com` 域名（含 Token Plan、Workspace）。未知或不支持的地域报错，不静默回退北京；`consoleSite` 与地域独立，不能把新加坡自动等同国际站。
 - `Client.console()` 收到 `NotLogined` 后，以本次实际 Console credential 的 region/site/switchAgent 签发并重试一次。只有原请求重试成功才保存新 token，并更新 Client 内存凭证；失败保留磁盘旧 token。
-- `refreshAccessToken()` 独立调用时默认用只读 `loginInfo` 验证；调用方提供 `validateToken` 时由其完成验证或原请求重试，回调成功后才落盘。缺少当前 Profile 的 AK/SK 返回 `null`，不跨 Profile 借用凭证。
+- Console token 为空时，authStage 先通过统一 AK/SK 链校验凭证是否可用；首次 `Client.console()` 调用时换票，并直接执行原请求。token 失效时也复用该 AK/SK 链与签发接口；每次请求至多换票一次，新 token 再次失效不循环刷新。有效 token 不要求额外提供 AK/SK。
+- 同一 Client 的并发请求共享在途换票，但每个业务请求独立执行和报错；任一业务请求成功后才更新 Client 凭证，符合落盘条件时只保存一次。旧 token 的失效响应晚到时，直接用该 Client 已刷新的 token 重试，不重复签发。换票失败或所有等待请求结束后清理在途状态，后续调用可重新尝试；不同 Client（包括 `withConsoleSwitchAgent()` 创建的实例）不共享换票状态。
+- 新增自动获取 token，以及使用环境变量凭证的刷新，只更新 Client 内存；不保存 AK/SK、STS 或 token。已有本地 token 使用本地 config AK/SK 刷新时，保留“原请求重试成功才保存 token”的规则。
+- `auth status` / AuthStore 快照仅展示当前凭证，不换票、不在线验证、不增加“可换票”等推断状态。静态 dry-run 不换票；需要 Console 只读请求的 prepare/dry-run 按原规则鉴权。模型 API Key 链、登录/退出、根帮助与配置 UI 不随此次换票接入改写。
+- `refreshAccessToken()` 独立调用时默认用只读 `loginInfo` 验证；调用方提供 `validateToken` 时由其完成验证，允许持久化时在回调成功后落盘。Client 的共享换票使用 `persist: false`，由各业务请求验证，并在符合条件的首次成功后保存。未传入已解析凭证且当前 Profile 缺少 AK/SK 时返回 `null`，不跨 Profile 借用凭证。
 - `auth generate-access-token` 只签发并输出，不做 Console 验证、不持久化；首次登录的校验直接走 `callConsoleGateway`，不得递归进入刷新流程。
 
 ### 例外:agent 命令的分层鉴权与 SDK 凭证内存注入
@@ -159,7 +165,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 - [ ] `packages/commands/tests/e2e/auth.e2e.test.ts` 增加新方式的 happy / failure 路径；浏览器回调契约在 `packages/commands/tests/login-console.test.ts` 覆盖
 - [ ] mask token 的输出格式不变(避免泄漏)
-- [ ] 如调整 resolver 优先级,补 core/runtime 单测覆盖 flag > env > file
+- [ ] 如调整 resolver 优先级，补 core/runtime 单测覆盖对应凭证链；AK/SK 为 flag > 百炼 env > file > 阿里云 env，并验证不跨来源拼接
 
 ## 完成后自查
 

@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   defineCommand,
   createDeployment,
   pickPlanStrategy,
@@ -211,7 +212,7 @@ async function runCreate(
     const resolved = await strategy.resolve({
       client: ctx.client,
       dryRun,
-      binName: identity.binName,
+      modelUnavailableHint: `Run \`${formatCommand(identity, "deploy models --source base")}\` to inspect available models, or pass --deploy-spec explicitly.`,
       flags,
       model: flags.modelName,
       name: flags.displayName,

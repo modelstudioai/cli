@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   defineCommand,
   createFineTune,
   getDataset,
@@ -82,7 +83,6 @@ async function analyzeDatasetTokens(
   knownModality?: { path: string; modality: DataModality },
 ): Promise<ResolvedDataset> {
   const { settings } = context;
-  const binName = context.identity.binName;
   const tokens = raw
     .split(",")
     .map((token) => token.trim())
@@ -135,8 +135,8 @@ async function analyzeDatasetTokens(
       }
       lines.push(
         "",
-        `Hint: re-run \`${binName} dataset validate --file <path>\` for the full report,`,
-        `      or upload manually with \`${binName} dataset upload --no-validate\` and`,
+        `Hint: re-run \`${formatCommand(context.identity, "dataset validate --file <path>")}\` for the full report,`,
+        `      or upload manually with \`${formatCommand(context.identity, "dataset upload --no-validate")}\` and`,
         "      pass the resulting file-id here.",
       );
       throw new BailianError(lines.join("\n"), ExitCode.GENERAL);

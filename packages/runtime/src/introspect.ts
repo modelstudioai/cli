@@ -1,4 +1,7 @@
 import {
+  formatCommand,
+  buildCommandInvocation,
+  renderCommandText,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
   CONSOLE_AUTH_FLAGS,
@@ -16,6 +19,7 @@ import { camelToKebab } from "./args.ts";
 import { confirmationFlagDefs } from "./confirm.ts";
 
 export interface CommandSchemaNode {
+  /** Complete subcommand chain after CommandSchema.bin, including fixed host subcommands. */
   path: readonly string[];
   description: LocalizedText;
   auth: AuthRequirement;
@@ -30,8 +34,10 @@ export interface CommandSchemaNode {
 
 export interface CommandSchema {
   schema_version: 1;
+  /** Actual executable; combine with a command's path without splitting display text. */
   bin: string;
   version: string;
+  /** Executable path of the inspected root, group, or leaf. */
   scope: readonly string[];
   exitCodes: typeof ExitCode;
   globalFlags: Record<string, FlagDef>;
@@ -39,15 +45,27 @@ export interface CommandSchema {
   commands: readonly CommandSchemaNode[];
 }
 
-function flagsSchema(definitions: FlagsDef): Record<string, FlagDef> {
+function localizedCommandText(text: LocalizedText, identity: Identity): LocalizedText {
+  return typeof text === "string"
+    ? renderCommandText(text, identity)
+    : {
+        "en-US": renderCommandText(text["en-US"], identity),
+        "zh-CN": renderCommandText(text["zh-CN"], identity),
+      };
+}
+
+function flagsSchema(definitions: FlagsDef, identity: Identity): Record<string, FlagDef> {
   return Object.fromEntries(
     Object.entries(definitions).map(([name, definition]) => [
       `--${camelToKebab(name)}`,
       definition.type === "switch"
-        ? { type: definition.type, description: definition.description }
+        ? {
+            type: definition.type,
+            description: localizedCommandText(definition.description, identity),
+          }
         : {
             type: definition.type,
-            description: definition.description,
+            description: localizedCommandText(definition.description, identity),
             valueHint: definition.valueHint,
             ...(definition.required !== undefined ? { required: definition.required } : {}),
             ...(definition.choices ? { choices: [...definition.choices] } : {}),
@@ -73,38 +91,39 @@ export function buildCommandSchema(
   identity: Identity,
   path: readonly string[] = [],
 ): CommandSchema {
+  const invocation = buildCommandInvocation(identity, path);
   return {
     schema_version: 1,
-    bin: identity.binName,
+    bin: invocation.bin,
     version: identity.version,
-    scope: [...path],
+    scope: invocation.path,
     exitCodes: ExitCode,
-    globalFlags: flagsSchema(GLOBAL_FLAGS),
+    globalFlags: flagsSchema(GLOBAL_FLAGS, identity),
     credentialFlags: {
-      apiKey: flagsSchema(MODEL_AUTH_FLAGS),
-      console: flagsSchema(CONSOLE_AUTH_FLAGS),
-      openapi: flagsSchema(OPENAPI_AUTH_FLAGS),
+      apiKey: flagsSchema(MODEL_AUTH_FLAGS, identity),
+      console: flagsSchema(CONSOLE_AUTH_FLAGS, identity),
+      openapi: flagsSchema(OPENAPI_AUTH_FLAGS, identity),
       none: {},
     },
     commands: registry
       .entries(path)
       .map(({ path: commandPath, command }): CommandSchemaNode => {
-        const prefix = [identity.binName, ...commandPath].join(" ");
+        const prefix = formatCommand(identity, commandPath.join(" "));
         return {
-          path: commandPath,
-          description: command.description,
+          path: buildCommandInvocation(identity, commandPath).path,
+          description: localizedCommandText(command.description, identity),
           auth: command.auth,
           usage: `${prefix}${command.usageArgs ? ` ${command.usageArgs}` : ""}`,
-          flags: flagsSchema({ ...command.flags, ...confirmationFlagDefs(command) }),
-          notes: command.notes ?? [],
+          flags: flagsSchema({ ...command.flags, ...confirmationFlagDefs(command) }, identity),
+          notes: (command.notes ?? []).map((note) => localizedCommandText(note, identity)),
           examples: (command.exampleArgs ?? []).map((example) =>
-            exampleWithPrefix(example, prefix),
+            localizedCommandText(exampleWithPrefix(example, prefix), identity),
           ),
           ...(command.risk
             ? {
                 risk: {
                   level: command.risk.level,
-                  message: command.risk.message,
+                  message: localizedCommandText(command.risk.message, identity),
                   ...(command.risk.reason ? { reason: command.risk.reason } : {}),
                 },
               }

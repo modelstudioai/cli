@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineCommand, type FlagsDef } from "bailian-cli-core";
 import { startSessionRun, startSessionRunPolling } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -154,33 +155,35 @@ export default defineCommand({
       return;
     }
 
-    await withAgentErrors(() =>
-      withStdoutProtected(ctx, async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
-        if (flags.noStream) {
-          const run = await startSessionRunPolling(runtime, flags.prompt, runOptions);
-          ctx.output.info({
-            "en-US": `Session created: ${run.session.id}`,
-            "zh-CN": `Session 已创建：${run.session.id}`,
-          });
-          renderCollectedEvents(ctx, run, {
-            session_id: run.session.id,
-            provider: run.provider,
-            agent: run.agentName,
-          });
-        } else {
-          const run = await startSessionRun(runtime, flags.prompt, runOptions);
-          ctx.output.info({
-            "en-US": `Session created: ${run.session.id}`,
-            "zh-CN": `Session 已创建：${run.session.id}`,
-          });
-          await streamAndRenderEvents(ctx, run.events, {
-            session_id: run.session.id,
-            provider: run.provider,
-            agent: run.agentName,
-          });
-        }
-      }),
+    await withAgentErrors(
+      () =>
+        withStdoutProtected(ctx, async () => {
+          const runtime = await buildAgentRuntime(ctx, file);
+          if (flags.noStream) {
+            const run = await startSessionRunPolling(runtime, flags.prompt, runOptions);
+            ctx.output.info({
+              "en-US": `Session created: ${run.session.id}`,
+              "zh-CN": `Session 已创建：${run.session.id}`,
+            });
+            renderCollectedEvents(ctx, run, {
+              session_id: run.session.id,
+              provider: run.provider,
+              agent: run.agentName,
+            });
+          } else {
+            const run = await startSessionRun(runtime, flags.prompt, runOptions);
+            ctx.output.info({
+              "en-US": `Session created: ${run.session.id}`,
+              "zh-CN": `Session 已创建：${run.session.id}`,
+            });
+            await streamAndRenderEvents(ctx, run.events, {
+              session_id: run.session.id,
+              provider: run.provider,
+              agent: run.agentName,
+            });
+          }
+        }),
+      `The session may still be running — check \`${formatCommand(ctx.identity, "managed-agent session get --session-id <id>")}\` or \`session events\`.`,
     );
   },
 });

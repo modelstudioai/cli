@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   defineCommand,
   effectiveConsoleGatewayConfig,
   BailianError,
@@ -88,7 +89,7 @@ export default defineCommand({
       const msg = (dataField.errorMsg as string | undefined) ?? code;
       const hint =
         code === "BailianGateway.Login.NotLogined"
-          ? `Run \`${identity.binName} auth login --console\` to refresh your console session.`
+          ? `Run \`${formatCommand(identity, "auth login --console")}\` to refresh your console session.`
           : undefined;
       throw new BailianError(`Console gateway: ${msg}`, ExitCode.AUTH, hint);
     }

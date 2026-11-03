@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineCommand, BailianError, ExitCode } from "bailian-cli-core";
 import { ansi } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
@@ -122,7 +123,7 @@ export default defineCommand({
         throw new BailianError(
           "session expired.",
           ExitCode.AUTH,
-          `Run \`${identity.binName} auth login --console\` to re-authenticate.`,
+          `Run \`${formatCommand(identity, "auth login --console")}\` to re-authenticate.`,
         );
       }
       throw err;

@@ -196,6 +196,28 @@ After a successful console login, the callback may persist `console_site` in `~/
 
 Use the same `--console-site` on console-gateway commands when it differs from the saved default, e.g. `bl app list --console-site international`.
 
+### AK/SK for OpenAPI and Console tokens
+
+OpenAPI commands resolve AK/SK as a complete group in this order: command parameters,
+`BAILIAN_ACCESS_KEY_ID` / `BAILIAN_ACCESS_KEY_SECRET`, the selected Bailian config,
+then `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET` (including
+credentials supplied by `aliyun bl`). Optional STS tokens come from the same
+source: `BAILIAN_SECURITY_TOKEN`, config `security_token`, or
+`ALIBABA_CLOUD_SECURITY_TOKEN`. An absent pair is skipped; a partial pair fails
+without borrowing fields from another source. `--config` selects only Bailian
+configuration; Aliyun configuration is handled by the host.
+
+Console business commands do not accept temporary AK/SK flags. Prepare credentials
+in advance: Bailian environment variables, the selected Bailian config, then
+Alibaba Cloud environment variables. Console commands continue using an existing access token. If it is missing or
+the gateway reports it expired, available AK/SK can obtain a Console token
+internally. Each request exchanges at most once; concurrent calls on the same
+Client share token issuance and execute their business requests independently.
+Late failures for an old token reuse an already refreshed token. Automatically acquired tokens
+and environment credentials stay in memory; refreshing an existing local token
+with local config AK/SK retains the existing save-after-success behavior.
+`auth status` remains read-only. Model commands still require a separate API Key.
+
 ---
 
 ## DashScope endpoint
@@ -211,7 +233,7 @@ Default: `https://dashscope.aliyuncs.com` (China). Override with any of:
 ## Configuration
 
 - **Config file:** `~/.bailian/config.json`
-- **Env:** `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_OUTPUT`, `ALIBABA_CLOUD_ACCESS_KEY_ID`, `ALIBABA_CLOUD_ACCESS_KEY_SECRET`, `BAILIAN_WORKSPACE_ID`
+- **Env:** `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_OUTPUT`, `BAILIAN_ACCESS_KEY_ID`, `BAILIAN_ACCESS_KEY_SECRET`, `BAILIAN_SECURITY_TOKEN`, `ALIBABA_CLOUD_ACCESS_KEY_ID`, `ALIBABA_CLOUD_ACCESS_KEY_SECRET`, `ALIBABA_CLOUD_SECURITY_TOKEN`, `BAILIAN_WORKSPACE_ID`
 
 ```bash
 bl config show

@@ -1,3 +1,4 @@
+import { consoleRecoveryHint } from "./error-handler.ts";
 import type {
   AnyCommand,
   CommandOutput,
@@ -16,6 +17,8 @@ import type {
   LocalizedText,
 } from "bailian-cli-core";
 import {
+  CredentialError,
+  formatCommand,
   Client,
   DEFAULT_LANGUAGE,
   isModelConnectionSourceMismatch,
@@ -140,14 +143,14 @@ function formatModelConnectionMismatchNotice(
       `api_key ← ${apiKeyLabel}`,
       `base_url ← ${baseUrlLabel}`,
       "These may not match. The request will continue.",
-      `Set both from the same source, or run ${ctx.identity.binName} config show to view effective configuration.`,
+      `Set both from the same source, or run ${formatCommand(ctx.identity, "config show")} to view effective configuration.`,
     ].join("\n"),
     "zh-CN": [
       "api_key 和 base_url 来自不同配置源。",
       `api_key ← ${apiKeyLabel}`,
       `base_url ← ${baseUrlLabel}`,
       "两者可能不匹配，请求仍会继续。",
-      `建议设为同一来源，或运行 ${ctx.identity.binName} config show 查看生效配置。`,
+      `建议设为同一来源，或运行 ${formatCommand(ctx.identity, "config show")} 查看生效配置。`,
     ].join("\n"),
   });
 }
@@ -187,6 +190,7 @@ export const authStage: Middleware = async (ctx, next) => {
   const base = {
     identity: ctx.identity,
     settings,
+    consoleRecoveryHint: consoleRecoveryHint(formatCommand(ctx.identity)),
     debug: (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic),
     ...resolveModelBaseUrlState(sources),
   };
@@ -219,12 +223,26 @@ export const authStage: Middleware = async (ctx, next) => {
     if (cred && !command.prepare) maybeShowStatusBar(settings, cred.token, cred, ctx.output);
   } else if (command.auth === "console") {
     let cred: ConsoleCredential | undefined;
+    let exchangeCredential: OpenApiCredential | undefined;
     try {
       cred = resolveConsole(sources);
-    } catch (err) {
-      if (!settings.dryRun || command.prepare) throw err;
+    } catch (error) {
+      try {
+        exchangeCredential = resolveOpenApi(sources);
+      } catch (credentialError) {
+        if (!settings.dryRun || command.prepare) {
+          throw credentialError instanceof CredentialError &&
+            credentialError.reason === "missing-openapi-pair"
+            ? error
+            : credentialError;
+        }
+      }
     }
-    if (cred) ctx.client = new Client({ ...base, consoleCred: cred });
+    ctx.client = new Client({
+      ...base,
+      consoleCred: cred,
+      resolveConsoleOpenApiCredential: () => exchangeCredential ?? resolveOpenApi(sources),
+    });
   } else if (command.auth === "openapi") {
     let cred: OpenApiCredential | undefined;
     try {
@@ -281,19 +299,23 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
         newVersion,
         ctx.identity.npmPackage,
         ctx.identity.clientName,
-        { output: ctx.output, binName: ctx.identity.binName },
+        {
+          output: ctx.output,
+          binName: ctx.identity.binName,
+          ...(ctx.identity.commandInvocation ? { commandPrefix: formatCommand(ctx.identity) } : {}),
+        },
       );
     } else {
       ctx.output.warning({
         code: "UPDATE_AVAILABLE",
         message: {
-          "en-US": `Update available: ${ctx.identity.version} → ${newVersion}. Run ${ctx.identity.binName} update to upgrade.`,
-          "zh-CN": `发现新版本：${ctx.identity.version} → ${newVersion}。运行 ${ctx.identity.binName} update 升级。`,
+          "en-US": `Update available: ${ctx.identity.version} → ${newVersion}. Run ${formatCommand(ctx.identity, "update")} to upgrade.`,
+          "zh-CN": `发现新版本：${ctx.identity.version} → ${newVersion}。运行 ${formatCommand(ctx.identity, "update")} 升级。`,
         },
         details: {
           current_version: ctx.identity.version,
           latest_version: newVersion,
-          upgrade_command: `${ctx.identity.binName} update`,
+          upgrade_command: `${formatCommand(ctx.identity, "update")}`,
         },
       });
     }

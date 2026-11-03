@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   REGIONS,
   buildAcsCanonicalQuery,
   type Client,
@@ -71,13 +72,13 @@ export type TokenPlanQueryParams = AcsQueryParams;
 export function requireWorkspaceId(
   settings: Settings,
   flags: { workspaceId?: string },
-  binName: string,
+  commandPrefix: string,
 ): string {
   const workspaceId = flags.workspaceId || settings.workspaceId;
   if (!workspaceId) {
     throw new BailianError(
       "Missing workspace ID.\n" +
-        `Set via: --workspace-id flag, env: BAILIAN_WORKSPACE_ID, or config: ${binName} config set workspace_id <id>`,
+        `Set via: --workspace-id flag, env: BAILIAN_WORKSPACE_ID, or config: ${formatCommand(commandPrefix, "config set workspace_id <id>")}`,
       ExitCode.USAGE,
     );
   }

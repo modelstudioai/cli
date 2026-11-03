@@ -1,4 +1,11 @@
-import { UsageError, unwrapResponse, type Client, type FlagsDef } from "bailian-cli-core";
+import {
+  formatCommand,
+  UsageError,
+  unwrapResponse,
+  type Client,
+  type FlagsDef,
+} from "bailian-cli-core";
+
 import { parseCommaList } from "../shared/params.ts";
 import { ensureTelemetryReady, ensureTelemetryRegionSupported } from "../shared/telemetry.ts";
 
@@ -206,14 +213,14 @@ export function buildAlertRuleReqDTO(
 export async function ensureAlertReady(
   client: Client,
   workspaceId: string | undefined,
-  binName: string,
+  commandPrefix: string,
   settings: Parameters<typeof ensureTelemetryRegionSupported>[0],
 ): Promise<void> {
   ensureTelemetryRegionSupported(settings);
   await ensureTelemetryReady(client, {
     serviceType: "ModelMonitor",
     workspaceId,
-    enableCommand: `${binName} monitor delivery enable`,
+    enableCommand: `${formatCommand(commandPrefix, "monitor delivery enable")}`,
     requireInstance: false,
   });
 }

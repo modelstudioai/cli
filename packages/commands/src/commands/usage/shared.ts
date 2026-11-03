@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   fetchModelListAll,
   BailianError,
   ExitCode,
@@ -6,6 +7,7 @@ import {
   type Client,
   type Settings,
 } from "bailian-cli-core";
+
 import { ansi, renderBoxTable, displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatNumber } from "../shared/format.ts";
 
@@ -29,13 +31,13 @@ export function formatDateTime(ts: number): string {
   return `${formatDate(ts)} ${hour}:${minute}:${second}`;
 }
 
-export function requireWorkspaceId(settings: Settings, binName: string): string {
+export function requireWorkspaceId(settings: Settings, commandPrefix: string): string {
   if (settings.workspaceId) return settings.workspaceId;
 
   throw new BailianError(
-    `workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${binName} config set workspace_id <id>\`.`,
+    `workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${formatCommand(commandPrefix, "config set workspace_id <id>")}\`.`,
     ExitCode.GENERAL,
-    `Run \`${binName} workspace list\` to view available workspaces.`,
+    `Run \`${formatCommand(commandPrefix, "workspace list")}\` to view available workspaces.`,
   );
 }
 

@@ -9,8 +9,7 @@ import type {
   OpenApiCredential,
   AuthState,
 } from "./types.ts";
-import { BailianError } from "../errors/base.ts";
-import { ExitCode } from "../errors/codes.ts";
+import { CredentialError } from "../errors/credential.ts";
 
 // Resolve the credential for a command's declared domain (model = api-key,
 // console = access-token), by priority, or throw. Read only from sources.
@@ -80,10 +79,10 @@ export function resolveApiKey(s: ResolutionSources): ApiKeyCredential {
   const envKey = s.env.DASHSCOPE_API_KEY?.trim();
   if (envKey) return { token: envKey, baseUrl, source: "env" };
   if (s.file.api_key) return { token: s.file.api_key, baseUrl, source: "config" };
-  throw new BailianError(
+  throw new CredentialError(
+    "missing-api-key",
     "No API key found.",
-    ExitCode.AUTH,
-    "Set DASHSCOPE_API_KEY, pass --api-key, or run `bl auth login`.",
+    "Set DASHSCOPE_API_KEY or pass --api-key.",
   );
 }
 
@@ -91,11 +90,7 @@ export function resolveApiKey(s: ResolutionSources): ApiKeyCredential {
 export function resolveConsole(s: ResolutionSources): ConsoleCredential {
   const token = s.file.access_token?.trim();
   if (!token) {
-    throw new BailianError(
-      "No console access token found.",
-      ExitCode.AUTH,
-      "Run `bl auth login --console`.",
-    );
+    throw new CredentialError("missing-console-token", "No console access token found.");
   }
   return {
     token,
@@ -106,7 +101,7 @@ export function resolveConsole(s: ResolutionSources): ConsoleCredential {
   };
 }
 
-/** Alibaba Cloud OpenAPI AK/SK credential. Priority: flags > env > config. */
+/** AK/SK priority: flags > Bailian env > selected config > Alibaba Cloud env. */
 export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
   const flagCred = resolveOpenApiPair(
     "flag",
@@ -119,13 +114,13 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
 
   const envCred = resolveOpenApiPair(
     "env",
-    s.env.ALIBABA_CLOUD_ACCESS_KEY_ID,
-    s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET,
+    s.env.BAILIAN_ACCESS_KEY_ID,
+    s.env.BAILIAN_ACCESS_KEY_SECRET,
     Boolean(
-      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_ID) ||
-      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET),
+      trimNonEmpty(s.env.BAILIAN_ACCESS_KEY_ID) || trimNonEmpty(s.env.BAILIAN_ACCESS_KEY_SECRET),
     ),
-    s.env.ALIBABA_CLOUD_SECURITY_TOKEN,
+    s.env.BAILIAN_SECURITY_TOKEN,
+    "BAILIAN",
   );
   if (envCred) return envCred;
 
@@ -138,10 +133,22 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
   );
   if (configCred) return configCred;
 
-  throw new BailianError(
+  const aliyunCred = resolveOpenApiPair(
+    "env",
+    s.env.ALIBABA_CLOUD_ACCESS_KEY_ID,
+    s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET,
+    Boolean(
+      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_ID) ||
+      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET),
+    ),
+    s.env.ALIBABA_CLOUD_SECURITY_TOKEN,
+  );
+  if (aliyunCred) return aliyunCred;
+
+  throw new CredentialError(
+    "missing-openapi-pair",
     "No OpenAPI AK/SK credentials found.",
-    ExitCode.AUTH,
-    "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, pass --access-key-id and --access-key-secret, or run `bl auth login --open-api`.",
+    "Set BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET), or pass --access-key-id and --access-key-secret.",
   );
 }
 
@@ -151,6 +158,7 @@ function resolveOpenApiPair(
   rawAccessKeySecret: string | undefined,
   provided: boolean,
   rawSecurityToken?: string,
+  envPrefix = "ALIBABA_CLOUD",
 ): OpenApiCredential | undefined {
   if (!provided) return undefined;
 
@@ -158,10 +166,10 @@ function resolveOpenApiPair(
   const accessKeySecret = trimNonEmpty(rawAccessKeySecret);
 
   if (!accessKeyId || !accessKeySecret) {
-    throw new BailianError(
+    throw new CredentialError(
+      `incomplete-openapi-${source}`,
       "Incomplete OpenAPI AK/SK credentials found.",
-      ExitCode.AUTH,
-      openApiPairHint(source),
+      openApiPairHint(source, envPrefix),
     );
   }
 
@@ -174,14 +182,14 @@ function trimNonEmpty(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function openApiPairHint(source: OpenApiCredential["source"]): string {
+function openApiPairHint(source: OpenApiCredential["source"], envPrefix: string): string {
   if (source === "flag") {
     return "Pass both --access-key-id and --access-key-secret, or remove the partial flags to use env/config credentials.";
   }
   if (source === "env") {
-    return "Set both ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or unset the partial env vars to use config credentials.";
+    return `Set both ${envPrefix}_ACCESS_KEY_ID and ${envPrefix}_ACCESS_KEY_SECRET, or unset the partial env vars.`;
   }
-  return "Run `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` again to save a complete pair.";
+  return "Save a complete AccessKey ID and secret pair in the selected configuration.";
 }
 
 /** Full auth snapshot from sources — what would resolve per domain (or undefined). */

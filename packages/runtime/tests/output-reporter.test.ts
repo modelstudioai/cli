@@ -381,7 +381,7 @@ test("local error hints use the invocation language and binary name", () => {
   let stderr = "";
   const reporter = createOutputReporter({
     settings: { output: "json", quiet: true, verbose: false },
-    binName: "kscli",
+    commandPrefix: "kscli",
     localize: (text) => createTranslator("zh-CN").localize(text),
     stderr: {
       write: (chunk) => {

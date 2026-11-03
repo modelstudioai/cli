@@ -1,6 +1,13 @@
 import { dirname, relative, sep } from "node:path";
 import { inspectSkillSource } from "@openagentpack/sdk";
-import { BailianError, defineCommand, ExitCode, type FlagsDef } from "bailian-cli-core";
+import {
+  formatCommand,
+  BailianError,
+  defineCommand,
+  ExitCode,
+  type FlagsDef,
+} from "bailian-cli-core";
+
 import { CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import {
   loadScopedCreateProject,
@@ -80,7 +87,7 @@ export default defineCommand({
       throw new BailianError(
         `Skill '${inspected.name}' is already tracked.`,
         ExitCode.USAGE,
-        "Modify its existing YAML declaration and run full `bl managed-agent apply` to create a new version.",
+        `Modify its existing YAML declaration and run full \`${formatCommand(ctx.identity, "managed-agent apply")}\` to create a new version.`,
       );
     }
     const rawDeclaration: Record<string, unknown> = {

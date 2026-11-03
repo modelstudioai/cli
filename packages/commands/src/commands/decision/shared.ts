@@ -1,5 +1,6 @@
 import { extname } from "path";
 import {
+  formatCommand,
   BailianError,
   ExitCode,
   decisionPath,
@@ -180,7 +181,7 @@ export function buildDecisionInput(flags: DecisionInputFlags, localize: Localize
 export function resolveDecisionEndpoint(ctx: {
   workspaceId?: string;
   region: string;
-  binName: string;
+  commandPrefix: string;
   client: Pick<Client, "url">;
   localize: Localize;
 }): string {
@@ -193,8 +194,8 @@ export function resolveDecisionEndpoint(ctx: {
           "zh-CN": "调用决策模型需要 Workspace ID。",
         },
         {
-          "en-US": `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${ctx.binName} config set workspace_id <id>. You can also override the endpoint with --base-url.`,
-          "zh-CN": `请传入 --workspace-id、设置环境变量 BAILIAN_WORKSPACE_ID，或执行：${ctx.binName} config set workspace_id <id>。也可以用 --base-url 覆盖请求地址。`,
+          "en-US": `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${formatCommand(ctx.commandPrefix, "config set workspace_id <id>")}. You can also override the endpoint with --base-url.`,
+          "zh-CN": `请传入 --workspace-id、设置环境变量 BAILIAN_WORKSPACE_ID，或执行：${formatCommand(ctx.commandPrefix, "config set workspace_id <id>")}。也可以用 --base-url 覆盖请求地址。`,
         },
       );
     }

@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   BailianError,
   ExitCode,
   defineCommand,
@@ -94,7 +95,7 @@ export default defineCommand({
         throw new BailianError(
           `${failed.length}/${skills.length} skill(s) failed to install`,
           ExitCode.GENERAL,
-          "Check the reason for failed skills in the output; network failures can be retried with bl skill add",
+          `Check the reason for failed skills in the output; network failures can be retried with ${formatCommand(ctx.identity, "skill add")}`,
         );
       }
       return;
@@ -160,7 +161,7 @@ export default defineCommand({
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to install`,
         ExitCode.GENERAL,
-        "Check the reason for failed skills in the output; network failures can be retried with bl skill add",
+        `Check the reason for failed skills in the output; network failures can be retried with ${formatCommand(ctx.identity, "skill add")}`,
       );
     }
   },

@@ -106,13 +106,24 @@ test("failed wait retains created resource diagnostics even in quiet mode and pr
 });
 
 test.each([
-  { binName: "bl", path: ["knowledge", "delete"] },
-  { binName: "kscli", path: ["kb", "delete"] },
+  { binName: "bl", path: ["knowledge", "delete"], commandInvocation: undefined },
+  { binName: "kscli", path: ["kb", "delete"], commandInvocation: undefined },
+  {
+    binName: "bl",
+    path: ["knowledge", "delete"],
+    commandInvocation: { bin: "aliyun", path: ["bl"] },
+  },
 ])(
   "direct create reports the actual $binName cleanup command before a failed wait",
-  async ({ binName, path }) => {
+  async ({ binName, path, commandInvocation }) => {
     const { context, requestJson, stderr } = fixture({ wait: true, quiet: true });
-    context.identity = { binName, version: "test", npmPackage: "test", clientName: "test" };
+    context.identity = {
+      binName,
+      commandInvocation,
+      version: "test",
+      npmPackage: "test",
+      clientName: "test",
+    };
     context.commandPath = (command) => (command === deleteIndex ? path : undefined);
     const original = new BailianError("original polling failure", ExitCode.GENERAL);
     requestJson
@@ -126,8 +137,8 @@ test.each([
       .map((line) => JSON.parse(line))
       .find((value) => value.warning?.code === "KNOWLEDGE_RESOURCE_CREATED");
     expect(record.warning.details.resource.cleanup.command).toEqual({
-      bin: binName,
-      path,
+      bin: commandInvocation?.bin ?? binName,
+      path: [...(commandInvocation?.path ?? []), ...path],
       args: ["--index-id", "idx-billed", "--workspace-id", "ws-test"],
     });
     expect(JSON.stringify(record.warning.details.resource.cleanup.command)).not.toContain("--yes");
@@ -155,4 +166,26 @@ test("human cleanup instructions quote IDs safely and do not guess a missing rou
   );
   context.commandPath = () => undefined;
   expect(reportCreatedKnowledgeBase(context, "ws", "idx").cleanup.command).toBeUndefined();
+});
+
+test("host cleanup text and structured command use the same executable invocation", () => {
+  const { context, stderr } = fixture({ format: "text" });
+  context.identity = {
+    binName: "bl",
+    commandInvocation: { bin: "aliyun", path: ["bl"] },
+    version: "test",
+    npmPackage: "test",
+    clientName: "test",
+  };
+  context.commandPath = () => ["knowledge", "delete"];
+  const resource = reportCreatedKnowledgeBase(context, "ws space", "idx'quoted");
+  expect(resource.cleanup.command).toEqual({
+    bin: "aliyun",
+    path: ["bl", "knowledge", "delete"],
+    args: ["--index-id", "idx'quoted", "--workspace-id", "ws space"],
+  });
+  expect(resource.cleanup.requiresConfirmation).toBe(true);
+  expect(stderr.join("")).toContain(
+    "aliyun bl knowledge delete --index-id 'idx'\\''quoted' --workspace-id 'ws space'",
+  );
 });

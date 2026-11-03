@@ -1,3 +1,5 @@
+import { CredentialError } from "bailian-cli-core";
+import { formatCommand } from "bailian-cli-core";
 import { BailianError, ExitCode, type LocalizedText } from "bailian-cli-core";
 import type { OutputReporter } from "./output/reporter.ts";
 import { sanitizeDiagnosticDetails } from "./output/diagnostics.ts";
@@ -8,11 +10,15 @@ export function handleError(error: unknown, reporter: Pick<OutputReporter, "erro
   process.exit(reporter.error(error));
 }
 
-export function normalizeError(error: unknown, binName: string, localize: Localize): BailianError {
+export function normalizeError(
+  error: unknown,
+  commandPrefix: string,
+  localize: Localize,
+): BailianError {
   if (error instanceof BailianError) return error;
   if (error instanceof Error) {
     return (
-      classifyRuntimeError(error, binName, localize) ??
+      classifyRuntimeError(error, commandPrefix, localize) ??
       new BailianError(error.message, ExitCode.GENERAL, undefined, { cause: error })
     );
   }
@@ -23,14 +29,37 @@ export function normalizeError(error: unknown, binName: string, localize: Locali
   return new BailianError(message, ExitCode.GENERAL);
 }
 
+/** Complete recovery text supplied before Console errors can be wrapped by commands. */
+export function consoleRecoveryHint(commandPrefix: string): string {
+  return `Run \`${formatCommand(commandPrefix, "auth login --console")}\` to sign in or refresh your console session.`;
+}
+
 /** Add runtime-owned model-auth guidance without modifying service errors. */
 export function errorHint(
   error: BailianError,
-  binName: string,
+  commandPrefix: string,
   localize: Localize,
 ): string | undefined {
-  if (error.exitCode !== ExitCode.AUTH) return error.hint;
-  const hint = error.hint;
+  let hint = error.hint;
+  if (error instanceof CredentialError) {
+    switch (error.reason) {
+      case "missing-api-key":
+        hint = `Set DASHSCOPE_API_KEY, pass --api-key, or run \`${formatCommand(commandPrefix, "auth login")}\`.`;
+        break;
+      case "missing-console-token":
+        return `Run \`${formatCommand(commandPrefix, "auth login --console")}\`.`;
+      case "expired-console-session":
+        return consoleRecoveryHint(commandPrefix);
+      case "missing-openapi-pair":
+        return `Set BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET), pass --access-key-id and --access-key-secret, or run \`${formatCommand(commandPrefix, "auth login --open-api")}\`.`;
+      case "incomplete-openapi-config":
+        return `Run \`${formatCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>")}\` again to save a complete pair.`;
+      case "incomplete-openapi-flag":
+      case "incomplete-openapi-env":
+        return hint;
+    }
+  }
+  if (error.exitCode !== ExitCode.AUTH) return hint;
   if (
     hint &&
     [
@@ -43,8 +72,8 @@ export function errorHint(
     return hint;
   return [
     hint,
-    `${binName} auth login --api-key <your-key>`,
-    `${binName} auth status`,
+    `${formatCommand(commandPrefix, "auth login --api-key <your-key>")}`,
+    `${formatCommand(commandPrefix, "auth status")}`,
     localize({ "en-US": `Get API Key: ${API_KEY_PAGE}`, "zh-CN": `获取 API Key：${API_KEY_PAGE}` }),
   ]
     .filter((line) => line !== undefined)
@@ -57,13 +86,13 @@ const english: Localize = (text) => (typeof text === "string" ? text : text["en-
 /** Shared local-error classification; service errors are never reclassified. */
 export function classifyRuntimeError(
   error: Error,
-  binName: string,
+  commandPrefix: string,
   localize: Localize = english,
 ): BailianError | undefined {
   if (error instanceof BailianError) return error;
   const baseUrlHint = localize({
-    "en-US": `If the DashScope host is wrong, check baseUrl (--base-url, ${binName} config show, or DASHSCOPE_BASE_URL).`,
-    "zh-CN": `如果 DashScope 主机地址有误，请检查 baseUrl（--base-url、${binName} config show 或 DASHSCOPE_BASE_URL）。`,
+    "en-US": `If the DashScope host is wrong, check baseUrl (--base-url, ${formatCommand(commandPrefix, "config show")}, or DASHSCOPE_BASE_URL).`,
+    "zh-CN": `如果 DashScope 主机地址有误，请检查 baseUrl（--base-url、${formatCommand(commandPrefix, "config show")} 或 DASHSCOPE_BASE_URL）。`,
   });
   if (
     error.name === "AbortError" ||
@@ -74,8 +103,8 @@ export function classifyRuntimeError(
       localize({ "en-US": "Request timed out.", "zh-CN": "请求超时。" }),
       ExitCode.TIMEOUT,
       localize({
-        "en-US": `Try increasing --timeout (e.g. --timeout 60).\n${baseUrlHint}\nRun: ${binName} auth status — to check credentials.`,
-        "zh-CN": `请尝试增大 --timeout（例如 --timeout 60）。\n${baseUrlHint}\n运行 ${binName} auth status 检查凭证。`,
+        "en-US": `Try increasing --timeout (e.g. --timeout 60).\n${baseUrlHint}\nRun: ${formatCommand(commandPrefix, "auth status")} — to check credentials.`,
+        "zh-CN": `请尝试增大 --timeout（例如 --timeout 60）。\n${baseUrlHint}\n运行 ${formatCommand(commandPrefix, "auth status")} 检查凭证。`,
       }),
       { cause: error },
     );
@@ -95,7 +124,7 @@ export function classifyRuntimeError(
         "zh-CN": `网络请求失败：${detail}`,
       }),
       ExitCode.NETWORK,
-      networkHint(cause?.code, binName, baseUrlHint, localize),
+      networkHint(cause?.code, commandPrefix, baseUrlHint, localize),
       { cause: cause ?? error },
     );
   }
@@ -132,7 +161,7 @@ export function classifyRuntimeError(
 
 function networkHint(
   code: string | undefined,
-  binName: string,
+  commandPrefix: string,
   baseUrlHint: string,
   localize: Localize,
 ): string {
@@ -150,8 +179,8 @@ function networkHint(
       });
     case "ECONNRESET":
       return localize({
-        "en-US": `Connection reset by peer. Retry, or check proxy / firewall.\nIf you are behind a VPN or corporate proxy, route ${binName} through it:\nexport HTTPS_PROXY=http://127.0.0.1:<proxy-port>`,
-        "zh-CN": `连接被对端重置，请重试或检查代理和防火墙。\n如果使用 VPN 或企业代理，请为 ${binName} 配置代理：\nexport HTTPS_PROXY=http://127.0.0.1:<proxy-port>`,
+        "en-US": `Connection reset by peer. Retry, or check proxy / firewall.\nIf you are behind a VPN or corporate proxy, route ${commandPrefix} through it:\nexport HTTPS_PROXY=http://127.0.0.1:<proxy-port>`,
+        "zh-CN": `连接被对端重置，请重试或检查代理和防火墙。\n如果使用 VPN 或企业代理，请为 ${commandPrefix} 配置代理：\nexport HTTPS_PROXY=http://127.0.0.1:<proxy-port>`,
       });
     case "ETIMEDOUT":
       return localize({

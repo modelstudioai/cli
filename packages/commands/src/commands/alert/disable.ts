@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ensureAlertReady } from "./shared.ts";
 
@@ -41,7 +42,7 @@ export default defineTelemetryCommand({
       return;
     }
 
-    await ensureAlertReady(ctx.client, settings.workspaceId, ctx.identity.binName, settings);
+    await ensureAlertReady(ctx.client, settings.workspaceId, formatCommand(ctx.identity), settings);
 
     await ctx.client.console(DISABLE_RULE_API, { reqDTO });
 

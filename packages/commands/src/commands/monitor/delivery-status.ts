@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { ansi, displayWidth, padEnd } from "bailian-cli-runtime";
 import { formatDateTime } from "../shared/format.ts";
 import {
@@ -19,7 +20,7 @@ function renderStatus(
   cmsSlrAuthorized: boolean,
   status: TelemetryServiceStatus,
   deliverySwitch: boolean | null,
-  binName: string,
+  commandPrefix: string,
 ): string {
   const textChunks: string[] = [];
 
@@ -51,7 +52,9 @@ function renderStatus(
 
   if (!status.openStatus || deliverySwitch !== true) {
     textChunks.push(
-      color.dim(`\nRun \`${binName} monitor delivery enable\` to activate monitoring delivery.`),
+      color.dim(
+        `\nRun \`${formatCommand(commandPrefix, "monitor delivery enable")}\` to activate monitoring delivery.`,
+      ),
     );
   }
 
@@ -102,7 +105,7 @@ export default defineTelemetryCommand({
       const textChunks: string[] = [];
 
       textChunks.push(
-        renderStatus(cmsSlrAuthorized, status, deliverySwitch, identity.binName) + "\n",
+        renderStatus(cmsSlrAuthorized, status, deliverySwitch, formatCommand(identity)) + "\n",
       );
 
       text = textChunks.join("").replace(/\n$/, "");

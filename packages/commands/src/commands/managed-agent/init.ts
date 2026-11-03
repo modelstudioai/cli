@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -10,12 +11,12 @@ agents.state.json
 .env
 `;
 
-function buildTemplate(options: { agentName: string }): string {
+function buildTemplate(options: { agentName: string; invocation: string }): string {
   return `version: "1"
 
 providers:
   bailian:
-    # bl auth login --api-key <key> sets DASHSCOPE_API_KEY; --base-url <url> sets BAILIAN_BASE_URL
+    # ${formatCommand(options.invocation, "auth login --api-key <key>")} sets DASHSCOPE_API_KEY; --base-url <url> sets BAILIAN_BASE_URL
     api_key: \${DASHSCOPE_API_KEY}
     base_url: \${BAILIAN_BASE_URL}
 
@@ -104,7 +105,7 @@ export default defineCommand({
       return;
     }
 
-    const template = buildTemplate({ agentName });
+    const template = buildTemplate({ agentName, invocation: formatCommand(ctx.identity) });
     await writeFile(file, template, "utf8");
 
     if (existsSync(gitignorePath)) {
@@ -126,9 +127,11 @@ export default defineCommand({
                 {
                   lines.push(`Created ${resolve(file)}`);
                   lines.push(
-                    "Credentials: run `bl auth login --api-key <key> --base-url <url>`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.",
+                    `Credentials: run \`${formatCommand(ctx.identity, "auth login --api-key <key> --base-url <url>")}\`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.`,
                   );
-                  lines.push("Next: edit agents.yaml, then run `bl managed-agent plan`.");
+                  lines.push(
+                    `Next: edit agents.yaml, then run \`${formatCommand(ctx.identity, "managed-agent plan")}\`.`,
+                  );
                 }
                 return lines.join("\n");
               })()

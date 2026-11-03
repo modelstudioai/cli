@@ -1,5 +1,5 @@
 import { UserError } from "@openagentpack/sdk";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { BailianError, ExitCode, formatCommand } from "bailian-cli-core";
 import { expect, test } from "vite-plus/test";
 import {
   formatAgentDiagnosticFailure,
@@ -51,7 +51,7 @@ test("SDK polling-timeout UserError maps to TIMEOUT (5), not USAGE", async () =>
   );
   expect(mapped.exitCode).toBe(ExitCode.TIMEOUT);
   expect(mapped.message).toBe("Session did not complete within the timeout (600 seconds).");
-  expect(mapped.hint).toMatch(/session get/);
+  expect(mapped.hint).toBeUndefined();
 });
 
 test("提及 timeout 但非轮询超时句式的 UserError 仍归 USAGE", async () => {
@@ -161,4 +161,40 @@ test("retaining an Agent error adds a hint without losing structured context", (
   expect(retained.api).toEqual(original.api);
   expect(retained.rawResponse).toBe("raw provider response");
   expect(retained.cause).toBe(cause);
+});
+
+test.each(["bl", "aliyun bl"])(
+  "SDK timeout hints are complete strings (%s)",
+  async (invocation) => {
+    const timeoutHint = `The session may still be running — check \`${formatCommand(invocation, "managed-agent session get --session-id <id>")}\` or \`session events\`.`;
+    let failure: BailianError | undefined;
+    try {
+      await withAgentErrors(
+        () =>
+          Promise.reject(
+            new UserError("Session did not complete within the timeout (600 seconds)."),
+          ),
+        timeoutHint,
+      );
+    } catch (error) {
+      expect(error).toBeInstanceOf(BailianError);
+      failure = error as BailianError;
+    }
+    expect(failure).toBeDefined();
+    expect(failure!.hint).toBe(
+      `The session may still be running — check \`${invocation} managed-agent session get --session-id <id>\` or \`session events\`.`,
+    );
+    expect(JSON.stringify(failure)).not.toContain("{{commandPrefix}}");
+  },
+);
+
+test("polling timeout preserves a supplied complete hint verbatim", async () => {
+  const hint = "User-selected {{commandPrefix}} text, without a rendering protocol.";
+  await expect(
+    withAgentErrors(
+      () =>
+        Promise.reject(new UserError("Session did not complete within the timeout (600 seconds).")),
+      hint,
+    ),
+  ).rejects.toMatchObject({ exitCode: ExitCode.TIMEOUT, hint });
 });

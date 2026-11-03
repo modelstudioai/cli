@@ -203,6 +203,8 @@ export function parseConfigFile(raw: unknown): ConfigFile {
 export interface Identity {
   /** Product binary name, e.g. "bl", "rag". */
   binName: string;
+  /** Executable and fixed host subcommands; display text is derived from this structure. */
+  commandInvocation?: { readonly bin: string; readonly path: readonly string[] };
   version: string;
   /** npm package name for self-update, e.g. "bailian-cli". */
   npmPackage: string;

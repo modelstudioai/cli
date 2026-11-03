@@ -1,5 +1,6 @@
 import { validateNonemptyFlags } from "./nonempty-flags.ts";
 import {
+  formatCommand,
   defineCommand,
   ragEndpoint,
   RAG_PATHS,
@@ -102,7 +103,7 @@ export default defineCommand({
         deletedCount += batchIds.length;
         completedBatches.push(batchIds);
       } catch (error) {
-        const original = normalizeError(error, ctx.identity.binName, ctx.localize);
+        const original = normalizeError(error, formatCommand(ctx.identity), ctx.localize);
         const failedBatch = completedBatches.length + 1;
         const progress = [
           ctx.localize({

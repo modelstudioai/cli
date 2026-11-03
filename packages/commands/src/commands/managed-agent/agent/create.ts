@@ -1,3 +1,4 @@
+import { formatCommand, type CommandFormatter } from "bailian-cli-core";
 import { stat } from "node:fs/promises";
 import { dirname, extname, relative, sep } from "node:path";
 import {
@@ -252,12 +253,14 @@ function canonicalJson(value: unknown): string {
 }
 
 export function selectLocalSkillKey(options: {
+  command: CommandFormatter;
   displayName: string;
   provider: string;
   declarations: Record<string, Record<string, unknown>>;
   candidate: Record<string, unknown>;
   state: IStateManager;
 }): LocalSkillKeySelection {
+  const { command } = options;
   const trackedKeys = new Set(
     options.state
       .listResources()
@@ -288,7 +291,7 @@ export function selectLocalSkillKey(options: {
     throw new BailianError(
       `Skill '${options.displayName}' is already tracked with a different declaration.`,
       ExitCode.USAGE,
-      "Modify its existing YAML declaration and run full `bl managed-agent apply`, or bind its remote ID with --skill.",
+      `Modify its existing YAML declaration and run full \`${command("managed-agent apply")}\`, or bind its remote ID with --skill.`,
     );
   }
   const selected = selectResourceKey({
@@ -312,6 +315,7 @@ export function selectLocalSkillKey(options: {
 async function prepareLocalSkillSources(
   project: LoadedScopedCreateProject,
   sources: string[] | undefined,
+  command: CommandFormatter,
 ): Promise<PreparedLocalSkill[]> {
   const declarations = {
     ...((project.config.skills ?? {}) as unknown as Record<string, Record<string, unknown>>),
@@ -352,6 +356,7 @@ async function prepareLocalSkillSources(
     })) as unknown as SkillDecl;
     const keySelection = await project.stateBackend.read(project.stateScope, (state) =>
       selectLocalSkillKey({
+        command,
         displayName: inspected.name,
         provider: project.provider,
         declarations,
@@ -468,7 +473,9 @@ export default defineCommand({
       mcp: mcpBindings.map((binding) => binding.serverName),
     };
     const externalSkillRefs = buildAgentSkillRefs(flags.skill, agentSkillType(flags.type));
-    const localSkills = await prepareLocalSkillSources(project, flags.skillDir);
+    const localSkills = await prepareLocalSkillSources(project, flags.skillDir, (args) =>
+      formatCommand(ctx.identity, args),
+    );
     const skillRefs: AgentSkillDecl[] = [
       ...externalSkillRefs,
       ...localSkills.map((skill) => skill.key),

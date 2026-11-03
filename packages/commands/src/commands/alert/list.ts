@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import type { LocalizedText } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, renderBoxTable } from "bailian-cli-runtime";
@@ -143,7 +144,7 @@ export default defineTelemetryCommand({
       return;
     }
 
-    await ensureAlertReady(ctx.client, settings.workspaceId, ctx.identity.binName, settings);
+    await ensureAlertReady(ctx.client, settings.workspaceId, formatCommand(ctx.identity), settings);
 
     const raw = await ctx.client.console(LIST_RULES_API, { reqDTO });
     const page = extractAlertPage<AlertRuleItem>(raw);

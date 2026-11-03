@@ -148,6 +148,9 @@ describe("e2e: auth", () => {
         ],
         {
           BAILIAN_CONFIG_DIR: configDir,
+          BAILIAN_ACCESS_KEY_ID: "",
+          BAILIAN_ACCESS_KEY_SECRET: "",
+          BAILIAN_SECURITY_TOKEN: "",
           ALIBABA_CLOUD_ACCESS_KEY_ID: "",
           ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
         },
@@ -1109,6 +1112,9 @@ describe("e2e: auth", () => {
       BAILIAN_CONFIG_DIR: configDir,
       DASHSCOPE_API_KEY: undefined,
       DASHSCOPE_BASE_URL: undefined,
+      BAILIAN_ACCESS_KEY_ID: undefined,
+      BAILIAN_ACCESS_KEY_SECRET: undefined,
+      BAILIAN_SECURITY_TOKEN: undefined,
       ALIBABA_CLOUD_ACCESS_KEY_ID: undefined,
       ALIBABA_CLOUD_ACCESS_KEY_SECRET: undefined,
       ALIBABA_CLOUD_SECURITY_TOKEN: undefined,
@@ -1258,6 +1264,9 @@ describe("e2e: auth", () => {
       const configDir = mkdtempSync(join(tmpdir(), "bl-auth-openapi-login-"));
       const env = {
         BAILIAN_CONFIG_DIR: configDir,
+        BAILIAN_ACCESS_KEY_ID: "",
+        BAILIAN_ACCESS_KEY_SECRET: "",
+        BAILIAN_SECURITY_TOKEN: "",
         ALIBABA_CLOUD_ACCESS_KEY_ID: "",
         ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
       };

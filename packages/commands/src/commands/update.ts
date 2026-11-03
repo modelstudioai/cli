@@ -2,6 +2,7 @@ import { execSync, spawnSync } from "child_process";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import {
+  formatCommand,
   BailianError,
   DEFAULT_INSTALL_PS1_URL,
   DEFAULT_INSTALL_SCRIPT_URL,
@@ -12,6 +13,7 @@ import {
   type InstallMethod,
   type CommandOutput,
 } from "bailian-cli-core";
+
 import {
   fetchLatestVersion,
   fetchBinaryChannelVersion,
@@ -90,7 +92,10 @@ function skillUpdateResult(value: unknown): unknown {
   }
 }
 
-function updateAgentSkill(output: CommandOutput): {
+function updateAgentSkill(
+  output: CommandOutput,
+  invocation: string,
+): {
   status: "updated" | "skipped";
   result?: unknown;
   exit_code?: number | null;
@@ -113,8 +118,8 @@ function updateAgentSkill(output: CommandOutput): {
         : undefined;
     output.warning({
       message: {
-        "en-US": `Agent skill update skipped. Run manually: ${SKILL_UPDATE_CMD}`,
-        "zh-CN": `已跳过 Agent Skill 更新。请手动运行：${SKILL_UPDATE_CMD}`,
+        "en-US": `Agent skill update skipped. Run manually: ${formatCommand(invocation, "skill update")}`,
+        "zh-CN": `已跳过 Agent Skill 更新。请手动运行：${formatCommand(invocation, "skill update")}`,
       },
       code: "SKILL_UPDATE_SKIPPED",
       details: { exit_code: failure?.status, signal: failure?.signal, error: failure?.diagnostic },
@@ -183,6 +188,7 @@ export default defineCommand({
   },
   async run(ctx) {
     const { identity } = ctx;
+    const skillCommandPrefix = identity.commandInvocation ? formatCommand(identity) : "bl";
     const npmPackage = identity.npmPackage;
     const binName = identity.binName;
     const currentVersion = identity.version;
@@ -251,7 +257,8 @@ export default defineCommand({
               "zh-CN": `✓ 当前已是最新版本（${currentVersion}）。`,
             },
       );
-      const skillUpdate = method === "npm" ? updateAgentSkill(ctx.output) : undefined;
+      const skillUpdate =
+        method === "npm" ? updateAgentSkill(ctx.output, skillCommandPrefix) : undefined;
       ctx.output.result(
         {
           status: "up-to-date",
@@ -307,7 +314,10 @@ export default defineCommand({
           const rawVersion = execSync(`${binName} --version 2>/dev/null`, {
             encoding: "utf-8",
           }).trim();
-          installedVersion = rawVersion.replace(new RegExp(`^${binName}\\s+`), "");
+          const parsedVersion = rawVersion.split(/\s+/).pop()!;
+          if (!isValidUpdateTargetVersion(parsedVersion))
+            throw new Error("Invalid installed version.");
+          installedVersion = parsedVersion;
           writeUpdateState(installedVersion);
         } catch {
           /* Version lookup has always been best effort. */
@@ -324,7 +334,7 @@ export default defineCommand({
         );
       }
     }
-    const skillUpdate = updateAgentSkill(ctx.output);
+    const skillUpdate = updateAgentSkill(ctx.output, skillCommandPrefix);
     ctx.output.result(
       {
         status: "updated",

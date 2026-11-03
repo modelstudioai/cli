@@ -4,6 +4,7 @@ import { createReadStream, existsSync, statSync, unlinkSync } from "node:fs";
 import { extname } from "node:path";
 
 import {
+  formatCommand,
   defineCommand,
   BailianError,
   ExitCode,
@@ -176,6 +177,7 @@ export function createConfigUiServer(
   outputBase: string = defaultOutputBase(),
   authBridge?: AuthUiBridge,
   onError?: (error: unknown) => void,
+  invocation = "bl",
 ): http.Server {
   let activatedUiProfile: string | null = null;
   const uiLanguage = (): Language => {
@@ -214,7 +216,7 @@ export function createConfigUiServer(
             "img-src 'self' data: https://img.alicdn.com https://oss.aliyuncs.com; " +
             "media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
         });
-        res.end(renderConfigUiHtml(uiLanguage()));
+        res.end(renderConfigUiHtml(uiLanguage(), invocation));
         return;
       }
 
@@ -400,7 +402,7 @@ export function createConfigUiServer(
           }))
           .filter((a) => a.dispatchable);
         sendJson(res, 200, {
-          scenarios: localizeScenarios(uiLanguage()),
+          scenarios: localizeScenarios(uiLanguage(), invocation),
           agents: targets,
         });
         return;
@@ -567,7 +569,7 @@ export function createConfigUiServer(
         } else {
           scenario =
             typeof body.scenario === "string"
-              ? getScenario(body.scenario, uiLanguage())
+              ? getScenario(body.scenario, uiLanguage(), invocation)
               : undefined;
         }
         if (!scenario) {
@@ -746,6 +748,7 @@ export default defineCommand({
           code: "CONFIG_UI_REQUEST_FAILED",
           details: { error },
         }),
+      formatCommand(ctx.identity),
     );
 
     let port: number;

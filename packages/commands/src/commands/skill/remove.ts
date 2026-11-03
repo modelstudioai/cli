@@ -1,4 +1,5 @@
 import {
+  formatCommand,
   BailianError,
   ExitCode,
   defineCommand,
@@ -99,7 +100,7 @@ export default defineCommand({
         throw new BailianError(
           `${failed.length}/${results.length} skill(s) failed to remove`,
           ExitCode.GENERAL,
-          "Check the reason for failed skills in the output; use bl skill list to verify local install status",
+          `Check the reason for failed skills in the output; use ${formatCommand(ctx.identity, "skill list")} to verify local install status`,
         );
       }
       return;
@@ -154,7 +155,7 @@ export default defineCommand({
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to remove`,
         ExitCode.GENERAL,
-        "Check the reason for failed skills in the output; use bl skill list to verify local install status",
+        `Check the reason for failed skills in the output; use ${formatCommand(ctx.identity, "skill list")} to verify local install status`,
       );
     }
   },

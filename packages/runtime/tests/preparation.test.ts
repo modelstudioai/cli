@@ -161,7 +161,7 @@ test("human confirmation output includes the actual plan and notices", async () 
         error,
         createOutputReporter({
           settings: { output: "text", quiet: true, verbose: false },
-          binName: "fixture",
+          commandPrefix: "fixture",
         }),
       ),
     ).toThrow("exit-confirmation");

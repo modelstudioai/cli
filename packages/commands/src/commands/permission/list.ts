@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineCommand, modelsPermissionsPath, type LocalizedText } from "bailian-cli-core";
 import { renderBoxTable } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
@@ -180,12 +181,11 @@ export default defineCommand({
 
     let text: string | undefined;
     if (format === "text") {
-      const binName = ctx.identity.binName;
       const emptyHint = ctx.localize(
         scope === "authorized"
           ? {
-              "en-US": `Nothing granted yet in this workspace. Browse grantable models with \`${binName} permission list --scope authorizable\`, then grant with \`${binName} permission grant --model <model>\`.`,
-              "zh-CN": `此工作空间尚无授权记录。使用 \`${binName} permission list --scope authorizable\` 查看可授权模型，再通过 \`${binName} permission grant --model <model>\` 授权。`,
+              "en-US": `Nothing granted yet in this workspace. Browse grantable models with \`${formatCommand(ctx.identity, "permission list --scope authorizable")}\`, then grant with \`${formatCommand(ctx.identity, "permission grant --model <model>")}\`.`,
+              "zh-CN": `此工作空间尚无授权记录。使用 \`${formatCommand(ctx.identity, "permission list --scope authorizable")}\` 查看可授权模型，再通过 \`${formatCommand(ctx.identity, "permission grant --model <model>")}\` 授权。`,
             }
           : {
               "en-US":

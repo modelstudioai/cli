@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
@@ -66,6 +66,70 @@ const identity = {
   npmPackage: "bailian-cli",
   version: "1.14.3",
 };
+
+test.each([undefined, "aliyun bl"])(
+  "manual skill recovery uses its real entrypoint or host override %j",
+  async (commandPrefix) => {
+    childProcessMocks.spawnSync.mockReturnValueOnce({
+      status: 1,
+      signal: null,
+      stdout: Buffer.alloc(0),
+      stderr: Buffer.from('{"error":{"message":"fixture failure"}}\n'),
+    });
+    const context = withCommandOutput({
+      identity: {
+        ...identity,
+        binName: "kscli",
+        ...(commandPrefix ? { commandInvocation: { bin: "aliyun", path: ["bl"] } } : {}),
+      },
+      flags: { to: "1.15.0" },
+      settings: buildSettings({ flags: { output: "json" }, file: {}, env: {} }),
+    });
+    vi.spyOn(context.output, "result").mockImplementation(() => {});
+    const warnings = vi.spyOn(context.output, "warning").mockImplementation(() => {});
+    await updateCommand.run(context as never);
+    const skipped = warnings.mock.calls
+      .map(([warning]) => warning)
+      .find(
+        (warning) =>
+          typeof warning === "object" &&
+          "code" in warning &&
+          warning.code === "SKILL_UPDATE_SKIPPED",
+      );
+    expect(JSON.stringify(skipped)).toContain(
+      `Run manually: ${commandPrefix ?? "bl"} skill update`,
+    );
+    expectSkillUpdateNotInit();
+  },
+);
+
+test.each([
+  ["aliyun bl 1.15.0\n", "1.15.0"],
+  ["bl 1.15.0\n", "1.15.0"],
+  ["aliyun bl invalid\n", undefined],
+] as const)(
+  "npm version lookup caches only a valid version from %j",
+  async (versionOutput, expected) => {
+    process.env.BAILIAN_INSTALL_METHOD = "npm";
+    childProcessMocks.execSync.mockReturnValueOnce(versionOutput);
+    const context = withCommandOutput({
+      identity: { ...identity, commandInvocation: { bin: "aliyun", path: ["bl"] } },
+      flags: { to: "1.15.0" },
+      settings: buildSettings({ flags: { output: "json" }, file: {}, env: {} }),
+    });
+    const result = vi.spyOn(context.output, "result").mockImplementation(() => {});
+    await updateCommand.run(context as never);
+    expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl --version 2>/dev/null", {
+      encoding: "utf-8",
+    });
+    expect(result.mock.calls[0]?.[0]).toHaveProperty("status", "updated");
+    const payload = result.mock.calls[0]?.[0] as { version?: string } | undefined;
+    expect(payload?.version).toBe(expected);
+    const state = join(configDir, "update-state.json");
+    if (expected) expect(JSON.parse(readFileSync(state, "utf8")).latestVersion).toBe(expected);
+    else expect(existsSync(state)).toBe(false);
+  },
+);
 
 function expectSkillUpdateNotInit(): void {
   expect(childProcessMocks.spawnSync).toHaveBeenCalledWith("bl skill update --output json", {

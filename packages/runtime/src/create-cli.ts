@@ -22,6 +22,7 @@ import type {
   OutputDiagnostic,
 } from "bailian-cli-core";
 import {
+  formatCommand,
   DEFAULT_LANGUAGE,
   BailianError,
   ExitCode,
@@ -48,8 +49,10 @@ import { createTranslator } from "./i18n.ts";
 
 /** Per-product identity injected by each CLI entrypoint (bl / rag / …). */
 export interface CliOptions {
-  /** Binary name shown in help/usage/version output (e.g. "bl", "rag"). */
+  /** Product binary name and default invocation (e.g. "bl", "rag"). */
   binName: string;
+  /** Explicit executable invocation for structured command references. */
+  commandInvocation?: Identity["commandInvocation"];
   /** Product version for `--version` output, telemetry and update checks. */
   version: string;
   /** User-Agent / telemetry client name (e.g. "bailian-cli", "rag-cli")。必填,无默认。 */
@@ -163,7 +166,14 @@ function installProcessHandlers(
  */
 export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions): Cli {
   const { binName, version, npmPackage, clientName } = opts;
-  const identity: Identity = { binName, version, npmPackage, clientName };
+  const identity: Identity = {
+    binName,
+    version,
+    npmPackage,
+    clientName,
+    ...(opts.commandInvocation ? { commandInvocation: opts.commandInvocation } : {}),
+  };
+  const commandPrefix = formatCommand(identity);
   const commandPackPolicy = opts.commandPacks ?? { supported: {} };
   let loadedCommandPacksPromise: ReturnType<typeof loadCommandPacks> | undefined;
 
@@ -186,7 +196,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     translator: ReturnType<typeof createTranslator>,
   ): Promise<CommandRegistry> {
     const loaded = await getLoadedCommandPacks();
-    return new CommandRegistry(loaded.commands, binName, translator);
+    return new CommandRegistry(loaded.commands, commandPrefix, translator);
   }
 
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
@@ -249,7 +259,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         );
         return;
       case "version":
-        process.stdout.write(`${binName} ${version}\n`);
+        process.stdout.write(`${commandPrefix} ${version}\n`);
         return;
 
       case "help":
@@ -324,7 +334,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       let translator = createTranslator(DEFAULT_LANGUAGE);
       const localize = (text: LocalizedText) => translator.localize(text);
       const initialSettings = buildOutputSettings({ flags, env: process.env });
-      let reporter = createOutputReporter({ settings: initialSettings, localize, binName });
+      let reporter = createOutputReporter({
+        settings: initialSettings,
+        localize,
+        commandPrefix,
+      });
       const warnings: OutputDiagnostic[] = [];
       const cleanup = installProcessHandlers(() => reporter, localize);
       try {
@@ -333,12 +347,12 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         reporter = createOutputReporter({
           settings: buildOutputSettings(sources),
           localize,
-          binName,
+          commandPrefix,
         });
         setupProxyFromEnv();
         const registry = await getRegistry(translator);
         await dispatch(registry, argv, localize, sources, (settings) => {
-          reporter = createOutputReporter({ settings, localize, binName });
+          reporter = createOutputReporter({ settings, localize, commandPrefix });
           for (const warning of warnings.splice(0)) reporter.output.warning(warning);
           return reporter;
         });

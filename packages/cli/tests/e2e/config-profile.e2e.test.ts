@@ -90,6 +90,9 @@ describe("e2e: named config", () => {
       const devStatus = await runCli(["auth", "status", "--config", "dev", "--output", "json"], {
         BAILIAN_CONFIG_DIR: dir,
         DASHSCOPE_API_KEY: "",
+        BAILIAN_ACCESS_KEY_ID: "",
+        BAILIAN_ACCESS_KEY_SECRET: "",
+        BAILIAN_SECURITY_TOKEN: "",
         ALIBABA_CLOUD_ACCESS_KEY_ID: "",
         ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
       });
@@ -101,6 +104,9 @@ describe("e2e: named config", () => {
       const defaultStatus = await runCli(["auth", "status", "--output", "json"], {
         BAILIAN_CONFIG_DIR: dir,
         DASHSCOPE_API_KEY: "",
+        BAILIAN_ACCESS_KEY_ID: "",
+        BAILIAN_ACCESS_KEY_SECRET: "",
+        BAILIAN_SECURITY_TOKEN: "",
         ALIBABA_CLOUD_ACCESS_KEY_ID: "",
         ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
       });
@@ -135,6 +141,9 @@ describe("e2e: named config", () => {
           DASHSCOPE_API_KEY: "",
           DASHSCOPE_BASE_URL: "",
           DASHSCOPE_OUTPUT: "",
+          BAILIAN_ACCESS_KEY_ID: "",
+          BAILIAN_ACCESS_KEY_SECRET: "",
+          BAILIAN_SECURITY_TOKEN: "",
           ALIBABA_CLOUD_ACCESS_KEY_ID: "",
           ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
         };
@@ -268,6 +277,9 @@ describe("e2e: named config", () => {
       const result = await runCli(["auth", "status", "--output", "text"], {
         BAILIAN_CONFIG_DIR: dir,
         DASHSCOPE_API_KEY: "",
+        BAILIAN_ACCESS_KEY_ID: "",
+        BAILIAN_ACCESS_KEY_SECRET: "",
+        BAILIAN_SECURITY_TOKEN: "",
         ALIBABA_CLOUD_ACCESS_KEY_ID: "",
         ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
       });

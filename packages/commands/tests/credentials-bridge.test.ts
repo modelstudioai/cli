@@ -1,11 +1,13 @@
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { afterEach, beforeEach, expect, test } from "vite-plus/test";
+import { afterEach, beforeEach, expect, expectTypeOf, test } from "vite-plus/test";
+import { formatCommand } from "bailian-cli-core";
 import {
   type ApiKeyCredential,
   Client,
   ExitCode,
   type Identity,
+  type CommandFormatter,
   type Settings,
 } from "bailian-cli-core";
 import {
@@ -15,6 +17,8 @@ import {
   prepareProviderEnv,
   scrubCredentialEnv,
 } from "../src/commands/managed-agent/_engine/credentials.ts";
+
+const standaloneCommand = (args = "") => formatCommand("bl", args);
 
 /**
  * 凭证内存注入管道:injectProviderCredentials 把 authStage 解析进 Client 的凭证
@@ -172,11 +176,15 @@ test("inject:非 bailian provider 块不被触碰", () => {
 });
 
 test("assert:所有已声明 provider 的 key 非空时通过", () => {
+  expectTypeOf<Parameters<typeof assertProviderCredentials>[1]>().toEqualTypeOf<CommandFormatter>();
   expect(() =>
-    assertProviderCredentials({
-      bailian: { api_key: "x" },
-      claude: { api_key: "y" },
-    }),
+    assertProviderCredentials(
+      {
+        bailian: { api_key: "x" },
+        claude: { api_key: "y" },
+      },
+      standaloneCommand,
+    ),
   ).not.toThrow();
 });
 
@@ -187,6 +195,7 @@ test("assert:定向检查不会被无关 provider 的空 key 阻塞", () => {
         bailian: { api_key: "x" },
         claude: { api_key: "" },
       },
+      standaloneCommand,
       ["bailian"],
     ),
   ).not.toThrow();
@@ -195,7 +204,7 @@ test("assert:定向检查不会被无关 provider 的空 key 阻塞", () => {
 test("assert:claude key 为空抛 AUTH 且 hint 指向 ANTHROPIC_API_KEY", () => {
   let thrown: unknown;
   try {
-    assertProviderCredentials({ claude: { api_key: "" } });
+    assertProviderCredentials({ claude: { api_key: "" } }, standaloneCommand);
   } catch (error) {
     thrown = error;
   }
@@ -205,17 +214,24 @@ test("assert:claude key 为空抛 AUTH 且 hint 指向 ANTHROPIC_API_KEY", () =>
   expect(err.message).toContain("claude");
 });
 
-test("assert:bailian key 为空(dry-run/未登录)抛 AUTH 且 hint 指向 bl auth login", () => {
-  let thrown: unknown;
-  try {
-    assertProviderCredentials({ bailian: { api_key: "" } });
-  } catch (error) {
-    thrown = error;
-  }
-  const err = thrown as { exitCode?: number; hint?: string };
-  expect(err.exitCode).toBe(ExitCode.AUTH);
-  expect(err.hint).toContain("bl auth login");
-});
+test.each(["bl", "aliyun bl"])(
+  "empty Bailian API key uses the explicit formatter: %s",
+  (invocation) => {
+    let thrown: unknown;
+    try {
+      assertProviderCredentials({ bailian: { api_key: "" } }, (args) =>
+        formatCommand(invocation, args),
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    const err = thrown as { exitCode?: number; hint?: string };
+    expect(err.exitCode).toBe(ExitCode.AUTH);
+    expect(err.hint).toBe(
+      `Run \`${invocation} auth login --api-key <key>\`, pass --api-key, or set DASHSCOPE_API_KEY.`,
+    );
+  },
+);
 
 test("scrub:所有凭证 env 变量被删除", () => {
   process.env.DASHSCOPE_API_KEY = "x";

@@ -4,7 +4,7 @@
 // fetches carry the session token from the page URL. Visual language mirrors
 // the bailian landing design system (Inter / Geist Mono, gradient accents,
 // lift-on-hover cards).
-import type { Language } from "bailian-cli-core";
+import { commandRef, renderCommandText, type Language } from "bailian-cli-core";
 import { renderConfigUiShell } from "./ui-i18n.ts";
 
 const PAGE_HTML = `<!doctype html>
@@ -533,7 +533,7 @@ const PAGE_HTML = `<!doctype html>
     <section id="view-playground" class="view is-active">
       <div class="view-head">
         <h2 class="view-title"><span class="grad">Playground</span></h2>
-        <p class="view-sub">Pick a scenario to dispatch a preset task to a connected local coding agent, running in a new terminal. Tasks run in the directory where <code style="font-family:var(--mono)">bl config ui</code> was started.</p>
+        <p class="view-sub">Pick a scenario to dispatch a preset task to a connected local coding agent, running in a new terminal. Tasks run in the directory where <code style="font-family:var(--mono)">${commandRef("config ui")}</code> was started.</p>
       </div>
       <div class="toolbar"><input id="scenarioSearch" class="search" type="search" placeholder="Search scenarios…" autocomplete="off"><button id="customScnBtn" class="btn-dark" type="button">+ Custom scenario</button></div>
       <div id="scenarioFilters" class="filters"></div>
@@ -552,7 +552,7 @@ const PAGE_HTML = `<!doctype html>
     <section id="view-skills" class="view">
       <div class="view-head">
         <h2 class="view-title">Installed <span class="grad">Skills</span></h2>
-        <p class="view-sub">Agent skills discovered across every local agent module (~/.agents/skills plus each agent's skills folder). Installed via <code style="font-family:var(--mono)">bl skill add</code>.</p>
+        <p class="view-sub">Agent skills discovered across every local agent module (~/.agents/skills plus each agent's skills folder). Installed via <code style="font-family:var(--mono)">${commandRef("skill add")}</code>.</p>
       </div>
       <div class="toolbar"><input id="skillSearch" class="search" type="search" placeholder="Search skills…" autocomplete="off"><button id="addSkillBtn" class="btn-dark" type="button">+ Add skill</button></div>
       <div id="skillsBody"><div class="loading">Loading…</div></div>
@@ -1253,8 +1253,8 @@ const PAGE_HTML = `<!doctype html>
   }
   function modelCatNote(key) {
     if (key === 'default_video_model') {
-      return 'Applies to <code>bl video generate</code> only (text/image-to-video). '
-        + '<code>bl video ref</code> (multi-image) and <code>bl video edit</code> keep their own '
+      return 'Applies to <code>${commandRef("video generate")}</code> only (text/image-to-video). '
+        + '<code>${commandRef("video ref")}</code> (multi-image) and <code>${commandRef("video edit")}</code> keep their own '
         + 'fixed models — pass <code>--model</code> to override those per run.';
     }
     return '';
@@ -1522,7 +1522,7 @@ const PAGE_HTML = `<!doctype html>
   function renderSkills() {
     var body = document.getElementById('skillsBody');
     var pager = document.getElementById('skillsPager');
-    if (!SKILLS.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills installed.', 'Install with <code>bl skill init</code>'); return; }
+    if (!SKILLS.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills installed.', 'Install with <code>${commandRef("skill init")}</code>'); return; }
     var list = SKILLS.filter(function (s) { return skillMatches(s, SKILL_Q); });
     if (!list.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills match "' + SKILL_Q + '".', ''); return; }
     var info = pageSlice(list, SKILL_PAGE, getPageSize('skills')); SKILL_PAGE = info.page;
@@ -2349,7 +2349,7 @@ const PAGE_HTML = `<!doctype html>
     var pager = document.getElementById('assetsPager');
     if (!ASSETS.length) {
       pager.innerHTML = '';
-      renderEmpty(body, 'No generated assets yet.', 'Assets from <code>bl image</code>, <code>bl video</code>, <code>bl speech</code> and <code>bl omni</code> will appear here.');
+      renderEmpty(body, 'No generated assets yet.', 'Assets from <code>${commandRef("image")}</code>, <code>${commandRef("video")}</code>, <code>${commandRef("speech")}</code> and <code>${commandRef("omni")}</code> will appear here.');
       return;
     }
     var list = ASSET_FILTER === 'all' ? ASSETS : ASSETS.filter(function (a) { return a.kind === ASSET_FILTER; });
@@ -2697,6 +2697,6 @@ const PAGE_HTML = `<!doctype html>
 </html>
 `;
 
-export function renderConfigUiHtml(language: Language): string {
-  return renderConfigUiShell(PAGE_HTML, language);
+export function renderConfigUiHtml(language: Language, invocation = "bl"): string {
+  return renderCommandText(renderConfigUiShell(PAGE_HTML, language), invocation);
 }

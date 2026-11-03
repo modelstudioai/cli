@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { BailianError, ExitCode, unwrapResponse } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import {
@@ -121,7 +122,7 @@ export default defineTelemetryCommand({
       return;
     }
 
-    await ensureAlertReady(ctx.client, settings.workspaceId, ctx.identity.binName, settings);
+    await ensureAlertReady(ctx.client, settings.workspaceId, formatCommand(ctx.identity), settings);
 
     const reqDTO = {
       templateName: flags.name,

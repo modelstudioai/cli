@@ -286,6 +286,36 @@ const tokenTestIdentity = {
   clientName: "bailian-cli-test",
 };
 
+test("explicit environment credentials refresh in memory unless persistence is requested", async () => {
+  await withIsolatedHome(async () => {
+    await writeConfigFile({ access_token: "saved-token" }, "selected");
+    const originalFetch = httpTransport.fetch;
+    let requests = 0;
+    httpTransport.fetch = async (input) => {
+      requests++;
+      const url = new URL(input instanceof Request ? input.url : input);
+      return Response.json(
+        url.pathname === "/modelstudio/cli/generateAccessToken"
+          ? { cliAccessToken: "temporary-token" }
+          : { data: { success: true } },
+      );
+    };
+    try {
+      const token = await refreshAccessToken({
+        identity: tokenTestIdentity,
+        settings: buildSettings({ flags: {}, env: {}, file: {}, configName: "selected" }),
+        baseUrl: "https://dashscope.aliyuncs.com",
+        credential: { source: "env", accessKeyId: "env-ak", accessKeySecret: "env-sk" },
+      });
+      expect(token).toBe("temporary-token");
+      expect(requests).toBe(2);
+      expect(readConfigFile("selected")).toEqual({ access_token: "saved-token" });
+    } finally {
+      httpTransport.fetch = originalFetch;
+    }
+  });
+});
+
 test.each([
   { baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com", expected: "ap-southeast-1" },
   { baseUrl: "https://workspace.ap-southeast-1.maas.aliyuncs.com", expected: "ap-southeast-1" },

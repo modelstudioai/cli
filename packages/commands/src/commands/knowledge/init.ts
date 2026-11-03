@@ -1,9 +1,11 @@
 import { resolve } from "node:path";
 import {
+  buildCommandInvocation,
   BailianError,
   ExitCode,
   defineCommand,
   type CommandContext,
+  type ExecutableCommand,
   type FlagsDef,
 } from "bailian-cli-core";
 import { knowledgeCreationRisk, localizedKnowledgeBillingNotice } from "./billing.ts";
@@ -46,16 +48,11 @@ const INIT_FLAGS = {
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
-interface CommandAction {
-  path: string[];
-  args: string[];
-}
-
 function cleanupAction(
-  context: Pick<CommandContext, "commandPath">,
+  context: Pick<CommandContext, "identity" | "commandPath">,
   resource: InitResource,
   workspaceId: string,
-): CommandAction[] {
+): ExecutableCommand[] {
   if (!resource.created) return [];
   const command =
     resource.kind === "knowledge-base"
@@ -70,11 +67,20 @@ function cleanupAction(
         ? "--agent-id"
         : "--file-id";
   const path = context.commandPath?.(command);
-  return path ? [{ path, args: [flag, resource.id, "--workspace-id", workspaceId] }] : [];
+  return path
+    ? [
+        buildCommandInvocation(context.identity, path, [
+          flag,
+          resource.id,
+          "--workspace-id",
+          workspaceId,
+        ]),
+      ]
+    : [];
 }
 
-function renderAction(binName: string, action: CommandAction): string {
-  return [binName, ...action.path, ...action.args]
+function renderAction(command: ExecutableCommand): string {
+  return [command.bin, ...command.path, ...command.args]
     .map((word) =>
       /^[a-zA-Z0-9_./:@=-]+$/.test(word) ? word : `'${word.replaceAll("'", "'\\''")}'`,
     )
@@ -172,13 +178,7 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
               });
         context.output.warning({
           code: "KNOWLEDGE_INIT_RESOURCE",
-          message:
-            format === "text"
-              ? [
-                  message,
-                  ...cleanup.map((action) => renderAction(context.identity.binName, action)),
-                ].join("\n")
-              : message,
+          message: format === "text" ? [message, ...cleanup.map(renderAction)].join("\n") : message,
           ...(format === "json" ? { details: { resource, cleanup } } : {}),
         });
       },
@@ -192,19 +192,16 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
       .flatMap((resource) => cleanupAction(context, resource, workspaceId));
     const searchPath = context.commandPath?.(search);
     const nextSearch = searchPath
-      ? {
-          path: searchPath,
-          args: [
-            "--agent-id",
-            result.agentId,
-            "--agent-version",
-            "beta",
-            "--workspace-id",
-            workspaceId,
-            "--query",
-            context.localize({ "en-US": "What is RAG?", "zh-CN": "什么是 RAG？" }),
-          ],
-        }
+      ? buildCommandInvocation(context.identity, searchPath, [
+          "--agent-id",
+          result.agentId,
+          "--agent-version",
+          "beta",
+          "--workspace-id",
+          workspaceId,
+          "--query",
+          context.localize({ "en-US": "What is RAG?", "zh-CN": "什么是 RAG？" }),
+        ])
       : undefined;
     const notices = [localizedKnowledgeBillingNotice(context)];
     let text: string | undefined;
@@ -239,7 +236,7 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
           }),
         );
       lines.push(context.localize({ "en-US": `Content: ${excerpt}`, "zh-CN": `内容：${excerpt}` }));
-      if (nextSearch) lines.push(renderAction(context.identity.binName, nextSearch));
+      if (nextSearch) lines.push(renderAction(nextSearch));
       lines.push(notices[0]!.message);
       if (cleanup.length)
         lines.push(
@@ -249,7 +246,7 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
             "zh-CN": "本次新建资源的清理命令（删除需另行确认）：",
           }),
         );
-      for (const action of cleanup) lines.push(renderAction(context.identity.binName, action));
+      for (const action of cleanup) lines.push(renderAction(action));
       text = lines.join("\n");
     }
     context.output.result(

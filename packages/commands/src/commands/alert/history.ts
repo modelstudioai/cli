@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineTelemetryCommand, telemetryGatewayPreview } from "../shared/telemetry.ts";
 import { ansi, renderBoxTable } from "bailian-cli-runtime";
 import { formatDateTime } from "../shared/format.ts";
@@ -130,7 +131,7 @@ export default defineTelemetryCommand({
       return;
     }
 
-    await ensureAlertReady(ctx.client, settings.workspaceId, ctx.identity.binName, settings);
+    await ensureAlertReady(ctx.client, settings.workspaceId, formatCommand(ctx.identity), settings);
 
     const raw = await ctx.client.console(LIST_HISTORIES_API, { reqDTO });
     const page = extractAlertPage<AlertHistoryItem>(raw);

@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineTelemetryCommand } from "../shared/telemetry.ts";
 import { disableLogDelivery } from "./shared.ts";
 
@@ -22,7 +23,7 @@ export default defineTelemetryCommand({
         client: ctx.client,
         output: ctx.output,
         settings: ctx.settings,
-        binName: ctx.identity.binName,
+        commandPrefix: formatCommand(ctx.identity),
       },
       "audit",
       true,

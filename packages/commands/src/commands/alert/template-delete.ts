@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { unwrapResponse } from "bailian-cli-core";
 import { parseCommaList } from "../shared/params.ts";
 import { ensureAlertReady } from "./shared.ts";
@@ -52,7 +53,7 @@ export default defineTelemetryCommand({
       return;
     }
 
-    await ensureAlertReady(ctx.client, settings.workspaceId, ctx.identity.binName, settings);
+    await ensureAlertReady(ctx.client, settings.workspaceId, formatCommand(ctx.identity), settings);
 
     const raw = await ctx.client.console(DELETE_TEMPLATES_API, { reqDTO });
     const resp = unwrapResponse(raw as Record<string, unknown>);

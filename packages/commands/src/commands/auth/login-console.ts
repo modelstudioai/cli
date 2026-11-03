@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import http from "node:http";
 
 import {
+  formatCommand,
   BailianError,
   ExitCode,
   validateConsoleAccessToken,
@@ -642,11 +643,10 @@ export async function runConsoleLogin(
   }
 
   if (opts?.needApiKey && savedSessionWithoutApiKey) {
-    const binName = deps.identity.binName;
     deps.output.warning({
       message: {
-        "en-US": `Saved the console session only. Model commands still need an API key: ${binName} auth login --console, or ${binName} auth login --api-key <key>`,
-        "zh-CN": `仅保存了控制台会话。模型命令仍需要 API Key：${binName} auth login --console，或 ${binName} auth login --api-key <key>`,
+        "en-US": `Saved the console session only. Model commands still need an API key: ${formatCommand(deps.identity, "auth login --console")}, or ${formatCommand(deps.identity, "auth login --api-key <key>")}`,
+        "zh-CN": `仅保存了控制台会话。模型命令仍需要 API Key：${formatCommand(deps.identity, "auth login --console")}，或 ${formatCommand(deps.identity, "auth login --api-key <key>")}`,
       },
       code: "MODEL_API_KEY_MISSING",
     });

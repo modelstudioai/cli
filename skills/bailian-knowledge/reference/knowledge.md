@@ -2,7 +2,7 @@
 
 > Generated from the same schema as `--introspect`. Do not edit by hand.
 > Schema version: 1.
-> Query the installed CLI version with `bl --version`.
+> Query the installed CLI version with `bl knowledge --version`.
 
 Cross-flag constraints are validated at execution and are not exported by this schema.
 

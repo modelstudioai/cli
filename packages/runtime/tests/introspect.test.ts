@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import { defineCommand, type Identity } from "bailian-cli-core";
+import { defineCommand, sourceConfig, type Identity } from "bailian-cli-core";
 import * as runtime from "../src/index.ts";
 
 const identity: Identity = {
@@ -29,6 +29,43 @@ const command = defineCommand({
 });
 const other = defineCommand({ auth: "none", description: "Other", async run() {} });
 const registry = new runtime.CommandRegistry({ "doc sync": command, "kb list": other }, "kscli");
+
+test.each([[], ["doc"], ["doc", "sync"]])(
+  "exported invocation qualifies scope %j without changing product identity",
+  (...path) => {
+    const hostedIdentity = {
+      ...identity,
+      binName: "bl",
+      commandInvocation: { bin: "aliyun", path: ["bl"] },
+    };
+    const hostedRegistry = new runtime.CommandRegistry({ "doc sync": command }, "aliyun bl");
+    const schema = runtime.buildCommandSchema(hostedRegistry, hostedIdentity, path);
+    expect(schema.bin).toBe("aliyun");
+    expect(schema.scope).toEqual(["bl", ...path]);
+    expect(schema.commands[0]?.path).toEqual(["bl", "doc", "sync"]);
+    expect(schema.commands[0]?.usage).toBe("aliyun bl doc sync --index-id <id>");
+    expect(schema.commands[0]?.examples[0]).toBe("aliyun bl doc sync --index-id example");
+    expect(hostedRegistry.entries()[0]?.path).toEqual(["doc", "sync"]);
+    expect(JSON.parse(sourceConfig(hostedIdentity)).tags.t2).toBe("bl");
+    expect(hostedIdentity.clientName).toBe("fixture");
+  },
+);
+
+test("generic host paths work with an empty registry and do not mutate their inputs", () => {
+  const hostPath = ["plugins", "example"];
+  const scope = ["missing"];
+  const schema = runtime.buildCommandSchema(
+    new runtime.CommandRegistry({}, "host"),
+    {
+      ...identity,
+      commandInvocation: { bin: "host", path: hostPath },
+    },
+    scope,
+  );
+  expect(schema).toMatchObject({ bin: "host", scope: [...hostPath, ...scope], commands: [] });
+  expect(hostPath).toEqual(["plugins", "example"]);
+  expect(scope).toEqual(["missing"]);
+});
 
 describe("introspection routing", () => {
   test.each([[], ["doc"], ["doc", "sync"]])(

@@ -1,3 +1,4 @@
+import { formatCommand } from "bailian-cli-core";
 import { defineCommand, type FlagsDef } from "bailian-cli-core";
 import { sendSessionMessagePolling, sendSessionMessageStreaming } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -68,30 +69,37 @@ export default defineCommand({
       return;
     }
 
-    await withAgentErrors(() =>
-      withStdoutProtected(ctx, async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
-        if (flags.noStream) {
-          const result = await sendSessionMessagePolling(runtime, flags.sessionId, flags.message, {
-            provider: "bailian",
-          });
-          renderCollectedEvents(ctx, result, {
-            session_id: flags.sessionId,
-          });
-        } else {
-          const events = await sendSessionMessageStreaming(
-            runtime,
-            flags.sessionId,
-            flags.message,
-            {
-              provider: "bailian",
-            },
-          );
-          await streamAndRenderEvents(ctx, events, {
-            session_id: flags.sessionId,
-          });
-        }
-      }),
+    await withAgentErrors(
+      () =>
+        withStdoutProtected(ctx, async () => {
+          const runtime = await buildAgentRuntime(ctx, file);
+          if (flags.noStream) {
+            const result = await sendSessionMessagePolling(
+              runtime,
+              flags.sessionId,
+              flags.message,
+              {
+                provider: "bailian",
+              },
+            );
+            renderCollectedEvents(ctx, result, {
+              session_id: flags.sessionId,
+            });
+          } else {
+            const events = await sendSessionMessageStreaming(
+              runtime,
+              flags.sessionId,
+              flags.message,
+              {
+                provider: "bailian",
+              },
+            );
+            await streamAndRenderEvents(ctx, events, {
+              session_id: flags.sessionId,
+            });
+          }
+        }),
+      `The session may still be running — check \`${formatCommand(ctx.identity, "managed-agent session get --session-id <id>")}\` or \`session events\`.`,
     );
   },
 });

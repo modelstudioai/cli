@@ -22,7 +22,7 @@ export interface OutputReporterOptions {
   stdout?: OutputWriter;
   stderr?: OutputWriter;
   localize?: (text: LocalizedText) => string;
-  binName?: string;
+  commandPrefix?: string;
 }
 
 export interface OutputReporter {
@@ -95,8 +95,8 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
     },
     error(error) {
       if (errorCode !== undefined) return errorCode;
-      const failure = normalizeError(error, options.binName ?? "cli", localize);
-      const hint = errorHint(failure, options.binName ?? "cli", localize);
+      const failure = normalizeError(error, options.commandPrefix ?? "cli", localize);
+      const hint = errorHint(failure, options.commandPrefix ?? "cli", localize);
       if (verbose && error instanceof Error && !(error instanceof BailianError)) {
         diagnostic("debug", {
           code: "ERROR_STACK",
@@ -137,9 +137,10 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
           const repeatsNormalizedMessage =
             failure !== error && cause === error && cause.message === failure.message && !code;
           if (!repeatsNormalizedMessage) {
+            const message = cause.message;
             field(
               { "en-US": "Caused by", "zh-CN": "原因" },
-              code ? `${code}: ${cause.message}` : cause.message,
+              code ? `${code}: ${message}` : message,
             );
           }
           cause = cause.cause;

@@ -45,7 +45,8 @@ export interface PlanContext {
   /** True in --dry-run: strategies must skip side-effecting catalog lookups. */
   dryRun: boolean;
   /** CLI bin name, for usage hints in error messages. */
-  binName: string;
+  /** Optional recovery text supplied by the calling product. */
+  modelUnavailableHint?: string;
   flags: CreatePlanFlags;
   /** Underlying model identifier (`--model`). */
   model: string;
@@ -164,8 +165,7 @@ const muStrategy: PlanStrategy = {
       const noTemplateError = () =>
         new BailianError(
           `No mu-plan template found for model "${ctx.model}". ` +
-            `Run \`${ctx.binName} deploy models --source base\` to inspect available models, ` +
-            `or pass --deploy-spec explicitly.`,
+            (ctx.modelUnavailableHint ?? "Pass --deploy-spec explicitly."),
           ExitCode.USAGE,
         );
       try {
