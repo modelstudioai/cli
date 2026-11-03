@@ -29,6 +29,10 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - `openapi` — 阿里云 OpenAPI 签名域,用 AccessKey ID/Secret 调用 Token Plan 等 OpenAPI
 - `none` — 本地命令、登录/配置类命令、无需 credential 的命令
 
+### 可选 console 副凭证
+
+`auth: "apiKey"` 的命令可用 `optionalConsole: true` 声明 best-effort console 副凭证(例:`cmodel import` 提交前用 console 目录预检基础模型)。runtime 在注入 apiCred 后尽力 `resolveConsole`;解析失败静默跳过,**不得**让 apiKey 主流程失败。此类命令的 help 会额外展示 console 域 flag(`--console-region` / `--console-site` / `--console-switch-agent`),命令捕获 `client.console` 的 AUTH 错误后降级并 warning。纯 console 请求仍必须声明 `auth: "console"`。
+
 ### 多凭证并存
 
 `~/.bailian/config.json` 可同时保存 `api_key`、`access_token` 与 `access_key_*`。登录任一种方式不得删除另一种:
@@ -130,6 +134,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
   - `globalFlags` 与 `ownFlags` 分流正确
 - [ ] `packages/runtime/src/middleware.ts:authStage`:
   - 根据 `command.auth` 解析 credential 并注入 `ctx.client`
+  - `optionalConsole` 只做 best-effort 副注入;console 解析失败不得影响 apiKey 主流程
   - `settings.dryRun` 下是否允许缺 credential 的策略明确
 - [ ] `packages/runtime/src/error-handler.ts`:
   - AUTH hint 增强使用 `binName`,不要硬编码 `bl`

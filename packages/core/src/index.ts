@@ -16,6 +16,7 @@ export * from "./decision/index.ts";
 export * from "./parsex/index.ts";
 export * from "./finetune/index.ts";
 export * from "./deploy/index.ts";
+export * from "./model-import/index.ts";
 export * from "./speech/index.ts";
 export * from "./types/index.ts";
 export * from "./utils/index.ts";

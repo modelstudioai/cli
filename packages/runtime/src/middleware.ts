@@ -216,6 +216,23 @@ export const authStage: Middleware = async (ctx, next) => {
       ...resolveModelBaseUrlState(apiSources),
       apiCred: cred,
     });
+    // Optional console precheck surface: inject the console credential when it
+    // resolves, but never fail an apiKey command because the console session is
+    // missing or expired. Commands must treat `client.console` calls as
+    // best-effort and catch AUTH errors themselves.
+    if (command.optionalConsole) {
+      try {
+        const consoleCred = resolveConsole(sources);
+        ctx.client = new Client({
+          ...base,
+          ...resolveModelBaseUrlState(apiSources),
+          apiCred: cred,
+          consoleCred,
+        });
+      } catch {
+        // Best-effort only — the command's apiKey flow continues.
+      }
+    }
     if (cred && !command.prepare) maybeShowStatusBar(settings, cred.token, cred, ctx.output);
   } else if (command.auth === "console") {
     let cred: ConsoleCredential | undefined;

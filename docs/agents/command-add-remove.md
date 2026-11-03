@@ -67,6 +67,7 @@ packages/commands/src/index.ts
 - [ ] 新建/删除/移动对应的 `packages/commands/src/commands/<...>.ts`
 - [ ] `defineCommand` 字段使用当前 schema:
   - `auth: "apiKey" | "console" | "openapi" | "none"`
+  - `optionalConsole: true` 仅用于 `auth: "apiKey"` 但需要 best-effort console 预检的命令:runtime 会尽力注入 console 凭证并展示 console 域 flag;console 会话缺失/过期不得阻断主流程,命令必须自行捕获 `client.console` 的 AUTH 错误
   - `flags`(camelCase key,由 runtime 渲染为 kebab-case)
   - `usageArgs`(不含 bin/path 前缀)
   - `exampleArgs`(不含 bin/path 前缀)

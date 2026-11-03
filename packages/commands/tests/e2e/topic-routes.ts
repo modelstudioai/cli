@@ -182,6 +182,15 @@ export const MODEL_ROUTES: E2eRouteExports = {
   "model code": "modelCode",
 };
 
+export const CMODEL_ROUTES: E2eRouteExports = {
+  "cmodel import": "cmodelImport",
+  "cmodel get": "cmodelGet",
+  "cmodel list": "cmodelList",
+  "cmodel watch": "cmodelWatch",
+  "cmodel delete": "cmodelDelete",
+  "cmodel base-models": "cmodelBaseModels",
+};
+
 export const QUOTA_ROUTES: E2eRouteExports = {
   "quota list": "quotaList",
   "quota update": "quotaUpdate",

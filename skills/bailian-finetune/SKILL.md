@@ -46,24 +46,25 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-f
 
 ## When to use which command
 
-| Intent                                 | Command                                                                                          |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Validate / upload training data        | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                            |
-| Dataset list / detail / delete         | `bl dataset list` / `get` / `delete`                                                             |
-| Create a fine-tuning job               | `bl finetune text\|audio\|image create`                                                          |
-| Job list / detail / follow             | `bl finetune list` / `get` / `watch` / `logs`                                                    |
-| Artifacts and export                   | `bl finetune checkpoints` / `export`                                                             |
-| Quantize / compress a full model       | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                  |
-| Cancel / delete a compression job      | `bl finetune compress cancel` / `delete`                                                         |
-| Cancel / delete a fine-tuning job      | `bl finetune cancel` / `delete`                                                                  |
-| Trainable capability lookup            | `bl finetune capability`                                                                         |
-| Deploy / lifecycle                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models` |
-| Query throughput reservations          | `bl deploy list --plan ptu` / `bl deploy get`                                                    |
-| Query capacity instances               | `bl deploy capacity list` / `get`                                                                |
-| Query / wait for a capacity operation  | `bl deploy operation get` / `wait`                                                               |
-| Buy / scale / renew / release capacity | `bl deploy capacity create` / `scale` / `renew` / `delete`                                       |
-| Unsubscribe a prepaid instance         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                        |
-| Configure ModelCode overflow strategy  | `bl deploy overflow`                                                                             |
+| Intent                                 | Command                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Validate / upload training data        | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                                  |
+| Dataset list / detail / delete         | `bl dataset list` / `get` / `delete`                                                                   |
+| Create a fine-tuning job               | `bl finetune text\|audio\|image create`                                                                |
+| Job list / detail / follow             | `bl finetune list` / `get` / `watch` / `logs`                                                          |
+| Artifacts and export                   | `bl finetune checkpoints` / `export`                                                                   |
+| Quantize / compress a full model       | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                        |
+| Cancel / delete a compression job      | `bl finetune compress cancel` / `delete`                                                               |
+| Cancel / delete a fine-tuning job      | `bl finetune cancel` / `delete`                                                                        |
+| Import an external OSS LoRA model      | Hand-off: `bl cmodel import *` — hub-owned commands; see `bailian-cli` reference or `bl cmodel --help` |
+| Trainable capability lookup            | `bl finetune capability`                                                                               |
+| Deploy / lifecycle                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models`       |
+| Query throughput reservations          | `bl deploy list --plan ptu` / `bl deploy get`                                                          |
+| Query capacity instances               | `bl deploy capacity list` / `get`                                                                      |
+| Query / wait for a capacity operation  | `bl deploy operation get` / `wait`                                                                     |
+| Buy / scale / renew / release capacity | `bl deploy capacity create` / `scale` / `renew` / `delete`                                             |
+| Unsubscribe a prepaid instance         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                              |
+| Configure ModelCode overflow strategy  | `bl deploy overflow`                                                                                   |
 
 The `capacity list` / `get`, `operation get` / `wait` and `deploy list` / `get` queries are read-only. Capacity values are kTPM; effective, configured and target capacities are distinct. `deploy list --status` filters only the fetched page locally, with the server total left unfiltered. `operation get` reports status as data; `operation wait` exits non-zero on failure or timeout and refreshes capacity after success. Use IDs returned by the API; waiting never retries a write.
 

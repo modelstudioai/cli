@@ -314,6 +314,28 @@ export function finetuneCheckpointsPath(jobId: string): string {
   return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/checkpoints`;
 }
 
+// ---- Custom Model Import (public DashScope host only) ----
+
+/**
+ * Absolute base endpoint for OSS custom-model import jobs.
+ *
+ * This API family is deployed only on the public DashScope host — workspace
+ * hosts (https://<workspace>.cn-beijing.maas.aliyuncs.com) return HTTP 404 for
+ * it, even though they serve other /api/v1 routes. Workspace API keys are
+ * accepted by the public host, so callers keep using the resolved credential.
+ */
+const CUSTOM_MODEL_IMPORT_ENDPOINT = "https://dashscope.aliyuncs.com/api/v1/custom_models/import";
+
+/** Create (POST) and list (GET) endpoint. */
+export function customModelImportEndpoint(): string {
+  return CUSTOM_MODEL_IMPORT_ENDPOINT;
+}
+
+/** Single-import-job get (GET) / delete (DELETE) endpoint. */
+export function customModelImportJobEndpoint(jobId: string): string {
+  return `${CUSTOM_MODEL_IMPORT_ENDPOINT}/${encodeURIComponent(jobId)}`;
+}
+
 /** GET /api/v1/fine-tunes/{job_id}/export/{checkpoint} */
 export function finetuneExportPath(jobId: string, checkpoint: string): string {
   return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/export/${encodeURIComponent(checkpoint)}`;

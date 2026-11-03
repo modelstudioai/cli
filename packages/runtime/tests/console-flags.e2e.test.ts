@@ -50,5 +50,15 @@ describe.each([
       expect(stdout).toBe("");
       expect(stderr).toMatch(new RegExp(`${unknownFlag}.*--api-key`));
     });
+
+    test("optionalConsole 命令接受 --console-region 且 dry-run 正常退出", async () => {
+      const { stdout, stderr, exitCode } = await runRuntimeHarness(
+        ["cmodel", "import", "--console-region", "cn-beijing", "--dry-run"],
+        language,
+      );
+      expect(exitCode, stderr).toBe(0);
+      expect(stderr).toBe("");
+      expect(stdout).toBe("");
+    });
   },
 );
