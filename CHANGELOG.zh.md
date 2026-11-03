@@ -6,6 +6,34 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.7.3] - 2026-11-03
+
+### 新增
+
+- **自定义模型导入**：新增 `bl cmodel base-models/import/get/list/watch/delete`，支持将百炼基础模型导入为自定义模型。
+  - `cmodel base-models` 列出可导入的基础模型（控制台接口动态返回；导入当前仅北京地域开放）。
+  - `cmodel import` 提交导入任务，支持权重类型、展示名称与可选 bucket/object-key，提交前按控制台可导入清单校验基础模型。
+  - `cmodel watch --job-id <id>` 跟踪导入任务进度，支持 `--follow`、轮询间隔与超时配置。
+  - `cmodel get/list/delete` 查询与删除已导入的自定义模型。
+
+### 变更
+
+- **统一输出契约**：全部命令统一走本次调用的输出契约（result / progress / info / warning / debug）。进度与过程提示写 stderr（quiet 下隐藏），警告与错误始终保留；JSON 模式下警告/错误以 stderr 单行 JSON 输出。quiet 不再裁剪结果字段，并新增 `DASHSCOPE_QUIET=1` 环境变量。
+- **Advisor 关闭思考模式**：`bl advisor recommend` 的 LLM 调用始终关闭思考模式（意图分析此前为唯一开启思考的阶段）；`--no-thinking` 仍被接受但已无效果，为兼容旧脚本保留。
+
+### 修复
+
+- **根帮助配置复用**：渲染根帮助时复用已加载的配置，保留 flag 解析、Profile 选择与凭证优先级。
+- **重复错误信息**：文本错误不再重复输出归一化 cause，同时保留显式 cause、错误码、JSON 详情与 verbose 堆栈。
+- **SDK 警告与空 ASR 结果**：managed-agent 工作流与 `bl speech recognize` 保留 SDK 警告与空的 ASR 任务结果。
+- **微调费用诊断**：`bl finetune fee` 在 verbose 模式下输出费用查询的 gateway 诊断信息。
+
+### 内部
+
+- Advisor LLM 调用接入请求埋点。
+- 全部命令测试与指引对齐输出契约；优化 CLI 测试套件并对 CI 测试任务分片。
+- 澄清 CLI 与 Knowledge Studio README 中 quiet 行为说明。
+
 ## [2.7.2] - 2026-10-30
 
 ### 新增
