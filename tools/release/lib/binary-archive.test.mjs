@@ -21,9 +21,11 @@ describe("binary archive matrix", () => {
       "bl-1.2.3-darwin-x64.tar.gz",
       "bl-1.2.3-linux-x64.zip",
       "bl-1.2.3-linux-x64.tar.gz",
+      "bl-1.2.3-linux-arm64.zip",
+      "bl-1.2.3-linux-arm64.tar.gz",
       "bl-1.2.3-windows-x64.zip",
     ]);
-    expect(BINARY_TARGETS.filter((target) => unixTarTarget(target))).toHaveLength(3);
+    expect(BINARY_TARGETS.filter((target) => unixTarTarget(target))).toHaveLength(4);
     expect(binaryTarAssetName("1.2.3", { os: "linux", arch: "x64" })).toBe(
       "bl-1.2.3-linux-x64.tar.gz",
     );
