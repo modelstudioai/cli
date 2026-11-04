@@ -3,7 +3,11 @@ import type { Identity, Settings } from "../src/config/schema.ts";
 import { BailianError } from "../src/errors/base.ts";
 import { ExitCode } from "../src/errors/codes.ts";
 import type { CallerAttribution } from "../src/telemetry/caller.ts";
-import { buildRemoteAemOptions, type TrackingEvent } from "../src/telemetry/event.ts";
+import {
+  buildRemoteAemOptions,
+  createTrackingEvent,
+  type TrackingEvent,
+} from "../src/telemetry/event.ts";
 
 const sinkMocks = vi.hoisted(() => ({
   localSink: vi.fn<(event: TrackingEvent) => Promise<void>>(async () => {}),
@@ -28,6 +32,118 @@ const agentCaller: CallerAttribution = {
   skillName: "bailian-cli",
   skillVersion: "2.5.0",
 };
+
+test("derives event version and prefix from identity", () => {
+  const event = createTrackingEvent({
+    command: "config show",
+    durationMs: 1,
+    success: true,
+    identity: { ...identity, version: "identity-version" },
+    caller: unknownCaller,
+  });
+  expect(event).toMatchObject({
+    command: "config show",
+    cliVersion: "identity-version",
+    commandPrefix: "bl",
+  });
+  expect(buildRemoteAemOptions(event)).toMatchObject({
+    ext: { cliVersion: "identity-version", commandPrefix: "bl" },
+  });
+});
+
+const entryIdentities = [
+  {
+    label: "bl",
+    identity: { ...identity, clientName: "bailian-cli" },
+    expected: { commandPrefix: "bl" },
+  },
+  {
+    label: "kscli",
+    identity: {
+      ...identity,
+      binName: "kscli",
+      clientName: "knowledge-studio-cli",
+      npmPackage: "knowledge-studio-cli",
+    },
+    expected: { commandPrefix: "kscli" },
+  },
+  {
+    label: "aliyun bl",
+    identity: {
+      ...identity,
+      commandInvocation: { bin: "aliyun", path: ["bl"] },
+      clientName: "bailian-cli",
+    },
+    expected: { commandPrefix: "aliyun bl" },
+  },
+];
+
+test.each(
+  entryIdentities.flatMap((entry) => [true, false].map((success) => ({ ...entry, success }))),
+)("preserves $label entry in local and remote events (success=$success)", async (entry) => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  const error = new BailianError("Example failure", ExitCode.GENERAL);
+  const execution = trackCommandExecution(
+    {
+      identity: entry.identity,
+      settings: { telemetry: true } as Settings,
+      authMethod: "none",
+      caller: agentCaller,
+    },
+    ["config", "show"],
+    { commandPrefix: "untrusted flag", clientName: "untrusted flag" },
+    async () => {
+      if (!entry.success) throw error;
+    },
+  );
+  if (entry.success) await execution;
+  else await expect(execution).rejects.toBe(error);
+
+  expect(sinkMocks.localSink).toHaveBeenCalledOnce();
+  expect(sinkMocks.remoteSink).toHaveBeenCalledOnce();
+  const localEvent = sinkMocks.localSink.mock.calls[0]![0];
+  const remoteEvent = sinkMocks.remoteSink.mock.calls[0]![0];
+  expect(localEvent).toMatchObject({
+    ...entry.expected,
+    command: "config show",
+    cliVersion: "0.0.0-test",
+    success: entry.success,
+    callerType: "agent",
+    callerName: "cursor",
+  });
+  expect(localEvent.params).toBeUndefined();
+  expect(remoteEvent).toEqual(localEvent);
+  expect(buildRemoteAemOptions(remoteEvent)).toMatchObject({
+    ext: entry.expected,
+    c2: entry.success ? "success" : "failure",
+  });
+  for (const field of ["binName", "clientName"]) {
+    expect(localEvent).not.toHaveProperty(field);
+    expect(buildRemoteAemOptions(remoteEvent).ext).not.toHaveProperty(field);
+  }
+});
+
+test("ignores obsolete display overrides when deriving the entry", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  const legacyIdentity = { ...identity, commandPrefix: "untrusted legacy override" };
+  await trackCommandExecution(
+    {
+      identity: legacyIdentity,
+      settings: { telemetry: true } as Settings,
+      caller: unknownCaller,
+    },
+    ["config", "show"],
+    {},
+    async () => {},
+  );
+  const event = sinkMocks.localSink.mock.calls[0]![0];
+  expect(event).toMatchObject({ commandPrefix: "bl" });
+  expect(buildRemoteAemOptions(event)).toMatchObject({
+    ext: { commandPrefix: "bl" },
+  });
+});
 
 test("records BailianError exitCode in local events and AEM ext", async () => {
   sinkMocks.localSink.mockClear();

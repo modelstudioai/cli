@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.8.2] - 2026-11-04
+
+### 内部维护
+
+- 完善 CLI 使用统计。
+
 ## [2.8.1] - 2026-11-04
 
 ### 新增

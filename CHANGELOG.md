@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.8.2] - 2026-11-04
+
+### Internal
+
+- Improve CLI usage statistics.
+
 ## [2.8.1] - 2026-11-04
 
 ### Added

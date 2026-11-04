@@ -133,7 +133,7 @@ export async function trackCommandExecution(
       durationMs,
       success,
       error: success ? undefined : { message: errorMessage, exitCode, httpStatus, requestId },
-      cliVersion: deps.identity.version,
+      identity: deps.identity,
       authMethod: deps.authMethod,
       params: extractParams(flags),
       caller: deps.caller,
