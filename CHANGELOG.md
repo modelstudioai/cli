@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.8.1] - 2026-11-04
+
+### Added
+
+- **Linux ARM64 binaries**: Add Linux ARM64 packages (glibc), supporting standalone installation and binary updates.
+
+### Fixed
+
+- **Image results**: Preserve all images returned by concurrent asynchronous image generation and editing tasks, including tasks with different response formats.
+- **Streaming chat**: Detect prematurely closed Chat Completions streams, preserve complete `tool_calls`, and return `finish_reason` in structured output.
+- **CLI shutdown**: Prevent pending telemetry requests from delaying exit and preserve queued events when telemetry initialization fails.
+
 ## [2.8.0] - 2026-11-03
 
 ### Added
