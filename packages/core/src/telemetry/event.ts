@@ -1,3 +1,5 @@
+import type { Identity } from "../config/schema.ts";
+import { formatCommand } from "../output/command.ts";
 import type { AuthRequirement } from "../types/command.ts";
 import type { CallerAttribution } from "./caller.ts";
 
@@ -11,6 +13,7 @@ export interface TrackingEvent {
   httpStatus?: number;
   requestId?: string;
   cliVersion: string;
+  commandPrefix: string;
   nodeVersion: string;
   os: string;
   authMethod?: AuthRequirement;
@@ -27,7 +30,7 @@ export function createTrackingEvent(opts: {
   durationMs: number;
   success: boolean;
   error?: { message?: string; exitCode?: number; httpStatus?: number; requestId?: string };
-  cliVersion: string;
+  identity: Identity;
   authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
   caller: CallerAttribution;
@@ -37,7 +40,8 @@ export function createTrackingEvent(opts: {
     timestamp: new Date().toISOString(),
     durationMs: opts.durationMs,
     success: opts.success,
-    cliVersion: opts.cliVersion,
+    cliVersion: opts.identity.version,
+    commandPrefix: formatCommand(opts.identity),
     nodeVersion: process.version,
     os: process.platform,
     callerType: opts.caller.callerType,
