@@ -15,6 +15,7 @@ let origin: string;
 let scenario: "success" | "submit-error" | "task-failed" | "empty" | "download-error";
 let requests: Array<{ method: string; path: string; body: unknown; async: boolean }>;
 let legacyResults: boolean;
+let asyncImageShape: "default" | "results" | "mixed" | "both" | "partial-empty" | "all-empty";
 let submissions: number;
 let downloads: number;
 
@@ -25,6 +26,7 @@ beforeEach(async () => {
   submissions = 0;
   downloads = 0;
   legacyResults = false;
+  asyncImageShape = "default";
   server = createServer(async (request, response) => {
     if (request.url?.startsWith("/files/")) {
       downloads++;
@@ -74,6 +76,13 @@ beforeEach(async () => {
       return;
     }
     const taskId = request.url!.split("/").at(-1)!;
+    const taskNumber = taskId.slice(5);
+    const fileUrl = `${origin}/files/${taskNumber}.png`;
+    const choiceImage = { message: { content: [{ image: fileUrl }] } };
+    const resultImage = { url: fileUrl };
+    const ignoredImage = { url: `${origin}/files/ignored-${taskNumber}.png` };
+    const useResults = legacyResults || asyncImageShape === "results";
+    const images = taskImages(taskNumber, choiceImage, resultImage, ignoredImage, useResults);
     response.end(
       JSON.stringify({
         output: {
@@ -81,23 +90,7 @@ beforeEach(async () => {
           task_status: scenario === "task-failed" ? "FAILED" : "SUCCEEDED",
           ...(scenario === "task-failed"
             ? { code: "TaskFailure", message: "Original task failure" }
-            : legacyResults
-              ? {
-                  results:
-                    scenario === "empty" ? [] : [{ url: `${origin}/files/${taskId.slice(5)}.png` }],
-                }
-              : {
-                  choices:
-                    scenario === "empty"
-                      ? []
-                      : [
-                          {
-                            message: {
-                              content: [{ image: `${origin}/files/${taskId.slice(5)}.png` }],
-                            },
-                          },
-                        ],
-                }),
+            : images),
         },
       }),
     );
@@ -116,6 +109,25 @@ afterEach(async () => {
   );
   rmSync(directory, { recursive: true, force: true });
 });
+
+function taskImages(
+  taskNumber: string,
+  choiceImage: { message: { content: Array<{ image: string }> } },
+  resultImage: { url: string },
+  ignoredImage: { url: string },
+  useResults: boolean,
+) {
+  if (asyncImageShape === "all-empty") return { results: [] };
+  if (asyncImageShape === "partial-empty") {
+    return taskNumber === "2" ? { results: [] } : { results: [resultImage] };
+  }
+  if (asyncImageShape === "both") return { choices: [choiceImage], results: [ignoredImage] };
+  if (asyncImageShape === "mixed") {
+    return taskNumber === "1" ? { choices: [choiceImage] } : { results: [resultImage] };
+  }
+  if (useResults) return { results: scenario === "empty" ? [] : [resultImage] };
+  return { choices: scenario === "empty" ? [] : [choiceImage] };
+}
 
 const commands = [
   { name: "generate", command: generate },
@@ -379,5 +391,119 @@ for (const entry of commands) {
       request: { model: "qwen-image-3.0" },
     });
     expect(result.stdout).not.toContain("cGF5bG9hZA==");
+  });
+}
+
+function savedPaths(count: number) {
+  const paths: string[] = [];
+  for (let index = 1; index <= count; index += 1) {
+    paths.push(join(directory, "explicit", `fixed_${String(index).padStart(3, "0")}.png`));
+  }
+  return paths;
+}
+
+function fileUrls(numbers: number[]) {
+  return numbers.map((number) => `${origin}/files/${number}.png`);
+}
+
+for (const entry of commands) {
+  test(`${entry.name} async concurrent results keeps every task image`, async () => {
+    asyncImageShape = "results";
+    const snapshots = [];
+    for (const format of ["json", "text"] as const) {
+      submissions = 0;
+      downloads = 0;
+      const result = await invoke(entry.command, flagsFor(entry.name, "wait", 3), {
+        format,
+        quiet: true,
+      });
+      expect(result.exitCode, result.stderr).toBe(0);
+      const data = format === "json" ? JSON.parse(result.stdout) : parseYaml(result.stdout);
+      const saved = savedPaths(3);
+      expect(data).toEqual({
+        urls: fileUrls([1, 2, 3]),
+        saved,
+        total: 3,
+        ...(entry.name === "generate" ? { task_ids: ["task-1", "task-2", "task-3"] } : {}),
+      });
+      for (const path of saved) expect(readFileSync(path, "utf8")).toBe("payload");
+      expect(downloads).toBe(3);
+      snapshots.push(data);
+    }
+    expect(snapshots[1]).toEqual(snapshots[0]);
+  });
+
+  test(`${entry.name} async mixed choices and results keeps both tasks`, async () => {
+    asyncImageShape = "mixed";
+    const result = await invoke(entry.command, flagsFor(entry.name, "wait", 2), {
+      format: "json",
+      quiet: true,
+    });
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      urls: fileUrls([1, 2]),
+      saved: savedPaths(2),
+      total: 2,
+      ...(entry.name === "generate" ? { task_ids: ["task-1", "task-2"] } : {}),
+    });
+    expect(downloads).toBe(2);
+  });
+
+  test(`${entry.name} async task with both fields keeps choices only`, async () => {
+    asyncImageShape = "both";
+    const result = await invoke(entry.command, flagsFor(entry.name, "wait", 2), {
+      format: "json",
+      quiet: true,
+    });
+    expect(result.exitCode, result.stderr).toBe(0);
+    const data = JSON.parse(result.stdout);
+    expect(data.urls).toEqual(fileUrls([1, 2]));
+    expect(data.total).toBe(2);
+    expect(data.saved).toEqual(savedPaths(2));
+    expect(JSON.stringify(data)).not.toContain("ignored-");
+    expect(downloads).toBe(2);
+  });
+
+  test(`${entry.name} async partial empty results keeps the remaining images`, async () => {
+    asyncImageShape = "partial-empty";
+    const result = await invoke(entry.command, flagsFor(entry.name, "wait", 3), {
+      format: "json",
+      quiet: true,
+    });
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      urls: fileUrls([1, 3]),
+      saved: savedPaths(2),
+      total: 2,
+      ...(entry.name === "generate" ? { task_ids: ["task-1", "task-2", "task-3"] } : {}),
+    });
+    expect(downloads).toBe(2);
+  });
+
+  test(`${entry.name} async empty results still fails without images`, async () => {
+    asyncImageShape = "all-empty";
+    const result = await invoke(entry.command, flagsFor(entry.name, "wait", 2), {
+      format: "json",
+      quiet: true,
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("All tasks completed but no images returned.");
+    expect(downloads).toBe(0);
+  });
+
+  test(`${entry.name} async concurrent choices still collects every image`, async () => {
+    const result = await invoke(entry.command, flagsFor(entry.name, "wait", 3), {
+      format: "json",
+      quiet: true,
+    });
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      urls: fileUrls([1, 2, 3]),
+      saved: savedPaths(3),
+      total: 3,
+      ...(entry.name === "generate" ? { task_ids: ["task-1", "task-2", "task-3"] } : {}),
+    });
+    expect(downloads).toBe(3);
   });
 }

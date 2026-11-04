@@ -42,6 +42,7 @@ import {
   mcpSingleImageOnlyError,
   type Localize,
 } from "../shared/aigc-mcp.ts";
+import { collectTaskImageUrls } from "../shared/task-images.ts";
 
 const EDIT_FLAGS = {
   image: {
@@ -491,23 +492,7 @@ async function handleAsyncMode(
   );
 
   const results = await Promise.all(pollPromises);
-
-  let imageUrls: string[] = [];
-  for (const result of results) {
-    if (result.output.choices) {
-      const urls = result.output.choices
-        .flatMap((choice) => choice.message?.content || [])
-        .map((item) => item.image)
-        .filter(Boolean);
-      imageUrls.push(...urls);
-    }
-    if (result.output.results) {
-      const urls = result.output.results.map((item) => item.url).filter(Boolean);
-      if (urls.length > 0 && imageUrls.length === 0) {
-        imageUrls.push(...urls);
-      }
-    }
-  }
+  const imageUrls = results.flatMap((result) => collectTaskImageUrls(result.output));
 
   if (imageUrls.length === 0) {
     throw new BailianError("All tasks completed but no images returned.", ExitCode.GENERAL);
