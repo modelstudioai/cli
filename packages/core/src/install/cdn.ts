@@ -74,11 +74,6 @@ export function detectBinaryPlatform(): { os: string; arch: string; fileSuffix: 
     throw new Error(`Unsupported architecture for binary updates: ${arch}`);
   }
 
-  if (os === "linux" && normalizedArch === "arm64") {
-    throw new Error(
-      "linux arm64 is not supported for binary updates; use: npm install -g bailian-cli",
-    );
-  }
   if (os === "windows" && normalizedArch === "arm64") {
     throw new Error(
       "windows arm64 is not supported for binary updates; use: npm install -g bailian-cli",
