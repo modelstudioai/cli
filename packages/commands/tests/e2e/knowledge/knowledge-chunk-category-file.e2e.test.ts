@@ -1126,7 +1126,6 @@ describe.skipIf(!isKbAdminE2EReady())(
         const kbCreateRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
           "knowledge",
           "create",
-          "--yes",
           "--name",
           `e2e-cate-kb-${Date.now() % 100000000}`.slice(0, 20),
           "--description",
@@ -1247,7 +1246,6 @@ describe.skipIf(!isKbAdminE2EReady())(
       const createRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
         "knowledge",
         "create",
-        "--yes",
         "--name",
         `e2e-ck-${Date.now() % 100000000}`,
         "--description",
@@ -1803,7 +1801,6 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
       const kbCreateRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
         "knowledge",
         "create",
-        "--yes",
         "--name",
         `e2e-pk-${Date.now() % 100000000}`.slice(0, 20),
         "--description",
@@ -1914,11 +1911,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         expect(chunkListEmptyPageRun.exitCode, chunkListEmptyPageRun.stderr).toBe(0);
         expect(chunkListEmptyPageRun.stdout).toMatch(/No chunks found\./);
 
-        // ── contract: updating a nonexistent chunk id — the server currently
-        // reports success (silent upsert-like semantics, verified live). The CLI
-        // passes the server result through without an existence pre-check; this
-        // assertion pins the known server behavior so a future server-side change
-        // (rejecting unknown ids) surfaces here immediately ──
+        // ── contract: updating a nonexistent chunk id — server rejects invalid
+        // chunkId (Index.InvalidParameter). CLI 不做存在性预检，原样透传服务端错误 ──
         const chunkUpdateMissingRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
           "knowledge",
           "chunk",
@@ -1934,8 +1928,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
           "--workspace-id",
           workspaceId,
         ]);
-        expect(chunkUpdateMissingRun.exitCode, chunkUpdateMissingRun.stderr).toBe(0);
-        expect(chunkUpdateMissingRun.stdout).toMatch(/updated: chunk_nonexistent_e2e_0000/);
+        expect(chunkUpdateMissingRun.exitCode).not.toBe(0);
+        expect(chunkUpdateMissingRun.stderr).toMatch(/chunkId|InvalidParameter/i);
 
         // ── P4: chunk update --content-file ──
         if (addedChunkId) {
