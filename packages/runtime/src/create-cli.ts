@@ -134,6 +134,26 @@ function handleInterrupt(): void {
   void flushTelemetry(500).finally(() => process.exit(130));
 }
 
+/**
+ * Run the CLI and end the process once the invocation is complete.
+ *
+ * Every background task (update check, telemetry flush) is awaited inside `run()`, so nothing
+ * useful is left once it resolves. Without an explicit exit, keep-alive sockets held by the HTTP
+ * client can keep a finished process alive for tens of seconds (observed on the Bun release binary).
+ * Errors still exit through `handleError`.
+ */
+export async function runToExit(cli: Cli, argv?: string[]): Promise<void> {
+  await cli.run(argv);
+  const code = process.exitCode ?? 0;
+  const flush = (stream: NodeJS.WriteStream) =>
+    new Promise<void>((done) => {
+      stream.write("", () => done());
+    });
+  await flush(process.stdout);
+  await flush(process.stderr);
+  process.exit(code);
+}
+
 /** Keep EPIPE protection after run() returns, without retaining completed invocations. */
 function handleStdoutPipeError(error: NodeJS.ErrnoException): void {
   if (error.code === "EPIPE") process.exit(0);
