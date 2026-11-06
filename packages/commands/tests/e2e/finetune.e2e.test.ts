@@ -280,6 +280,8 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     ["delete", ["--job-id", "ft-xxx"]],
     ["watch", ["--job-id", "ft-xxx"]],
     ["capability", ["--base-model", "qwen3-8b"]],
+    ["params", ["--base-model", "qwen3-8b"]],
+    ["metrics", ["--job-id", "ft-xxx"]],
   ])("finetune %s --dry-run 发出结构化动作", async (sub, extra) => {
     const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
@@ -302,6 +304,164 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--yes/i);
+  });
+
+  test("finetune params --dry-run 映射训练类型并合并 modality/reasoning-mode", async () => {
+    // sft-lora → efficient_sft at the interface boundary; --modality and
+    // --reasoning-mode merge into one hyper_parameters JSON query string.
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "params",
+      "--base-model",
+      "qwen3-8b",
+      "--modality",
+      "text",
+      "--reasoning-mode",
+      "thinking",
+      "--param-type",
+      "hyper",
+      "--mtu-spec-code",
+      "MTU2",
+      "--workspace-id",
+      "ws-123",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      base_model: string;
+      training_type: string;
+      param_type: string;
+      mtu_spec_code: string;
+      hyper_parameters: string;
+      workspace_id: string;
+    }>(stdout);
+    expect(data.action).toBe("finetune.params");
+    expect(data.base_model).toBe("qwen3-8b");
+    expect(data.training_type).toBe("efficient_sft");
+    expect(data.param_type).toBe("hyper");
+    expect(data.mtu_spec_code).toBe("MTU2");
+    expect(data.hyper_parameters).toBe('{"modality":"text","reasoning_mode":"thinking"}');
+    expect(data.workspace_id).toBe("ws-123");
+  });
+
+  test("finetune params --dry-run 显式训练类型按映射表转换", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "params",
+      "--base-model",
+      "qwen3-8b",
+      "--training-type",
+      "dpo",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ training_type: string }>(stdout);
+    expect(data.training_type).toBe("dpo_full");
+  });
+
+  test("finetune params 非法训练类型退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "params",
+      "--base-model",
+      "qwen3-8b",
+      "--training-type",
+      "nope",
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--training-type|nope/);
+  });
+
+  test("finetune params 非法 modality 枚举值退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "params",
+      "--base-model",
+      "qwen3-8b",
+      "--modality",
+      "audio",
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--modality|modality|audio/i);
+  });
+
+  test("finetune params 缺少 --base-model 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "params",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--base-model|Missing required argument/i);
+  });
+
+  test("finetune metrics --dry-run 默认 page_no=1 且显式 page_size=100", async () => {
+    // The OpenAPI default is 1000 per page; the CLI keeps the legacy 100-page
+    // shape by sending page_size explicitly unless the user overrides it.
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "metrics",
+      "--job-id",
+      "ft-xxx",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      job_id: string;
+      page_no: number;
+      page_size: number;
+    }>(stdout);
+    expect(data.action).toBe("finetune.metrics");
+    expect(data.job_id).toBe("ft-xxx");
+    expect(data.page_no).toBe(1);
+    expect(data.page_size).toBe(100);
+  });
+
+  test("finetune metrics --dry-run 转发 page/page-size/workspace 覆盖值", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "metrics",
+      "--job-id",
+      "ft-xxx",
+      "--page",
+      "3",
+      "--page-size",
+      "50",
+      "--workspace-id",
+      "ws-123",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      page_no: number;
+      page_size: number;
+      workspace_id?: string;
+    }>(stdout);
+    expect(data.page_no).toBe(3);
+    expect(data.page_size).toBe(50);
+    expect(data.workspace_id).toBe("ws-123");
+  });
+
+  test("finetune metrics 缺少 --job-id 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "metrics",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--job-id|Missing required argument/i);
   });
 
   test("finetune create --dry-run 解析多 datasets 中的空白", async () => {

@@ -309,6 +309,16 @@ export function finetuneLogsPath(jobId: string): string {
   return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/logs`;
 }
 
+/** GET /api/v1/fine-tunes/fine-tunes-params — training hyper-parameter config. */
+export function finetuneParamsPath(): string {
+  return "/api/v1/fine-tunes/fine-tunes-params";
+}
+
+/** GET /api/v1/fine-tunes/{job_id}/basic_metrics — training metrics. */
+export function finetuneBasicMetricsPath(jobId: string): string {
+  return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/basic_metrics`;
+}
+
 /** GET /api/v1/fine-tunes/{job_id}/checkpoints */
 export function finetuneCheckpointsPath(jobId: string): string {
   return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/checkpoints`;

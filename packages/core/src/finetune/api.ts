@@ -11,6 +11,8 @@ import {
   finetuneLogsPath,
   finetuneCheckpointsPath,
   finetuneExportPath,
+  finetuneParamsPath,
+  finetuneBasicMetricsPath,
 } from "../client/endpoints.ts";
 import type { Client } from "../client/client.ts";
 import type {
@@ -23,6 +25,8 @@ import type {
   GetFineTuneLogsResponse,
   ListCheckpointsResponse,
   ExportCheckpointResponse,
+  GetFineTuneParamsResponse,
+  ListBasicMetricsResponse,
 } from "./types.ts";
 
 /** POST /api/v1/fine-tunes */
@@ -126,6 +130,85 @@ export async function getFineTuneLogs(
   return client.requestJson<GetFineTuneLogsResponse>({
     path,
     method: "GET",
+    signal: params.signal,
+  });
+}
+
+export interface GetFineTuneParamsParams {
+  /** Base model ID, e.g. qwen3-14b. */
+  inputModel: string;
+  /** Server training_type: sft | efficient_sft | dpo_full | dpo_lora | cpt. */
+  trainingType: string;
+  /** MTU spec code; forwarded when present (resource params queries). */
+  mtuSpecCode?: string;
+  /** `hyper` / `resource`; omit to return all groups. */
+  paramType?: string;
+  /**
+   * Training-option context, sent as a single `hyper_parameters` query
+   * parameter holding the JSON-serialized object (e.g. modality /
+   * reasoning_mode). Omit when the model has no dynamic train options.
+   */
+  trainOptions?: Record<string, string>;
+  /** Explicit locale for server-side display text; omit for the server default. */
+  lang?: string;
+  /** Sent as X-DashScope-WorkSpace; use the job's owning workspace. */
+  workspaceId?: string;
+  signal?: AbortSignal;
+}
+
+/**
+ * GET /api/v1/fine-tunes/fine-tunes-params — training hyper-parameter config.
+ * Empty/absent optional fields in each hyper_params entry are not failures.
+ */
+export async function getFineTuneParams(
+  client: Client,
+  params: GetFineTuneParamsParams,
+): Promise<GetFineTuneParamsResponse> {
+  const qs = new URLSearchParams();
+  qs.set("input_model", params.inputModel);
+  qs.set("training_type", params.trainingType);
+  if (params.mtuSpecCode) qs.set("mtu_spec_code", params.mtuSpecCode);
+  if (params.paramType) qs.set("param_type", params.paramType);
+  if (params.trainOptions && Object.keys(params.trainOptions).length > 0) {
+    qs.set("hyper_parameters", JSON.stringify(params.trainOptions));
+  }
+  if (params.lang) qs.set("lang", params.lang);
+  const path = `${finetuneParamsPath()}?${qs.toString()}`;
+  return client.requestJson<GetFineTuneParamsResponse>({
+    path,
+    method: "GET",
+    headers: params.workspaceId ? { "X-DashScope-WorkSpace": params.workspaceId } : undefined,
+    signal: params.signal,
+  });
+}
+
+export interface ListBasicMetricsParams {
+  pageNo?: number;
+  pageSize?: number;
+  /** Sent as X-DashScope-WorkSpace; use the job's owning workspace. */
+  workspaceId?: string;
+  signal?: AbortSignal;
+}
+
+/**
+ * GET /api/v1/fine-tunes/{job_id}/basic_metrics — training metrics.
+ * An empty `output.metrics` list is a normal result. No server-side metric
+ * type filter: the full result is returned and callers pick metric keys.
+ */
+export async function listBasicMetrics(
+  client: Client,
+  jobId: string,
+  params: ListBasicMetricsParams = {},
+): Promise<ListBasicMetricsResponse> {
+  const qs = new URLSearchParams();
+  if (params.pageNo !== undefined) qs.set("page_no", String(params.pageNo));
+  if (params.pageSize !== undefined) qs.set("page_size", String(params.pageSize));
+  const base = finetuneBasicMetricsPath(jobId);
+  const path = qs.toString() ? `${base}?${qs.toString()}` : base;
+  return client.requestJson<ListBasicMetricsResponse>({
+    path,
+    method: "GET",
+    headers: params.workspaceId ? { "X-DashScope-WorkSpace": params.workspaceId } : undefined,
     signal: params.signal,
   });
 }

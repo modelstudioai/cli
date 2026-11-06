@@ -27,6 +27,8 @@ Index: [index.md](index.md)
 | `bl finetune image create`       | API Key        | Create an image generation model fine-tune job (sft-lora)                                                                       |
 | `bl finetune list`               | API Key        | List fine-tune jobs                                                                                                             |
 | `bl finetune logs`               | API Key        | Fetch training logs for a fine-tune job                                                                                         |
+| `bl finetune metrics`            | API Key        | Query the training metrics of a fine-tune job                                                                                   |
+| `bl finetune params`             | API Key        | Query the training hyper-parameter configuration for a base model                                                               |
 | `bl finetune price`              | Console        | Estimate the training cost for a fine-tune job (token billing)                                                                  |
 | `bl finetune text create`        | API Key        | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   |
 | `bl finetune video create`       | API Key        | Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)                                                     |
@@ -710,6 +712,109 @@ bl finetune logs --job-id ft-xxx --tail 20
 
 ```bash
 bl finetune logs --job-id ft-xxx --search checkpoint --tail 5
+```
+
+### `bl finetune metrics`
+
+| Field              | Value                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| **Name**           | `finetune metrics`                                                                       |
+| **Description**    | Query the training metrics of a fine-tune job                                            |
+| **Authentication** | API Key                                                                                  |
+| **Usage**          | `bl finetune metrics --job-id <id> [--page <n>] [--page-size <n>] [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                                                                                                    |
+| --------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `--job-id <id>`       | string | yes      | Fine-tune job ID (required)                                                                                                    |
+| `--page <n>`          | number | no       | Page number, starting at 1 (default: 1)                                                                                        |
+| `--page-size <n>`     | number | no       | Records per page (default: 100)                                                                                                |
+| `--workspace-id <id>` | string | no       | Workspace ID sent as X-DashScope-WorkSpace; use the job's owning workspace. Omit when your API key is already workspace-bound. |
+| `--api-key <key>`     | string | no       | API key                                                                                                                        |
+| `--base-url <url>`    | string | no       | API base URL                                                                                                                   |
+
+#### Notes
+
+- Queries GET /api/v1/fine-tunes/{job_id}/basic_metrics. Each metrics record is returned verbatim (step + dynamic metric fields); an empty list is a normal result.
+- Metrics are not filtered server-side; the full result is returned and callers pick the metric keys from each record. Use --page/--page-size for paging.
+
+#### Examples
+
+```bash
+bl finetune metrics --job-id ft-xxx
+```
+
+```bash
+bl finetune metrics --job-id ft-xxx --page 2 --page-size 100
+```
+
+```bash
+bl finetune metrics --job-id ft-xxx --output json
+```
+
+```bash
+bl finetune metrics --job-id ft-xxx --dry-run
+```
+
+### `bl finetune params`
+
+| Field              | Value                                                                                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune params`                                                                                                                                                                                                                     |
+| **Description**    | Query the training hyper-parameter configuration for a base model                                                                                                                                                                     |
+| **Authentication** | API Key                                                                                                                                                                                                                               |
+| **Usage**          | `bl finetune params --base-model <model> [--training-type <t>] [--param-type <hyper\|resource>] [--mtu-spec-code <code>] [--modality <text\|vision>] [--reasoning-mode <instruct\|thinking>] [--lang <locale>] [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                                    | Type   | Required | Description                                                                                                                                                 |
+| --------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--base-model <model>`                  | string | yes      | Base model to query training parameters for (e.g. qwen3-8b)                                                                                                 |
+| `--training-type <t>`                   | string | no       | Training type: sft \| sft-lora \| dpo \| dpo-lora \| cpt (default: sft-lora). Mapped to the server's training_type (e.g. sft-lora -> efficient_sft).        |
+| `--mtu-spec-code <code>`                | string | no       | MTU spec code, required for resource-group queries (e.g. MTU2)                                                                                              |
+| `--param-type <hyper\|resource>`        | string | no       | Parameter group: hyper \| resource. Omit to return all groups.                                                                                              |
+| `--modality <text\|vision>`             | string | no       | Training modality: text \| vision. Only meaningful for models with dynamic train options; sent as modality inside hyper_parameters.                         |
+| `--reasoning-mode <instruct\|thinking>` | string | no       | Reasoning mode: instruct (non-thinking) \| thinking. Only meaningful for models with dynamic train options; sent as reasoning_mode inside hyper_parameters. |
+| `--lang <locale>`                       | string | no       | Locale for server-side display text (e.g. en, zh). Omit for the server default.                                                                             |
+| `--workspace-id <id>`                   | string | no       | Workspace ID sent as X-DashScope-WorkSpace; omit when your API key is already workspace-bound.                                                              |
+| `--api-key <key>`                       | string | no       | API key                                                                                                                                                     |
+| `--base-url <url>`                      | string | no       | API base URL                                                                                                                                                |
+
+#### Notes
+
+- Queries GET /api/v1/fine-tunes/fine-tunes-params. Each hyper_params entry keeps server field names verbatim (recommend_value, defaultValue, is_advanced_parameter, ...).
+- --modality / --reasoning-mode travel as one hyper_parameters query parameter (JSON). Supported values and combinations vary per model; invalid combinations are rejected by the server and surfaced as-is. Models without dynamic train options ignore these flags.
+- resume_from_checkpoint in the output reports whether the training type supports resuming training.
+
+#### Examples
+
+```bash
+bl finetune params --base-model qwen3-8b
+```
+
+```bash
+bl finetune params --base-model qwen3-8b --training-type sft
+```
+
+```bash
+bl finetune params --base-model qwen3-8b --training-type dpo-lora --param-type hyper
+```
+
+```bash
+bl finetune params --base-model qwen3.7-plus-2026-05-26 --modality vision --reasoning-mode thinking
+```
+
+```bash
+bl finetune params --base-model qwen3-8b --param-type resource --mtu-spec-code MTU2
+```
+
+```bash
+bl finetune params --base-model qwen3-8b --output json
+```
+
+```bash
+bl finetune params --base-model qwen3-8b --dry-run
 ```
 
 ### `bl finetune price`
