@@ -301,6 +301,8 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune export": "finetuneExport",
   "finetune watch": "finetuneWatch",
   "finetune capability": "finetuneCapability",
+  "finetune params": "finetuneParams",
+  "finetune metrics": "finetuneMetrics",
   "finetune compress templates": "finetuneCompressTemplates",
   "finetune compress create": "finetuneCompressCreate",
   "finetune compress list": "finetuneCompressList",

@@ -182,6 +182,8 @@ export { default as finetuneExport } from "./commands/finetune/export.ts";
 export { default as finetuneWatch } from "./commands/finetune/watch.ts";
 export { default as finetuneCapability } from "./commands/finetune/capability.ts";
 export { default as finetunePrice } from "./commands/finetune/price.ts";
+export { default as finetuneParams } from "./commands/finetune/params.ts";
+export { default as finetuneMetrics } from "./commands/finetune/metrics.ts";
 export { default as finetuneCompressTemplates } from "./commands/finetune/compress-templates.ts";
 export { default as finetuneCompressCreate } from "./commands/finetune/compress-create.ts";
 export { default as finetuneCompressList } from "./commands/finetune/compress-list.ts";

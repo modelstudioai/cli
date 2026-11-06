@@ -6,6 +6,13 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.8.4] - 2026-11-06
+
+### 新增
+
+- **精调训练参数查询**：新增 `bl finetune params` 命令，查询基础模型的训练超参配置，支持 `--training-type`、`--param-type`、`--mtu-spec-code` 筛选及 `--modality` / `--reasoning-mode` 动态训练选项。
+- **精调训练指标查询**：新增 `bl finetune metrics` 命令，查询微调任务的训练指标，支持 `--page` / `--page-size` 显式分页。
+
 ## [2.8.3] - 2026-11-06
 
 ### 新增

@@ -201,6 +201,65 @@ export interface GetFineTuneResponse {
   data?: FineTuneJob;
 }
 
+// ---- Training params / metrics (DashScope OpenAPI) ----
+
+/**
+ * GET /api/v1/fine-tunes/fine-tunes-params 的 `output.hyper_params[]` 元素。
+ * `defaultValue` 是服务端保留的兼容字段名（与 recommend_value 同值），不改名为
+ * default_value。`visibility` / `required` 等其他可选字段不在此依赖，缺失不算失败。
+ */
+export interface FineTuneParamHyperParam {
+  name?: string;
+  recommend_value?: string;
+  defaultValue?: string;
+  is_advanced_parameter?: boolean;
+  display_name?: string;
+  description?: string;
+  type?: string;
+  data_range?: string[];
+  left_range?: string;
+  right_range?: string;
+  step?: number;
+  support_values?: string[];
+  editable?: boolean;
+  /** `hyper` / `resource` */
+  group?: string;
+  [k: string]: unknown;
+}
+
+/** GET /api/v1/fine-tunes/fine-tunes-params response. */
+export interface GetFineTuneParamsResponse {
+  request_id?: string;
+  output?: {
+    hyper_params?: FineTuneParamHyperParam[];
+    /** Whether the training type supports resuming from a checkpoint. */
+    resume_from_checkpoint?: boolean;
+    [k: string]: unknown;
+  };
+  [k: string]: unknown;
+}
+
+/**
+ * GET /api/v1/fine-tunes/{job_id}/basic_metrics 的 `output.metrics[]` 元素。
+ * 每条指标记录的 JSON 原样返回（step + 动态指标字段），内部 key 不做改名。
+ */
+export interface BasicMetricRecord {
+  [key: string]: unknown;
+}
+
+/** GET /api/v1/fine-tunes/{job_id}/basic_metrics response. 空指标列表是正常结果。 */
+export interface ListBasicMetricsResponse {
+  request_id?: string;
+  output?: {
+    page_no?: number;
+    page_size?: number;
+    total?: number;
+    metrics?: BasicMetricRecord[];
+    [k: string]: unknown;
+  };
+  [k: string]: unknown;
+}
+
 // ---- Model Compression (DashScope /api/v1/fine-tunes/compress) ----
 
 /** A tunable hyper-parameter declared by a compression template. */
