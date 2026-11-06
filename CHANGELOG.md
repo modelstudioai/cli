@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.8.4] - 2026-11-06
+
+### Added
+
+- **Fine-tune training params**: New `bl finetune params` command queries the training hyper-parameter configuration for a base model, with `--training-type`, `--param-type`, `--mtu-spec-code` filters and `--modality` / `--reasoning-mode` dynamic train options.
+- **Fine-tune training metrics**: New `bl finetune metrics` command queries the training metrics of a fine-tune job, with explicit paging via `--page` / `--page-size`.
+
 ## [2.8.3] - 2026-11-06
 
 ### Added
