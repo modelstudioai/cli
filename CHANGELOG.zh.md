@@ -6,6 +6,17 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.8.3] - 2026-11-06
+
+### 新增
+
+- **模型联网搜索**：`bl search web` 新增模型搜索模式（`--mode model`），并改为默认实现。
+- **对话内置联网搜索**：`bl text chat` 新增 `enable_search` 参数，支持内置联网搜索。
+
+### 变更
+
+- **Profile 凭证**：Profile 可按搜索模式（`model` / `mcp`）声明凭证，切换搜索模式时自动选择对应 Profile 凭证。
+
 ## [2.8.2] - 2026-11-04
 
 ### 内部维护
