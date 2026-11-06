@@ -12,6 +12,7 @@ import {
   makeConfigStore,
   resolveModelBaseUrl,
   writeConfigFile,
+  type AnyCommand,
   type CommandPackManager,
   type LocalizedText,
   type SourceFlags,
@@ -39,15 +40,15 @@ function makeContext(
   path: string[],
   flags: Partial<SourceFlags> = { config: "company-plan" },
   env: NodeJS.ProcessEnv = {},
+  command: AnyCommand = defineCommand({
+    description: "test command",
+    auth: "apiKey",
+    async run() {},
+  }),
 ): RunContext {
   const sources = buildSources(flags);
   sources.env = env;
   const settings = { ...buildSettings(sources), quiet: true };
-  const command = defineCommand({
-    description: "test command",
-    auth: "apiKey",
-    async run() {},
-  });
   return {
     identity: {
       binName: "bl",
@@ -186,6 +187,43 @@ test("authStage 不为缺少 capability 字段的旧 token-plan 注入内置 pre
   expect(context.client.exportApiCredential()).toMatchObject({
     token: "sk-token-plan",
     baseUrl: "https://token-plan.example.com",
+  });
+});
+
+test("authStage 按命令 authCapability 选 capability:model 模式保留 token-plan,mcp 模式回退 default", async () => {
+  useTempConfigDir();
+  await writeConfigFile({ api_key: "sk-default", base_url: "https://default.example.com" });
+  await writeConfigFile(
+    {
+      api_key: "sk-token-plan",
+      base_url: "https://token-plan.example.com",
+      api_key_capabilities: ["text.chat"],
+    },
+    "token-plan",
+  );
+  const command = defineCommand({
+    description: "test search",
+    auth: "apiKey",
+    flags: {
+      mode: { type: "string", valueHint: "<mcp|model>", description: "search mode" },
+    },
+    authCapability: (flags) => (flags.mode === "mcp" ? "search.web" : "text.chat"),
+    async run() {},
+  });
+
+  const modelContext = makeContext(["search", "web"], { config: "token-plan" }, {}, command);
+  await runAuth(modelContext);
+  expect(modelContext.client.exportApiCredential()).toMatchObject({
+    token: "sk-token-plan",
+    baseUrl: "https://token-plan.example.com",
+  });
+
+  const mcpContext = makeContext(["search", "web"], { config: "token-plan" }, {}, command);
+  mcpContext.flags = { mode: "mcp" };
+  await runAuth(mcpContext);
+  expect(mcpContext.client.exportApiCredential()).toMatchObject({
+    token: "sk-default",
+    baseUrl: "https://default.example.com",
   });
 });
 

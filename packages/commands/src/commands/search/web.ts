@@ -77,6 +77,11 @@ export default defineCommand({
     "zh-CN": "搜索互联网：默认走模型内置联网搜索，也可切换为 DashScope MCP WebSearch 服务",
   },
   auth: "apiKey",
+  // Model mode talks Chat Completions (the `text.chat` capability domain), so
+  // Profile API-key selection must follow the mode; MCP mode keeps the
+  // `search.web` capability, which Token Plan profiles deliberately do not
+  // list — plan keys cannot authorize Bailian MCP search.
+  authCapability: (flags) => (resolveSearchMode(flags) === "model" ? "text.chat" : "search.web"),
   usageArgs: "--query <text> [flags]",
   flags: WEB_SEARCH_FLAGS,
   exampleArgs: [

@@ -1,5 +1,13 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import {
+  isDashScopeE2EReady,
+  makeE2eOutputDir,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+} from "./helpers.ts";
 import { SEARCH_WEB_ROUTES } from "./topic-routes.ts";
 
 function pagesFromSearchWebStdout(stdout: string): Array<{ title?: string; url?: string }> {
@@ -160,6 +168,55 @@ describe("e2e: search web", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--count.*MCP/i);
+  });
+
+  test("search web 按模式选择 Profile 凭证:model 保留 token-plan,mcp 回退 default", async () => {
+    const configDir = makeE2eOutputDir("search-web-mode-capability");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          api_key: "sk-default",
+          base_url: "https://default.example.com",
+          active_config: "token-plan",
+          "token-plan": {
+            api_key: "sk-token-plan",
+            base_url: "https://token-plan.example.com",
+            api_key_capabilities: ["text.chat"],
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+    const env = {
+      BAILIAN_CONFIG_DIR: configDir,
+      DASHSCOPE_API_KEY: undefined,
+      DASHSCOPE_BASE_URL: undefined,
+      DASHSCOPE_ACCESS_TOKEN: undefined,
+    };
+
+    // Model mode authenticates as `text.chat`, which the token-plan Profile
+    // lists — its connection must survive capability selection.
+    const model = await runCommandE2e(
+      SEARCH_WEB_ROUTES,
+      ["search", "web", "--dry-run", "--output", "json", "--query", "凭证选择"],
+      env,
+    );
+    expect(model.exitCode, model.stderr).toBe(0);
+    const modelData = parseStdoutJson<{ endpoint?: string }>(model.stdout);
+    expect(modelData.endpoint).toContain("https://token-plan.example.com");
+
+    // MCP mode keeps the `search.web` capability, absent from token-plan —
+    // the run must fall back to the default Profile connection.
+    const mcp = await runCommandE2e(
+      SEARCH_WEB_ROUTES,
+      ["search", "web", "--mode", "mcp", "--dry-run", "--output", "json", "--query", "凭证选择"],
+      env,
+    );
+    expect(mcp.exitCode, mcp.stderr).toBe(0);
+    const mcpData = parseStdoutJson<{ endpoint?: string }>(mcp.stdout);
+    expect(mcpData.endpoint).toContain("https://default.example.com");
   });
 });
 

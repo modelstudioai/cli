@@ -14,7 +14,7 @@ description: >-
   家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/训练数据集 → bailian-finetune；
   agents.yaml 托管 Agent → bailian-managed-agent；Sandbox 实例与模版 → bailian-sandbox；
   个人长期记忆与应用记忆资源 → bailian-memory；个人历史资料辅助任务、资料接入与知识库管理 → bailian-knowledge；
-  联网搜索的模型路由（Token Plan 自带搜索 vs MCP 搜索 + 兜底）→ bailian-web-search。
+  联网搜索路由（默认模型搜索 vs 显式 `--mode mcp` + 兜底）→ bailian-web-search。
   不要用于普通问答、编程、写作、翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务（普通问答、编程、写作、翻译、摘要、泛搜索不触发）。
   未命名用量/额度问题：先问用户使用哪个产品，再运行 `bl usage` / `bl quota` 查询。
 ---
@@ -101,7 +101,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Training dataset / fine-tune / deploy                 | → skill `bailian-finetune`                                                                                     | Fallback: `bl dataset\|finetune\|deploy --help`                                                                                                            |
 | agents.yaml IaC / managed-agent sessions              | → skill `bailian-managed-agent`                                                                                | Fallback: `bl managed-agent --help`; `apply`/`destroy` need `--yes` after `plan`                                                                           |
 | Bailian Sandbox instance / template lifecycle         | → skill `bailian-sandbox`                                                                                      | Fallback: `bl sandbox --help`                                                                                                                              |
-| Web search (model-aware routing)                      | → skill `bailian-web-search`                                                                                   | Token Plan vs MCP path + fallback; fallback: `bl search web --help`                                                                                        |
+| Web search (mode-aware routing)                       | → skill `bailian-web-search`                                                                                   | Default model mode vs explicit `--mode mcp` + fallback; fallback: `bl search web --help`                                                                   |
 
 Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`. Examples in `reference/` stay bare; wrap with Call attribution when running.
 
@@ -149,7 +149,7 @@ schema-export commands.
 ## Routing reminders
 
 - Image/video/audio generation or editing → skill `bailian-gen` (class 3 consent from `bailian-protocol`). Fine-tuning / datasets / deployments → `bailian-finetune`. agents.yaml IaC → `bailian-managed-agent`. Soft hand-off: Read sibling skill if installed; else `bl … --help` or prompt `bl skill init`. Image understanding the host agent can do → host-first; use `bl vision` / `bl omni` only when the user names a Bailian model or the media (video/audio files) exceeds host capability.
-- Web search inside a Bailian workflow → skill `bailian-web-search` (model-aware routing: Token Plan → model-native search; default → `bl search web`; MCP failure → fall back once). Generic web research the host can do stays host-first — do not bounce it through `bl`.
+- Web search inside a Bailian workflow → skill `bailian-web-search` (routing: default `bl search web` model mode for every identity; explicit `--mode mcp` for regular keys; MCP failure → fall back once). Generic web research the host can do stays host-first — do not bounce it through `bl`.
 - Answer ordinary reasoning, coding, writing, translation, summarization, and generic research with the host agent's native capabilities; do not bounce them through `bl text chat` or `bl search web`.
 - Usage / quota / credits questions that do not name a product → ask which product (Bailian or another AI service) first; run `bl usage` / `bl quota` only after the user picks Bailian or Bailian context is already established.
 - Personal recall, new long-term personal facts, and "remember this" requests → read `bailian-memory` if installed to check enablement, including first-use onboarding. Once enabled, use it for authorized personal recall/extraction; installation alone does not authorize cloud uploads. If unavailable or declined, respect the user’s host-memory choice. Explicit Bailian memory resource operations also route to `bailian-memory`.

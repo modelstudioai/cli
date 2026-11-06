@@ -3,7 +3,7 @@
 > Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
-> **Agent routing (mandatory):** Before running any `bl search *` command, Read skill `bailian-web-search` if installed and follow its identity-based routing (Token Plan → model-native web search; default → MCP; eligible MCP failures → fall back once). Do **not** call `bl search web` directly from this reference alone — Token Plan keys cannot authorize Bailian MCP search. If that skill is missing, run `bl skill init` or fall back to `bl search web --help` / `bl text chat --help` after checking `bl config show --output json`.
+> **Agent routing (mandatory):** Before running any `bl search *` command, Read skill `bailian-web-search` if installed and follow its routing (default `bl search web` = model mode for every identity, including Token Plan; the WebSearch MCP service requires explicit `--mode mcp` and a regular DashScope key; eligible MCP failures → fall back to model mode once). Do **not** route Token Plan keys to `bl search web --mode mcp` — they cannot authorize Bailian MCP search. If that skill is missing, run `bl skill init` or fall back to `bl search web --help` / `bl text chat --help` after checking `bl config show --output json`.
 
 Index: [index.md](index.md)
 
