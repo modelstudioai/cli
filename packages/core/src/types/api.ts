@@ -42,6 +42,7 @@ export interface ChatRequest {
   tool_choice?: "auto" | "none" | { type: "function"; function: { name: string } };
   enable_thinking?: boolean;
   thinking_budget?: number;
+  enable_search?: boolean;
   modalities?: string[];
   audio?: { voice: string; format?: string };
   stream_options?: { include_usage?: boolean };

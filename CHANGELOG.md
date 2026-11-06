@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.8.3] - 2026-11-06
+
+### Added
+
+- **Model-based web search**: `bl search web` adds a model search mode and now uses it as the default implementation.
+- **Web search in chat**: `bl text chat` supports built-in web search via the `enable_search` parameter.
+
+### Changed
+
+- **Profile credentials**: Profiles can now declare credentials per search mode (`model` / `mcp`), and the CLI picks the matching profile credential when switching search modes.
+
 ## [2.8.2] - 2026-11-04
 
 ### Internal

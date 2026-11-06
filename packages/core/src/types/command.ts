@@ -319,6 +319,15 @@ export interface Command<F extends FlagsDef = FlagsDef, Prepared = undefined> {
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;
   /**
+   * Capability key used for Profile API-key selection (see
+   * `selectApiKeyResolutionSources`). Defaults to the command path joined with
+   * ".". Commands whose network target switches with a flag supply a resolver
+   * so credential selection follows the actual connection: `search web` model
+   * mode talks Chat Completions and authenticates as `text.chat`, while
+   * `--mode mcp` keeps the MCP-only `search.web` capability.
+   */
+  authCapability?: (flags: ParsedFlags<F>) => string;
+  /**
    * Best-effort secondary console credential for `auth: "apiKey"` commands.
    * When true, the runtime additionally resolves the console credential and
    * injects it when available; a missing/expired console session never blocks

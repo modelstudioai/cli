@@ -195,7 +195,11 @@ export const authStage: Middleware = async (ctx, next) => {
     ...resolveModelBaseUrlState(sources),
   };
   if (command.auth === "apiKey") {
-    const capability = ctx.path.join(".");
+    // Commands whose network target switches with a flag declare authCapability
+    // so Profile selection follows the actual connection; others key off path.
+    const capability = command.authCapability
+      ? command.authCapability(ctx.flags)
+      : ctx.path.join(".");
     const selection = selectApiKeyResolutionSources(sources, capability);
     const apiSources = selection.sources;
     if (selection.fallbackFrom) {
