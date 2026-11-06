@@ -199,35 +199,53 @@ export class MemoryJourney {
     return result.events!;
   }
 
-  async add(text: string, options: { direct?: boolean; schemaId?: string } = {}): Promise<string> {
+  async add(
+    text: string,
+    options: { direct?: boolean; schemaId?: string; requireExtraction?: boolean } = {},
+  ): Promise<string> {
     const payload = options.direct
       ? ["--content", text]
       : ["--messages", JSON.stringify([{ role: "user", content: text }])];
-    this.uncertainSubmission = true;
-    this.flush();
-    const receipt = await this.command<MemoryAddBody>("add", [
-      "add",
-      "--user-id",
-      this.userId,
-      ...payload,
-      ...(options.schemaId ? ["--profile-schema", options.schemaId] : []),
-      "--wait",
-      "0",
-    ]);
-    expect(receipt.event_id).toBeTruthy();
-    this.events.add(receipt.event_id!);
-    this.pending.add(receipt.event_id!);
-    this.uncertainSubmission = false;
-    this.flush();
-    const events = await this.settle(receipt.event_id!);
-    expect(
-      events.some((event) => event.status === "FAILED"),
-      JSON.stringify(events),
-    ).toBe(false);
-    expect(events.some((event) => ["SUCCEEDED", "SUCCESS"].includes(event.status ?? ""))).toBe(
-      true,
+    // Server-side observation extraction is nondeterministic: a terminal
+    // SUCCEEDED event may still carry an empty result. An empty terminal
+    // result never materializes later, so retry instead of waiting it out.
+    const maxAttempts = options.requireExtraction ? 3 : 1;
+    let eventId = "";
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      this.uncertainSubmission = true;
+      this.flush();
+      const receipt = await this.command<MemoryAddBody>(
+        attempt === 1 ? "add" : `add retry ${attempt - 1}`,
+        [
+          "add",
+          "--user-id",
+          this.userId,
+          ...payload,
+          ...(options.schemaId ? ["--profile-schema", options.schemaId] : []),
+          "--wait",
+          "0",
+        ],
+      );
+      expect(receipt.event_id).toBeTruthy();
+      this.events.add(receipt.event_id!);
+      this.pending.add(receipt.event_id!);
+      this.uncertainSubmission = false;
+      this.flush();
+      eventId = receipt.event_id!;
+      const events = await this.settle(eventId);
+      expect(
+        events.some((event) => event.status === "FAILED"),
+        JSON.stringify(events),
+      ).toBe(false);
+      expect(events.some((event) => ["SUCCEEDED", "SUCCESS"].includes(event.status ?? ""))).toBe(
+        true,
+      );
+      if (!options.requireExtraction) return eventId;
+      if (events.some((event) => (event.result ?? []).length > 0)) return eventId;
+    }
+    throw new Error(
+      `add extracted nothing after ${maxAttempts} attempts; evidence ${this.outputDir}`,
     );
-    return receipt.event_id!;
   }
 
   async remove(nodeId: string, allowMissing = false) {
