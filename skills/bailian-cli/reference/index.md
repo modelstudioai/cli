@@ -100,7 +100,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl quota history`              | Console        | View quota change history                                                                                          | [quota.md](quota.md)           |
 | `bl quota list`                 | API Key        | View model rate limits (QPM/TPM, account and workspace level)                                                      | [quota.md](quota.md)           |
 | `bl quota update`               | API Key        | Update model rate limits (QPM/TPM)                                                                                 | [quota.md](quota.md)           |
-| `bl search web`                 | API Key        | Search the web using DashScope MCP WebSearch service                                                               | [search.md](search.md)         |
+| `bl search web`                 | API Key        | Search the web via a chat model with built-in web search (default) or the DashScope MCP WebSearch service          | [search.md](search.md)         |
 | `bl skill add`                  | No Auth        | Install skills from the Bailian skill registry into local agents                                                   | [skill.md](skill.md)           |
 | `bl skill init`                 | No Auth        | Install all bailian-* skills (one-shot bootstrap for new environments)                                             | [skill.md](skill.md)           |
 | `bl skill list`                 | No Auth        | List registry skills and diff against local installs                                                               | [skill.md](skill.md)           |

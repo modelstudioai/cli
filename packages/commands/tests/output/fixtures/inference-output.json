@@ -1669,221 +1669,99 @@
     ]
   },
   "search:text:false": {
-    "stdout": "pages:\n  - title: Fixture\n    url: https://example.com/fixture\n    snippet: fixture snippet\n    hostname: example.com\ntotal: 1\ntext: extra result\n",
+    "stdout": "Hello fixture\n",
     "requests": [
       {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "id": 0,
-          "method": "initialize",
-          "params": {
-            "protocolVersion": "2025-11-25",
-            "capabilities": {},
-            "clientInfo": {
-              "name": "test",
-              "version": "0.0.0"
+          "model": "qwen3.8-max",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture query"
             }
-          }
-        }
-      },
-      {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
-        "method": "POST",
-        "body": {
-          "jsonrpc": "2.0",
-          "method": "notifications/initialized"
-        }
-      },
-      {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
-        "method": "POST",
-        "body": {
-          "jsonrpc": "2.0",
-          "id": 1,
-          "method": "tools/call",
-          "params": {
-            "name": "bailian_web_search",
-            "arguments": {
-              "query": "fixture query",
-              "count": 2
-            }
-          }
+          ],
+          "enable_search": true,
+          "stream": false
         }
       }
     ]
   },
   "search:json:false": {
-    "stdout": "{\n  \"isError\": false,\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{\\\"pages\\\":[{\\\"title\\\":\\\"Fixture\\\",\\\"url\\\":\\\"https://example.com/fixture\\\",\\\"snippet\\\":\\\"fixture snippet\\\",\\\"hostname\\\":\\\"example.com\\\"}]}\"\n    },\n    {\n      \"type\": \"text\",\n      \"text\": \"extra result\"\n    }\n  ],\n  \"structuredContent\": {\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+    "stdout": "{\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"Hello fixture\"\n    }\n  ],\n  \"isError\": false\n}\n",
     "data": {
-      "isError": false,
       "content": [
         {
           "type": "text",
-          "text": "{\"pages\":[{\"title\":\"Fixture\",\"url\":\"https://example.com/fixture\",\"snippet\":\"fixture snippet\",\"hostname\":\"example.com\"}]}"
-        },
-        {
-          "type": "text",
-          "text": "extra result"
+          "text": "Hello fixture"
         }
       ],
-      "structuredContent": {
-        "future": {
-          "values": [false, 0, null, []]
-        }
-      }
+      "isError": false
     },
     "requests": [
       {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "id": 0,
-          "method": "initialize",
-          "params": {
-            "protocolVersion": "2025-11-25",
-            "capabilities": {},
-            "clientInfo": {
-              "name": "test",
-              "version": "0.0.0"
+          "model": "qwen3.8-max",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture query"
             }
-          }
-        }
-      },
-      {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
-        "method": "POST",
-        "body": {
-          "jsonrpc": "2.0",
-          "method": "notifications/initialized"
-        }
-      },
-      {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
-        "method": "POST",
-        "body": {
-          "jsonrpc": "2.0",
-          "id": 1,
-          "method": "tools/call",
-          "params": {
-            "name": "bailian_web_search",
-            "arguments": {
-              "query": "fixture query",
-              "count": 2
-            }
-          }
+          ],
+          "enable_search": true,
+          "stream": false
         }
       }
     ]
   },
   "search:text:true": {
-    "stdout": "pages:\n  - title: Fixture\n    url: https://example.com/fixture\n    snippet: fixture snippet\n    hostname: example.com\ntotal: 1\ntext: extra result\n",
+    "stdout": "Hello fixture\n",
     "requests": [
       {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "id": 0,
-          "method": "initialize",
-          "params": {
-            "protocolVersion": "2025-11-25",
-            "capabilities": {},
-            "clientInfo": {
-              "name": "test",
-              "version": "0.0.0"
+          "model": "qwen3.8-max",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture query"
             }
-          }
-        }
-      },
-      {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
-        "method": "POST",
-        "body": {
-          "jsonrpc": "2.0",
-          "method": "notifications/initialized"
-        }
-      },
-      {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
-        "method": "POST",
-        "body": {
-          "jsonrpc": "2.0",
-          "id": 1,
-          "method": "tools/call",
-          "params": {
-            "name": "bailian_web_search",
-            "arguments": {
-              "query": "fixture query",
-              "count": 2
-            }
-          }
+          ],
+          "enable_search": true,
+          "stream": false
         }
       }
     ]
   },
   "search:json:true": {
-    "stdout": "{\n  \"isError\": false,\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{\\\"pages\\\":[{\\\"title\\\":\\\"Fixture\\\",\\\"url\\\":\\\"https://example.com/fixture\\\",\\\"snippet\\\":\\\"fixture snippet\\\",\\\"hostname\\\":\\\"example.com\\\"}]}\"\n    },\n    {\n      \"type\": \"text\",\n      \"text\": \"extra result\"\n    }\n  ],\n  \"structuredContent\": {\n    \"future\": {\n      \"values\": [\n        false,\n        0,\n        null,\n        []\n      ]\n    }\n  }\n}\n",
+    "stdout": "{\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"Hello fixture\"\n    }\n  ],\n  \"isError\": false\n}\n",
     "data": {
-      "isError": false,
       "content": [
         {
           "type": "text",
-          "text": "{\"pages\":[{\"title\":\"Fixture\",\"url\":\"https://example.com/fixture\",\"snippet\":\"fixture snippet\",\"hostname\":\"example.com\"}]}"
-        },
-        {
-          "type": "text",
-          "text": "extra result"
+          "text": "Hello fixture"
         }
       ],
-      "structuredContent": {
-        "future": {
-          "values": [false, 0, null, []]
-        }
-      }
+      "isError": false
     },
     "requests": [
       {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
+        "url": "https://fixture.invalid/compatible-mode/v1/chat/completions",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "id": 0,
-          "method": "initialize",
-          "params": {
-            "protocolVersion": "2025-11-25",
-            "capabilities": {},
-            "clientInfo": {
-              "name": "test",
-              "version": "0.0.0"
+          "model": "qwen3.8-max",
+          "messages": [
+            {
+              "role": "user",
+              "content": "fixture query"
             }
-          }
-        }
-      },
-      {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
-        "method": "POST",
-        "body": {
-          "jsonrpc": "2.0",
-          "method": "notifications/initialized"
-        }
-      },
-      {
-        "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
-        "method": "POST",
-        "body": {
-          "jsonrpc": "2.0",
-          "id": 1,
-          "method": "tools/call",
-          "params": {
-            "name": "bailian_web_search",
-            "arguments": {
-              "query": "fixture query",
-              "count": 2
-            }
-          }
+          ],
+          "enable_search": true,
+          "stream": false
         }
       }
     ]
@@ -1895,8 +1773,6 @@
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "id": 0,
           "method": "initialize",
           "params": {
             "protocolVersion": "2025-11-25",
@@ -1905,24 +1781,26 @@
               "name": "test",
               "version": "0.0.0"
             }
-          }
+          },
+          "jsonrpc": "2.0",
+          "id": 0
         }
       },
       {
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "method": "notifications/initialized"
+          "method": "notifications/initialized",
+          "jsonrpc": "2.0"
         }
       },
       {
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
+          "method": "tools/list",
           "jsonrpc": "2.0",
-          "id": 1,
-          "method": "tools/list"
+          "id": 1
         }
       }
     ]
@@ -1945,8 +1823,6 @@
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "id": 0,
           "method": "initialize",
           "params": {
             "protocolVersion": "2025-11-25",
@@ -1955,24 +1831,26 @@
               "name": "test",
               "version": "0.0.0"
             }
-          }
+          },
+          "jsonrpc": "2.0",
+          "id": 0
         }
       },
       {
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "method": "notifications/initialized"
+          "method": "notifications/initialized",
+          "jsonrpc": "2.0"
         }
       },
       {
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
+          "method": "tools/list",
           "jsonrpc": "2.0",
-          "id": 1,
-          "method": "tools/list"
+          "id": 1
         }
       }
     ]
@@ -1984,8 +1862,6 @@
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "id": 0,
           "method": "initialize",
           "params": {
             "protocolVersion": "2025-11-25",
@@ -1994,24 +1870,26 @@
               "name": "test",
               "version": "0.0.0"
             }
-          }
+          },
+          "jsonrpc": "2.0",
+          "id": 0
         }
       },
       {
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "method": "notifications/initialized"
+          "method": "notifications/initialized",
+          "jsonrpc": "2.0"
         }
       },
       {
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
+          "method": "tools/list",
           "jsonrpc": "2.0",
-          "id": 1,
-          "method": "tools/list"
+          "id": 1
         }
       }
     ]
@@ -2034,8 +1912,6 @@
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "id": 0,
           "method": "initialize",
           "params": {
             "protocolVersion": "2025-11-25",
@@ -2044,24 +1920,26 @@
               "name": "test",
               "version": "0.0.0"
             }
-          }
+          },
+          "jsonrpc": "2.0",
+          "id": 0
         }
       },
       {
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
-          "jsonrpc": "2.0",
-          "method": "notifications/initialized"
+          "method": "notifications/initialized",
+          "jsonrpc": "2.0"
         }
       },
       {
         "url": "https://fixture.invalid/api/v1/mcps/WebSearch/mcp",
         "method": "POST",
         "body": {
+          "method": "tools/list",
           "jsonrpc": "2.0",
-          "id": 1,
-          "method": "tools/list"
+          "id": 1
         }
       }
     ]

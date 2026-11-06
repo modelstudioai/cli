@@ -2,7 +2,13 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import {
+  isDashScopeE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  runCommandInProcess,
+} from "./helpers.ts";
 import { TEXT_CHAT_ROUTES } from "./topic-routes.ts";
 
 let isolatedDirectory: string;
@@ -40,6 +46,7 @@ describe("e2e: text chat", () => {
     const { stderr, exitCode } = await runCommandHelp(TEXT_CHAT_ROUTES, ["text", "chat", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--api\s+<chat\|responses>/i);
+    expect(stderr).toMatch(/--enable-search/i);
     expect(stderr).toMatch(/--prime/i);
     expect(stderr).toMatch(/--workspace-id/i);
     expect(stderr).toMatch(/chat|--message|model|stream/i);
@@ -71,6 +78,140 @@ describe("e2e: text chat", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/thinking-budget.*Responses/i);
+  });
+
+  test("text chat 在 Responses 模式拒绝 --enable-search", async () => {
+    const { stderr, exitCode } = await runCommandInProcess(TEXT_CHAT_ROUTES, [
+      "text",
+      "chat",
+      "--api",
+      "responses",
+      "--message",
+      "hello",
+      "--enable-search",
+      "true",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/enable-search.*Responses/i);
+  });
+
+  test("text chat --dry-run 透传 --enable-search true/false 到请求体", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      TEXT_CHAT_ROUTES,
+      [
+        "text",
+        "chat",
+        "--dry-run",
+        "--enable-search",
+        "true",
+        "--message",
+        "hello",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const enabled = parseStdoutJson<{ request?: { enable_search?: boolean } }>(stdout);
+    expect(enabled.request?.enable_search).toBe(true);
+
+    const {
+      stdout: disabledStdout,
+      stderr: disabledStderr,
+      exitCode: disabledExit,
+    } = await runCommandInProcess(
+      TEXT_CHAT_ROUTES,
+      [
+        "text",
+        "chat",
+        "--dry-run",
+        "--enable-search",
+        "false",
+        "--message",
+        "hello",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(disabledExit, disabledStderr).toBe(0);
+    const disabled = parseStdoutJson<{ request?: { enable_search?: boolean } }>(disabledStdout);
+    expect(disabled.request?.enable_search).toBe(false);
+  });
+
+  test("text chat --dry-run 未传 --enable-search 时请求体不含 enable_search", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      TEXT_CHAT_ROUTES,
+      [
+        "text",
+        "chat",
+        "--dry-run",
+        "--model",
+        "qwen-max",
+        "--message",
+        "hello",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: Record<string, unknown> }>(stdout);
+    expect(data.request).not.toHaveProperty("enable_search");
+  });
+
+  test("text chat --dry-run 白名单模型 qwen3.8-max 默认开启 enable_search", async () => {
+    // 未显式传 --model 时兼容默认模型也是 qwen3.8-max，同样命中白名单。
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      TEXT_CHAT_ROUTES,
+      [
+        "text",
+        "chat",
+        "--dry-run",
+        "--model",
+        "qwen3.8-max",
+        "--message",
+        "hello",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { enable_search?: boolean } }>(stdout);
+    expect(data.request?.enable_search).toBe(true);
+
+    const { stdout: implicitStdout, exitCode: implicitExit } = await runCommandInProcess(
+      TEXT_CHAT_ROUTES,
+      ["text", "chat", "--dry-run", "--message", "hello", "--output", "json"],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(implicitExit).toBe(0);
+    const implicit = parseStdoutJson<{ request?: { enable_search?: boolean } }>(implicitStdout);
+    expect(implicit.request?.enable_search).toBe(true);
+  });
+
+  test("text chat --dry-run 白名单模型可用 --enable-search false 显式关闭", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      TEXT_CHAT_ROUTES,
+      [
+        "text",
+        "chat",
+        "--dry-run",
+        "--model",
+        "qwen3.8-max",
+        "--enable-search",
+        "false",
+        "--message",
+        "hello",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { enable_search?: boolean } }>(stdout);
+    expect(data.request?.enable_search).toBe(false);
   });
 
   test("Prime 模式要求显式 --model", async () => {

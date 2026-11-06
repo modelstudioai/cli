@@ -304,6 +304,7 @@ async function invoke(
       return new Response("", { status: 200 });
     }
     if (scenario.kind === "search") {
+      if (address.includes("/chat/completions")) return Response.json(chat);
       if (String(json.method).startsWith("notifications/"))
         return new Response(null, { status: 204 });
       return Response.json({
