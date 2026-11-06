@@ -1,5 +1,5 @@
 import { execFile, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, request as forwardRequest, type Server } from "node:http";
 import { createConnection, type AddressInfo, type Socket } from "node:net";
 import { tmpdir } from "node:os";
@@ -142,7 +142,12 @@ describe("core HTTP across Node, native Bun and compiled binaries", () => {
     proxyUrl = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
     probeDirectory = mkdtempSync(join(tmpdir(), "bl-native-http-"));
     scriptPath = join(probeDirectory, "probe.mts");
-    binaryPath = join(probeDirectory, process.platform === "win32" ? "probe.exe" : "probe");
+    // Keep the executable at a stable path for local security approvals.
+    binaryPath = join(
+      repositoryRoot,
+      "test/native-http-probe",
+      process.platform === "win32" ? "probe.exe" : "probe",
+    );
     writeFileSync(
       scriptPath,
       `
@@ -218,6 +223,7 @@ try {
   )("%s", (runtime) => {
     beforeAll(async () => {
       if (runtime !== "binary") return;
+      mkdirSync(dirname(binaryPath), { recursive: true });
       const target = `bun-${process.platform === "win32" ? "windows" : process.platform}-${process.arch}`;
       await execFileAsync(
         bun,

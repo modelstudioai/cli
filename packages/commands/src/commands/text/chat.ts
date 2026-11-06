@@ -1,4 +1,4 @@
-import { parseModelStreamEvent } from "../shared/model-stream.ts";
+import { createChatCompletionStreamAccumulator } from "../shared/chat-completion-stream.ts";
 import {
   defineCommand,
   resolveBatchChatEndpoint,
@@ -13,7 +13,6 @@ import {
   type ResponsesRequest,
   type ResponsesResponse,
   type ResponsesStreamEvent,
-  type StreamChunk,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
@@ -372,6 +371,7 @@ export default defineCommand({
       let textContent = "";
       let inThinking = false;
       let responsesCompleted = false;
+      const accumulator = createChatCompletionStreamAccumulator(ctx.localize);
       const writesStreamingStdout = format === "text";
       const isTTY = process.stdout.isTTY;
       const statusOut =
@@ -380,8 +380,8 @@ export default defineCommand({
       const statusColor = ansi(statusOut);
 
       for await (const event of parseSSE(responseStream)) {
-        if (event.data === "[DONE]") break;
         if (api === "responses") {
+          if (event.data === "[DONE]") break;
           let parsedEvent: ResponsesStreamEvent;
           try {
             parsedEvent = JSON.parse(event.data) as ResponsesStreamEvent;
@@ -401,36 +401,36 @@ export default defineCommand({
           continue;
         }
 
-        const parsed = parseModelStreamEvent(event) as unknown as StreamChunk | undefined;
-        if (!parsed) continue;
+        const update = accumulator.accept(event);
 
-        for (const choice of parsed.choices ?? []) {
-          const delta = choice.delta;
-
-          // Handle thinking/reasoning content
-          if (delta.reasoning_content) {
-            if (writesStreamingStdout && !inThinking) {
-              inThinking = true;
-              statusOut.write(statusColor.dim("Thinking:\n"));
-            }
-            if (writesStreamingStdout) statusOut.write(delta.reasoning_content);
+        // Write thinking/reasoning content to the status stream.
+        if (update.reasoning) {
+          if (writesStreamingStdout && !inThinking) {
+            inThinking = true;
+            statusOut.write(statusColor.dim("Thinking:\n"));
           }
-
-          // Handle regular content
-          if (delta.content) {
-            if (writesStreamingStdout && inThinking) {
-              statusOut.write(`${statusColor.reset}\n\nResponse:\n`);
-              inThinking = false;
-            }
-            textContent += delta.content;
-            if (writesStreamingStdout) resultOut.write(delta.content);
-          }
+          if (writesStreamingStdout) statusOut.write(update.reasoning);
         }
+
+        // Write regular content to stdout; tool_calls stay off the text stream.
+        if (update.content) {
+          if (writesStreamingStdout && inThinking) {
+            statusOut.write(`${statusColor.reset}\n\nResponse:\n`);
+            inThinking = false;
+          }
+          if (writesStreamingStdout) resultOut.write(update.content);
+        }
+
+        if (accumulator.completed) break;
       }
       if (api === "responses") assertResponsesStreamCompleted(responsesCompleted);
       if (inThinking) statusOut.write(statusColor.reset);
 
-      ctx.output.result({ content: textContent }, format === "text" ? { text: "" } : undefined);
+      if (api === "responses") {
+        ctx.output.result({ content: textContent }, format === "text" ? { text: "" } : undefined);
+      } else {
+        ctx.output.result(accumulator.finish(), format === "text" ? { text: "" } : undefined);
+      }
     } else if (api === "responses") {
       const response = await ctx.client.requestJson<ResponsesResponse>({
         path: requestPath,

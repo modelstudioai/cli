@@ -6,33 +6,46 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [2.7.3] - 2026-11-03
+## [2.8.2] - 2026-11-04
+
+### 内部维护
+
+- 完善 CLI 使用统计。
+
+## [2.8.1] - 2026-11-04
 
 ### 新增
 
-- **自定义模型导入**：新增 `bl cmodel base-models/import/get/list/watch/delete`，支持将百炼基础模型导入为自定义模型。
-  - `cmodel base-models` 列出可导入的基础模型（控制台接口动态返回；导入当前仅北京地域开放）。
-  - `cmodel import` 提交导入任务，支持权重类型、展示名称与可选 bucket/object-key，提交前按控制台可导入清单校验基础模型。
-  - `cmodel watch --job-id <id>` 跟踪导入任务进度，支持 `--follow`、轮询间隔与超时配置。
-  - `cmodel get/list/delete` 查询与删除已导入的自定义模型。
-
-### 变更
-
-- **统一输出契约**：全部命令统一走本次调用的输出契约（result / progress / info / warning / debug）。进度与过程提示写 stderr（quiet 下隐藏），警告与错误始终保留；JSON 模式下警告/错误以 stderr 单行 JSON 输出。quiet 不再裁剪结果字段，并新增 `DASHSCOPE_QUIET=1` 环境变量。
-- **Advisor 关闭思考模式**：`bl advisor recommend` 的 LLM 调用始终关闭思考模式（意图分析此前为唯一开启思考的阶段）；`--no-thinking` 仍被接受但已无效果，为兼容旧脚本保留。
+- **Linux ARM64 二进制**：新增 Linux ARM64 安装包（glibc），支持独立安装和二进制更新。
 
 ### 修复
 
-- **根帮助配置复用**：渲染根帮助时复用已加载的配置，保留 flag 解析、Profile 选择与凭证优先级。
-- **重复错误信息**：文本错误不再重复输出归一化 cause，同时保留显式 cause、错误码、JSON 详情与 verbose 堆栈。
-- **SDK 警告与空 ASR 结果**：managed-agent 工作流与 `bl speech recognize` 保留 SDK 警告与空的 ASR 任务结果。
-- **微调费用诊断**：`bl finetune fee` 在 verbose 模式下输出费用查询的 gateway 诊断信息。
+- **图片结果**：完整保留异步并发图片生成和编辑任务返回的全部图片，兼容不同任务使用不同响应格式的情况。
+- **流式对话**：修复 Chat Completions 提前断流被误判成功的问题，结构化输出保留完整 `tool_calls` 并返回 `finish_reason`。
+- **CLI 退出**：避免待发送的遥测请求拖延退出，并在遥测初始化失败时保留已排队事件。
 
-### 内部
+## [2.8.0] - 2026-11-03
 
-- Advisor LLM 调用接入请求埋点。
-- 全部命令测试与指引对齐输出契约；优化 CLI 测试套件并对 CI 测试任务分片。
-- 澄清 CLI 与 Knowledge Studio README 中 quiet 行为说明。
+### 新增
+
+- **Aliyun CLI 接入**：支持通过 `aliyun bl` 调用，帮助、示例、操作指引和结构化命令适配对应入口。
+- **AK/SK 鉴权**：支持 `BAILIAN_ACCESS_KEY_ID`、`BAILIAN_ACCESS_KEY_SECRET` 和可选的 `BAILIAN_SECURITY_TOKEN`；Console token 缺失或过期时，可通过 AK/SK 自动获取。
+- **自定义模型导入**：新增 `bl cmodel base-models/import/get/list/watch/delete`，支持从 OSS 导入自定义模型、查询可导入基础模型、跟踪导入任务，以及查询或删除已导入模型；导入 API 当前仅北京地域开放。
+
+### 变更
+
+- **命令输出**：JSON 模式返回完整业务结果，警告、诊断和错误以 JSONL 单独写入 stderr，方便脚本和 Agent 处理。
+- **quiet 模式**：只隐藏进度和过程提示，保留完整结果、警告及错误；支持 `DASHSCOPE_QUIET=1`。原先依赖 quiet 提取 ID、路径或回答的脚本，需改为读取 JSON 字段。
+- **凭证优先级**：AK/SK 按“命令参数 → 百炼环境变量 → 百炼配置 → 阿里云环境变量”解析。
+- **模型推荐**：关闭推荐过程中的思考模式，`--no-thinking` 保持兼容。
+- **输出模式校验**：交互式登录、本地 UI、Pipeline 事件流和语音流式输出明确各自支持的格式，避免产生混合输出；原生交互模式与 Pipeline JSONL 事件使用 text 输出，语音流式 JSON 输出需指定 `--out`。
+
+### 修复
+
+- **语音识别**：JSON 输出保留完整响应和转写结果，空转写结果仍返回任务信息。
+- **Managed Agent 警告**：quiet 和 JSON 模式下保留 SDK 警告。
+- **更新提示**：使用缓存结果时仍能显示可升级通知。
+- **错误诊断**：避免重复错误信息，完善模型推荐和精调费用查询的请求诊断。
 
 ## [2.7.2] - 2026-10-30
 

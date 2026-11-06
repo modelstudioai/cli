@@ -6,33 +6,46 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
-## [2.7.3] - 2026-11-03
-
-### Added
-
-- **Custom model import**: Add `bl cmodel base-models/import/get/list/watch/delete` to import Bailian base models as custom models.
-  - `cmodel base-models` lists base models eligible for import (console API; import is currently available in the Beijing region only).
-  - `cmodel import` submits an import job with weight type, display name, and optional bucket/object-key, validating the base model against the console-supported import list before submission.
-  - `cmodel watch --job-id <id>` tracks import job progress with `--follow`, polling interval, and timeout options.
-  - `cmodel get/list/delete` query and remove imported custom models.
-
-### Changed
-
-- **Unified output contract**: Route every command family through one invocation output contract (result / progress / info / warning / debug). Progress and informational messages go to stderr and are hidden in quiet mode; warnings and errors are always preserved. In JSON mode, warnings and errors are emitted as single-line JSON on stderr. Quiet mode no longer trims result fields and gains a `DASHSCOPE_QUIET=1` environment variable.
-- **Advisor thinking disabled**: `bl advisor recommend` LLM calls no longer use thinking mode; intent analysis was the only thinking stage. `--no-thinking` remains accepted as a deprecated no-op for existing scripts.
-
-### Fixed
-
-- **Root help configuration**: Reuse the loaded configuration when rendering root help, preserving parsed flags, Profile selection, and credential precedence.
-- **Duplicate error messages**: Stop repeating the redundant normalization cause in text errors while preserving explicit causes, error codes, JSON details, and verbose stacks.
-- **SDK warnings and empty ASR results**: Preserve SDK warnings and empty ASR task results in managed-agent workflows and `bl speech recognize`.
-- **Finetune fee diagnostics**: `bl finetune fee` now emits gateway diagnostics for fee queries in verbose mode.
+## [2.8.2] - 2026-11-04
 
 ### Internal
 
-- Instrument advisor LLM requests for telemetry.
-- Align all command tests and guidance with the output contract; optimize CLI test suites and shard CI test jobs.
-- Clarify quiet output behavior in the CLI and Knowledge Studio READMEs.
+- Improve CLI usage statistics.
+
+## [2.8.1] - 2026-11-04
+
+### Added
+
+- **Linux ARM64 binaries**: Add Linux ARM64 packages (glibc), supporting standalone installation and binary updates.
+
+### Fixed
+
+- **Image results**: Preserve all images returned by concurrent asynchronous image generation and editing tasks, including tasks with different response formats.
+- **Streaming chat**: Detect prematurely closed Chat Completions streams, preserve complete `tool_calls`, and return `finish_reason` in structured output.
+- **CLI shutdown**: Prevent pending telemetry requests from delaying exit and preserve queued events when telemetry initialization fails.
+
+## [2.8.0] - 2026-11-03
+
+### Added
+
+- **Aliyun CLI integration**: Support invocation through `aliyun bl`, with host-aware help, examples, recovery hints, and structured commands.
+- **AK/SK authentication**: Support `BAILIAN_ACCESS_KEY_ID`, `BAILIAN_ACCESS_KEY_SECRET`, and optional `BAILIAN_SECURITY_TOKEN`. Automatically obtain Console tokens with AK/SK when missing or expired.
+- **Custom model import**: Add `bl cmodel base-models/import/get/list/watch/delete` to import custom models from OSS, list supported base models, track import jobs, and query or delete imported models. The import API is currently available in the Beijing region only.
+
+### Changed
+
+- **Command output**: JSON mode returns complete business results, with warnings, diagnostics, and errors written separately to stderr as JSONL for scripts and Agents.
+- **Quiet mode**: Hide only progress and informational messages while preserving complete results, warnings, and errors. Support `DASHSCOPE_QUIET=1`. Scripts extracting IDs, paths, or answers through quiet mode should explicitly read fields from JSON output.
+- **Credential precedence**: Resolve AK/SK in this order: command parameters, Bailian environment variables, Bailian configuration, then Alibaba Cloud environment variables.
+- **Model recommendations**: Disable thinking for recommendation LLM calls; keep `--no-thinking` accepted for compatibility.
+- **Output mode validation**: Explicitly validate supported formats for interactive login, local UI, Pipeline event streams, and streaming speech synthesis to avoid mixed output. Use text output for native interactive modes and Pipeline JSONL events, and specify `--out` for streaming speech synthesis in JSON mode.
+
+### Fixed
+
+- **Speech recognition**: Preserve complete responses and transcriptions in JSON output, including task information when no transcriptions are returned.
+- **Managed Agent warnings**: Preserve SDK warnings in quiet and JSON modes.
+- **Update notices**: Display available updates even when using cached version results.
+- **Error diagnostics**: Avoid duplicate error messages and improve request diagnostics for model recommendations and fine-tuning fee queries.
 
 ## [2.7.2] - 2026-10-30
 

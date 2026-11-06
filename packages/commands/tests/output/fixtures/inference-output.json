@@ -83,9 +83,10 @@
     ]
   },
   "text chat:json:true": {
-    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "stdout": "{\n  \"content\": \"Hello fixture\",\n  \"finish_reason\": \"stop\"\n}\n",
     "data": {
-      "content": "Hello fixture"
+      "content": "Hello fixture",
+      "finish_reason": "stop"
     },
     "requests": [
       {
@@ -126,9 +127,10 @@
     ]
   },
   "text stream:json:false": {
-    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "stdout": "{\n  \"content\": \"Hello fixture\",\n  \"finish_reason\": \"stop\"\n}\n",
     "data": {
-      "content": "Hello fixture"
+      "content": "Hello fixture",
+      "finish_reason": "stop"
     },
     "requests": [
       {
@@ -169,9 +171,10 @@
     ]
   },
   "text stream:json:true": {
-    "stdout": "{\n  \"content\": \"Hello fixture\"\n}\n",
+    "stdout": "{\n  \"content\": \"Hello fixture\",\n  \"finish_reason\": \"stop\"\n}\n",
     "data": {
-      "content": "Hello fixture"
+      "content": "Hello fixture",
+      "finish_reason": "stop"
     },
     "requests": [
       {

@@ -95,6 +95,7 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 - `command`、`timestamp`、`durationMs`、`success`
 - `cliVersion`、`nodeVersion`、`os`
+- `commandPrefix`（调用入口，来自 `Identity`）
 - `authMethod`
 - `callerType`（必填：`agent` 或 `unknown`）；`callerType=agent` 时可选 `callerName`、`skillName`、`skillVersion`
 - 失败时的 `errorMessage`、`exitCode`、`httpStatus`、`requestId`
@@ -119,20 +120,32 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 底层 Node tracker 还会附加公共设备字段：OS 类型/版本、Node 应用名与版本、平台，以及由本机网络标识计算的 MD5 `device_id`。
 
-当前 AEM 事件没有 `binName` 或 `clientName` 产品维度，并且 `bl`、`kscli` 共用 `pid=bailian-cli-node`。两边相同路径的 `config show`、`config set`、`update` 无法仅凭当前事件稳定区分产品；Knowledge 命令虽然因路径映射不同而表现为 `knowledge chat` 与 `chat`，也不应把命令路径当作长期产品标识。后端 source-config 的 `t2` 已能区分 `bl/kscli`，但这个维度尚未进入 AEM 客户端事件。
+从 2.8.2 起，每条命令事件通过 `commandPrefix` 显式记录调用入口，三种入口仍共用 `pid=bailian-cli-node`：
+
+| 调用入口    | `commandPrefix` |
+| ----------- | --------------- |
+| `bl`        | `bl`            |
+| `kscli`     | `kscli`         |
+| `aliyun bl` | `aliyun bl`     |
+
+`commandPrefix` 使用 `formatCommand(identity)` 从结构化的 `commandInvocation` 生成，未设置时回落到 `binName`。Aliyun 兼容入口由产品入口识别并注入 `Identity.commandInvocation = { bin: "aliyun", path: ["bl"] }`；telemetry 不读取环境变量或 argv 猜测来源，也不采用旧的显示覆盖字段。命令路径保持不变：如三种入口的 `config show` 仍以 `config show` 为事件名，按 `commandPrefix` 区分入口。调用方 `callerType` / `callerName` 是独立维度。
+
+该字段同时进入本地 JSONL 与远端 AEM `ext`，成功与失败均携带。旧版本缺少入口字段的事件保留为入口未知，不能自动归为 `bl`，也不能靠命令路径可靠补回。后端 source-config 和 User-Agent 的既有口径不变。
+
+`createTrackingEvent()` 必须传入 `identity`，统一从中读取 `cliVersion` 并生成 `commandPrefix`。`trackCommandExecution()` 传入产品 `Identity`，因此本版 CLI 命令事件始终包含 `commandPrefix`。
 
 AEM 映射：
 
-| AEM 字段   | 内容                                                                             |
-| ---------- | -------------------------------------------------------------------------------- |
-| event name | 命令路径                                                                         |
-| `et`       | `EXP`                                                                            |
-| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `callerType` 与失败时的 `exitCode` |
-| `c1`       | allowlist 参数                                                                   |
-| `c2`       | `success` / `failure`                                                            |
-| `c3`       | HTTP status                                                                      |
-| `c4`       | 错误文案，最多 500 字符                                                          |
-| `c5`       | request ID                                                                       |
+| AEM 字段   | 内容                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| event name | 命令路径                                                                                          |
+| `et`       | `EXP`                                                                                             |
+| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType` 与失败时的 `exitCode` |
+| `c1`       | allowlist 参数                                                                                    |
+| `c2`       | `success` / `failure`                                                                             |
+| `c3`       | HTTP status                                                                                       |
+| `c4`       | 错误文案，最多 500 字符                                                                           |
+| `c5`       | request ID                                                                                        |
 
 远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。
 
@@ -159,10 +172,13 @@ AEM 映射：
 
 - [ ] 更新 `TrackingEvent`、`createTrackingEvent()` 与 `buildRemoteAemOptions()` 的字段映射
 - [ ] 本地 JSONL 与远端 AEM 必须基于同一结构化事件，不能维护两套字段口径
+- [ ] 三种入口分别核对 `commandPrefix`；共享路径也必须可区分，旧数据缺字段保留为未知
 - [ ] 调用方字段经 `readCaller` → `TrackingDeps.caller` → 事件；仅显式 `agent` / `ai_agent` 为 `agent`，其余为 `unknown`
 - [ ] 成功与失败均覆盖；遥测异常必须静默且不改变业务退出码
 - [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口
+- [ ] 遥测发送的 DNS/HTTP/响应体必须受可取消预算控制；flush 超时必须取消在途操作，不能只停止等待，也不能修改全局 DNS/dispatcher 或强制退出宿主
+- [ ] 退出生命周期变更保留真实子进程回归：挂起响应头/响应体、DNS 预查询和关闭遥测；检查实际退出及进程仍存活时的连接释放，不以 flush Promise 返回代替验收
 - [ ] 错误字段不得额外拼接 token、请求体、prompt 或本地路径
 
 ## 完成后自查

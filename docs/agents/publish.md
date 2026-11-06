@@ -72,7 +72,7 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 ### channel 发布
 
 1. 在 GitHub 触发 Publish workflow，mode 选 `channel`，channel 填 npm dist-tag 名：
-   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`。**先发二进制（zip+tar.gz 上齐）再发静态仓 `install.sh`**，避免新脚本去拉还不存在的 `.tar.gz`。
+   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`。
    - **`knowledge-studio-cli` 和两个 dsh 插件**：随上述流程发布 npm，七包使用同一个临时 beta 版本。
 2. CI 自动：生成 `0.0.0-beta-<sha7>-<YYYYMMDDHHMM>`（UTC 到分钟；同 commit 同分钟重跑会覆盖同号）→ 临时 bump → 自检 →（bailian-cli）**Bun 编二进制 + GH prerelease + 覆盖 `sync-release.json`** → **npm 发到 dist-tag** → 还原 package.json
 3. 对应脚本：`tools/release/publish-channel.mjs`
@@ -125,7 +125,7 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 - **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限；OSS 通道复用同一 OIDC token 向 FC 证明身份（见上文「OSS 通道」）
 - **GitHub Release**：`contents: write` + `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`（stable / channel 均需）
 - **Node 版本**：24（npm 11.5+ 才支持 OIDC token 交换）
-- **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中
+- **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中。目标以 `tools/release/lib/binary-build.mjs` 的 `BINARY_TARGETS` 为准，含 glibc 的 `bun-linux-arm64`（x64 runner 交叉编译）
 - **darwin 签名**：编完后 `binary-codesign.mjs` 对 darwin Mach-O 做 ad-hoc 重签，并按 Apple 的方式重算每一页 SHA-256（末页不补零）。对不上就中止发布。macOS runner 额外跑 `codesign --verify --strict`。Linux runner 用 `rcodesign 0.29.0 sign`；不要用 `rcodesign verify`（会拒绝 Apple 已通过的 ad-hoc 签名）。漏签时 Apple Silicon 会在启动时 SIGKILL
 - **Actions 版本**：checkout/setup-node/pnpm-action 均为 v6（Node 24 兼容）
 - **npm 配置**：七个发布包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands` / `bailian-cli` / `knowledge-studio-cli` / `bailian-kb-dsh` / `bailian-memo-dsh`)的 Trusted Publisher 指向 `modelstudioai/cli` 的 `publish.yml`;新增发布包时同步 npm Trusted Publisher
