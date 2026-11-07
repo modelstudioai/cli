@@ -311,11 +311,27 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: quota（DashScope）", () => {
   });
 
   test("quota list --model 精确查询返回模型限流", async () => {
+    // 账号限流目录不一定含固定模型名（如 qwen3-max）；先模糊取一条再测精确查询。
+    const listRun = await runCommandE2e(QUOTA_ROUTES, [
+      "quota",
+      "list",
+      "--name",
+      "qwen",
+      "--page-size",
+      "1",
+      "--output",
+      "json",
+    ]);
+    expect(listRun.exitCode, listRun.stderr).toBe(0);
+    const listed = parseStdoutJson<{ items?: { model?: string }[] }>(listRun.stdout);
+    const model = listed.items?.[0]?.model;
+    expect(model, "quota list --name qwen 应至少返回一条模型限流").toBeTruthy();
+
     const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "list",
       "--model",
-      "qwen3-max",
+      model!,
       "--output",
       "json",
     ]);
@@ -323,7 +339,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: quota（DashScope）", () => {
     const data = parseStdoutJson<{
       items?: { model?: string; model_limit?: { request_limit?: number | null } | null }[];
     }>(stdout);
-    expect(data.items?.[0]?.model).toBe("qwen3-max");
+    expect(data.items?.[0]?.model).toBe(model);
     expect(data.items?.[0]).toHaveProperty("model_limit");
   });
 
