@@ -32,6 +32,10 @@ const agentCaller: CallerAttribution = {
   skillName: "bailian-cli",
   skillVersion: "2.5.0",
 };
+const scriptCaller: CallerAttribution = {
+  callerType: "script",
+  callerName: "cursor",
+};
 
 test("derives event version and prefix from identity", () => {
   const event = createTrackingEvent({
@@ -251,6 +255,40 @@ test("keeps agent attribution on success and in AEM ext", async () => {
       skillVersion: "2.5.0",
     }),
   });
+});
+
+test("keeps script attribution with callerName and without skill leak", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true } as Settings,
+      authMethod: "apiKey",
+      caller: scriptCaller,
+    },
+    ["config", "show"],
+    {},
+    async () => {},
+  );
+
+  const event = sinkMocks.localSink.mock.calls[0]![0];
+  expect(event).toMatchObject({
+    success: true,
+    callerType: "script",
+    callerName: "cursor",
+  });
+  expect(event.skillName).toBeUndefined();
+  expect(event.skillVersion).toBeUndefined();
+  expect(event.params).toBeUndefined();
+  const remoteExt = buildRemoteAemOptions(event).ext as Record<string, unknown>;
+  expect(remoteExt).toMatchObject({
+    callerType: "script",
+    callerName: "cursor",
+  });
+  expect(remoteExt).not.toHaveProperty("skillName");
+  expect(remoteExt).not.toHaveProperty("skillVersion");
 });
 
 test("does not call sinks when telemetry is disabled", async () => {

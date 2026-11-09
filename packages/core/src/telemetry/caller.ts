@@ -1,4 +1,4 @@
-/** Parse BAILIAN_CALLER_*. Only an explicit agent is `agent`; everything else is `unknown`. */
+/** Parse BAILIAN_CALLER_*. Explicit agent/ai_agent → agent; explicit script → script; everything else → unknown. */
 
 export type CallerAttribution =
   | { callerType: "unknown" }
@@ -7,7 +7,8 @@ export type CallerAttribution =
       callerName: string;
       skillName?: string;
       skillVersion?: string;
-    };
+    }
+  | { callerType: "script"; callerName: string };
 
 const CALLER_TYPE_ENV = "BAILIAN_CALLER_TYPE";
 const CALLER_NAME_ENV = "BAILIAN_CALLER_NAME";
@@ -35,25 +36,36 @@ function normalizeCallerName(raw: string | undefined): string {
 /** Env-only attribution; no TTY or install-path heuristics. */
 export function readCaller(env: NodeJS.ProcessEnv): CallerAttribution {
   const callerType = readTrimmed(env, CALLER_TYPE_ENV)?.toLowerCase();
-  if (callerType !== "agent" && callerType !== "ai_agent") {
-    return { callerType: "unknown" };
+
+  if (callerType === "agent" || callerType === "ai_agent") {
+    const skillNameRaw = readTrimmed(env, SKILL_NAME_ENV)?.toLowerCase();
+    const skillName =
+      skillNameRaw !== undefined && SKILL_NAME_PATTERN.test(skillNameRaw)
+        ? skillNameRaw
+        : undefined;
+    const skillVersionRaw = readTrimmed(env, SKILL_VERSION_ENV);
+    const skillVersion =
+      skillName !== undefined &&
+      skillVersionRaw !== undefined &&
+      SKILL_VERSION_PATTERN.test(skillVersionRaw)
+        ? skillVersionRaw
+        : undefined;
+
+    return {
+      callerType: "agent",
+      callerName: normalizeCallerName(readTrimmed(env, CALLER_NAME_ENV)),
+      ...(skillName !== undefined ? { skillName } : {}),
+      ...(skillVersion !== undefined ? { skillVersion } : {}),
+    };
   }
 
-  const skillNameRaw = readTrimmed(env, SKILL_NAME_ENV)?.toLowerCase();
-  const skillName =
-    skillNameRaw !== undefined && SKILL_NAME_PATTERN.test(skillNameRaw) ? skillNameRaw : undefined;
-  const skillVersionRaw = readTrimmed(env, SKILL_VERSION_ENV);
-  const skillVersion =
-    skillName !== undefined &&
-    skillVersionRaw !== undefined &&
-    SKILL_VERSION_PATTERN.test(skillVersionRaw)
-      ? skillVersionRaw
-      : undefined;
+  if (callerType === "script") {
+    return {
+      callerType: "script",
+      // script 只带执行/维护宿主名，不读取 skill*
+      callerName: normalizeCallerName(readTrimmed(env, CALLER_NAME_ENV)),
+    };
+  }
 
-  return {
-    callerType: "agent",
-    callerName: normalizeCallerName(readTrimmed(env, CALLER_NAME_ENV)),
-    ...(skillName !== undefined ? { skillName } : {}),
-    ...(skillVersion !== undefined ? { skillVersion } : {}),
-  };
+  return { callerType: "unknown" };
 }

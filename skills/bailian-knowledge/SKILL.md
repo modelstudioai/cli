@@ -70,7 +70,7 @@ description: >-
 
 ## 命令执行与参考
 
-执行任何 `bl` 命令前读取 [共享协议](../bailian-protocol/SKILL.md)，完成版本预检、鉴权和实际风险确认；协议缺失不妨碍本地发现与解释，但须提示 `bl skill init` 补齐后再执行。沿用当前产品，用 `bl knowledge --introspect` 或 `kscli --introspect` 发现能力，切换产品或更新版本后重新读取。不猜 flag，不替换前缀推导路径；当前 schema 不支持的能力如实说明，不承诺升级一定提供。
+执行任何 `bl` 命令前读取 [共享协议](../bailian-protocol/SKILL.md)，完成版本预检、鉴权、[调用归因](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command)和实际风险确认；协议缺失不妨碍本地发现与解释，但须提示 `bl skill init` 补齐后再执行。沿用当前产品，用 `bl knowledge --introspect` 或 `kscli --introspect` 发现能力，切换产品或更新版本后重新读取。不猜 flag，不替换前缀推导路径；当前 schema 不支持的能力如实说明，不承诺升级一定提供。 **把命令写入可复用脚本 / 模板 / 任务定义时，改用协议的 `script` 模板（不要保留 `agent`）；若出现 agent 样例，仅适用于当面 inline。交给用户手动粘贴时去掉归因前缀。**
 
 个人绑定的业务调用显式传已核实的 `--workspace-id`，优先 `--output json`。使用真实返回的 ID；知识库 index ID 不能当作检索 agent ID。凭证与签名上传 URL 不进入回复、绑定或版本库。用户文本作为参数传递，不作为 shell 代码执行。
 
