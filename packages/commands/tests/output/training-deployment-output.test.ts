@@ -53,6 +53,33 @@ const deployment = {
   ...retained,
 };
 const response = { request_id: "request-fixture", output: job, ...retained };
+const trainingParameters = {
+  output: {
+    hyper_params: [
+      {
+        name: "batch_size",
+        type: "number",
+        data_range: ["1", "8192"],
+        left_range: "include",
+        right_range: "include",
+        step: 1,
+        editable: true,
+        defaultValue: "32",
+      },
+      {
+        name: "n_epochs",
+        type: "number",
+        data_range: ["1", "200"],
+        left_range: "include",
+        right_range: "include",
+        step: 1,
+        editable: true,
+        defaultValue: "3",
+      },
+      { name: "learning_rate", type: "input", editable: true, defaultValue: "2e-5" },
+    ],
+  },
+};
 const scenarios: Scenario[] = [
   {
     name: "dataset list",
@@ -357,43 +384,28 @@ const scenarios: Scenario[] = [
       trainingType: "sft-lora",
       batchSize: 4,
     },
-    response: {},
+    response: trainingParameters,
     dryRun: true,
   },
   {
     name: "audio training create preview",
     command: commands.finetuneAudioCreate,
-    flags: {
-      baseModel: "cosyvoice-v3.5",
-      datasets: "file-fixture",
-      trainingType: "sft",
-      batchSize: 4,
-    },
-    response: {},
+    flags: { baseModel: "cosyvoice-v3.5", datasets: "file-fixture" },
+    response: trainingParameters,
     dryRun: true,
   },
   {
     name: "image training create preview",
     command: commands.finetuneImageCreate,
-    flags: {
-      baseModel: "wan2.7",
-      datasets: "file-fixture",
-      trainingType: "sft-lora",
-      batchSize: 4,
-    },
-    response: {},
+    flags: { baseModel: "wan2.7", datasets: "file-fixture" },
+    response: trainingParameters,
     dryRun: true,
   },
   {
     name: "video training create preview",
     command: commands.finetuneVideoCreate,
-    flags: {
-      baseModel: "wan2.6-i2v",
-      datasets: "file-fixture",
-      trainingType: "sft-lora",
-      batchSize: 4,
-    },
-    response: {},
+    flags: { baseModel: "wan2.6-i2v", datasets: "file-fixture", batchSize: 4 },
+    response: trainingParameters,
     dryRun: true,
   },
 ];
@@ -532,6 +544,65 @@ async function withDatasetFixture(contents: string, run: (file: string) => Promi
     await rm(directory, { recursive: true, force: true });
   }
 }
+
+test("invalid authoritative training override stops before upload and submission", async () => {
+  const contents = '{"messages":[{"role":"assistant","content":"fixture response"}]}\n';
+  await withDatasetFixture(contents, async (file) => {
+    const result = await invoke(
+      {
+        name: "invalid training override",
+        command: commands.finetuneTextCreate,
+        flags: {
+          baseModel: "qwen-fixture",
+          datasets: file,
+          trainingType: "sft-lora",
+          batchSize: 4,
+        },
+        response: {
+          output: {
+            hyper_params: [
+              {
+                name: "batch_size",
+                type: "number",
+                data_range: ["32", "8192"],
+                left_range: "include",
+                right_range: "include",
+                step: 8,
+                editable: true,
+              },
+            ],
+          },
+        },
+      },
+      { format: "json", quiet: false, verbose: false },
+    );
+    expect(result.exitCode).toBe(2);
+    expect(result.requests).toEqual([expect.objectContaining({ method: "GET", body: null })]);
+    expect(result.stderr).toContain("training hyper-parameter overrides are invalid");
+    expect(result.stderr).not.toContain("Uploaded");
+  });
+});
+
+test("training parameter lookup failure stops before upload and submission", async () => {
+  const contents = '{"messages":[{"role":"assistant","content":"fixture response"}]}\n';
+  await withDatasetFixture(contents, async (file) => {
+    const result = await invoke(
+      {
+        name: "failed training parameter lookup",
+        command: commands.finetuneTextCreate,
+        flags: { baseModel: "qwen-fixture", datasets: file, trainingType: "sft-lora" },
+        response: {},
+      },
+      { format: "json", quiet: false, verbose: false },
+      true,
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.requests).toEqual([expect.objectContaining({ method: "GET", body: null })]);
+    expect(result.stderr).toContain("original server failure");
+    expect(result.stderr).not.toContain("Uploaded");
+  });
+});
+
 test.each(displays)(
   "dataset missing data returns JSON null or the old text: %j",
   async (display) => {

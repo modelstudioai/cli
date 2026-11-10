@@ -1,27 +1,176 @@
-import { describe, expect, test } from "vite-plus/test";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
+import { createServer, type Server } from "node:http";
 import { join } from "path";
 import {
   isDashScopeE2EReady,
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runCommandInProcess,
   e2eFixturesDir,
 } from "./helpers.ts";
 import { FINETUNE_ROUTES } from "./topic-routes.ts";
+
+let schemaServer: Server;
+let schemaOrigin = "";
+
+function parameterSchema(inputModel: string): Array<Record<string, unknown>> {
+  const videoModel = inputModel.startsWith("wan");
+  return [
+    {
+      name: "batch_size",
+      type: "number",
+      data_range: videoModel ? ["1", "8192"] : ["8", "8192"],
+      step: videoModel ? 1 : 8,
+      editable: true,
+      defaultValue: videoModel ? "1" : "8",
+    },
+    {
+      name: "n_epochs",
+      type: "number",
+      data_range: ["1", "200"],
+      step: 1,
+      editable: true,
+    },
+    { name: "learning_rate", type: "input", editable: true },
+    {
+      name: "max_length",
+      type: "intInputNumber",
+      data_range: ["500", "65536"],
+      editable: true,
+    },
+    {
+      name: "eval_steps",
+      type: "intInputNumber",
+      data_range: ["1", "2147483647"],
+      editable: true,
+    },
+    {
+      name: "lora_alpha",
+      type: "select",
+      support_values: ["16", "32", "64", "128"],
+      editable: true,
+    },
+    {
+      name: "lora_dropout",
+      type: "floatInputNumber",
+      data_range: ["0", "0.2"],
+      left_range: "exclude",
+      right_range: "exclude",
+      editable: true,
+    },
+    {
+      name: "lora_rank",
+      type: "select",
+      support_values: ["8", "16", "32", "64"],
+      editable: true,
+    },
+    {
+      name: "lr_scheduler_type",
+      type: "select",
+      support_values: ["linear", "cosine"],
+      editable: true,
+    },
+    {
+      name: "save_strategy",
+      type: "select",
+      support_values: ["steps", "epoch"],
+      editable: true,
+    },
+    {
+      name: "save_total_limit",
+      type: "number",
+      data_range: ["1", "10"],
+      step: 1,
+      editable: true,
+    },
+    {
+      name: "save_steps",
+      type: "intInputNumber",
+      data_range: ["1", "2147483647"],
+      editable: true,
+    },
+    {
+      name: "split",
+      type: "floatInputNumber",
+      data_range: ["0", "1"],
+      left_range: "exclude",
+      right_range: "exclude",
+      editable: true,
+    },
+    {
+      name: "max_split_val_dataset_sample",
+      type: "intInputNumber",
+      data_range: ["1", "2147483647"],
+      editable: true,
+    },
+    {
+      name: "data_augmentation",
+      type: "select",
+      support_values: ["true", "false"],
+      editable: true,
+    },
+  ];
+}
+
+beforeAll(async () => {
+  schemaServer = createServer((request, response) => {
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    response.setHeader("content-type", "application/json");
+    if (url.pathname !== "/api/v1/fine-tunes/fine-tunes-params") {
+      response.statusCode = 404;
+      response.end('{"message":"unexpected path"}');
+      return;
+    }
+    response.end(
+      JSON.stringify({
+        output: {
+          hyper_params: parameterSchema(url.searchParams.get("input_model") ?? ""),
+        },
+      }),
+    );
+  });
+  await new Promise<void>((resolve, reject) => {
+    schemaServer.once("error", reject);
+    schemaServer.listen(0, "127.0.0.1", resolve);
+  });
+  const address = schemaServer.address();
+  if (!address || typeof address === "string") throw new Error("Expected a local TCP server.");
+  schemaOrigin = `http://127.0.0.1:${address.port}`;
+});
+
+afterAll(async () => {
+  schemaServer.closeAllConnections();
+  await new Promise<void>((resolve) => schemaServer.close(() => resolve()));
+});
+
+function runSchemaCommand(args: string[]) {
+  return runCommandInProcess(FINETUNE_ROUTES, args, {
+    DASHSCOPE_API_KEY: "offline-test-only",
+    DASHSCOPE_BASE_URL: schemaOrigin,
+    BAILIAN_WORKSPACE_ID: "",
+    NODE_OPTIONS: "",
+    HTTP_PROXY: "",
+    HTTPS_PROXY: "",
+    ALL_PROXY: "",
+    NO_PROXY: "",
+    http_proxy: "",
+    https_proxy: "",
+    all_proxy: "",
+    no_proxy: "",
+    NODE_USE_ENV_PROXY: "",
+  });
+}
 
 /**
  * Fine-tune E2E.
  *
  * The suite exercises command discovery, help text, and the `--dry-run`
- * structured-output path (arg parsing + body construction) with no network
- * dependency. Because `ensureApiKey` runs before every command (see main.ts),
- * these cases are gated by isDashScopeE2EReady() — they are skipped when no
- * DashScope credential is present (e.g. on CI) and run offline when one is.
- * The remote list test is also gated and tolerates both empty accounts and
- * auth/permission failures (see the test comment).
+ * structured-output path. Fine-tune create previews query a local model-specific
+ * parameter schema but never upload data or submit a job.
  */
 
-describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
+describe("e2e: finetune (schema-gated)", () => {
   test("finetune 列出子命令", async () => {
     const { stderr, exitCode } = await runCommandHelp(FINETUNE_ROUTES, ["finetune", "--help"]);
     expect(exitCode, stderr).toBe(0);
@@ -42,7 +191,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune create --dry-run 构造 SFT 默认请求体", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
       "create",
@@ -64,7 +213,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
         training_file_ids: string[];
         validation_file_ids: string[];
         training_type: string;
-        hyper_parameters: { n_epochs: number };
+        hyper_parameters: Record<string, unknown>;
       };
     }>(stdout);
     expect(data.action).toBe("finetune.create");
@@ -72,11 +221,11 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     expect(data.body.training_file_ids).toEqual(["file-aaa", "file-bbb"]);
     expect(data.body.validation_file_ids).toEqual(["file-ccc"]);
     expect(data.body.training_type).toBe("efficient_sft");
-    expect(data.body.hyper_parameters.n_epochs).toBe(3);
+    expect(data.body.hyper_parameters).toEqual({});
   });
 
   test("finetune create --dry-run 转发训练类型与超参", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
       "create",
@@ -89,7 +238,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "--n-epochs",
       "5",
       "--batch-size",
-      "16",
+      "32",
       "--learning-rate",
       "1.6e-5",
       "--max-length",
@@ -120,10 +269,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     expect(data.body.training_type).toBe("efficient_sft");
     expect(data.body.model_name).toBe("my-qwen-sft");
     expect(data.body.finetuned_output_suffix).toBe("v1");
-    // batch_size is forwarded verbatim when within the [8, 1024] server range.
     expect(data.body.hyper_parameters).toEqual({
       n_epochs: 5,
-      batch_size: 16,
+      batch_size: 32,
       learning_rate: "1.6e-5",
       max_length: 4096,
     });
@@ -138,7 +286,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   ])(
     "finetune create --training-type %s 经 profile 映射为 server 类型 %s",
     async (cliType, serverType) => {
-      const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      const { stdout, stderr, exitCode } = await runSchemaCommand([
         "finetune",
         "text",
         "create",
@@ -160,7 +308,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   );
 
   test("finetune create --training-type 拒绝不支持的训练类型值", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
       "create",
@@ -177,9 +325,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     expect(exitCode, stdout + stderr).not.toBe(0);
   });
 
-  test("finetune create --dry-run 把本地路径标记为 pending 上传且不发起网络请求", async () => {
+  test("finetune create --dry-run 把本地路径标记为 pending 且不上传数据", async () => {
     const localPath = join(e2eFixturesDir, ".dataset-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
       "create",
@@ -210,7 +358,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune create --datasets 为空时拒绝", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
       "create",
@@ -225,13 +373,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     expect(exitCode, stdout + stderr).not.toBe(0);
   });
 
-  test("finetune create 样本数 <= batch_size 时提交前快速失败且不上传", async () => {
-    // The fixture has 3 records; the small-file auto-adjust sets batch_size=8,
-    // so 3 <= 8 trips the pre-submit gate. The gate fires before any upload,
-    // so this is fully offline (no key, no network) — the proof is that the
-    // error is the gate message AND no "Uploaded …" line ever appears.
+  test("finetune create 样本数 <= 有效 batch_size 时提交前失败且不上传", async () => {
     const localPath = join(e2eFixturesDir, ".dataset-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
       "create",
@@ -239,21 +383,20 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "qwen3-8b",
       "--datasets",
       localPath,
+      "--batch-size",
+      "32",
       "--output",
       "json",
     ]);
     expect(exitCode, stdout + stderr).not.toBe(0);
     const combined = `${stdout}\n${stderr}`;
     expect(combined).toMatch(/not greater than batch_size/i);
-    // Crucially, no upload happened — the gate must fire before the upload step.
     expect(combined).not.toMatch(/Uploaded .* → file-/);
   });
 
-  test("finetune create --batch-size 过小仍按 8 下限比较（不绕过卡口）", async () => {
-    // Even with --batch-size 1 (server clamps to 8), 3 samples <= 8 still trips
-    // the gate — confirms the gate uses the clamped/effective batch, not the raw.
+  test("finetune create 按权威配置拒绝过小 batch_size 且不上传", async () => {
     const localPath = join(e2eFixturesDir, ".dataset-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
       "create",
@@ -267,7 +410,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "json",
     ]);
     expect(exitCode, stdout + stderr).not.toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/batch_size \(8\)/);
+    const combined = `${stdout}\n${stderr}`;
+    expect(combined).toMatch(/batch_size/i);
+    expect(combined).not.toMatch(/Uploaded .* → file-/);
   });
 
   test.each([
@@ -283,7 +428,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     ["params", ["--base-model", "qwen3-8b"]],
     ["metrics", ["--job-id", "ft-xxx"]],
   ])("finetune %s --dry-run 发出结构化动作", async (sub, extra) => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       sub,
       ...extra,
@@ -297,11 +442,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune delete --help 展示 --yes", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
-      "finetune",
-      "delete",
-      "--help",
-    ]);
+    const { stderr, exitCode } = await runSchemaCommand(["finetune", "delete", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--yes/i);
   });
@@ -309,7 +450,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune params --dry-run 映射训练类型并合并 modality/reasoning-mode", async () => {
     // sft-lora → efficient_sft at the interface boundary; --modality and
     // --reasoning-mode merge into one hyper_parameters JSON query string.
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "params",
       "--base-model",
@@ -348,7 +489,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune params --dry-run 显式训练类型按映射表转换", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "params",
       "--base-model",
@@ -365,7 +506,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune params 非法训练类型退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "params",
       "--base-model",
@@ -379,7 +520,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune params 非法 modality 枚举值退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "params",
       "--base-model",
@@ -393,11 +534,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune params 缺少 --base-model 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
-      "finetune",
-      "params",
-      "--quiet",
-    ]);
+    const { stderr, exitCode } = await runSchemaCommand(["finetune", "params", "--quiet"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--base-model|Missing required argument/i);
   });
@@ -405,7 +542,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune metrics --dry-run 默认 page_no=1 且显式 page_size=100", async () => {
     // The OpenAPI default is 1000 per page; the CLI keeps the legacy 100-page
     // shape by sending page_size explicitly unless the user overrides it.
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "metrics",
       "--job-id",
@@ -428,7 +565,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune metrics --dry-run 转发 page/page-size/workspace 覆盖值", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "metrics",
       "--job-id",
@@ -455,17 +592,13 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune metrics 缺少 --job-id 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
-      "finetune",
-      "metrics",
-      "--quiet",
-    ]);
+    const { stderr, exitCode } = await runSchemaCommand(["finetune", "metrics", "--quiet"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--job-id|Missing required argument/i);
   });
 
   test("finetune create --dry-run 解析多 datasets 中的空白", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
       "create",
@@ -487,7 +620,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune audio create --dry-run 用 sft-lora 默认 + audio 超参", async () => {
     // Audio has no --training-type flag; the command fixes modality=audio and
     // defaults to sft-lora (efficient_sft) with the fixed CosyVoice hyper-params.
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "audio",
       "create",
@@ -525,7 +658,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune image create --dry-run 用 sft-lora 默认", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "image",
       "create",
@@ -561,7 +694,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune video create --datasets 缺失时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "video",
       "create",
@@ -581,7 +714,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   ])(
     "finetune video create --dry-run %s 解析 batch_size=%i / max_pixels=%i",
     async (baseModel, batchSize, maxPixels) => {
-      const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      const { stdout, stderr, exitCode } = await runSchemaCommand([
         "finetune",
         "video",
         "create",
@@ -613,7 +746,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   );
 
   test("finetune video create --dry-run 转发超参覆盖且不做 clamp", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "video",
       "create",
@@ -644,17 +777,13 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
 
 describe("e2e: finetune high-risk confirmation", () => {
   test("finetune delete --help 展示 runtime 注入的 --yes", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
-      "finetune",
-      "delete",
-      "--help",
-    ]);
+    const { stderr, exitCode } = await runSchemaCommand(["finetune", "delete", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--yes/i);
   });
 
   test("finetune delete 无 --yes 返回确认请求 (7)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "delete",
       "--job-id",
@@ -748,7 +877,7 @@ describe("finetune complete recipe (offline)", () => {
     "json",
   ];
   test("preserves names, priority and every explicit hyperparameter", async () => {
-    const result = await runCommandE2e(FINETUNE_ROUTES, recipeArgs);
+    const result = await runSchemaCommand(recipeArgs);
     expect(result.exitCode, result.stderr).toBe(0);
     const response = parseStdoutJson<{ body: Record<string, unknown> }>(result.stdout);
     expect(response.body).toMatchObject({
@@ -781,7 +910,7 @@ describe("finetune complete recipe (offline)", () => {
   ])("rejects invalid %s before submission", async (flagName, invalidValue) => {
     const invalidArgs = [...recipeArgs];
     invalidArgs[invalidArgs.indexOf(flagName) + 1] = invalidValue;
-    const result = await runCommandE2e(FINETUNE_ROUTES, invalidArgs);
+    const result = await runSchemaCommand(invalidArgs);
     expect(result.exitCode).toBe(2);
   });
 });

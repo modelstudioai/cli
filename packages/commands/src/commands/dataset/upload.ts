@@ -30,8 +30,8 @@ const UPLOAD_FLAGS = {
     type: "string",
     valueHint: "<name>",
     description: {
-      "en-US": 'Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")',
-      "zh-CN": '数据集用途标签（默认："fine-tune"；例如 "evaluation"）',
+      "en-US": 'Dataset purpose tag (default: "fine-tune")',
+      "zh-CN": '数据集用途标签（默认："fine-tune"）',
     },
   },
   schema: {
@@ -76,7 +76,6 @@ export default defineCommand({
     "--file cpt.jsonl --schema cpt",
     "--file decision.jsonl --schema decision",
     "--file audio.zip --schema tts",
-    "--file eval.jsonl --purpose evaluation",
     "--file train.jsonl --full-validate",
     "--file train.jsonl --no-validate",
   ],

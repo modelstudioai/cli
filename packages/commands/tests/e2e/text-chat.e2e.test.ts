@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
@@ -12,13 +13,22 @@ import {
 import { TEXT_CHAT_ROUTES } from "./topic-routes.ts";
 
 let isolatedDirectory: string;
+const servers: Server[] = [];
 
 beforeEach(() => {
   isolatedDirectory = mkdtempSync(join(tmpdir(), "bl-text-prime-e2e-"));
   writeFileSync(join(isolatedDirectory, "config.json"), "{}");
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await Promise.all(
+    servers.splice(0).map(
+      (server) =>
+        new Promise<void>((resolve, reject) => {
+          server.close((error) => (error ? reject(error) : resolve()));
+        }),
+    ),
+  );
   rmSync(isolatedDirectory, { recursive: true, force: true });
 });
 
@@ -37,6 +47,20 @@ const EMPTY_MODEL_ENV = {
   BAILIAN_WORKSPACE_ID: "",
 };
 
+async function startChatServer(
+  handler: (request: IncomingMessage, response: ServerResponse) => void,
+): Promise<{ origin: string }> {
+  const server = createServer(handler);
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  servers.push(server);
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Expected a local TCP server.");
+  return { origin: `http://127.0.0.1:${address.port}` };
+}
+
 /**
  * Text chat：help / 分组不依赖密钥；对话需 DashScope。
  */
@@ -47,6 +71,9 @@ describe("e2e: text chat", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--api\s+<chat\|responses>/i);
     expect(stderr).toMatch(/--enable-search/i);
+    expect(stderr).toMatch(/--enable-thinking\s+\[true\|false\]/i);
+    expect(stderr).toMatch(/bare flag means true|裸参数表示 true/i);
+    expect(stderr).toMatch(/--enable-thinking false/i);
     expect(stderr).toMatch(/--prime/i);
     expect(stderr).toMatch(/--workspace-id/i);
     expect(stderr).toMatch(/chat|--message|model|stream/i);
@@ -137,6 +164,136 @@ describe("e2e: text chat", () => {
     expect(disabledExit, disabledStderr).toBe(0);
     const disabled = parseStdoutJson<{ request?: { enable_search?: boolean } }>(disabledStdout);
     expect(disabled.request?.enable_search).toBe(false);
+  });
+
+  test.each([
+    { name: "omitted", thinkingArgs: [], expected: undefined, expectedBudget: undefined },
+    { name: "bare", thinkingArgs: ["--enable-thinking"], expected: true, expectedBudget: 32 },
+    {
+      name: "explicit true",
+      thinkingArgs: ["--enable-thinking=true"],
+      expected: true,
+      expectedBudget: 32,
+    },
+    {
+      name: "explicit false",
+      thinkingArgs: ["--enable-thinking", "false"],
+      expected: false,
+      expectedBudget: undefined,
+    },
+  ])(
+    "text chat --dry-run keeps enable_thinking tri-state: $name",
+    async ({ thinkingArgs, expected, expectedBudget }) => {
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
+        TEXT_CHAT_ROUTES,
+        [
+          "text",
+          "chat",
+          "--dry-run",
+          "--model",
+          "qwen-plus",
+          "--message",
+          "hello",
+          ...thinkingArgs,
+          "--thinking-budget",
+          "32",
+          "--output",
+          "json",
+        ],
+        { DASHSCOPE_API_KEY: "" },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        request?: { enable_thinking?: boolean; thinking_budget?: number };
+      }>(stdout);
+      expect(data.request?.enable_thinking).toBe(expected);
+      expect(data.request?.thinking_budget).toBe(expectedBudget);
+    },
+  );
+
+  test("text chat actual local request preserves thinking tri-state", async () => {
+    const requestBodies: Array<Record<string, unknown>> = [];
+    const { origin } = await startChatServer((request, response) => {
+      let rawBody = "";
+      request.setEncoding("utf8");
+      request.on("data", (chunk: string) => {
+        rawBody += chunk;
+      });
+      request.on("end", () => {
+        requestBodies.push(JSON.parse(rawBody) as Record<string, unknown>);
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ choices: [{ message: { content: "ok" } }] }));
+      });
+    });
+
+    for (const thinkingArgs of [[], ["--enable-thinking"], ["--enable-thinking=false"]]) {
+      const result = await runCommandInProcess(
+        TEXT_CHAT_ROUTES,
+        [
+          "text",
+          "chat",
+          "--base-url",
+          origin,
+          "--api-key",
+          "sk-local-test",
+          "--model",
+          "fixture-model",
+          "--message",
+          "hello",
+          ...thinkingArgs,
+          "--thinking-budget",
+          "32",
+          "--output",
+          "json",
+        ],
+        {},
+      );
+      expect(result.exitCode, result.stderr).toBe(0);
+    }
+
+    expect(requestBodies).toHaveLength(3);
+    expect(requestBodies[0]).not.toHaveProperty("enable_thinking");
+    expect(requestBodies[0]).not.toHaveProperty("thinking_budget");
+    expect(requestBodies[1]).toMatchObject({ enable_thinking: true, thinking_budget: 32 });
+    expect(requestBodies[2]).toMatchObject({ enable_thinking: false });
+    expect(requestBodies[2]).not.toHaveProperty("thinking_budget");
+  });
+
+  test("text chat leaves unsupported-model thinking errors unchanged", async () => {
+    const { origin } = await startChatServer((request, response) => {
+      request.resume();
+      response.writeHead(400, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          code: "InvalidParameter",
+          message: "fixture model does not support thinking",
+          request_id: "request-thinking-test",
+        }),
+      );
+    });
+    const result = await runCommandInProcess(
+      TEXT_CHAT_ROUTES,
+      [
+        "text",
+        "chat",
+        "--base-url",
+        origin,
+        "--api-key",
+        "sk-local-test",
+        "--model",
+        "fixture-model",
+        "--message",
+        "hello",
+        "--enable-thinking",
+        "--output",
+        "json",
+      ],
+      {},
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("fixture model does not support thinking");
+    expect(result.stderr).toContain("InvalidParameter");
+    expect(result.stderr).toContain("request-thinking-test");
   });
 
   test("text chat --dry-run 未传 --enable-search 时请求体不含 enable_search", async () => {

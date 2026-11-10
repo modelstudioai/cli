@@ -18,8 +18,8 @@ const LIST_FLAGS = {
     type: "string",
     valueHint: "<name>",
     description: {
-      "en-US": 'Filter by purpose (e.g. "fine-tune", "evaluation"). Omit to list all.',
-      "zh-CN": '按用途筛选（例如 "fine-tune"、"evaluation"）。省略时列出全部。',
+      "en-US": 'Filter by purpose (e.g. "fine-tune"). Omit to list all.',
+      "zh-CN": '按用途筛选（例如 "fine-tune"）。省略时列出全部。',
     },
   },
 } satisfies FlagsDef;
@@ -30,7 +30,7 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--purpose <name>]",
   flags: LIST_FLAGS,
-  exampleArgs: ["", "--purpose fine-tune", "--purpose evaluation --page-size 20", "--output json"],
+  exampleArgs: ["", "--purpose fine-tune", "--page-size 20", "--output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
 

@@ -68,6 +68,9 @@ function flagsSchema(definitions: FlagsDef, identity: Identity): Record<string, 
             description: localizedCommandText(definition.description, identity),
             valueHint: definition.valueHint,
             ...(definition.required !== undefined ? { required: definition.required } : {}),
+            ...(definition.implicitValue !== undefined
+              ? { implicitValue: definition.implicitValue }
+              : {}),
             ...(definition.choices ? { choices: [...definition.choices] } : {}),
           },
     ]),

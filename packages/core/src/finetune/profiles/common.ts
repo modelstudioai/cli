@@ -2,10 +2,9 @@
  * Shared helpers for training profiles.
  *
  * Most text-based training types (sft, dpo, cpt, and their -lora variants)
- * share the same hyper-parameter resolution logic: n_epochs defaults to 3,
- * learning_rate and max_length are set only when explicitly provided, and
- * batch_size is clamped to the server's [8, 1024] range. Extracting this
- * into a single helper prevents drift when defaults or bounds change.
+ * share the same hyper-parameter resolution logic: only explicitly supplied
+ * values are forwarded. Defaults and valid ranges come from the model-specific
+ * training parameter schema returned by the service.
  */
 import type { TrainingProfile, DataModality } from "./types.ts";
 import type { ValidateOpts, ValidationResult } from "../../dataset/validate/types.ts";
@@ -22,16 +21,10 @@ export function resolveTextHyperParameters(
   flags: Record<string, unknown>,
 ): Record<string, unknown> {
   const hp: Record<string, unknown> = {};
-  hp.n_epochs = flags.nEpochs !== undefined ? (flags.nEpochs as number) : 3;
+  if (flags.nEpochs !== undefined) hp.n_epochs = flags.nEpochs as number;
   if (flags.learningRate !== undefined) hp.learning_rate = flags.learningRate as string;
   if (flags.maxLength !== undefined) hp.max_length = flags.maxLength as number;
-  if (flags.batchSize !== undefined) {
-    const requested = flags.batchSize as number;
-    let batchSize = requested;
-    if (batchSize < 8) batchSize = 8;
-    if (batchSize > 1024) batchSize = 1024;
-    hp.batch_size = batchSize;
-  }
+  if (flags.batchSize !== undefined) hp.batch_size = flags.batchSize as number;
   return hp;
 }
 

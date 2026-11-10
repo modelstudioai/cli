@@ -83,11 +83,24 @@ export default defineCommand({
       const response = await getDeployment(ctx.client, deployedModel);
       const deployment = response.output ?? response.data;
       const status = (deployment?.status ?? "").toUpperCase();
-      const isPtu =
-        deployment?.plan === "ptu" ||
-        deployment?.plan === "ptu_v2" ||
-        deployment?.ptu_capacity !== undefined ||
-        deployment?.ptu_service_tier !== undefined;
+      const plan = typeof deployment?.plan === "string" ? deployment.plan.trim().toLowerCase() : "";
+      const knownPtuPlan = plan === "ptu" || plan === "ptu_v2";
+      const knownNonPtuPlan = plan === "mu" || plan === "cu" || plan === "lora";
+      const hasMeaningfulPtuTier =
+        typeof deployment?.ptu_service_tier === "string" &&
+        deployment.ptu_service_tier.trim().length > 0;
+      const hasMeaningfulPtuCapacity =
+        typeof deployment?.ptu_capacity === "object" &&
+        deployment.ptu_capacity !== null &&
+        !Array.isArray(deployment.ptu_capacity) &&
+        Object.keys(deployment.ptu_capacity).length > 0;
+      const isPtu = knownPtuPlan || (!plan && (hasMeaningfulPtuTier || hasMeaningfulPtuCapacity));
+      if (!isPtu && !knownNonPtuPlan) {
+        throw new BailianError(
+          "Cannot determine deployment plan safely; deletion was not submitted. / 无法可靠判断部署计划类型；未提交删除请求。",
+          ExitCode.USAGE,
+        );
+      }
       if (isPtu) {
         if (status !== "STOPPED") {
           throw new BailianError(

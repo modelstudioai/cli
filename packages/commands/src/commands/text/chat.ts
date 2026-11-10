@@ -107,10 +107,13 @@ const CHAT_FLAGS = {
     },
   },
   enableThinking: {
-    type: "switch",
+    type: "boolean",
+    valueHint: "[true|false]",
+    implicitValue: true,
     description: {
-      "en-US": "Enable thinking/reasoning mode (for qwen3/qwq models)",
-      "zh-CN": "启用思考/推理模式（适用于 qwen3/qwq 模型）",
+      "en-US":
+        "Set thinking/reasoning mode; bare flag means true (model support is service-defined)",
+      "zh-CN": "设置思考/推理模式；裸参数表示 true（是否支持由服务端模型能力决定）",
     },
   },
   thinkingBudget: {
@@ -215,6 +218,10 @@ export default defineCommand({
       "zh-CN": '--model qwq-plus --message "计算 1+1" --enable-thinking',
     },
     {
+      "en-US": '--model qwen-plus --message "Answer directly" --enable-thinking false',
+      "zh-CN": '--model qwen-plus --message "直接回答" --enable-thinking false',
+    },
+    {
       "en-US": '--enable-search true --message "Latest news about Alibaba Cloud"',
       "zh-CN": '--enable-search true --message "阿里云最新新闻"',
     },
@@ -313,9 +320,14 @@ export default defineCommand({
     if (flags.temperature !== undefined) body.temperature = flags.temperature;
     if (flags.topP !== undefined) body.top_p = flags.topP;
 
-    if (flags.enableThinking) {
-      body.enable_thinking = true;
-      if (api === "chat" && "messages" in body && flags.thinkingBudget !== undefined) {
+    if (flags.enableThinking !== undefined) {
+      body.enable_thinking = flags.enableThinking;
+      if (
+        flags.enableThinking &&
+        api === "chat" &&
+        "messages" in body &&
+        flags.thinkingBudget !== undefined
+      ) {
         body.thinking_budget = flags.thinkingBudget;
       }
     }

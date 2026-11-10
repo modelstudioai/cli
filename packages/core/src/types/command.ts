@@ -23,6 +23,7 @@ export interface ValueFlag {
   description: LocalizedText;
   valueHint: string;
   required?: boolean;
+  implicitValue?: boolean;
   /**
    * Restrict to a fixed set of values. The parser rejects anything else and the
    * parsed type narrows to the union. Declare with `as const` so the literals

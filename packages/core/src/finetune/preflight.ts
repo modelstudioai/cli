@@ -15,6 +15,7 @@
  * `finetune create` (the only call site today) — that's the job-level boundary.
  */
 import type { ValidationIssue } from "../dataset/validate/types.ts";
+import type { FineTuneParamHyperParam } from "./types.ts";
 
 /** Stable issue code for "too few training samples for the batch size". */
 export const INSUFFICIENT_SAMPLES_CODE = "INSUFFICIENT_SAMPLES";
@@ -28,11 +29,7 @@ export interface BatchSizeGateInput {
    * platform.
    */
   recordCount: number;
-  /**
-   * Effective batch_size the job will run with — after the CLI's clamp
-   * ([8, 1024]) and small-file auto-adjust, or the platform default (16) when
-   * neither the user nor auto-adjust set one.
-   */
+  /** Effective batch_size from the user override or the model-specific service default. */
   batchSize: number;
 }
 
@@ -73,7 +70,148 @@ export function preflightBatchSizeGate(input: BatchSizeGateInput): BatchSizeGate
       "Options:",
       "  • add more data (recommended: comfortably more than batch_size, since the",
       "    platform also holds back a default 0.9 train split),",
-      "  • lower --batch-size (server clamps to a minimum of 8).",
+      "  • lower --batch-size within the range published for this model and training type.",
     ].join("\n"),
   };
+}
+
+export type FineTuneHyperParameterIssueCode =
+  | "unsupported"
+  | "not_editable"
+  | "invalid_type"
+  | "not_supported"
+  | "out_of_range"
+  | "invalid_step";
+
+export interface FineTuneHyperParameterIssue {
+  parameter: string;
+  value: unknown;
+  code: FineTuneHyperParameterIssueCode;
+  expected?: string;
+}
+
+function numericValue(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function isStepAligned(value: number, origin: number, step: number): boolean {
+  const quotient = (value - origin) / step;
+  return Math.abs(quotient - Math.round(quotient)) < 1e-9;
+}
+
+export function validateFineTuneHyperParameterOverrides(
+  schema: FineTuneParamHyperParam[],
+  overrides: Record<string, unknown>,
+): FineTuneHyperParameterIssue[] {
+  const definitions = new Map(
+    schema.flatMap((parameter) => (parameter.name ? [[parameter.name, parameter] as const] : [])),
+  );
+  const issues: FineTuneHyperParameterIssue[] = [];
+
+  for (const [parameter, value] of Object.entries(overrides)) {
+    const definition = definitions.get(parameter);
+    if (!definition) {
+      issues.push({ parameter, value, code: "unsupported" });
+      continue;
+    }
+    if (definition.editable === false) {
+      issues.push({ parameter, value, code: "not_editable" });
+      continue;
+    }
+
+    const serialized = String(value);
+    const supportedValues = definition.support_values ?? [];
+    if (supportedValues.length > 0 && !supportedValues.includes(serialized)) {
+      issues.push({
+        parameter,
+        value,
+        code: "not_supported",
+        expected: supportedValues.join(", "),
+      });
+      continue;
+    }
+
+    const range = definition.data_range ?? [];
+    const numericType =
+      definition.type === "number" ||
+      definition.type === "intInputNumber" ||
+      definition.type === "floatInputNumber" ||
+      range.length === 2 ||
+      definition.step !== undefined;
+    if (numericType) {
+      const numeric = numericValue(value);
+      if (
+        numeric === undefined ||
+        (definition.type === "intInputNumber" && !Number.isInteger(numeric))
+      ) {
+        issues.push({
+          parameter,
+          value,
+          code: "invalid_type",
+          expected: definition.type === "intInputNumber" ? "integer" : "number",
+        });
+        continue;
+      }
+
+      const minimum = numericValue(range[0]);
+      const maximum = numericValue(range[1]);
+      const belowMinimum =
+        minimum !== undefined &&
+        (definition.left_range === "exclude" ? numeric <= minimum : numeric < minimum);
+      const aboveMaximum =
+        maximum !== undefined &&
+        (definition.right_range === "exclude" ? numeric >= maximum : numeric > maximum);
+      if (belowMinimum || aboveMaximum) {
+        const left = definition.left_range === "exclude" ? "(" : "[";
+        const right = definition.right_range === "exclude" ? ")" : "]";
+        issues.push({
+          parameter,
+          value,
+          code: "out_of_range",
+          expected: `${left}${range[0]}, ${range[1]}${right}`,
+        });
+        continue;
+      }
+
+      if (
+        definition.step !== undefined &&
+        definition.step > 0 &&
+        !isStepAligned(numeric, minimum ?? 0, definition.step)
+      ) {
+        issues.push({
+          parameter,
+          value,
+          code: "invalid_step",
+          expected: `step ${definition.step} from ${minimum ?? 0}`,
+        });
+      }
+      continue;
+    }
+
+    if (
+      value === null ||
+      typeof value === "object" ||
+      (definition.type === "input" && serialized.trim() === "")
+    ) {
+      issues.push({
+        parameter,
+        value,
+        code: "invalid_type",
+        expected: definition.type ?? "scalar",
+      });
+    }
+  }
+
+  return issues;
+}
+
+export function getFineTuneHyperParameterDefaultNumber(
+  schema: FineTuneParamHyperParam[],
+  parameter: string,
+): number | undefined {
+  const definition = schema.find((candidate) => candidate.name === parameter);
+  return numericValue(definition?.defaultValue ?? definition?.recommend_value);
 }

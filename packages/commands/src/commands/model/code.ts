@@ -4,11 +4,11 @@ import {
   anonymousConsoleCall,
   defineCommand,
   fetchModelDetail,
+  formatCommand,
   type ModelGroupItem,
   type ModelSampleCodeV2,
   type ModelSampleSnippet,
 } from "bailian-cli-core";
-import { pickTrunkItems } from "./shared.ts";
 
 /** `--api` values map onto the API-style keys used inside `sampleCodeV2`. */
 const API_STYLE_KEYS: Record<string, string> = {
@@ -117,15 +117,9 @@ export function resolveSample(
   return { sdk, apiStyle, lang, code };
 }
 
-/** Prefer the exact model asked for, then any trunk item that carries samples. */
-function pickSampleBearingItem(
-  items: ModelGroupItem[],
-  modelKey: string,
-): ModelGroupItem | undefined {
-  const exact = items.find((item) => item.model === modelKey);
-  if (exact?.sampleCodeV2) return exact;
-  const trunk = pickTrunkItems(items).find((item) => item.sampleCodeV2);
-  return trunk ?? items.find((item) => item.sampleCodeV2);
+/** Select only the exact model requested; samples from sibling model IDs are not interchangeable. */
+function pickExactModelItem(items: ModelGroupItem[], modelKey: string): ModelGroupItem | undefined {
+  return items.find((item) => item.model === modelKey);
 }
 
 export default defineCommand({
@@ -217,20 +211,33 @@ export default defineCommand({
     }
 
     const detail = await fetchModelDetail(call, flags.model);
+    const modelNotFoundMessage = ctx.localize({
+      "en-US": `Model "${flags.model}" not found.`,
+      "zh-CN": `未找到模型“${flags.model}”。`,
+    });
+    const browseCatalogHint = ctx.localize({
+      "en-US": `Run "${formatCommand(ctx.identity, "model list")}" to browse the catalog.`,
+      "zh-CN": `运行“${formatCommand(ctx.identity, "model list")}”浏览模型目录。`,
+    });
     if (!detail) {
-      throw new BailianError(
-        `Model "${flags.model}" not found.`,
-        ExitCode.GENERAL,
-        `Run "model list" to browse the catalog.`,
-      );
+      throw new BailianError(modelNotFoundMessage, ExitCode.GENERAL, browseCatalogHint);
     }
 
-    const item = pickSampleBearingItem(detail.items ?? [], flags.model);
-    if (!item?.sampleCodeV2) {
+    const item = pickExactModelItem(detail.items ?? [], flags.model);
+    if (!item) {
+      throw new BailianError(modelNotFoundMessage, ExitCode.GENERAL, browseCatalogHint);
+    }
+    if (!item.sampleCodeV2) {
       throw new BailianError(
-        `Model "${flags.model}" publishes no SDK sample code.`,
+        ctx.localize({
+          "en-US": `Model "${flags.model}" publishes no SDK sample code.`,
+          "zh-CN": `模型“${flags.model}”未发布 SDK 示例代码。`,
+        }),
         ExitCode.GENERAL,
-        "Speech, image and video models are called through their own command groups.",
+        ctx.localize({
+          "en-US": "Speech, image and video models are called through their own command groups.",
+          "zh-CN": "语音、图像和视频模型需通过各自的命令组调用。",
+        }),
       );
     }
 
