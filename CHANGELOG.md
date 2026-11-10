@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.8.5] - 2026-11-10
+
+### Fixed
+
+- **Fine-tune creation**: Query the authoritative hyper-parameter schema before uploads, validate only explicit constrained overrides, and stop before uploading or submitting when the schema lookup or validation fails. Unspecified parameters are no longer filled or clamped locally.
+- **Deployment deletion**: Prefer the explicit deployment plan over stale PTU-shaped fields and refuse deletion when the plan cannot be determined safely.
+- **Thinking control**: Allow `bl text chat --enable-thinking=false` while preserving the existing omitted and bare-flag behavior; a disabled request no longer sends `thinking_budget`.
+- **Model sample code**: Require an exact model match instead of returning sample code from another model in the same family.
+- **Dataset upload help**: Remove the unsupported `evaluation` purpose example while keeping `fine-tune` as the default.
+
 ## [2.8.4] - 2026-11-06
 
 ### Added
