@@ -325,7 +325,6 @@ export async function createKbWithDocs(
   const createRun = await reporter.runStep("kb create --wait", routes, [
     "knowledge",
     "create",
-    "--yes",
     "--name",
     kbName,
     "--description",

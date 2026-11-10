@@ -43,6 +43,7 @@ const retained = { future: { values: [false, 0, null, []] } };
 beforeEach(() => {
   vi.stubEnv("NO_COLOR", "1");
   vi.stubEnv("BAILIAN_INSTALL_METHOD", "brew");
+  vi.stubEnv("DASHSCOPE_API_KEY", undefined as unknown as string);
   vi.spyOn(httpTransport, "fetch").mockImplementation(async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (url.endsWith("/index.json")) return Response.json({ version: 1, skills: registrySkills });

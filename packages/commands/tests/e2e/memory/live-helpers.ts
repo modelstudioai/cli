@@ -24,6 +24,11 @@ export function assertMemoryServiceRejection(
   );
 }
 
+/** True only for the flaky server-side project-existence rejection (see add). */
+function isTransientProjectRejection(error: unknown): boolean {
+  return error instanceof Error && /project_ids got a project does not exist/i.test(error.message);
+}
+
 /** Each journey owns only a fresh user; cleanup never touches existing user data. */
 export function memoryJourney(
   libraryId: string | undefined = process.env.BAILIAN_E2E_MEMORY_LIBRARY_ID,
@@ -71,7 +76,17 @@ export function memoryJourney(
     for (const [index, argument] of args.entries()) {
       if (argument === "--project-id") projects.add(args[index + 1]);
     }
-    return invoke(["add", "--user-id", userId, ...args]);
+    // Project-existence validation is transiently inconsistent: a valid
+    // project can be reported as missing, then accepted minutes later.
+    // Only that exact rejection is retryable; anything else fails at once.
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await invoke(["add", "--user-id", userId, ...args]);
+      } catch (error) {
+        if (attempt >= 3 || !isTransientProjectRejection(error)) throw error;
+        await delay(attempt * 5_000);
+      }
+    }
   }
   async function search(args: string[]): Promise<Node[]> {
     const result = await invoke<MemoryNodeListBody>(["search", "--user-id", userId, ...args]);

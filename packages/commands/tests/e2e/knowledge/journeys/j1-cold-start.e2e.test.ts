@@ -159,7 +159,10 @@ describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清
         ],
       );
       expect(chatBadVersionRun.exitCode, "未发布版本号应被服务端拒绝").not.toBe(0);
-      expect(chatBadVersionRun.stderr).toMatch(/HTTP 400/);
+      // JSON 错误通道写 HTTP_STATUS/400 或 http_status:400，不一定有 "HTTP 400" 字面量
+      expect(chatBadVersionRun.stderr).toMatch(
+        /HTTP_STATUS\/400|"http_status"\s*:\s*400|ParamField\.Error/i,
+      );
     } finally {
       for (const agentId of serviceAgentIds) {
         const deleteRun = await reporter.runStep(

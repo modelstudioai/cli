@@ -47,7 +47,7 @@ describe.skipIf(!liveEnabled())("Memory J1–J5 (real cloud, isolated CLI subpro
     "J3 a later correction becomes a searchable current preference",
     async () =>
       journey("J3", async (fixture) => {
-        await fixture.add("请记住，我当前最喜欢的运动是徒步。");
+        await fixture.add("请记住，我当前最喜欢的运动是徒步。", { requireExtraction: true });
         await eventually(
           () => fixture.search("当前最喜欢的运动是什么？"),
           (nodes) => nodes.some((node) => /徒步/.test(node.content)),
@@ -55,6 +55,7 @@ describe.skipIf(!liveEnabled())("Memory J1–J5 (real cloud, isolated CLI subpro
         );
         await fixture.add(
           "更新我的长期偏好：我以前最喜欢徒步，但现在已经改成游泳。游泳是我当前最喜欢的运动，徒步只是过去的偏好。",
+          { requireExtraction: true },
         );
         await eventually(
           () => fixture.list(),
