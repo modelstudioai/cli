@@ -29,16 +29,53 @@ export function normalizeError(
   return new BailianError(message, ExitCode.GENERAL);
 }
 
+type Localize = (text: LocalizedText) => string;
+const english: Localize = (text) => (typeof text === "string" ? text : text["en-US"]);
+
 /** Complete recovery text supplied before Console errors can be wrapped by commands. */
 export function consoleRecoveryHint(commandPrefix: string): string {
   return `Run \`${formatCommand(commandPrefix, "auth login --console")}\` to sign in or refresh your console session.`;
 }
 
-/** Add runtime-owned model-auth guidance without modifying service errors. */
+/** Native DashScope code for free-tier-only exhaustion (not TPS/TPM insufficient_quota). */
+const FREE_TIER_ONLY_API_CODE = "AllocationQuota.FreeTierOnly";
+
+export interface ErrorHintOptions {
+  /**
+   * When true, free-tier recovery may render `usage free` / `usage freetier`
+   * under this product's commandPrefix. Derived from the product command map.
+   */
+  supportsFreeTierRecovery?: boolean;
+}
+
+/** Detect AllocationQuota.FreeTierOnly without matching TPS/TPM insufficient_quota. */
+function isFreeTierOnlyExhausted(error: BailianError): boolean {
+  if (error.api?.apiCode === FREE_TIER_ONLY_API_CODE) return true;
+  const message = error.message;
+  // Documented FreeTierOnly copy, plus OpenAI-compat wrappers that keep the
+  // distinctive "use free tier only" phrase when type/code are remapped.
+  return (
+    /use free tier only/i.test(message) ||
+    /The free tier of the model has been exhausted/i.test(message)
+  );
+}
+
+/** Localized free-tier recovery steps; only call when the product exposes usage commands. */
+function freeTierRecoveryHint(commandPrefix: string, localize: Localize): string {
+  const statusCommand = formatCommand(commandPrefix, "usage free --model <model>");
+  const disableCommand = formatCommand(commandPrefix, "usage freetier --off --model <model> --yes");
+  return localize({
+    "en-US": `Check status: ${statusCommand}\nIf Auto-Stop is ON and you accept pay-as-you-go: ${disableCommand}`,
+    "zh-CN": `查看状态：${statusCommand}\n若 Auto-Stop 为 ON 且接受按量计费：${disableCommand}`,
+  });
+}
+
+/** Add runtime-owned recovery guidance without modifying service error messages. */
 export function errorHint(
   error: BailianError,
   commandPrefix: string,
   localize: Localize,
+  options: ErrorHintOptions = {},
 ): string | undefined {
   let hint = error.hint;
   if (error instanceof CredentialError) {
@@ -58,6 +95,12 @@ export function errorHint(
       case "incomplete-openapi-env":
         return hint;
     }
+  }
+  // Append free-tier recovery before the AUTH-only early return so GENERAL
+  // service errors (and async paths that already set a hint) still get guidance.
+  if (options.supportsFreeTierRecovery && isFreeTierOnlyExhausted(error)) {
+    const recovery = freeTierRecoveryHint(commandPrefix, localize);
+    hint = hint ? `${hint}\n${recovery}` : recovery;
   }
   if (error.exitCode !== ExitCode.AUTH) return hint;
   if (
@@ -79,9 +122,6 @@ export function errorHint(
     .filter((line) => line !== undefined)
     .join("\n");
 }
-
-type Localize = (text: LocalizedText) => string;
-const english: Localize = (text) => (typeof text === "string" ? text : text["en-US"]);
 
 /** Shared local-error classification; service errors are never reclassified. */
 export function classifyRuntimeError(

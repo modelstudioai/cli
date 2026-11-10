@@ -43,7 +43,7 @@ runtime/create-cli.ts: 每次调用创建 reporter，统一捕获初始化/解�
   ↓
 runtime/error-handler.ts:
   - 服务端错误(BailianError(GENERAL)) → text 直接打 message
-  - 内部 AUTH/USAGE/NETWORK/TIMEOUT → 走 errorHint(只 AUTH 还有增强)
+  - 内部 AUTH/USAGE/NETWORK/TIMEOUT → 走 errorHint(AUTH 增强;另可对已知可恢复服务端错误追加 hint)
   - TypeError("fetch failed") → 读 err.cause.code 翻成 NETWORK
   - Node fs errno → 翻成 GENERAL + errno hint
   - reporter：JSON 错误、warning、debug 各占 stderr 一行，无空行；stdout 仅保留最终业务结果
@@ -104,7 +104,10 @@ process.exit(err.exitCode)
 
 ### B. runtime 增强(`errorHint`)
 
-- [ ] `packages/runtime/src/error-handler.ts:errorHint`:**当前只为 internal AUTH 增强**(因为 resolver / authStage 等内部位置会发 AUTH)
+- [ ] `packages/runtime/src/error-handler.ts:errorHint`:**主要为 internal AUTH 增强**(resolver / authStage 等内部位置会发 AUTH)
+- [ ] **允许的有限扩展**:对已知可恢复的服务端错误,**追加**恢复 hint(保留原 message / exitCode)。当前仅 `AllocationQuota.FreeTierOnly`(及同义英文 message 短语)。message / apiCode 匹配**只用于追加**,不参与分类、归并或替换 message(勿与下方反面 case 3 的关键词归并混淆)
+- [ ] 追加时若已有 hint(如 video task id),拼接并按标记去重;不要 `hint` 非空就跳过
+- [ ] 渲染产品命令前须经能力门控(命令表是否暴露对应 path),不要对 `kscli` 等缺命令的产品硬拼 `usage freetier`
 - [ ] 命令名使用 `commandPrefix`,不要硬编码 `bl`
 - [ ] URL 必须是 `import { API_KEY_PAGE } from "./urls.ts"`
 

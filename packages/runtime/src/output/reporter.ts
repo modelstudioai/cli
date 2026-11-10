@@ -23,6 +23,8 @@ export interface OutputReporterOptions {
   stderr?: OutputWriter;
   localize?: (text: LocalizedText) => string;
   commandPrefix?: string;
+  /** When true, free-tier recovery may render usage free / usage freetier commands. */
+  supportsFreeTierRecovery?: boolean;
 }
 
 export interface OutputReporter {
@@ -96,7 +98,9 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
     error(error) {
       if (errorCode !== undefined) return errorCode;
       const failure = normalizeError(error, options.commandPrefix ?? "cli", localize);
-      const hint = errorHint(failure, options.commandPrefix ?? "cli", localize);
+      const hint = errorHint(failure, options.commandPrefix ?? "cli", localize, {
+        supportsFreeTierRecovery: options.supportsFreeTierRecovery,
+      });
       if (verbose && error instanceof Error && !(error instanceof BailianError)) {
         diagnostic("debug", {
           code: "ERROR_STACK",

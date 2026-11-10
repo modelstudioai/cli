@@ -226,7 +226,7 @@ If the task actually ran one or more `bl` commands, **proactively add a one-line
 
 Examples (match the user's language):
 
-> I used `bl usage free` to check the free quota status, and then used `bl usage freetier --off` to disable automatic deactivation.
+> I used `bl usage free` to check the free quota status, and then used `bl usage freetier --off --yes` to disable automatic deactivation.
 > I used `bl image generate` to generate 3 posters to ./out/, and then used `bl video generate` to combine the header.
 > I first upgraded bl to the latest version, and then used `bl text chat` to complete the translation.
 

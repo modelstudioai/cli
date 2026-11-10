@@ -21,6 +21,15 @@ export default defineCommand({
     "zh-CN": "启用或停用免费额度模型自动停止。默认启用，使用 --off 停用",
   },
   auth: "console",
+  risk: {
+    level: "high",
+    reason: "billing",
+    message: {
+      "en-US":
+        "This changes free-tier auto-stop. Disabling it allows pay-as-you-go calls after free quota is exhausted.",
+      "zh-CN": "此操作会变更免费额度自动停止。停用后，免费额度用尽将继续按量计费调用。",
+    },
+  },
   usageArgs: "<--model <model>[,model2,...] | --all> [--off] [flags]",
   flags: {
     model: {
@@ -48,12 +57,37 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    "--model qwen3-max",
-    "--model qwen3-max,qwen-turbo",
-    "--all",
-    "--on --model qwen3-max",
-    "--off --model qwen3-max",
-    "--off --all",
+    {
+      "en-US": "--model qwen3-max --yes",
+      "zh-CN": "--model qwen3-max --yes",
+    },
+    {
+      "en-US": "--model qwen3-max,qwen-turbo --yes",
+      "zh-CN": "--model qwen3-max,qwen-turbo --yes",
+    },
+    {
+      "en-US": "--all --yes",
+      "zh-CN": "--all --yes",
+    },
+    {
+      "en-US": "--on --model qwen3-max --yes",
+      "zh-CN": "--on --model qwen3-max --yes",
+    },
+    {
+      "en-US": "--off --model qwen3-max --yes",
+      "zh-CN": "--off --model qwen3-max --yes",
+    },
+    {
+      "en-US": "--off --all --yes",
+      "zh-CN": "--off --all --yes",
+    },
+  ],
+  notes: [
+    {
+      "en-US":
+        "Requires `--yes` (exit code 7 / requires_confirmation without it). Applies to both enabling and disabling auto-stop.",
+      "zh-CN": "需要 `--yes`（缺少时退出码 7 / requires_confirmation）。启用与停用自动停止均适用。",
+    },
   ],
   validate: (flags) =>
     !flags.model && !flags.all ? "Provide --model <model>[,model2,...] or --all." : undefined,

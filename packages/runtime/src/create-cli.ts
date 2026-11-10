@@ -174,6 +174,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     ...(opts.commandInvocation ? { commandInvocation: opts.commandInvocation } : {}),
   };
   const commandPrefix = formatCommand(identity);
+  // Product capability gate: only render usage free / freetier recovery when those paths exist.
+  const supportsFreeTierRecovery = "usage free" in commands && "usage freetier" in commands;
   const commandPackPolicy = opts.commandPacks ?? { supported: {} };
   let loadedCommandPacksPromise: ReturnType<typeof loadCommandPacks> | undefined;
 
@@ -338,6 +340,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         settings: initialSettings,
         localize,
         commandPrefix,
+        supportsFreeTierRecovery,
       });
       const warnings: OutputDiagnostic[] = [];
       const cleanup = installProcessHandlers(() => reporter, localize);
@@ -348,11 +351,17 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           settings: buildOutputSettings(sources),
           localize,
           commandPrefix,
+          supportsFreeTierRecovery,
         });
         setupProxyFromEnv();
         const registry = await getRegistry(translator);
         await dispatch(registry, argv, localize, sources, (settings) => {
-          reporter = createOutputReporter({ settings, localize, commandPrefix });
+          reporter = createOutputReporter({
+            settings,
+            localize,
+            commandPrefix,
+            supportsFreeTierRecovery,
+          });
           for (const warning of warnings.splice(0)) reporter.output.warning(warning);
           return reporter;
         });
