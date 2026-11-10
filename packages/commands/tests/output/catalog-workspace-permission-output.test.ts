@@ -4,9 +4,11 @@ import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import {
   buildSettings,
   Client,
+  ExitCode,
   httpTransport,
   type AnyCommand,
   type LocalizedText,
+  type ModelGroup,
 } from "bailian-cli-core";
 import { createOutputReporter } from "bailian-cli-runtime";
 import * as commands from "../../src/index.ts";
@@ -168,6 +170,7 @@ let missing: boolean,
   neverReady: boolean;
 let failing: string | undefined;
 let catalogTotal: number;
+let modelFamily: ModelGroup;
 let permissionResponse: unknown;
 beforeEach(() => {
   calls = [];
@@ -179,6 +182,7 @@ beforeEach(() => {
   neverReady = false;
   failing = undefined;
   catalogTotal = 2;
+  modelFamily = family;
   permissionResponse = permission;
   vi.stubEnv("NO_COLOR", "1");
   vi.spyOn(httpTransport, "fetch").mockImplementation(async (input, init) => {
@@ -211,7 +215,7 @@ beforeEach(() => {
         const request = params.Data.input as Record<string, unknown>;
         payload = {
           total: catalogTotal,
-          list: missing ? [] : request.queryGroupByModel ? [family] : [family, deadFamily],
+          list: missing ? [] : request.queryGroupByModel ? [modelFamily] : [family, deadFamily],
         };
       } else if (params.Api === schemaApi) payload = { predictConfig: schema };
       else if (params.Api === workspaceApi) payload = missing ? [] : workspace;
@@ -366,6 +370,78 @@ const diagnostics = (stderr: string) =>
         .split("\n")
         .map((line) => JSON.parse(line))
     : [];
+
+test("model code uses the exact requested model sample", async () => {
+  modelFamily = {
+    ...family,
+    items: [
+      item,
+      {
+        ...item,
+        model: "qwen-fixture-2024-09-19",
+        category: "snapshot",
+        sampleCodeV2: {
+          openai: { completionsAPI: { python: { code: 'print("snapshot")\n' } } },
+        },
+      },
+    ],
+  };
+  const result = await invoke(
+    cases.find(({ name }) => name === "model code")!,
+    {
+      format: "text",
+      quiet: true,
+    },
+    { model: "qwen-fixture-2024-09-19" },
+  );
+  expect(result.exitCode, result.stderr).toBe(0);
+  expect(result.stdout).toBe('print("snapshot")\n\n');
+});
+
+test("model code rejects an unlisted concrete model instead of using a sibling sample", async () => {
+  const result = await invoke(
+    cases.find(({ name }) => name === "model code")!,
+    {
+      format: "json",
+      quiet: true,
+    },
+    { model: "qwen-fixture-missing" },
+  );
+  expect(result.exitCode).toBe(1);
+  expect(diagnostics(result.stderr)[0]).toMatchObject({
+    error: {
+      code: ExitCode.GENERAL,
+      message: expect.stringContaining('Model "qwen-fixture-missing" not found.'),
+    },
+  });
+  expect(result.stdout).toBe("");
+});
+
+test("model code rejects an exact model with no sample instead of using a sibling sample", async () => {
+  modelFamily = {
+    ...family,
+    items: [...family.items, { ...item, model: "qwen-fixture-no-sample", sampleCodeV2: undefined }],
+  };
+  const result = await invoke(
+    cases.find(({ name }) => name === "model code")!,
+    {
+      format: "json",
+      quiet: true,
+    },
+    { model: "qwen-fixture-no-sample" },
+  );
+  expect(result.exitCode).toBe(1);
+  expect(diagnostics(result.stderr)[0]).toMatchObject({
+    error: {
+      code: ExitCode.GENERAL,
+      message: expect.stringContaining(
+        'Model "qwen-fixture-no-sample" publishes no SDK sample code.',
+      ),
+    },
+  });
+  expect(result.stdout).toBe("");
+});
+
 const modes = ["json", "text"].flatMap((format) =>
   [false, true].flatMap((quiet) =>
     [false, true].map((verbose) => ({ format: format as "text" | "json", quiet, verbose })),

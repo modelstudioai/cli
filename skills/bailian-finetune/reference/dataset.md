@@ -92,13 +92,13 @@ bl dataset get --file-id file-xxx --output json
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                                           |
-| ------------------ | ------ | -------- | --------------------------------------------------------------------- |
-| `--page <n>`       | number | no       | Page number (default: 1)                                              |
-| `--page-size <n>`  | number | no       | Results per page (default: 10, max 100)                               |
-| `--purpose <name>` | string | no       | Filter by purpose (e.g. "fine-tune", "evaluation"). Omit to list all. |
-| `--api-key <key>`  | string | no       | API key                                                               |
-| `--base-url <url>` | string | no       | API base URL                                                          |
+| Flag               | Type   | Required | Description                                             |
+| ------------------ | ------ | -------- | ------------------------------------------------------- |
+| `--page <n>`       | number | no       | Page number (default: 1)                                |
+| `--page-size <n>`  | number | no       | Results per page (default: 10, max 100)                 |
+| `--purpose <name>` | string | no       | Filter by purpose (e.g. "fine-tune"). Omit to list all. |
+| `--api-key <key>`  | string | no       | API key                                                 |
+| `--base-url <url>` | string | no       | API base URL                                            |
 
 #### Examples
 
@@ -111,7 +111,7 @@ bl dataset list --purpose fine-tune
 ```
 
 ```bash
-bl dataset list --purpose evaluation --page-size 20
+bl dataset list --page-size 20
 ```
 
 ```bash
@@ -132,7 +132,7 @@ bl dataset list --output json
 | Flag               | Type   | Required | Description                                                                                                                                                                                                        |
 | ------------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `--file <path>`    | string | yes      | Local dataset file (.jsonl or .zip; ≤200MB SFT/DPO, ≤300MB CPT/decision, ≤2GB media zip)                                                                                                                           |
-| `--purpose <name>` | string | no       | Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")                                                                                                                                                      |
+| `--purpose <name>` | string | no       | Dataset purpose tag (default: "fine-tune")                                                                                                                                                                         |
 | `--schema <s>`     | string | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "decision" (state/questions), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record. |
 | `--no-validate`    | switch | no       | Skip the local JSONL pre-flight check (not recommended)                                                                                                                                                            |
 | `--full-validate`  | switch | no       | JSON.parse every line instead of sampling (slower)                                                                                                                                                                 |
@@ -165,10 +165,6 @@ bl dataset upload --file decision.jsonl --schema decision
 
 ```bash
 bl dataset upload --file audio.zip --schema tts
-```
-
-```bash
-bl dataset upload --file eval.jsonl --purpose evaluation
 ```
 
 ```bash

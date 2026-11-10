@@ -8,6 +8,12 @@ const IMAGE_GENERATE_FLAGS = {
   image: { type: "array", valueHint: "<url>", description: "Image URL (repeatable)" },
   n: { type: "number", valueHint: "<count>", description: "Number of images" },
   watermark: { type: "boolean", valueHint: "<bool>", description: "Watermark" },
+  thinking: {
+    type: "boolean",
+    valueHint: "[true|false]",
+    implicitValue: true,
+    description: "Thinking",
+  },
   async: { type: "switch", description: "Return immediately" },
 } satisfies FlagsDef;
 const OPTS = { ...GLOBAL_FLAGS, ...IMAGE_GENERATE_FLAGS };
@@ -136,6 +142,42 @@ test("parseFlags supports the --flag=value form", () => {
 test("parseFlags coerces boolean flags to real booleans", () => {
   expect(parseFlags(["--prompt", "x", "--watermark", "false"], OPTS).watermark).toBe(false);
   expect(parseFlags(["--prompt", "x", "--watermark=true"], OPTS).watermark).toBe(true);
+});
+
+test("parseFlags keeps omitted opt-in booleans undefined", () => {
+  expect(parseFlags(["--prompt", "x"], OPTS).thinking).toBeUndefined();
+});
+
+test.each([
+  { argumentsList: ["--prompt", "x", "--thinking"], expected: true },
+  { argumentsList: ["--prompt", "x", "--thinking", "true"], expected: true },
+  { argumentsList: ["--prompt", "x", "--thinking=true"], expected: true },
+  { argumentsList: ["--prompt", "x", "--thinking", "false"], expected: false },
+  { argumentsList: ["--prompt", "x", "--thinking=false"], expected: false },
+  { argumentsList: ["--prompt", "x", "--thinking", "--async"], expected: true },
+])("parseFlags parses opt-in boolean form $argumentsList", ({ argumentsList, expected }) => {
+  const flags = parseFlags(argumentsList, OPTS);
+  expect(flags.thinking).toBe(expected);
+  expect(flags.async).toBe(argumentsList.includes("--async"));
+});
+
+test("parseFlags rejects invalid and repeated opt-in booleans", () => {
+  expect(() => parseFlags(["--prompt", "x", "--thinking", "yes"], OPTS)).toThrowError(
+    expect.objectContaining({ message: expect.stringContaining("true or false") }),
+  );
+  expect(() => parseFlags(["--prompt", "x", "--thinking", "--thinking=false"], OPTS)).toThrowError(
+    expect.objectContaining({ message: expect.stringContaining("more than once") }),
+  );
+});
+
+test("parseFlags keeps ordinary booleans value-required and switches unchanged", () => {
+  expect(() => parseFlags(["--prompt", "x", "--watermark"], OPTS)).toThrowError(
+    expect.objectContaining({ message: expect.stringContaining("requires a value") }),
+  );
+  expect(parseFlags(["--prompt", "x", "--async"], OPTS).async).toBe(true);
+  expect(() => parseFlags(["--prompt", "x", "--async=false"], OPTS)).toThrowError(
+    expect.objectContaining({ message: expect.stringContaining("takes no value") }),
+  );
 });
 
 test("parseFlags collects repeated array flags", () => {

@@ -19,6 +19,12 @@ const command = defineCommand({
       choices: ["append", "replace"],
       description: "Mode",
     },
+    thinking: {
+      type: "boolean",
+      valueHint: "[true|false]",
+      implicitValue: true,
+      description: "Thinking",
+    },
   },
   usageArgs: "--index-id <id>",
   exampleArgs: ["--index-id example", { "en-US": "# confirm first", "zh-CN": "# 先确认" }],
@@ -129,6 +135,7 @@ test("schema contains actual flags, bilingual metadata, credential definitions a
     flags: {
       "--index-id": { required: true, type: "string" },
       "--mode": { choices: ["append", "replace"] },
+      "--thinking": { type: "boolean", implicitValue: true, valueHint: "[true|false]" },
       "--yes": { type: "switch" },
     },
     notes: command.notes,

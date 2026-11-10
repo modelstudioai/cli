@@ -632,6 +632,41 @@ describe("delete safety", () => {
   });
 
   test.each([
+    { plan: "mu", ptu_service_tier: "ptu_fast" },
+    { plan: "cu", ptu_capacity: { input_tpm: 10, output_tpm: 1 } },
+    { plan: "lora", ptu_service_tier: "ptu_fast", ptu_capacity: { input_tpm: 10 } },
+    { plan: "mu", ptu_service_tier: "" },
+    { plan: "mu", ptu_service_tier: null },
+    { plan: "mu", ptu_capacity: null },
+  ])("explicit non-PTU plan overrides PTU-looking fields: %j", async (deployment) => {
+    const mock = mockClient(
+      { output: { ...deployment, status: "FAILED" } },
+      { output: { deleted: true } },
+    );
+    await run(deployDelete, { deployedModel: MODEL_CODE }, mock.client);
+    expect(requests(mock).map(({ method }) => method)).toEqual(["GET", "DELETE"]);
+  });
+
+  test.each([
+    {},
+    { ptu_service_tier: "" },
+    { ptu_service_tier: null },
+    { ptu_capacity: null },
+    { ptu_capacity: {} },
+    { ptu_capacity: [] },
+    { plan: "future" },
+  ])("fails closed when deployment type is not trustworthy: %j", async (deployment) => {
+    const mock = mockClient({ output: { ...deployment, status: "FAILED" } });
+    await expect(
+      run(deployDelete, { deployedModel: MODEL_CODE }, mock.client),
+    ).rejects.toMatchObject({
+      exitCode: ExitCode.USAGE,
+      message: expect.stringContaining("Cannot determine deployment plan"),
+    });
+    expect(requests(mock)).toHaveLength(1);
+  });
+
+  test.each([
     { records: [INSTANCE], items: 1 },
     { records: [{ ...INSTANCE, status: "STOPPED" }], items: 1 },
     { records: [], items: 1 },

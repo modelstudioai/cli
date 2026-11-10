@@ -744,7 +744,7 @@
     "requests": []
   },
   "text training create preview": {
-    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"qwen2.5-7b-instruct\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"n_epochs\": 3,\n      \"batch_size\": 8\n    }\n  }\n}\n",
+    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"qwen2.5-7b-instruct\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"batch_size\": 4\n    }\n  }\n}\n",
     "data": {
       "action": "finetune.create",
       "body": {
@@ -752,28 +752,45 @@
         "training_file_ids": ["file-fixture"],
         "training_type": "efficient_sft",
         "hyper_parameters": {
-          "n_epochs": 3,
-          "batch_size": 8
+          "batch_size": 4
         }
       }
     },
-    "requests": []
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/fine-tunes-params?input_model=qwen2.5-7b-instruct&training_type=efficient_sft&param_type=hyper",
+        "method": "GET",
+        "body": null
+      }
+    ]
   },
   "audio training create preview": {
-    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"cosyvoice-v3.5\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"sft\",\n    \"hyper_parameters\": {\n      \"n_epochs\": 3,\n      \"batch_size\": 8\n    }\n  }\n}\n",
+    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"cosyvoice-v3.5\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"lm_max_epoch\": 60,\n      \"lm_step\": 5,\n      \"lm_num\": 3,\n      \"lm_batch_size\": 1000,\n      \"fm_max_epoch\": 100,\n      \"fm_step\": 10,\n      \"fm_num\": 3,\n      \"fm_batch_size\": 2000\n    }\n  }\n}\n",
     "data": {
       "action": "finetune.create",
       "body": {
         "model": "cosyvoice-v3.5",
         "training_file_ids": ["file-fixture"],
-        "training_type": "sft",
+        "training_type": "efficient_sft",
         "hyper_parameters": {
-          "n_epochs": 3,
-          "batch_size": 8
+          "lm_max_epoch": 60,
+          "lm_step": 5,
+          "lm_num": 3,
+          "lm_batch_size": 1000,
+          "fm_max_epoch": 100,
+          "fm_step": 10,
+          "fm_num": 3,
+          "fm_batch_size": 2000
         }
       }
     },
-    "requests": []
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/fine-tunes-params?input_model=cosyvoice-v3.5&training_type=efficient_sft&param_type=hyper",
+        "method": "GET",
+        "body": null
+      }
+    ]
   },
   "image training create preview": {
     "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"wan2.7\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"learning_rate\": \"3e-5\",\n      \"max_steps\": 800,\n      \"eval_steps\": 200,\n      \"max_token_length\": \"1k\",\n      \"gradient_clip\": 0.5,\n      \"weight_decay\": 0.02,\n      \"max_pixels\": \"2k\",\n      \"val_img_size\": \"2k\",\n      \"generation_type\": \"t2i\",\n      \"lora_rank\": 32,\n      \"save_total_limit\": 10,\n      \"split\": 0.9\n    }\n  }\n}\n",
@@ -799,7 +816,13 @@
         }
       }
     },
-    "requests": []
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/fine-tunes-params?input_model=wan2.7&training_type=efficient_sft&param_type=hyper",
+        "method": "GET",
+        "body": null
+      }
+    ]
   },
   "video training create preview": {
     "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"wan2.6-i2v\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"n_epochs\": 50,\n      \"learning_rate\": \"2e-5\",\n      \"split\": 0.5,\n      \"max_split_val_dataset_sample\": 5,\n      \"eval_epochs\": 20,\n      \"save_total_limit\": 10,\n      \"lora_rank\": 32,\n      \"lora_alpha\": 32,\n      \"batch_size\": 4,\n      \"max_pixels\": 262144\n    }\n  }\n}\n",
@@ -823,6 +846,12 @@
         }
       }
     },
-    "requests": []
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/fine-tunes-params?input_model=wan2.6-i2v&training_type=efficient_sft&param_type=hyper",
+        "method": "GET",
+        "body": null
+      }
+    ]
   }
 }

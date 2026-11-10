@@ -2,13 +2,15 @@ import {
   formatCommand,
   defineCommand,
   createFineTune,
-  getDataset,
+  getFineTuneParams,
   uploadDataset,
   detectModality,
   getProfile,
   fetchModelCapability,
   listSupportedTrainingTypes,
   preflightBatchSizeGate,
+  validateFineTuneHyperParameterOverrides,
+  getFineTuneHyperParameterDefaultNumber,
   isTrainingTypeCli,
   TRAINING_TYPES_CLI,
   DEFAULT_TRAINING_TYPE,
@@ -19,6 +21,7 @@ import {
   type CommandContext,
   type CreateFineTuneRequest,
   type FineTuneHyperParameters,
+  type FineTuneHyperParameterIssue,
   type DatasetFile,
   type TrainingProfile,
   type DataModality,
@@ -206,6 +209,86 @@ async function uploadResolvedLocal(
 /** The modality a `finetune <modality> create` subcommand is bound to. */
 type CommandModality = "text" | "audio" | "image" | "video";
 
+function explicitHyperParameterOverrides(
+  commandModality: CommandModality,
+  flags: Record<string, unknown>,
+): Record<string, unknown> {
+  const mappings: Record<Exclude<CommandModality, "audio">, Record<string, string>> = {
+    text: {
+      nEpochs: "n_epochs",
+      batchSize: "batch_size",
+      learningRate: "learning_rate",
+      maxLength: "max_length",
+      evalSteps: "eval_steps",
+      loraAlpha: "lora_alpha",
+      loraDropout: "lora_dropout",
+      loraRank: "lora_rank",
+      lrSchedulerType: "lr_scheduler_type",
+      saveStrategy: "save_strategy",
+      saveTotalLimit: "save_total_limit",
+      saveSteps: "save_steps",
+      split: "split",
+      maxSplitValDatasetSample: "max_split_val_dataset_sample",
+      dataAugmentation: "data_augmentation",
+    },
+    image: { learningRate: "learning_rate" },
+    video: {
+      nEpochs: "n_epochs",
+      batchSize: "batch_size",
+      learningRate: "learning_rate",
+    },
+  };
+  if (commandModality === "audio") return {};
+
+  const overrides: Record<string, unknown> = {};
+  for (const [flagName, parameterName] of Object.entries(mappings[commandModality])) {
+    const value = flags[flagName];
+    if (value !== undefined) {
+      overrides[parameterName] = flagName === "dataAugmentation" ? value === "true" : value;
+    }
+  }
+  return overrides;
+}
+
+function formatHyperParameterIssue(
+  context: Pick<CommandContext, "localize">,
+  issue: FineTuneHyperParameterIssue,
+): string {
+  const value = JSON.stringify(issue.value);
+  switch (issue.code) {
+    case "unsupported":
+      return context.localize({
+        "en-US": `${issue.parameter} is not supported for this model and training type.`,
+        "zh-CN": `当前模型和训练类型不支持参数 ${issue.parameter}。`,
+      });
+    case "not_editable":
+      return context.localize({
+        "en-US": `${issue.parameter} cannot be overridden for this model and training type.`,
+        "zh-CN": `当前模型和训练类型不允许覆盖参数 ${issue.parameter}。`,
+      });
+    case "invalid_type":
+      return context.localize({
+        "en-US": `${issue.parameter}=${value} must be ${issue.expected ?? "a scalar value"}.`,
+        "zh-CN": `${issue.parameter}=${value} 的类型不正确，应为 ${issue.expected ?? "标量值"}。`,
+      });
+    case "not_supported":
+      return context.localize({
+        "en-US": `${issue.parameter}=${value} must be one of: ${issue.expected}.`,
+        "zh-CN": `${issue.parameter}=${value} 必须是以下值之一：${issue.expected}。`,
+      });
+    case "out_of_range":
+      return context.localize({
+        "en-US": `${issue.parameter}=${value} must be within ${issue.expected}.`,
+        "zh-CN": `${issue.parameter}=${value} 必须位于区间 ${issue.expected}。`,
+      });
+    case "invalid_step":
+      return context.localize({
+        "en-US": `${issue.parameter}=${value} must follow ${issue.expected}.`,
+        "zh-CN": `${issue.parameter}=${value} 必须满足 ${issue.expected}。`,
+      });
+  }
+}
+
 /**
  * Flags shared by every `finetune <modality> create` subcommand: what to train
  * (model), what data to train on (datasets / validations), and how to name the
@@ -370,15 +453,17 @@ const TEXT_FLAGS = {
   nEpochs: {
     type: "number",
     valueHint: "<n>",
-    description: { "en-US": "Number of epochs (default: 3)", "zh-CN": "训练轮数（默认：3）" },
+    description: {
+      "en-US": "Number of epochs; valid values are checked against the selected model",
+      "zh-CN": "训练轮数；有效值按所选模型的权威配置检查",
+    },
   },
   batchSize: {
     type: "number",
     valueHint: "<n>",
     description: {
-      "en-US":
-        "Per-device batch size (clamped to [8, 1024]). Auto-set to 8 for small datasets (<100KB)",
-      "zh-CN": "单设备 Batch Size（限制在 [8, 1024]）。小数据集（<100KB）自动设为 8",
+      "en-US": "Per-device batch size; range and step are checked against the selected model",
+      "zh-CN": "单设备 Batch Size；范围和步长按所选模型的权威配置检查",
     },
   },
   learningRate: {
@@ -511,8 +596,10 @@ const TEXT_NOTES = [
       "提交任务前（非 dry-run），会通过 listFoundationModels 检查模型训练能力（无需登录控制台）；如果训练类型不受支持，会立即失败并列出该模型实际支持的训练类型。",
   },
   {
-    "en-US": "n_epochs defaults to 3. Other hyper-parameters are platform defaults unless set.",
-    "zh-CN": "n_epochs 默认为 3。其他超参数未设置时使用平台默认值。",
+    "en-US":
+      "Before upload, the command queries the selected model and training type's parameter schema. Explicit overrides must satisfy its editability, type, enum, range, and step constraints; omitted values use platform defaults.",
+    "zh-CN":
+      "上传前会查询所选模型和训练类型的参数配置。显式覆盖值必须满足可编辑性、类型、枚举、范围和步长约束；未指定项使用平台默认值。",
   },
   {
     "en-US": "Learning rate is forwarded as a string to avoid JSON-number precision loss.",
@@ -734,82 +821,59 @@ async function runCreate<F extends FlagsDef>(
     }
   }
 
-  // Restore the batch-size clamping warning that was lost when the logic moved
-  // into profiles. The profile silently clamps to [8, 1024]; surface it here
-  // so the user has an audit trail. Skip modalities that bypass the batch_size
-  // gate (image): their batch_size is a fixed model-family default, not a
-  // clamp of the user's value, so the [8, 1024] "clamped" message would be
-  // self-contradictory and misleading.
-  if (
-    flags.batchSize !== undefined &&
-    hp.batch_size !== undefined &&
-    !profile.shouldSkipGate("batch_size", modality)
-  ) {
-    const requested = flags.batchSize as number;
-    if (hp.batch_size !== requested) {
-      ctx.output.warning({
-        code: "TRAINING_BATCH_SIZE_CLAMPED",
-        message: {
-          "en-US": `--batch-size ${requested} clamped to ${hp.batch_size} (server range [8, 1024] for the common training types).`,
-          "zh-CN": `--batch-size ${requested} 已调整为 ${hp.batch_size}（常用训练类型的服务端范围为 [8, 1024]）。`,
-        },
-        details: { requested, batch_size: hp.batch_size },
-      });
-    }
-  }
-  // For modalities that skip the batch_size gate, warn the user that their
-  // explicit --batch-size was discarded (model uses a fixed batch_size).
-  if (flags.batchSize !== undefined && profile.shouldSkipGate("batch_size", modality)) {
-    const requested = flags.batchSize as number;
-    if (hp.batch_size !== undefined && hp.batch_size !== requested) {
-      ctx.output.warning({
-        code: "TRAINING_BATCH_SIZE_IGNORED",
-        message: {
-          "en-US": `--batch-size ${requested} ignored for ${modality} training (model uses a fixed batch_size of ${hp.batch_size}).`,
-          "zh-CN": `${modality} 训练忽略了 --batch-size ${requested}（模型使用固定 batch_size ${hp.batch_size}）。`,
-        },
-        details: { requested, batch_size: hp.batch_size, modality },
-      });
-    }
+  const parameterResponse = await getFineTuneParams(ctx.client, {
+    inputModel: model,
+    trainingType: profile.serverTrainingType,
+    paramType: "hyper",
+    workspaceId: settings.workspaceId,
+  });
+  const parameterSchema = parameterResponse.output?.hyper_params;
+  if (!Array.isArray(parameterSchema) || parameterSchema.length === 0) {
+    throw new BailianError(
+      ctx.localize({
+        "en-US": `No authoritative training parameter schema was returned for model "${model}" and training type "${trainingType}".`,
+        "zh-CN": `模型“${model}”和训练类型“${trainingType}”未返回权威训练参数配置。`,
+      }),
+      ExitCode.GENERAL,
+      ctx.localize({
+        "en-US": "The dataset was not uploaded and the training job was not submitted.",
+        "zh-CN": "数据集未上传，训练任务未提交。",
+      }),
+    );
   }
 
-  // Auto batch_size for small datasets — only for text data. Audio/image
-  // profiles already set their own batch parameters.
-  if (modality === "text" && hp.batch_size === undefined && !settings.dryRun) {
-    let sizeBytes = training.firstSize ?? 0;
-    if (sizeBytes === 0) {
-      try {
-        const fileInfo = await getDataset(ctx.client, trainingFileIds[0]);
-        sizeBytes = fileInfo.data?.size ?? 0;
-      } catch {
-        // If we can't fetch file info, skip auto-adjustment; platform will use default.
-      }
-    }
-    if (sizeBytes > 0 && sizeBytes < 100 * 1024) {
-      hp.batch_size = 8;
-    }
+  const overrideIssues = validateFineTuneHyperParameterOverrides(
+    parameterSchema,
+    explicitHyperParameterOverrides(commandModality, flags),
+  );
+  if (overrideIssues.length > 0) {
+    throw new BailianError(
+      ctx.localize({
+        "en-US": "One or more training hyper-parameter overrides are invalid.",
+        "zh-CN": "一个或多个训练超参数覆盖值无效。",
+      }),
+      ExitCode.USAGE,
+      overrideIssues.map((issue) => formatHyperParameterIssue(ctx, issue)).join("\n"),
+    );
   }
 
-  // Pre-submit batch-size gate: the platform rejects a job whose number of
-  // training samples is not greater than batch_size, but only surfaces that
-  // ~10 minutes into the run (after data processing). Fail fast here, before
-  // burning quota. `recordCount` is only known when every --datasets token
-  // was a local file we validated; file-id tokens fall through to the
-  // platform rather than risk a false positive from an undercount.
   if (
     !settings.dryRun &&
     training.recordCount !== undefined &&
     !profile.shouldSkipGate("batch_size", modality)
   ) {
-    // 16 is the platform default when neither the user nor the small-file
-    // auto-adjust set a batch_size (see the auto-adjust comment above).
-    const effectiveBatchSize = hp.batch_size ?? 16;
-    const gate = preflightBatchSizeGate({
-      recordCount: training.recordCount,
-      batchSize: effectiveBatchSize,
-    });
-    if (!gate.ok && gate.issue) {
-      throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
+    const effectiveBatchSize =
+      typeof hp.batch_size === "number"
+        ? hp.batch_size
+        : getFineTuneHyperParameterDefaultNumber(parameterSchema, "batch_size");
+    if (effectiveBatchSize !== undefined) {
+      const gate = preflightBatchSizeGate({
+        recordCount: training.recordCount,
+        batchSize: effectiveBatchSize,
+      });
+      if (!gate.ok && gate.issue) {
+        throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
+      }
     }
   }
 

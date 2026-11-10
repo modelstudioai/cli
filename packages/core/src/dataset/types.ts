@@ -2,9 +2,8 @@
  * Dataset API types.
  *
  * Maps DashScope `/api/v1/files` responses. The same endpoint backs every
- * dataset purpose the platform supports today (fine-tune training,
- * evaluation, etc.) — these types are deliberately purpose-agnostic so new
- * purposes can be plugged in without schema changes.
+ * dataset purpose the platform supports today — these types are deliberately
+ * purpose-agnostic so new purposes can be plugged in without schema changes.
  */
 
 /** A single uploaded dataset file as returned by the platform. */
@@ -17,7 +16,7 @@ export interface DatasetFile {
   size?: number;
   /** Content hash (server-computed). */
   md5?: string;
-  /** Free-form purpose tag, e.g. "fine-tune", "evaluation". */
+  /** Free-form purpose tag, e.g. "fine-tune". */
   purpose?: string;
   /** Optional internal/external URL (kept for parity with the API). */
   url?: string;

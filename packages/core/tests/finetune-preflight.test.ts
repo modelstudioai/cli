@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { preflightBatchSizeGate, INSUFFICIENT_SAMPLES_CODE } from "../src/index.ts";
+import {
+  getFineTuneHyperParameterDefaultNumber,
+  INSUFFICIENT_SAMPLES_CODE,
+  preflightBatchSizeGate,
+  validateFineTuneHyperParameterOverrides,
+  type FineTuneParamHyperParam,
+} from "../src/index.ts";
 
 describe("preflightBatchSizeGate", () => {
   test("passes when recordCount exceeds batch_size", () => {
@@ -38,10 +44,81 @@ describe("preflightBatchSizeGate", () => {
     expect(r.hint).toMatch(/0\.9 train split/);
   });
 
-  test("honors the effective (clamped) batch size, not a raw sub-minimum", () => {
-    // The CLI clamps --batch-size 1 up to 8 before calling; 3 <= 8 still fails.
-    const r = preflightBatchSizeGate({ recordCount: 3, batchSize: 8 });
-    expect(r.ok).toBe(false);
-    expect(r.issue!.message).toMatch(/batch_size \(8\)/);
+  test("honors the effective model-specific batch size", () => {
+    const result = preflightBatchSizeGate({ recordCount: 31, batchSize: 32 });
+    expect(result.ok).toBe(false);
+    expect(result.issue!.message).toMatch(/batch_size \(32\)/);
+    expect(result.hint).toMatch(/range published for this model/);
+  });
+});
+
+const schema: FineTuneParamHyperParam[] = [
+  {
+    name: "batch_size",
+    type: "number",
+    data_range: ["32", "8192"],
+    left_range: "include",
+    right_range: "include",
+    step: 8,
+    editable: true,
+    defaultValue: "32",
+  },
+  {
+    name: "lora_dropout",
+    type: "floatInputNumber",
+    data_range: ["0", "0.2"],
+    left_range: "exclude",
+    right_range: "exclude",
+    editable: true,
+  },
+  {
+    name: "lora_rank",
+    type: "select",
+    support_values: ["8", "16", "32", "64"],
+    editable: true,
+  },
+  {
+    name: "eval_steps",
+    type: "intInputNumber",
+    data_range: ["1", "2147483647"],
+    left_range: "include",
+    right_range: "include",
+    editable: true,
+  },
+  { name: "fixed", type: "number", editable: false },
+  { name: "fallback_default", type: "number", recommend_value: "7" },
+];
+
+describe("validateFineTuneHyperParameterOverrides", () => {
+  test("accepts values that satisfy enum, range, type, and step constraints", () => {
+    expect(
+      validateFineTuneHyperParameterOverrides(schema, {
+        batch_size: 40,
+        lora_dropout: 0.1,
+        lora_rank: 16,
+        eval_steps: 50,
+      }),
+    ).toEqual([]);
+  });
+
+  test.each([
+    [{ unknown: 1 }, "unsupported"],
+    [{ fixed: 1 }, "not_editable"],
+    [{ eval_steps: 1.5 }, "invalid_type"],
+    [{ lora_rank: 4 }, "not_supported"],
+    [{ batch_size: 16 }, "out_of_range"],
+    [{ batch_size: 34 }, "invalid_step"],
+    [{ lora_dropout: 0 }, "out_of_range"],
+    [{ lora_dropout: 0.2 }, "out_of_range"],
+  ] as const)("rejects %j as %s", (overrides, code) => {
+    expect(validateFineTuneHyperParameterOverrides(schema, overrides)).toEqual([
+      expect.objectContaining({ code }),
+    ]);
+  });
+
+  test("uses defaultValue before recommend_value for numeric service defaults", () => {
+    expect(getFineTuneHyperParameterDefaultNumber(schema, "batch_size")).toBe(32);
+    expect(getFineTuneHyperParameterDefaultNumber(schema, "fallback_default")).toBe(7);
+    expect(getFineTuneHyperParameterDefaultNumber(schema, "missing")).toBeUndefined();
   });
 });

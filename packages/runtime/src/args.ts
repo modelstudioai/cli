@@ -185,16 +185,32 @@ export function parseFlags<F extends FlagsDef>(
     if (value === undefined) {
       const next = rest[index + 1];
       if (next === undefined || next.startsWith("--")) {
-        throw usageError(localize, {
-          "en-US": `Flag --${rawKey} requires a value.`,
-          "zh-CN": `参数 --${rawKey} 需要一个值。`,
-        });
+        if (definition.type === "boolean" && definition.implicitValue !== undefined) {
+          flags[key] = definition.implicitValue;
+          index += 1;
+        } else {
+          throw usageError(localize, {
+            "en-US": `Flag --${rawKey} requires a value.`,
+            "zh-CN": `参数 --${rawKey} 需要一个值。`,
+          });
+        }
+      } else {
+        value = next;
+        index += 2;
       }
-      value = next;
-      index += 2;
     } else {
       index += 1;
     }
+
+    if (seen.has(key)) {
+      throw usageError(localize, {
+        "en-US": `Flag --${rawKey} given more than once.`,
+        "zh-CN": `参数 --${rawKey} 不能重复指定。`,
+      });
+    }
+    seen.add(key);
+
+    if (value === undefined) continue;
 
     if (definition.choices && !definition.choices.includes(value)) {
       throw usageError(localize, {
@@ -207,16 +223,9 @@ export function parseFlags<F extends FlagsDef>(
       const values = flags[key] as string[] | undefined;
       if (values) values.push(value);
       else flags[key] = [value];
+      seen.delete(key);
       continue;
     }
-
-    if (seen.has(key)) {
-      throw usageError(localize, {
-        "en-US": `Flag --${rawKey} given more than once.`,
-        "zh-CN": `参数 --${rawKey} 不能重复指定。`,
-      });
-    }
-    seen.add(key);
 
     if (definition.type === "number") {
       const numberValue = Number(value);

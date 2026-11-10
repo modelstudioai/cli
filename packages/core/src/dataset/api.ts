@@ -27,7 +27,7 @@ export interface DatasetUploadParams {
   /**
    * Purpose tag forwarded to the platform. Defaults to "fine-tune" because
    * the API requires the field, but callers should set this explicitly when
-   * uploading evaluation or other dataset kinds.
+   * uploading other dataset kinds.
    */
   purpose?: string;
   /** 已由调用方校验的不可变字节；提供时不再读取 filePath。 */
