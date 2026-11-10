@@ -97,17 +97,20 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 - `cliVersion`、`nodeVersion`、`os`
 - `commandPrefix`（调用入口，来自 `Identity`）
 - `authMethod`
-- `callerType`（必填：`agent` 或 `unknown`）；`callerType=agent` 时可选 `callerName`、`skillName`、`skillVersion`
+- `callerType`（必填：`agent` | `script` | `unknown`）
+- `callerName`：`agent` 与 `script` 时发送（缺省/非法 → `"unknown"`）；`skillName` / `skillVersion` 仅 `agent` 时可选发送
 - 失败时的 `errorMessage`、`exitCode`、`httpStatus`、`requestId`
 - 安全 allowlist 过滤后的 `params`
 
 调用方归因只认本次进程的 `BAILIAN_CALLER_*`（由 `readCaller` 归一化后写入事件）：
 
 - `BAILIAN_CALLER_TYPE` 为 `agent` / `ai_agent`（大小写不敏感）→ `callerType=agent`
+- `BAILIAN_CALLER_TYPE` 为 `script`（大小写不敏感，trim）→ `callerType=script`；读取 `callerName`，**忽略** skill env
 - 未设置、空白或其他值 → `callerType=unknown`；不要把该字段当成人工
-- `callerName` / `skillName` / `skillVersion` 仅在 `agent` 时发送；`kscli` 通常没有 skill 字段
+- `callerName` 在 `agent` 与 `script` 时发送；缺省、空白或非法名称一律归一为 `"unknown"`（看板会出现 `callerType=script, callerName=unknown` 等组合，属预期兜底，不是漏字段）
+- `skillName` / `skillVersion` 仅在 `agent` 时发送；`kscli` 通常没有 skill 字段
 
-新 CLI 每条进入 middleware 的命令事件都有 `callerType`。旧 CLI 没有该字段。看板只统计带 `callerType` 的事件，不能把字段缺失混进分母。`unknown` 只表示未识别为 agent，不是人工。新 CLI + 旧 skill / Agent 漏设变量时，会落进 `unknown`。`BAILIAN_CALLER_*` 是调用方声明，不是 `Identity`，不得用来猜 `bl` / `kscli`。
+新 CLI 每条进入 middleware 的命令事件都有 `callerType`。旧 CLI 没有该字段。看板只统计带 `callerType` 的事件，不能把字段缺失混进分母。已归因 := `agent + unknown + script`。Agent 调用率主口径：`agent / (agent + unknown + script)`；`script` 进分母、不进分子，也不得从分母剔除。`unknown` 只表示未识别为 agent/script，不是人工。新 CLI + 旧 skill / Agent 漏设变量时，会落进 `unknown`。`BAILIAN_CALLER_*` 是调用方声明，不是 `Identity`，不得用来猜 `bl` / `kscli`。看板禁止按 `callerName` 跨 `callerType` 聚合。
 
 参数默认不上传，只有 `packages/core/src/telemetry/tracker.ts` 的 `PARAM_ALLOWLIST` 中字段会进入事件。不得加入 prompt、凭证、文件路径、URL、账号/租户/工作空间 ID 或其他用户内容。
 
@@ -173,7 +176,7 @@ AEM 映射：
 - [ ] 更新 `TrackingEvent`、`createTrackingEvent()` 与 `buildRemoteAemOptions()` 的字段映射
 - [ ] 本地 JSONL 与远端 AEM 必须基于同一结构化事件，不能维护两套字段口径
 - [ ] 三种入口分别核对 `commandPrefix`；共享路径也必须可区分，旧数据缺字段保留为未知
-- [ ] 调用方字段经 `readCaller` → `TrackingDeps.caller` → 事件；仅显式 `agent` / `ai_agent` 为 `agent`，其余为 `unknown`
+- [ ] 调用方字段经 `readCaller` → `TrackingDeps.caller` → 事件；显式 `agent` / `ai_agent` → `agent`，显式 `script` → `script`，其余 → `unknown`
 - [ ] 成功与失败均覆盖；遥测异常必须静默且不改变业务退出码
 - [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口

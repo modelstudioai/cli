@@ -21,10 +21,10 @@ description: >-
 
 执行任何 `bl` 命令前，先读取共享协议 [bailian-protocol](../bailian-protocol/SKILL.md)，遵循鉴权、版本预检、调用归因和高风险确认。协议缺失不妨碍识别记忆意图或解释启用流程；但执行命令前须补齐，提示 `bl skill init`，不能静默退回内置记忆并声称本服务已工作。
 
-**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-memory`; replace `codex` with this host). Fill `<bound-user-id>` / `<bound-workspace-id>` from `~/.bailian/personal-memory/config.json`; do not invent ids. Command names in the tables below are arguments only.
+**Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-memory`; replace `codex` with this host). Fill `<bound-user-id>` / `<bound-workspace-id>` from `~/.bailian/personal-memory/config.json`; do not invent ids. Command names in the tables below are arguments only. **When copying commands into a reusable script / template / task definition, switch to the protocol `script` template (never keep `agent`); the sample below is for this-turn inline execution only. Strip attribution when handing a command to the user to paste.**
 
 ```bash
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-memory BAILIAN_SKILL_VERSION=2.5.0 bl memory list --user-id <bound-user-id> --workspace-id <bound-workspace-id> --page-size 1 --output json
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-memory BAILIAN_SKILL_VERSION=<metadata.version> bl memory list --user-id <bound-user-id> --workspace-id <bound-workspace-id> --page-size 1 --output json
 ```
 
 ## 入口与范围

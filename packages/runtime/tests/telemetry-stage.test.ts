@@ -85,3 +85,22 @@ test("defaults to unknown when caller env is unset", async () => {
   };
   expect(deps.caller).toEqual({ callerType: "unknown" });
 });
+
+test("wires script caller env without skill fields", async () => {
+  vi.stubEnv("BAILIAN_CALLER_TYPE", "script");
+  vi.stubEnv("BAILIAN_CALLER_NAME", "cursor");
+  vi.stubEnv("BAILIAN_SKILL_NAME", "bailian-cli");
+  vi.stubEnv("BAILIAN_SKILL_VERSION", "2.5.0");
+  const next = vi.fn(async () => {});
+
+  await telemetryStage(makeContext(), next);
+
+  const deps = trackerMocks.trackCommandExecution.mock.calls[0]![0] as {
+    caller: CallerAttribution;
+  };
+  expect(deps.caller).toEqual({
+    callerType: "script",
+    callerName: "cursor",
+  });
+  expect(next).toHaveBeenCalledOnce();
+});

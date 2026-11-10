@@ -82,13 +82,25 @@ Commands declaring `preparation: "read-only"` may authenticate and read remote r
 
 ## Call attribution (mandatory for every Agent `bl` command)
 
-Examples in this protocol, `assets/`, business skills, and generated `reference/` show bare `bl …`. When an Agent **runs** a command, wrap that single invocation with one of the templates below. Humans must not set these variables. Anything other than an explicit agent is recorded as `unknown`.
+Examples in this protocol, `assets/`, business skills, and generated `reference/` show bare `bl …`. When an Agent **runs** a command, wrap that single invocation with the matching template below. Humans must not set these variables to impersonate an agent; reusable script files may use the `script` prefix described below. Explicit `agent` / `ai_agent` → recorded as `agent`; explicit `script` → recorded as `script`; anything else → `unknown`.
 
-`--help` and `--version` skip telemetry and need no prefix. Every other `bl` does, including `bl skill init`, `bl skill update`, and `bl update`. Do not `export` the variables into the shell session. If the host accepts a one-shot env map without rewriting the command string, set the same four variables there instead.
+`--help` and `--version` skip telemetry and need no prefix. Every other `bl` does, including `bl skill init`, `bl skill update`, and `bl update`. Do not `export` these variables into an interactive shell session, shell profile, direnv, or CI global environment. Local assignment **inside a reusable script file** is allowed. If the host accepts a one-shot env map without rewriting the command string, set the same variables there instead.
 
-Pick the template that matches the **current shell**. Windows Codex defaults to PowerShell — do not paste the bash form into PowerShell. Sample host id is `codex`; replace with this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Use `unknown` only when you cannot tell. Do not borrow another product's name. Do not scan install directories.
+Pick the template that matches the **artifact**:
 
-### bash / zsh / Git Bash / WSL
+| Artifact                                                                    | Declare                                                        |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Agent runs `bl` inline in the current turn (not written to a reusable file) | `agent` four-variable prefix                                   |
+| Command written into a reusable file / template / task definition           | `script` prefix — **never** `agent`, whoever later executes it |
+| Both coexist                                                                | File contents stay `script`; live inline stays `agent`         |
+| Hand the command to the user to paste manually                              | Strip attribution prefixes                                     |
+| Shell profile / direnv / CI global env                                      | Forbidden                                                      |
+
+`script` does not require an Agent author — CI- or human-maintained reusable scripts may declare it too. Business skills that generate scripts should point here; they need not repeat this section.
+
+Pick the template that matches the **current shell**. Windows Codex defaults to PowerShell — do not paste the bash form into PowerShell. Sample host id is `codex`; replace with this host's stable id (examples: `codex`, `qwen-code`, `claude-code`, `cursor`, `qoder`). Use `unknown` only when you cannot tell. Do not borrow another product's name. Do not scan install directories. For `script`, `BAILIAN_CALLER_NAME` is the host that authored or maintains the script.
+
+### bash / zsh / Git Bash / WSL — agent (inline)
 
 ```bash
 BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=<host> BAILIAN_SKILL_NAME=<owning-skill> BAILIAN_SKILL_VERSION=<metadata.version> bl <args>
@@ -97,7 +109,7 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=<host> BAILIAN_SKILL_NAME=<owning-
 Filled sample for this protocol (`bl skill init`):
 
 ```bash
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=2.5.0 bl skill init
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-protocol BAILIAN_SKILL_VERSION=<metadata.version> bl skill init
 ```
 
 Inside a command substitution: put the four variables inside `$(...)`.
@@ -105,10 +117,16 @@ Inside a command substitution: put the four variables inside `$(...)`.
 With `NO_COLOR` (config is owned by `bailian-cli`):
 
 ```bash
-BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=2.5.0 NO_COLOR=1 bl config show --output text
+BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-cli BAILIAN_SKILL_VERSION=<metadata.version> NO_COLOR=1 bl config show --output text
 ```
 
-### PowerShell (Windows Codex default)
+### bash / zsh / Git Bash / WSL — script (reusable file)
+
+```bash
+BAILIAN_CALLER_TYPE=script BAILIAN_CALLER_NAME=<host> bl <args>
+```
+
+### PowerShell (Windows Codex default) — agent (inline)
 
 ```powershell
 $env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='<host>'; $env:BAILIAN_SKILL_NAME='<owning-skill>'; $env:BAILIAN_SKILL_VERSION='<metadata.version>'; bl <args>; $code=$LASTEXITCODE; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue; if ($code -ne 0) { exit $code }
@@ -117,14 +135,20 @@ $env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='<host>'; $env:BAILIA
 Filled sample for this protocol:
 
 ```powershell
-$env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='codex'; $env:BAILIAN_SKILL_NAME='bailian-protocol'; $env:BAILIAN_SKILL_VERSION='2.5.0'; bl skill init; $code=$LASTEXITCODE; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue; if ($code -ne 0) { exit $code }
+$env:BAILIAN_CALLER_TYPE='agent'; $env:BAILIAN_CALLER_NAME='codex'; $env:BAILIAN_SKILL_NAME='bailian-protocol'; $env:BAILIAN_SKILL_VERSION='<metadata.version>'; bl skill init; $code=$LASTEXITCODE; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME,Env:BAILIAN_SKILL_NAME,Env:BAILIAN_SKILL_VERSION -ErrorAction SilentlyContinue; if ($code -ne 0) { exit $code }
 ```
 
 Clear the four variables after each command so they do not linger in the Codex session. Save `$LASTEXITCODE` before `Remove-Item` and `exit` only on nonzero — a trailing successful cleanup must not mask `bl` failures (e.g. exit 7 `requires_confirmation`).
 
+### PowerShell — script (reusable file)
+
+```powershell
+$env:BAILIAN_CALLER_TYPE='script'; $env:BAILIAN_CALLER_NAME='<host>'; bl <args>; $code=$LASTEXITCODE; Remove-Item Env:BAILIAN_CALLER_TYPE,Env:BAILIAN_CALLER_NAME -ErrorAction SilentlyContinue; if ($code -ne 0) { exit $code }
+```
+
 ### Owning skill
 
-Reuse the same four-variable shape on every later `bl`, but change `BAILIAN_SKILL_NAME` when the command belongs to a different skill; keep `BAILIAN_CALLER_NAME` as this host. Each business skill shows one filled-in sample for its own commands.
+Reuse the same four-variable shape on every later **inline agent** `bl`, but change `BAILIAN_SKILL_NAME` when the command belongs to a different skill; keep `BAILIAN_CALLER_NAME` as this host. `script` invocations omit skill variables. Each business skill shows one filled-in agent sample for its own commands.
 
 | Task                                                                     | `<owning-skill>`                       |
 | ------------------------------------------------------------------------ | -------------------------------------- |
@@ -133,7 +157,7 @@ Reuse the same four-variable shape on every later `bl`, but change `BAILIAN_SKIL
 | image / video / speech / vision / omni                                   | `bailian-gen`                          |
 | Other domain commands                                                    | The `bailian-*` skill currently in use |
 
-`BAILIAN_SKILL_VERSION`: copy `metadata.version` from that owning skill's `SKILL.md` frontmatter. The family currently shares one version; if the frontmatter differs from `2.5.0` in a sample, use the frontmatter.
+`BAILIAN_SKILL_VERSION`: replace `<metadata.version>` with the owning skill's `SKILL.md` frontmatter `metadata.version` (do not paste the placeholder literally). The family currently shares one version across skills.
 
 ## Version & updates (after provider selection, before the first `bl` command)
 

@@ -140,3 +140,29 @@ test("ignores agent detail fields when callerType is not agent", () => {
     }),
   ).toEqual({ callerType: "unknown" });
 });
+
+test.each([
+  { label: "script", type: "script" },
+  { label: "Script", type: "Script" },
+  { label: "SCRIPT", type: "SCRIPT" },
+  { label: "padded script", type: "  script  " },
+])("accepts $label as script without skill fields", ({ type }) => {
+  expect(
+    readCaller({
+      BAILIAN_CALLER_TYPE: type,
+      BAILIAN_CALLER_NAME: "cursor",
+      BAILIAN_SKILL_NAME: "bailian-cli",
+      BAILIAN_SKILL_VERSION: "2.5.0",
+    }),
+  ).toEqual({
+    callerType: "script",
+    callerName: "cursor",
+  });
+});
+
+test("script falls back to unknown callerName when NAME is missing", () => {
+  expect(readCaller({ BAILIAN_CALLER_TYPE: "script" })).toEqual({
+    callerType: "script",
+    callerName: "unknown",
+  });
+});

@@ -18,7 +18,7 @@ export interface TrackingEvent {
   os: string;
   authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
-  /** Always present on new CLI events: `agent` or `unknown`. */
+  /** Always present on new CLI events: `agent` | `script` | `unknown`. */
   callerType: CallerAttribution["callerType"];
   callerName?: string;
   skillName?: string;
@@ -51,6 +51,8 @@ export function createTrackingEvent(opts: {
     event.callerName = opts.caller.callerName;
     if (opts.caller.skillName !== undefined) event.skillName = opts.caller.skillName;
     if (opts.caller.skillVersion !== undefined) event.skillVersion = opts.caller.skillVersion;
+  } else if (opts.caller.callerType === "script") {
+    event.callerName = opts.caller.callerName;
   }
 
   if (opts.authMethod) {
