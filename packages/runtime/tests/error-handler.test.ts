@@ -1,6 +1,6 @@
 import { BailianError, ExitCode, mapApiError } from "bailian-cli-core";
 import { expect, test, vi } from "vite-plus/test";
-import { errorHint, handleError } from "../src/error-handler.ts";
+import { errorHint, handleError, resolveRecoveryConfigName } from "../src/error-handler.ts";
 import { createOutputReporter } from "../src/output/reporter.ts";
 import { ConfirmationRequiredError } from "../src/confirm.ts";
 
@@ -206,10 +206,29 @@ test("recovery hints append --config when a named profile is active", () => {
   expect(timeoutHint).toContain("bl auth status --config prod");
 });
 
-test("recovery hints omit --config for the default profile", () => {
+test("recovery hints omit --config for the implicit default profile", () => {
   const payload = JSON.parse(
     render(new BailianError("No key", ExitCode.AUTH), "json", { commandPrefix: "bl" }),
   ).error;
   expect(payload.hint).toContain("bl auth status");
   expect(payload.hint).not.toContain("--config");
+});
+
+test("recovery hints keep explicit --config default when active profile is named", () => {
+  // Loader normalizes explicit default to undefined; resolveRecoveryConfigName must restore it.
+  expect(resolveRecoveryConfigName({ flags: { config: "default" }, configName: undefined })).toBe(
+    "default",
+  );
+  expect(resolveRecoveryConfigName({ flags: { config: "prod" }, configName: "prod" })).toBe("prod");
+  expect(resolveRecoveryConfigName({ flags: {}, configName: "prod" })).toBe("prod");
+  expect(resolveRecoveryConfigName({ flags: {}, configName: undefined })).toBeUndefined();
+
+  const hint = JSON.parse(
+    render(new BailianError("No key", ExitCode.AUTH), "json", {
+      commandPrefix: "bl",
+      configName: "default",
+    }),
+  ).error.hint as string;
+  expect(hint).toContain("bl auth login --api-key <your-key> --config default");
+  expect(hint).toContain("bl auth status --config default");
 });

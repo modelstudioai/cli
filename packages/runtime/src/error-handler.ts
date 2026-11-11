@@ -34,8 +34,23 @@ type Localize = (text: LocalizedText) => string;
 const english: Localize = (text) => (typeof text === "string" ? text : text["en-US"]);
 
 /**
- * 恢复命令统一入口：命名 Profile 激活时追加 `--config <name>`，
- * 避免用户按 hint 操作打到错误的凭证/计费配置。
+ * Config name for recovery hints (does not change IO-layer `configName` semantics).
+ * Explicit `--config default` is normalized to undefined in the loader; keep
+ * `"default"` here so copying the hint does not fall back to an active named profile.
+ */
+export function resolveRecoveryConfigName(sources: {
+  flags: { config?: unknown };
+  configName?: string;
+}): string | undefined {
+  if (sources.flags.config !== undefined) {
+    return sources.configName ?? "default";
+  }
+  return sources.configName;
+}
+
+/**
+ * Format a recovery command; append `--config <name>` when a profile must be pinned
+ * so following the hint does not hit the wrong credentials/billing config.
  */
 function recoveryCommand(commandPrefix: string, args: string, configName?: string): string {
   const withConfig = configName ? `${args} --config ${configName}` : args;
@@ -56,7 +71,10 @@ export interface ErrorHintOptions {
    * under this product's commandPrefix. Derived from the product command map.
    */
   supportsFreeTierRecovery?: boolean;
-  /** 当前命名 Profile；未指定或 default 时为 undefined，恢复命令不加 `--config`。 */
+  /**
+   * Profile to pin in recovery commands (via `resolveRecoveryConfigName`).
+   * Implicit default is undefined; explicit `--config default` is `"default"`.
+   */
   configName?: string;
 }
 
@@ -79,7 +97,7 @@ function freeTierRecoveryHint(
   configName?: string,
 ): string {
   const statusCommand = recoveryCommand(commandPrefix, "usage free --model <model>", configName);
-  // 不带 --yes：调用方先撞确认门槛（exit 7），再按 skill 规范向用户确认。
+  // Omit --yes so the caller hits the confirmation gate (exit 7) first.
   const disableCommand = recoveryCommand(
     commandPrefix,
     "usage freetier --off --model <model>",
@@ -120,7 +138,7 @@ export function errorHint(
   }
   // Append free-tier recovery before the AUTH-only early return so GENERAL
   // service errors (and async paths that already set a hint) still get guidance.
-  // 已含恢复指引（命令自带或上游已追加）时不重复追加。
+  // Skip when recovery guidance is already present (command-owned or upstream).
   if (
     options.supportsFreeTierRecovery &&
     isFreeTierOnlyExhausted(error) &&

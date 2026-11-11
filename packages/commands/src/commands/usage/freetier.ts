@@ -58,30 +58,12 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    {
-      "en-US": "--model qwen3-max --yes",
-      "zh-CN": "--model qwen3-max --yes",
-    },
-    {
-      "en-US": "--model qwen3-max,qwen-turbo --yes",
-      "zh-CN": "--model qwen3-max,qwen-turbo --yes",
-    },
-    {
-      "en-US": "--all --yes",
-      "zh-CN": "--all --yes",
-    },
-    {
-      "en-US": "--on --model qwen3-max --yes",
-      "zh-CN": "--on --model qwen3-max --yes",
-    },
-    {
-      "en-US": "--off --model qwen3-max --yes",
-      "zh-CN": "--off --model qwen3-max --yes",
-    },
-    {
-      "en-US": "--off --all --yes",
-      "zh-CN": "--off --all --yes",
-    },
+    "--model qwen3-max --yes",
+    "--model qwen3-max,qwen-turbo --yes",
+    "--all --yes",
+    "--on --model qwen3-max --yes",
+    "--off --model qwen3-max --yes",
+    "--off --all --yes",
   ],
   notes: [
     {

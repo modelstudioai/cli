@@ -25,7 +25,7 @@ export interface OutputReporterOptions {
   commandPrefix?: string;
   /** When true, free-tier recovery may render usage free / usage freetier commands. */
   supportsFreeTierRecovery?: boolean;
-  /** 当前命名 Profile；未指定或 default 时为 undefined。 */
+  /** Profile pinned in recovery hints (via resolveRecoveryConfigName). */
   configName?: string;
 }
 

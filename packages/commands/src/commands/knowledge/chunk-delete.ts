@@ -103,7 +103,12 @@ export default defineCommand({
         deletedCount += batchIds.length;
         completedBatches.push(batchIds);
       } catch (error) {
-        const original = normalizeError(error, formatCommand(ctx.identity), ctx.localize);
+        const original = normalizeError(
+          error,
+          formatCommand(ctx.identity),
+          ctx.localize,
+          ctx.settings.configName,
+        );
         const failedBatch = completedBatches.length + 1;
         const progress = [
           ctx.localize({

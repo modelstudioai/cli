@@ -1,4 +1,4 @@
-import { consoleRecoveryHint } from "./error-handler.ts";
+import { consoleRecoveryHint, resolveRecoveryConfigName } from "./error-handler.ts";
 import type {
   AnyCommand,
   CommandOutput,
@@ -190,7 +190,10 @@ export const authStage: Middleware = async (ctx, next) => {
   const base = {
     identity: ctx.identity,
     settings,
-    consoleRecoveryHint: consoleRecoveryHint(formatCommand(ctx.identity), sources.configName),
+    consoleRecoveryHint: consoleRecoveryHint(
+      formatCommand(ctx.identity),
+      resolveRecoveryConfigName(sources),
+    ),
     debug: (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic),
     ...resolveModelBaseUrlState(sources),
   };

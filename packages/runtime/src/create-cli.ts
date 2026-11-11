@@ -40,7 +40,7 @@ import {
   Client,
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
-import { handleError } from "./error-handler.ts";
+import { handleError, resolveRecoveryConfigName } from "./error-handler.ts";
 import { type OutputReporter, createOutputReporter } from "./output/reporter.ts";
 import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
@@ -346,13 +346,14 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       const cleanup = installProcessHandlers(() => reporter, localize);
       try {
         const sources = buildSources(flags, (warning) => warnings.push(warning));
+        const recoveryConfigName = resolveRecoveryConfigName(sources);
         translator = createTranslator(sources.file.language ?? DEFAULT_LANGUAGE);
         reporter = createOutputReporter({
           settings: buildOutputSettings(sources),
           localize,
           commandPrefix,
           supportsFreeTierRecovery,
-          configName: sources.configName,
+          configName: recoveryConfigName,
         });
         setupProxyFromEnv();
         const registry = await getRegistry(translator);
@@ -362,7 +363,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             localize,
             commandPrefix,
             supportsFreeTierRecovery,
-            configName: sources.configName,
+            configName: recoveryConfigName,
           });
           for (const warning of warnings.splice(0)) reporter.output.warning(warning);
           return reporter;

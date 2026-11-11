@@ -109,7 +109,7 @@ process.exit(err.exitCode)
 - [ ] 追加时若已有 hint(如 video task id),拼接并按标记去重;不要 `hint` 非空就跳过
 - [ ] 渲染产品命令前须经能力门控(命令表是否暴露对应 path),不要对 `kscli` 等缺命令的产品硬拼 `usage freetier`
 - [ ] 命令名使用 `commandPrefix`,不要硬编码 `bl`
-- [ ] 恢复命令经 `recoveryCommand` 渲染：命名 Profile 激活时追加 `--config <name>`（default / 未指定不加）
+- [ ] 恢复命令经 `recoveryCommand` 渲染；Profile 名用 `resolveRecoveryConfigName`（显式 `--config default` 保留，隐式 default 不加）
 - [ ] URL 必须是 `import { API_KEY_PAGE } from "./urls.ts"`
 
 ### C. command / runtime 直接抛错
