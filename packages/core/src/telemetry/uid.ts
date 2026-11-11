@@ -12,7 +12,8 @@ import {
 import { join } from "path";
 import { getConfigDir } from "../config/paths.ts";
 
-export const DEVICE_ID_FILE_NAME = "telemetry-device-id";
+/** On-disk name for the anonymous install id reported to AEM as `uid`. */
+export const UID_FILE_NAME = "telemetry-uid";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -25,11 +26,11 @@ type ReadResult =
   | { kind: "invalid" }
   | { kind: "unreadable" };
 
-export function getDeviceIdPath(): string {
-  return join(getConfigDir(), DEVICE_ID_FILE_NAME);
+export function getUidPath(): string {
+  return join(getConfigDir(), UID_FILE_NAME);
 }
 
-function readDeviceIdFile(path: string): ReadResult {
+function readUidFile(path: string): ReadResult {
   let raw: string;
   try {
     raw = readFileSync(path, "utf8");
@@ -43,21 +44,21 @@ function readDeviceIdFile(path: string): ReadResult {
 }
 
 /** Read-only: returns undefined when missing or invalid; never creates the file. */
-export function loadDeviceId(): string | undefined {
-  const result = readDeviceIdFile(getDeviceIdPath());
+export function loadUid(): string | undefined {
+  const result = readUidFile(getUidPath());
   return result.kind === "ok" ? result.id : undefined;
 }
 
 /**
- * Read or create the persistent telemetry device ID.
+ * Read or create the persistent anonymous install id (AEM `uid`).
  *
  * Must stay synchronous: remoteSink relies on no await between the call and
  * event enqueue, otherwise flushTelemetry may return before the event is queued.
- * Any failure returns undefined so the tracker falls back to its built-in MAC hash.
+ * Any failure returns undefined so remoteSink omits `uid`; built-in `device_id` is unchanged.
  */
-export function ensureDeviceId(): string | undefined {
-  const path = getDeviceIdPath();
-  const current = readDeviceIdFile(path);
+export function ensureUid(): string | undefined {
+  const path = getUidPath();
+  const current = readUidFile(path);
   if (current.kind === "ok") return current.id;
   // Do not overwrite unreadable paths (e.g. permission errors); that could damage the environment.
   if (current.kind === "unreadable") return undefined;
@@ -86,7 +87,7 @@ export function ensureDeviceId(): string | undefined {
     }
   }
 
-  return loadDeviceId();
+  return loadUid();
 }
 
 /** Atomic create-if-absent: first writer wins on concurrent first runs. */

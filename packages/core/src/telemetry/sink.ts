@@ -3,7 +3,7 @@ import { join } from "path";
 import { getConfigDir, ensureConfigDir } from "../config/paths.ts";
 import { buildRemoteAemOptions, type TrackingEvent } from "./event.ts";
 import { detectEnv } from "./env.ts";
-import { ensureDeviceId, loadDeviceId } from "./device-id.ts";
+import { ensureUid, loadUid } from "./uid.ts";
 import Tracker from "../../lib/remote-telemetry/tracker.cjs";
 import EventPlugin from "../../lib/remote-telemetry/event-plugin.cjs";
 
@@ -29,22 +29,21 @@ let remoteInitialized = false;
 
 /**
  * Construct the tracker on first remote report so disabled telemetry neither
- * scans NICs nor creates a device ID file. Fully synchronous; see ensureDeviceId.
+ * constructs the tracker nor creates the uid file. Fully synchronous; see ensureUid.
  */
 function initRemote(): void {
   if (remoteInitialized) return;
   remoteInitialized = true;
   try {
-    const deviceId = ensureDeviceId();
+    const uid = ensureUid();
     // `env` on the Tracker top-level config becomes a URL query param; AEM's
     // "environment" column (raw field `env`) reads it. Allowed values:
     // prod/pre/daily/dev. We currently use only prod/dev.
-    // `device_id` overrides the tracker's built-in md5(MAC); when missing, keep the built-in value.
+    // anonymous install id as `uid`, which AEM exposes as a dashboard field.
     const client = new Tracker({
       pid: "bailian-cli-node",
       env: detectEnv(),
-      // ...(deviceId ? { device_id: deviceId } : {}),
-      ...(deviceId ? { uuid: deviceId } : {}),
+      ...(uid ? { uid } : {}),
     });
     // Monkey-patch only this instance's `send` to collect each fetch promise.
     // Do not touch the prototype so other Tracker consumers stay unaffected.
@@ -133,8 +132,8 @@ export async function localSink(event: TrackingEvent): Promise<void> {
     }
 
     // Read-only; remoteSink creates the file on first report.
-    const deviceId = loadDeviceId();
-    appendFileSync(path, JSON.stringify(deviceId ? { ...event, deviceId } : event) + "\n", {
+    const uid = loadUid();
+    appendFileSync(path, JSON.stringify(uid ? { ...event, uid } : event) + "\n", {
       mode: 0o600,
     });
   } catch {

@@ -12,12 +12,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, expect, test } from "vite-plus/test";
 import type { Identity, Settings } from "../src/config/schema.ts";
-import {
-  DEVICE_ID_FILE_NAME,
-  ensureDeviceId,
-  getDeviceIdPath,
-  loadDeviceId,
-} from "../src/telemetry/device-id.ts";
+import { UID_FILE_NAME, ensureUid, getUidPath, loadUid } from "../src/telemetry/uid.ts";
 import { trackCommandExecution } from "../src/telemetry/tracker.ts";
 import { enterIsolatedHome, type IsolatedHomeHandle } from "./helpers/isolation.ts";
 
@@ -30,47 +25,47 @@ beforeEach(() => {
 afterEach(() => iso.restore());
 
 test("first call writes a UUID v4 and later calls return the same value", () => {
-  expect(loadDeviceId()).toBeUndefined();
-  const id = ensureDeviceId();
+  expect(loadUid()).toBeUndefined();
+  const id = ensureUid();
   expect(id).toMatch(UUID_V4);
-  expect(readFileSync(getDeviceIdPath(), "utf8")).toBe(`${id}\n`);
-  expect(ensureDeviceId()).toBe(id);
-  expect(loadDeviceId()).toBe(id);
+  expect(readFileSync(getUidPath(), "utf8")).toBe(`${id}\n`);
+  expect(ensureUid()).toBe(id);
+  expect(loadUid()).toBe(id);
 });
 
-test("device id path follows BAILIAN_CONFIG_DIR", () => {
-  ensureDeviceId();
-  expect(getDeviceIdPath()).toBe(join(iso.configDir, DEVICE_ID_FILE_NAME));
+test("uid path follows BAILIAN_CONFIG_DIR", () => {
+  ensureUid();
+  expect(getUidPath()).toBe(join(iso.configDir, UID_FILE_NAME));
 });
 
 test.skipIf(process.platform === "win32")("file mode is 0600", () => {
-  ensureDeviceId();
-  expect(statSync(getDeviceIdPath()).mode & 0o777).toBe(0o600);
+  ensureUid();
+  expect(statSync(getUidPath()).mode & 0o777).toBe(0o600);
 });
 
 test("creates the config directory when missing", () => {
   process.env.BAILIAN_CONFIG_DIR = join(iso.home, "nested", "cfg");
-  expect(ensureDeviceId()).toMatch(UUID_V4);
+  expect(ensureUid()).toMatch(UUID_V4);
 });
 
 test("rebuilds when content is invalid", () => {
-  writeFileSync(getDeviceIdPath(), "not-a-uuid\n");
-  const id = ensureDeviceId();
+  writeFileSync(getUidPath(), "not-a-uuid\n");
+  const id = ensureUid();
   expect(id).toMatch(UUID_V4);
-  expect(readFileSync(getDeviceIdPath(), "utf8").trim()).toBe(id);
+  expect(readFileSync(getUidPath(), "utf8").trim()).toBe(id);
 });
 
 test("accepts upper-case or padded UUID without rewriting the file", () => {
   const upper = "  0F8FAD5B-D9CB-469F-A165-70867728950E \n";
-  writeFileSync(getDeviceIdPath(), upper);
-  expect(ensureDeviceId()).toBe("0f8fad5b-d9cb-469f-a165-70867728950e");
-  expect(readFileSync(getDeviceIdPath(), "utf8")).toBe(upper);
+  writeFileSync(getUidPath(), upper);
+  expect(ensureUid()).toBe("0f8fad5b-d9cb-469f-a165-70867728950e");
+  expect(readFileSync(getUidPath(), "utf8")).toBe(upper);
 });
 
 test("keeps an ID already published by another process", () => {
   const existing = "0f8fad5b-d9cb-469f-a165-70867728950e";
-  writeFileSync(getDeviceIdPath(), `${existing}\n`);
-  expect(ensureDeviceId()).toBe(existing);
+  writeFileSync(getUidPath(), `${existing}\n`);
+  expect(ensureUid()).toBe(existing);
 });
 
 test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
@@ -78,7 +73,7 @@ test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
   () => {
     chmodSync(iso.configDir, 0o500);
     try {
-      expect(ensureDeviceId()).toBeUndefined();
+      expect(ensureUid()).toBeUndefined();
     } finally {
       chmodSync(iso.configDir, 0o700);
     }
@@ -88,18 +83,18 @@ test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
 test.skipIf(process.platform === "win32")(
   "does not overwrite a path occupied by a directory; returns undefined",
   () => {
-    mkdirSync(getDeviceIdPath());
-    expect(ensureDeviceId()).toBeUndefined();
-    expect(statSync(getDeviceIdPath()).isDirectory()).toBe(true);
+    mkdirSync(getUidPath());
+    expect(ensureUid()).toBeUndefined();
+    expect(statSync(getUidPath()).isDirectory()).toBe(true);
   },
 );
 
 test("leaves no temporary files behind", () => {
-  ensureDeviceId();
+  ensureUid();
   expect(readdirSync(iso.configDir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
 });
 
-test("telemetry disabled does not create the device id file", async () => {
+test("telemetry disabled does not create the uid file", async () => {
   const identity: Identity = {
     binName: "bl",
     version: "0.0.0-test",
@@ -116,16 +111,16 @@ test("telemetry disabled does not create the device id file", async () => {
     {},
     async () => {},
   );
-  expect(existsSync(getDeviceIdPath())).toBe(false);
+  expect(existsSync(getUidPath())).toBe(false);
 });
 
 test("eight concurrent first runs converge on one ID", async () => {
-  const deviceIdUrl = pathToFileURL(
-    fileURLToPath(new URL("../src/telemetry/device-id.ts", import.meta.url)),
+  const uidModuleUrl = pathToFileURL(
+    fileURLToPath(new URL("../src/telemetry/uid.ts", import.meta.url)),
   ).href;
   const script = `
-    import { ensureDeviceId } from ${JSON.stringify(deviceIdUrl)};
-    process.stdout.write(String(ensureDeviceId() ?? ""));
+    import { ensureUid } from ${JSON.stringify(uidModuleUrl)};
+    process.stdout.write(String(ensureUid() ?? ""));
   `;
   const tsxLoader = import.meta.resolve("tsx");
   const run = () =>
@@ -153,7 +148,7 @@ test("eight concurrent first runs converge on one ID", async () => {
       });
     });
   const ids = await Promise.all(Array.from({ length: 8 }, () => run()));
-  const finalId = readFileSync(getDeviceIdPath(), "utf8").trim();
+  const finalId = readFileSync(getUidPath(), "utf8").trim();
   expect(finalId).toMatch(UUID_V4);
   expect(new Set(ids)).toEqual(new Set([finalId]));
 });

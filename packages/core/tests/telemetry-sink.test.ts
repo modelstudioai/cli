@@ -81,21 +81,22 @@ test("successful sending and repeated flushes leave no deadlines behind", async 
   expect(vi.getTimerCount()).toBe(0);
 });
 
-test("first remoteSink constructs the tracker once with a persisted device_id", async () => {
+test("first remoteSink constructs the tracker once with persisted uid, not device_id", async () => {
   const { remoteSink } = await import("../src/telemetry/sink.ts");
   expect(fixture.configs).toHaveLength(0);
   await remoteSink({ command: "fixture" } as TrackingEvent);
   await remoteSink({ command: "fixture" } as TrackingEvent);
   expect(fixture.configs).toHaveLength(1);
-  const { loadDeviceId } = await import("../src/telemetry/device-id.ts");
+  const { loadUid } = await import("../src/telemetry/uid.ts");
   expect(fixture.configs[0]).toMatchObject({
     pid: "bailian-cli-node",
-    device_id: loadDeviceId(),
+    uid: loadUid(),
   });
+  expect(fixture.configs[0]).not.toHaveProperty("device_id");
 });
 
-test("importing sink without reporting does not create the device id file", async () => {
+test("importing sink without reporting does not create the uid file", async () => {
   await import("../src/telemetry/sink.ts");
-  const { getDeviceIdPath } = await import("../src/telemetry/device-id.ts");
-  expect(existsSync(getDeviceIdPath())).toBe(false);
+  const { getUidPath } = await import("../src/telemetry/uid.ts");
+  expect(existsSync(getUidPath())).toBe(false);
 });

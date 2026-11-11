@@ -118,11 +118,11 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 事件同时写入两处：
 
-1. 本地 `~/.bailian/telemetry.jsonl`：权限 `0600`，超过 5 MB 后重建；每行附带 `deviceId`（只读已有文件，不创建）
+1. 本地 `~/.bailian/telemetry.jsonl`：权限 `0600`，超过 5 MB 后重建；每行附带 `uid`（只读已有文件，不创建）
 2. AEM：`pid=bailian-cli-node`，源码运行自动使用 `env=dev`，npm 安装或编译二进制使用 `env=prod`
-3. 设备 ID 文件 `~/.bailian/telemetry-device-id`（遵循 `BAILIAN_CONFIG_DIR`）：仅在首次远端上报时由 `ensureDeviceId` 生成
+3. 匿名 install id 文件 `~/.bailian/telemetry-uid`（遵循 `BAILIAN_CONFIG_DIR`）：仅在首次远端上报时由 `ensureUid` 生成
 
-底层 Node tracker 还会附加公共设备字段：OS 类型/版本、Node 应用名与版本、平台，以及 `device_id`。`device_id` 来自 `~/.bailian/telemetry-device-id`（遵循 `BAILIAN_CONFIG_DIR`）：首次远端上报时生成随机 UUID v4，以 0600 权限原子发布；生成失败时退回 tracker 内置的 MAC MD5。遥测关闭时不生成该文件。本地 `telemetry.jsonl` 每行附带 `deviceId`。
+底层 Node tracker 还会附加公共设备字段：OS 类型/版本、Node 应用名与版本、平台，以及内置的 `device_id`（本机网卡 MAC 的 MD5，保持不变）。稳定匿名 install id 写入 AEM 的 `uid`：来自 `~/.bailian/telemetry-uid`（遵循 `BAILIAN_CONFIG_DIR`），首次远端上报时生成随机 UUID v4，以 0600 权限原子发布；生成失败时不上报 `uid`。遥测关闭时不生成该文件。本地 `telemetry.jsonl` 每行附带同名 `uid`。注意：这不是账号用户 ID，只是上报到 AEM `uid` 字段的匿名标识；与 Tracker 内置 `device_id` 无关。
 
 从 2.8.2 起，每条命令事件通过 `commandPrefix` 显式记录调用入口，三种入口仍共用 `pid=bailian-cli-node`：
 
@@ -193,7 +193,7 @@ AEM 映射：
 rg -n "trackingHeaders|x-dashscope-source-config|User-Agent" packages --glob '*.ts'
 rg -n "trackCommandExecution|PARAM_ALLOWLIST|buildRemoteAemOptions|readCaller" packages/core packages/runtime --glob '*.ts'
 vp check
-vp test packages/core/tests/telemetry-device-id.test.ts packages/core/tests/telemetry-sink.test.ts packages/core/tests/telemetry-tracker.test.ts packages/core/tests/telemetry-send.test.ts packages/runtime/tests/telemetry-stage.test.ts packages/commands/tests/e2e/auth.e2e.test.ts
+vp test packages/core/tests/telemetry-uid.test.ts packages/core/tests/telemetry-sink.test.ts packages/core/tests/telemetry-tracker.test.ts packages/core/tests/telemetry-send.test.ts packages/runtime/tests/telemetry-stage.test.ts packages/commands/tests/e2e/auth.e2e.test.ts
 ```
 
 ## 常见漏点
