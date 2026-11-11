@@ -190,7 +190,7 @@ export const authStage: Middleware = async (ctx, next) => {
   const base = {
     identity: ctx.identity,
     settings,
-    consoleRecoveryHint: consoleRecoveryHint(formatCommand(ctx.identity)),
+    consoleRecoveryHint: consoleRecoveryHint(formatCommand(ctx.identity), sources.configName),
     debug: (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic),
     ...resolveModelBaseUrlState(sources),
   };

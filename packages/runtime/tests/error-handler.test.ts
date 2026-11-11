@@ -7,13 +7,18 @@ import { ConfirmationRequiredError } from "../src/confirm.ts";
 function render(
   error: unknown,
   output: "text" | "json" = "json",
-  options: { commandPrefix?: string; supportsFreeTierRecovery?: boolean } = {},
+  options: {
+    commandPrefix?: string;
+    supportsFreeTierRecovery?: boolean;
+    configName?: string;
+  } = {},
 ) {
   let stderr = "";
   const reporter = createOutputReporter({
     settings: { output, quiet: true, verbose: false },
     commandPrefix: options.commandPrefix ?? "kscli",
     supportsFreeTierRecovery: options.supportsFreeTierRecovery,
+    configName: options.configName,
     stderr: {
       write: (chunk) => {
         stderr += chunk;
@@ -166,4 +171,45 @@ test("free-tier hint does not duplicate when existing hint already mentions usag
   ).error;
   expect(payload.hint).toBe(existing);
   expect(payload.hint?.split("usage freetier").length - 1).toBe(1);
+});
+
+test("recovery hints append --config when a named profile is active", () => {
+  const freeTier = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, undefined, {
+    api: { httpStatus: 403, apiCode: FREE_TIER_ONLY_API_CODE },
+  });
+  const freeTierHint = JSON.parse(
+    render(freeTier, "json", {
+      commandPrefix: "bl",
+      supportsFreeTierRecovery: true,
+      configName: "prod",
+    }),
+  ).error.hint as string;
+  expect(freeTierHint).toContain("bl usage free --model <model> --config prod");
+  expect(freeTierHint).toContain("bl usage freetier --off --model <model> --config prod");
+
+  const authHint = JSON.parse(
+    render(new BailianError("No key", ExitCode.AUTH), "json", {
+      commandPrefix: "bl",
+      configName: "prod",
+    }),
+  ).error.hint as string;
+  expect(authHint).toContain("bl auth login --api-key <your-key> --config prod");
+  expect(authHint).toContain("bl auth status --config prod");
+
+  const timeoutHint = JSON.parse(
+    render(Object.assign(new Error("timed out"), { name: "TimeoutError" }), "json", {
+      commandPrefix: "bl",
+      configName: "prod",
+    }),
+  ).error.hint as string;
+  expect(timeoutHint).toContain("bl config show --config prod");
+  expect(timeoutHint).toContain("bl auth status --config prod");
+});
+
+test("recovery hints omit --config for the default profile", () => {
+  const payload = JSON.parse(
+    render(new BailianError("No key", ExitCode.AUTH), "json", { commandPrefix: "bl" }),
+  ).error;
+  expect(payload.hint).toContain("bl auth status");
+  expect(payload.hint).not.toContain("--config");
 });

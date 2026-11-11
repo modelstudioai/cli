@@ -14,11 +14,12 @@ export function normalizeError(
   error: unknown,
   commandPrefix: string,
   localize: Localize,
+  configName?: string,
 ): BailianError {
   if (error instanceof BailianError) return error;
   if (error instanceof Error) {
     return (
-      classifyRuntimeError(error, commandPrefix, localize) ??
+      classifyRuntimeError(error, commandPrefix, localize, configName) ??
       new BailianError(error.message, ExitCode.GENERAL, undefined, { cause: error })
     );
   }
@@ -32,9 +33,18 @@ export function normalizeError(
 type Localize = (text: LocalizedText) => string;
 const english: Localize = (text) => (typeof text === "string" ? text : text["en-US"]);
 
+/**
+ * 恢复命令统一入口：命名 Profile 激活时追加 `--config <name>`，
+ * 避免用户按 hint 操作打到错误的凭证/计费配置。
+ */
+function recoveryCommand(commandPrefix: string, args: string, configName?: string): string {
+  const withConfig = configName ? `${args} --config ${configName}` : args;
+  return formatCommand(commandPrefix, withConfig);
+}
+
 /** Complete recovery text supplied before Console errors can be wrapped by commands. */
-export function consoleRecoveryHint(commandPrefix: string): string {
-  return `Run \`${formatCommand(commandPrefix, "auth login --console")}\` to sign in or refresh your console session.`;
+export function consoleRecoveryHint(commandPrefix: string, configName?: string): string {
+  return `Run \`${recoveryCommand(commandPrefix, "auth login --console", configName)}\` to sign in or refresh your console session.`;
 }
 
 /** Native DashScope code for free-tier-only exhaustion (not TPS/TPM insufficient_quota). */
@@ -46,6 +56,8 @@ export interface ErrorHintOptions {
    * under this product's commandPrefix. Derived from the product command map.
    */
   supportsFreeTierRecovery?: boolean;
+  /** 当前命名 Profile；未指定或 default 时为 undefined，恢复命令不加 `--config`。 */
+  configName?: string;
 }
 
 /** Detect AllocationQuota.FreeTierOnly without matching TPS/TPM insufficient_quota. */
@@ -61,10 +73,18 @@ function isFreeTierOnlyExhausted(error: BailianError): boolean {
 }
 
 /** Localized free-tier recovery steps; only call when the product exposes usage commands. */
-function freeTierRecoveryHint(commandPrefix: string, localize: Localize): string {
-  const statusCommand = formatCommand(commandPrefix, "usage free --model <model>");
+function freeTierRecoveryHint(
+  commandPrefix: string,
+  localize: Localize,
+  configName?: string,
+): string {
+  const statusCommand = recoveryCommand(commandPrefix, "usage free --model <model>", configName);
   // 不带 --yes：调用方先撞确认门槛（exit 7），再按 skill 规范向用户确认。
-  const disableCommand = formatCommand(commandPrefix, "usage freetier --off --model <model>");
+  const disableCommand = recoveryCommand(
+    commandPrefix,
+    "usage freetier --off --model <model>",
+    configName,
+  );
   return localize({
     "en-US": `Check status: ${statusCommand}\nTo keep calling after free quota runs out (pay-as-you-go), disable auto-stop — confirmation required: ${disableCommand}`,
     "zh-CN": `查看状态：${statusCommand}\n若要在免费额度用尽后按量继续调用，请停用自动停止（需确认）：${disableCommand}`,
@@ -78,20 +98,21 @@ export function errorHint(
   localize: Localize,
   options: ErrorHintOptions = {},
 ): string | undefined {
+  const configName = options.configName;
   let hint = error.hint;
   if (error instanceof CredentialError) {
     switch (error.reason) {
       case "missing-api-key":
-        hint = `Set DASHSCOPE_API_KEY, pass --api-key, or run \`${formatCommand(commandPrefix, "auth login")}\`.`;
+        hint = `Set DASHSCOPE_API_KEY, pass --api-key, or run \`${recoveryCommand(commandPrefix, "auth login", configName)}\`.`;
         break;
       case "missing-console-token":
-        return `Run \`${formatCommand(commandPrefix, "auth login --console")}\`.`;
+        return `Run \`${recoveryCommand(commandPrefix, "auth login --console", configName)}\`.`;
       case "expired-console-session":
-        return consoleRecoveryHint(commandPrefix);
+        return consoleRecoveryHint(commandPrefix, configName);
       case "missing-openapi-pair":
-        return `Set BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET), pass --access-key-id and --access-key-secret, or run \`${formatCommand(commandPrefix, "auth login --open-api")}\`.`;
+        return `Set BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET), pass --access-key-id and --access-key-secret, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\`.`;
       case "incomplete-openapi-config":
-        return `Run \`${formatCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>")}\` again to save a complete pair.`;
+        return `Run \`${recoveryCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>", configName)}\` again to save a complete pair.`;
       case "incomplete-openapi-flag":
       case "incomplete-openapi-env":
         return hint;
@@ -105,7 +126,7 @@ export function errorHint(
     isFreeTierOnlyExhausted(error) &&
     !hint?.includes("usage freetier")
   ) {
-    const recovery = freeTierRecoveryHint(commandPrefix, localize);
+    const recovery = freeTierRecoveryHint(commandPrefix, localize, configName);
     hint = hint ? `${hint}\n${recovery}` : recovery;
   }
   if (error.exitCode !== ExitCode.AUTH) return hint;
@@ -121,8 +142,8 @@ export function errorHint(
     return hint;
   return [
     hint,
-    `${formatCommand(commandPrefix, "auth login --api-key <your-key>")}`,
-    `${formatCommand(commandPrefix, "auth status")}`,
+    `${recoveryCommand(commandPrefix, "auth login --api-key <your-key>", configName)}`,
+    `${recoveryCommand(commandPrefix, "auth status", configName)}`,
     localize({ "en-US": `Get API Key: ${API_KEY_PAGE}`, "zh-CN": `获取 API Key：${API_KEY_PAGE}` }),
   ]
     .filter((line) => line !== undefined)
@@ -134,11 +155,12 @@ export function classifyRuntimeError(
   error: Error,
   commandPrefix: string,
   localize: Localize = english,
+  configName?: string,
 ): BailianError | undefined {
   if (error instanceof BailianError) return error;
   const baseUrlHint = localize({
-    "en-US": `If the DashScope host is wrong, check baseUrl (--base-url, ${formatCommand(commandPrefix, "config show")}, or DASHSCOPE_BASE_URL).`,
-    "zh-CN": `如果 DashScope 主机地址有误，请检查 baseUrl（--base-url、${formatCommand(commandPrefix, "config show")} 或 DASHSCOPE_BASE_URL）。`,
+    "en-US": `If the DashScope host is wrong, check baseUrl (--base-url, ${recoveryCommand(commandPrefix, "config show", configName)}, or DASHSCOPE_BASE_URL).`,
+    "zh-CN": `如果 DashScope 主机地址有误，请检查 baseUrl（--base-url、${recoveryCommand(commandPrefix, "config show", configName)} 或 DASHSCOPE_BASE_URL）。`,
   });
   if (
     error.name === "AbortError" ||
@@ -149,8 +171,8 @@ export function classifyRuntimeError(
       localize({ "en-US": "Request timed out.", "zh-CN": "请求超时。" }),
       ExitCode.TIMEOUT,
       localize({
-        "en-US": `Try increasing --timeout (e.g. --timeout 60).\n${baseUrlHint}\nRun: ${formatCommand(commandPrefix, "auth status")} — to check credentials.`,
-        "zh-CN": `请尝试增大 --timeout（例如 --timeout 60）。\n${baseUrlHint}\n运行 ${formatCommand(commandPrefix, "auth status")} 检查凭证。`,
+        "en-US": `Try increasing --timeout (e.g. --timeout 60).\n${baseUrlHint}\nRun: ${recoveryCommand(commandPrefix, "auth status", configName)} — to check credentials.`,
+        "zh-CN": `请尝试增大 --timeout（例如 --timeout 60）。\n${baseUrlHint}\n运行 ${recoveryCommand(commandPrefix, "auth status", configName)} 检查凭证。`,
       }),
       { cause: error },
     );

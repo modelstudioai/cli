@@ -352,6 +352,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           localize,
           commandPrefix,
           supportsFreeTierRecovery,
+          configName: sources.configName,
         });
         setupProxyFromEnv();
         const registry = await getRegistry(translator);
@@ -361,6 +362,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             localize,
             commandPrefix,
             supportsFreeTierRecovery,
+            configName: sources.configName,
           });
           for (const warning of warnings.splice(0)) reporter.output.warning(warning);
           return reporter;

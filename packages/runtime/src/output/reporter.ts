@@ -25,6 +25,8 @@ export interface OutputReporterOptions {
   commandPrefix?: string;
   /** When true, free-tier recovery may render usage free / usage freetier commands. */
   supportsFreeTierRecovery?: boolean;
+  /** 当前命名 Profile；未指定或 default 时为 undefined。 */
+  configName?: string;
 }
 
 export interface OutputReporter {
@@ -97,9 +99,15 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
     },
     error(error) {
       if (errorCode !== undefined) return errorCode;
-      const failure = normalizeError(error, options.commandPrefix ?? "cli", localize);
+      const failure = normalizeError(
+        error,
+        options.commandPrefix ?? "cli",
+        localize,
+        options.configName,
+      );
       const hint = errorHint(failure, options.commandPrefix ?? "cli", localize, {
         supportsFreeTierRecovery: options.supportsFreeTierRecovery,
+        configName: options.configName,
       });
       if (verbose && error instanceof Error && !(error instanceof BailianError)) {
         diagnostic("debug", {
