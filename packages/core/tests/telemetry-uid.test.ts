@@ -5,7 +5,9 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -138,6 +140,7 @@ test("leaves no temporary files or lock dir behind", () => {
   ensureUid();
   const names = readdirSync(iso.configDir);
   expect(names.filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  expect(names.filter((name) => name.includes(".stale."))).toEqual([]);
   expect(names).not.toContain(UID_LOCK_NAME);
 });
 
@@ -179,4 +182,46 @@ test("eight concurrent repairs of an invalid file converge on one ID", async () 
   expect(ids.every((id) => id === finalId)).toBe(true);
   expect(new Set(ids)).toEqual(new Set([finalId]));
   expect(readdirSync(iso.configDir)).not.toContain(UID_LOCK_NAME);
+});
+
+test("eight concurrent reclaimers of a leftover stale lock converge on one ID", async () => {
+  // Leftover lock from a crashed holder — the race that blind rmSync could lose.
+  mkdirSync(getUidLockPath());
+  writeFileSync(join(getUidLockPath(), "owner"), "dead-holder\n");
+  const pastSeconds = (Date.now() - 10_000) / 1000;
+  utimesSync(getUidLockPath(), pastSeconds, pastSeconds);
+
+  const ids = await runEnsureUidChildren(8);
+  const finalId = readFileSync(getUidPath(), "utf8").trim();
+  expect(finalId).toMatch(UUID_V4);
+  expect(ids.every((id) => id === finalId)).toBe(true);
+  expect(new Set(ids)).toEqual(new Set([finalId]));
+  const names = readdirSync(iso.configDir);
+  expect(names).not.toContain(UID_LOCK_NAME);
+  expect(names.filter((name) => name.includes(".stale."))).toEqual([]);
+});
+
+test("repeated stale-lock reclaim bursts keep converging", async () => {
+  for (let round = 0; round < 5; round += 1) {
+    try {
+      rmSync(getUidPath(), { force: true });
+    } catch {
+      /* missing */
+    }
+    try {
+      rmSync(getUidLockPath(), { recursive: true, force: true });
+    } catch {
+      /* missing */
+    }
+    mkdirSync(getUidLockPath());
+    writeFileSync(join(getUidLockPath(), "owner"), `dead-${round}\n`);
+    const pastSeconds = (Date.now() - 10_000) / 1000;
+    utimesSync(getUidLockPath(), pastSeconds, pastSeconds);
+
+    const ids = await runEnsureUidChildren(6);
+    const finalId = readFileSync(getUidPath(), "utf8").trim();
+    expect(finalId).toMatch(UUID_V4);
+    expect(new Set(ids)).toEqual(new Set([finalId]));
+  }
+  expect(readdirSync(iso.configDir).filter((name) => name.includes(".stale."))).toEqual([]);
 });

@@ -8,6 +8,7 @@ import {
   rmSync,
   statSync,
   unlinkSync,
+  writeFileSync,
   writeSync,
 } from "fs";
 import { join } from "path";
@@ -29,9 +30,9 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const LOCK_WAIT_MS = 1000;
 
 /**
- * Drop a lock dir left behind by a crashed holder (aliyun flock auto-releases; mkdir does not).
- * Assumes the holder has crashed. Extreme stalls (FS hang, clock jump) past this age may
- * briefly double-publish different uids; the on-disk file still converges to one value.
+ * Reclaim a lock dir left behind by a crashed holder (aliyun flock auto-releases; mkdir does not).
+ * Assumes the holder has crashed. Extreme stalls past this age may reclaim a live lock;
+ * unlock still only removes the dir when this process still owns the owner token.
  */
 const LOCK_STALE_MS = 2000;
 
@@ -74,9 +75,33 @@ function sleepSync(ms: number): void {
 }
 
 /**
+ * Claim a stale lock by renaming it away (only one reclaimer wins), then delete the claim.
+ * Never rmSync the live lock path by name — that can delete a newer holder's mkdir.
+ */
+function tryReclaimStaleLock(lockPath: string): void {
+  try {
+    const age = Date.now() - statSync(lockPath).mtimeMs;
+    if (age <= LOCK_STALE_MS) return;
+    const stalePath = `${lockPath}.stale.${randomBytes(6).toString("hex")}`;
+    try {
+      renameSync(lockPath, stalePath);
+    } catch {
+      return; // another process already claimed or removed it
+    }
+    try {
+      rmSync(stalePath, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
  * Acquire an exclusive mkdir lock, waiting up to timeoutMs.
  * Returns an unlock function, or undefined when the lock stays busy.
- * unlock removes this process's lock dir and does not verify ownership tokens.
+ * unlock only removes the lock when this process still owns the owner token.
  */
 function acquireUidLock(timeoutMs: number): (() => void) | undefined {
   const lockPath = getUidLockPath();
@@ -85,28 +110,31 @@ function acquireUidLock(timeoutMs: number): (() => void) | undefined {
   for (;;) {
     try {
       mkdirSync(lockPath);
-      return () => {
+      const token = randomBytes(8).toString("hex");
+      try {
+        writeFileSync(join(lockPath, "owner"), `${token}\n`, { flag: "wx", mode: 0o600 });
+      } catch (error) {
         try {
           rmSync(lockPath, { recursive: true, force: true });
         } catch {
           /* ignore */
+        }
+        throw error;
+      }
+      return () => {
+        // Rename the owner file first so we only delete a lock we still own.
+        try {
+          renameSync(join(lockPath, "owner"), join(lockPath, `releasing.${token}`));
+          rmSync(lockPath, { recursive: true, force: true });
+        } catch {
+          /* lock moved/stolen or already gone */
         }
       };
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code ?? "";
       if (code !== "EEXIST") throw error;
 
-      // Stale recovery: treat a lock older than LOCK_STALE_MS as abandoned.
-      // See LOCK_STALE_MS for the crash-vs-stall trade-off vs kernel flock.
-      try {
-        const age = Date.now() - statSync(lockPath).mtimeMs;
-        if (age > LOCK_STALE_MS) {
-          rmSync(lockPath, { recursive: true, force: true });
-          continue;
-        }
-      } catch {
-        /* ignore and keep waiting / give up */
-      }
+      tryReclaimStaleLock(lockPath);
 
       if (Date.now() >= deadline) return undefined;
       sleepSync(Math.min(5, Math.max(0, deadline - Date.now())));
