@@ -3,6 +3,7 @@ import { join } from "path";
 import { getConfigDir, ensureConfigDir } from "../config/paths.ts";
 import { buildRemoteAemOptions, type TrackingEvent } from "./event.ts";
 import { detectEnv } from "./env.ts";
+import { ensureDeviceId, loadDeviceId } from "./device-id.ts";
 import Tracker from "../../lib/remote-telemetry/tracker.cjs";
 import EventPlugin from "../../lib/remote-telemetry/event-plugin.cjs";
 
@@ -12,11 +13,11 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 let remoteSendEvent: ((name: string, opts: Record<string, unknown>) => void) | undefined;
 
-// 追踪在途（in-flight）的远端发送请求，以便在进程退出前等待它们完成。
-// 底层 tracker 是 fire-and-forget 模式（发起 fetch 后不再持有 promise）；
-// 如果不追踪，CLI 在短命令或 SIGINT 场景下会在请求真正落网络前就退出。
-// 配合 tracker.js 中的 `keepalive: true`，await 这些 promise 可以在不阻塞
-// 主流程的前提下，尽最大努力把埋点送达。
+// Track in-flight remote sends so we can wait for them before process exit.
+// The underlying tracker is fire-and-forget (fetch starts without holding the promise);
+// without tracking, short commands or SIGINT can exit before the request hits the network.
+// With `keepalive: true` in tracker.js, awaiting these promises best-effort delivers
+// telemetry without blocking the main command path.
 const SEND_TIMEOUT_MS = 1000;
 interface PendingSend {
   controller: AbortController;
@@ -24,62 +25,79 @@ interface PendingSend {
 }
 const inflightSends = new Set<PendingSend>();
 let remoteClient: any = undefined;
+let remoteInitialized = false;
 
-try {
-  // env 传给 Tracker 顶层 config 后会进 URL 查询参数, AEM 后台 "环境" 列
-  // (原始字段 env) 直接读它, 值域 prod/pre/daily/dev。我们目前只用 prod/dev。
-  const client = new Tracker({ pid: "bailian-cli-node", env: detectEnv() });
-  // 仅对当前实例的 `send` 做猴补丁，把每次 fetch 的 promise 收集起来。
-  // 不修改 prototype，避免污染其他可能存在的 Tracker 使用方。
-  const originalSend = client.send.bind(client);
-  client.send = function (payload: string) {
-    const controller = new AbortController();
-    const deadline = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
-    deadline.unref?.();
-    const pending: PendingSend = {
-      controller,
-      promise: Promise.resolve()
-        .then(() => originalSend(payload, { signal: controller.signal }))
-        .catch(() => {})
-        .finally(() => {
-          // Bun may resolve body.cancel() before stopping its underlying fetch.
-          // Finish this send's private scope before removing its deadline.
-          controller.abort();
-          clearTimeout(deadline);
-          inflightSends.delete(pending);
-        }),
+/**
+ * Construct the tracker on first remote report so disabled telemetry neither
+ * scans NICs nor creates a device ID file. Fully synchronous; see ensureDeviceId.
+ */
+function initRemote(): void {
+  if (remoteInitialized) return;
+  remoteInitialized = true;
+  try {
+    const deviceId = ensureDeviceId();
+    // `env` on the Tracker top-level config becomes a URL query param; AEM's
+    // "environment" column (raw field `env`) reads it. Allowed values:
+    // prod/pre/daily/dev. We currently use only prod/dev.
+    // `device_id` overrides the tracker's built-in md5(MAC); when missing, keep the built-in value.
+    const client = new Tracker({
+      pid: "bailian-cli-node",
+      env: detectEnv(),
+      // ...(deviceId ? { device_id: deviceId } : {}),
+      ...(deviceId ? { uuid: deviceId } : {}),
+    });
+    // Monkey-patch only this instance's `send` to collect each fetch promise.
+    // Do not touch the prototype so other Tracker consumers stay unaffected.
+    const originalSend = client.send.bind(client);
+    client.send = function (payload: string) {
+      const controller = new AbortController();
+      const deadline = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+      deadline.unref?.();
+      const pending: PendingSend = {
+        controller,
+        promise: Promise.resolve()
+          .then(() => originalSend(payload, { signal: controller.signal }))
+          .catch(() => {})
+          .finally(() => {
+            // Bun may resolve body.cancel() before stopping its underlying fetch.
+            // Finish this send's private scope before removing its deadline.
+            controller.abort();
+            clearTimeout(deadline);
+            inflightSends.delete(pending);
+          }),
+      };
+      inflightSends.add(pending);
+      return pending.promise;
     };
-    inflightSends.add(pending);
-    return pending.promise;
-  };
-  remoteClient = client;
-  remoteSendEvent = client.use(EventPlugin);
-} catch {
-  // 埋点逻辑任何异常都不能影响 CLI 主流程
+    remoteClient = client;
+    remoteSendEvent = client.use(EventPlugin);
+  } catch {
+    // Telemetry must never affect the CLI main flow
+  }
 }
 
 /**
- * 尽力等待所有在途的埋点发送完成（best-effort）。
+ * Best-effort wait for all in-flight telemetry sends.
  *
- * 1. 先调用 `_sendAll` 排空 tracker 内部的去抖队列，把还卡在 500ms 合并窗口里
- *    的事件立刻推上网络。
- * 2. 在预算内等待发送，预算耗尽时真正取消 DNS/HTTP/body 工作。
+ * 1. Call `_sendAll` to drain the tracker's debounce queue so events still in
+ *    the 500ms merge window are pushed to the network immediately.
+ * 2. Wait for sends within the budget; on timeout, cancel DNS/HTTP/body work.
  *
- * 埋点永远不应阻塞 CLI：调用方应传入较短的超时（例如 1000ms），并始终与超时
- * race。错误与超时一律静默吞掉。
+ * Telemetry must never block the CLI: callers should pass a short timeout
+ * (e.g. 1000ms) and always race against it. Errors and timeouts are swallowed.
  */
 export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
   let deadline: ReturnType<typeof setTimeout> | undefined;
   try {
     if (remoteClient) {
       try {
-        // 排空去抖队列：把卡在 500ms 合并窗口里的事件立刻发出去
-        // （每次发出都会被追加到 inflightSends 里）。
+        // Drain the debounce queue so events stuck in the 500ms merge window
+        // are sent immediately (each send is appended to inflightSends).
         if (typeof remoteClient._sendAll === "function") {
           remoteClient._sendAll();
         }
       } catch {
-        // flush 自身绝不抛出
+        // flush itself must never throw
       }
     }
     if (inflightSends.size === 0) return;
@@ -94,7 +112,7 @@ export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
       }),
     ]);
   } catch {
-    // 埋点逻辑任何异常都不能影响 CLI 主流程
+    // Telemetry must never affect the CLI main flow
   } finally {
     clearTimeout(deadline);
   }
@@ -111,20 +129,25 @@ export async function localSink(event: TrackingEvent): Promise<void> {
         unlinkSync(path);
       }
     } catch {
-      // 文件还不存在，忽略
+      // File does not exist yet; ignore
     }
 
-    appendFileSync(path, JSON.stringify(event) + "\n", { mode: 0o600 });
+    // Read-only; remoteSink creates the file on first report.
+    const deviceId = loadDeviceId();
+    appendFileSync(path, JSON.stringify(deviceId ? { ...event, deviceId } : event) + "\n", {
+      mode: 0o600,
+    });
   } catch {
-    // 埋点逻辑任何异常都不能影响 CLI 主流程
+    // Telemetry must never affect the CLI main flow
   }
 }
 
 export async function remoteSink(event: TrackingEvent): Promise<void> {
   try {
+    initRemote();
     if (!remoteSendEvent) return;
     remoteSendEvent(event.command, buildRemoteAemOptions(event));
   } catch {
-    // 埋点逻辑任何异常都不能影响 CLI 主流程
+    // Telemetry must never affect the CLI main flow
   }
 }

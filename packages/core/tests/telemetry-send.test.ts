@@ -18,6 +18,16 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
+test("constructor device_id overrides the built-in MAC hash and reaches send config", () => {
+  const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const tracker = new Tracker({ pid: "fixture-pid", device_id: id }) as unknown as {
+    getConfig(key: string): unknown;
+    _getSendConfig(): Record<string, unknown>;
+  };
+  expect(tracker.getConfig("device_id")).toBe(id);
+  expect(tracker._getSendConfig().device_id).toBe(id);
+});
+
 test("telemetry uses the bounded transport without a separate DNS preflight", async () => {
   const controller = new AbortController();
   const tracker = new Tracker({ pid: "fixture-pid", env: "dev" });
