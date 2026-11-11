@@ -12,7 +12,14 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, expect, test } from "vite-plus/test";
 import type { Identity, Settings } from "../src/config/schema.ts";
-import { UID_FILE_NAME, ensureUid, getUidPath, loadUid } from "../src/telemetry/uid.ts";
+import {
+  UID_FILE_NAME,
+  UID_LOCK_NAME,
+  ensureUid,
+  getUidLockPath,
+  getUidPath,
+  loadUid,
+} from "../src/telemetry/uid.ts";
 import { trackCommandExecution } from "../src/telemetry/tracker.ts";
 import { enterIsolatedHome, type IsolatedHomeHandle } from "./helpers/isolation.ts";
 
@@ -23,6 +30,43 @@ beforeEach(() => {
   iso = enterIsolatedHome();
 });
 afterEach(() => iso.restore());
+
+function uidModuleUrl(): string {
+  return pathToFileURL(fileURLToPath(new URL("../src/telemetry/uid.ts", import.meta.url))).href;
+}
+
+async function runEnsureUidChildren(count: number): Promise<string[]> {
+  const script = `
+    import { ensureUid } from ${JSON.stringify(uidModuleUrl())};
+    process.stdout.write(String(ensureUid() ?? ""));
+  `;
+  const tsxLoader = import.meta.resolve("tsx");
+  const run = () =>
+    new Promise<string>((resolve, reject) => {
+      const child = spawn(
+        process.execPath,
+        ["--import", tsxLoader, "--input-type=module", "-e", script],
+        {
+          env: { ...process.env },
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      let out = "";
+      let err = "";
+      child.stdout.on("data", (chunk: Buffer) => {
+        out += chunk.toString();
+      });
+      child.stderr.on("data", (chunk: Buffer) => {
+        err += chunk.toString();
+      });
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code === 0) resolve(out);
+        else reject(new Error(`child exited ${code}: ${err || out}`));
+      });
+    });
+  return Promise.all(Array.from({ length: count }, () => run()));
+}
 
 test("first call writes a UUID v4 and later calls return the same value", () => {
   expect(loadUid()).toBeUndefined();
@@ -36,6 +80,7 @@ test("first call writes a UUID v4 and later calls return the same value", () => 
 test("uid path follows BAILIAN_CONFIG_DIR", () => {
   ensureUid();
   expect(getUidPath()).toBe(join(iso.configDir, UID_FILE_NAME));
+  expect(getUidLockPath()).toBe(join(iso.configDir, UID_LOCK_NAME));
 });
 
 test.skipIf(process.platform === "win32")("file mode is 0600", () => {
@@ -89,9 +134,11 @@ test.skipIf(process.platform === "win32")(
   },
 );
 
-test("leaves no temporary files behind", () => {
+test("leaves no temporary files or lock dir behind", () => {
   ensureUid();
-  expect(readdirSync(iso.configDir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  const names = readdirSync(iso.configDir);
+  expect(names.filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  expect(names).not.toContain(UID_LOCK_NAME);
 });
 
 test("telemetry disabled does not create the uid file", async () => {
@@ -115,40 +162,21 @@ test("telemetry disabled does not create the uid file", async () => {
 });
 
 test("eight concurrent first runs converge on one ID", async () => {
-  const uidModuleUrl = pathToFileURL(
-    fileURLToPath(new URL("../src/telemetry/uid.ts", import.meta.url)),
-  ).href;
-  const script = `
-    import { ensureUid } from ${JSON.stringify(uidModuleUrl)};
-    process.stdout.write(String(ensureUid() ?? ""));
-  `;
-  const tsxLoader = import.meta.resolve("tsx");
-  const run = () =>
-    new Promise<string>((resolve, reject) => {
-      const child = spawn(
-        process.execPath,
-        ["--import", tsxLoader, "--input-type=module", "-e", script],
-        {
-          env: { ...process.env },
-          stdio: ["ignore", "pipe", "pipe"],
-        },
-      );
-      let out = "";
-      let err = "";
-      child.stdout.on("data", (chunk: Buffer) => {
-        out += chunk.toString();
-      });
-      child.stderr.on("data", (chunk: Buffer) => {
-        err += chunk.toString();
-      });
-      child.on("error", reject);
-      child.on("close", (code) => {
-        if (code === 0) resolve(out);
-        else reject(new Error(`child exited ${code}: ${err || out}`));
-      });
-    });
-  const ids = await Promise.all(Array.from({ length: 8 }, () => run()));
+  const ids = await runEnsureUidChildren(8);
   const finalId = readFileSync(getUidPath(), "utf8").trim();
   expect(finalId).toMatch(UUID_V4);
+  // Every child either published or waited and re-read the same winner.
+  expect(ids.every((id) => id === finalId)).toBe(true);
   expect(new Set(ids)).toEqual(new Set([finalId]));
+  expect(readdirSync(iso.configDir)).not.toContain(UID_LOCK_NAME);
+});
+
+test("eight concurrent repairs of an invalid file converge on one ID", async () => {
+  writeFileSync(getUidPath(), "not-a-uuid\n");
+  const ids = await runEnsureUidChildren(8);
+  const finalId = readFileSync(getUidPath(), "utf8").trim();
+  expect(finalId).toMatch(UUID_V4);
+  expect(ids.every((id) => id === finalId)).toBe(true);
+  expect(new Set(ids)).toEqual(new Set([finalId]));
+  expect(readdirSync(iso.configDir)).not.toContain(UID_LOCK_NAME);
 });
