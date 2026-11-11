@@ -13,6 +13,7 @@ describe("e2e: usage freetier", () => {
     expect(stderr).toContain("--yes");
     expect(stderr).toMatch(/Risk:\s*high/i);
     expect(stderr).toContain("This changes free-tier auto-stop");
+    expect(stderr).toContain("Enabling it makes calls fail once free quota is exhausted");
     expect(stderr).toContain("bl usage freetier --model qwen3-max --yes");
     expect(stderr).toContain("bl usage freetier --off --model qwen3-max --yes");
   });

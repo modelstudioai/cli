@@ -88,11 +88,13 @@ test("free-tier hint appends for AllocationQuota.FreeTierOnly when product suppo
   expect(payload.code).toBe(ExitCode.GENERAL);
   expect(payload.message).toBe(FREE_TIER_MESSAGE);
   expect(payload.hint).toContain("bl usage free --model <model>");
-  expect(payload.hint).toContain("bl usage freetier --off --model <model> --yes");
+  expect(payload.hint).toContain("bl usage freetier --off --model <model>");
+  expect(payload.hint).not.toContain("--yes");
   expect(payload.hint).not.toContain("--all");
   const text = render(error, "text", { commandPrefix: "bl", supportsFreeTierRecovery: true });
   expect(text).toContain("Hint:");
   expect(text).toContain("usage freetier --off");
+  expect(text).not.toContain("--yes");
 });
 
 test("free-tier hint uses message fallback when type shadows AllocationQuota.FreeTierOnly code", () => {
@@ -115,7 +117,8 @@ test("OpenAI-compat Free quota exhausted copy matches via use free tier only phr
   const payload = JSON.parse(
     render(error, "json", { commandPrefix: "bl", supportsFreeTierRecovery: true }),
   ).error;
-  expect(payload.hint).toContain("bl usage freetier --off --model <model> --yes");
+  expect(payload.hint).toContain("bl usage freetier --off --model <model>");
+  expect(payload.hint).not.toContain("--yes");
 });
 
 test("insufficient_quota TPS/TPM message does not get free-tier recovery", () => {
@@ -150,4 +153,17 @@ test("free-tier hint appends after an existing hint without replacing it", () =>
   ).error;
   expect(payload.hint?.startsWith(existing)).toBe(true);
   expect(payload.hint).toContain("usage freetier --off");
+  expect(payload.hint).not.toContain("--yes");
+});
+
+test("free-tier hint does not duplicate when existing hint already mentions usage freetier", () => {
+  const existing = "Already guided: bl usage freetier --off --model demo";
+  const error = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, existing, {
+    api: { apiCode: FREE_TIER_ONLY_API_CODE },
+  });
+  const payload = JSON.parse(
+    render(error, "json", { commandPrefix: "bl", supportsFreeTierRecovery: true }),
+  ).error;
+  expect(payload.hint).toBe(existing);
+  expect(payload.hint?.split("usage freetier").length - 1).toBe(1);
 });

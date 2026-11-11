@@ -26,8 +26,9 @@ export default defineCommand({
     reason: "billing",
     message: {
       "en-US":
-        "This changes free-tier auto-stop. Disabling it allows pay-as-you-go calls after free quota is exhausted.",
-      "zh-CN": "此操作会变更免费额度自动停止。停用后，免费额度用尽将继续按量计费调用。",
+        "This changes free-tier auto-stop. Enabling it makes calls fail once free quota is exhausted; disabling it allows pay-as-you-go charges after free quota is exhausted.",
+      "zh-CN":
+        "此操作会变更免费额度自动停止。启用后，免费额度用尽时调用将失败；停用后，免费额度用尽将继续按量计费调用。",
     },
   },
   usageArgs: "<--model <model>[,model2,...] | --all> [--off] [flags]",

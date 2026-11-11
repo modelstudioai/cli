@@ -104,14 +104,14 @@ bl usage free --model qwen3-max --console-region cn-beijing
 
 ### `bl usage freetier`
 
-| Field              | Value                                                                                                    |
-| ------------------ | -------------------------------------------------------------------------------------------------------- |
-| **Name**           | `usage freetier`                                                                                         |
-| **Description**    | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable               |
-| **Authentication** | Console                                                                                                  |
-| **Usage**          | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                              |
-| **Risk**           | `high`                                                                                                   |
-| **Risk message**   | This changes free-tier auto-stop. Disabling it allows pay-as-you-go calls after free quota is exhausted. |
+| Field              | Value                                                                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `usage freetier`                                                                                                                                                      |
+| **Description**    | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable                                                                            |
+| **Authentication** | Console                                                                                                                                                               |
+| **Usage**          | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                                                                                           |
+| **Risk**           | `high`                                                                                                                                                                |
+| **Risk message**   | This changes free-tier auto-stop. Enabling it makes calls fail once free quota is exhausted; disabling it allows pay-as-you-go charges after free quota is exhausted. |
 
 > **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 

@@ -63,10 +63,11 @@ function isFreeTierOnlyExhausted(error: BailianError): boolean {
 /** Localized free-tier recovery steps; only call when the product exposes usage commands. */
 function freeTierRecoveryHint(commandPrefix: string, localize: Localize): string {
   const statusCommand = formatCommand(commandPrefix, "usage free --model <model>");
-  const disableCommand = formatCommand(commandPrefix, "usage freetier --off --model <model> --yes");
+  // 不带 --yes：调用方先撞确认门槛（exit 7），再按 skill 规范向用户确认。
+  const disableCommand = formatCommand(commandPrefix, "usage freetier --off --model <model>");
   return localize({
-    "en-US": `Check status: ${statusCommand}\nIf Auto-Stop is ON and you accept pay-as-you-go: ${disableCommand}`,
-    "zh-CN": `查看状态：${statusCommand}\n若 Auto-Stop 为 ON 且接受按量计费：${disableCommand}`,
+    "en-US": `Check status: ${statusCommand}\nTo keep calling after free quota runs out (pay-as-you-go), disable auto-stop — confirmation required: ${disableCommand}`,
+    "zh-CN": `查看状态：${statusCommand}\n若要在免费额度用尽后按量继续调用，请停用自动停止（需确认）：${disableCommand}`,
   });
 }
 
@@ -98,7 +99,12 @@ export function errorHint(
   }
   // Append free-tier recovery before the AUTH-only early return so GENERAL
   // service errors (and async paths that already set a hint) still get guidance.
-  if (options.supportsFreeTierRecovery && isFreeTierOnlyExhausted(error)) {
+  // 已含恢复指引（命令自带或上游已追加）时不重复追加。
+  if (
+    options.supportsFreeTierRecovery &&
+    isFreeTierOnlyExhausted(error) &&
+    !hint?.includes("usage freetier")
+  ) {
     const recovery = freeTierRecoveryHint(commandPrefix, localize);
     hint = hint ? `${hint}\n${recovery}` : recovery;
   }
