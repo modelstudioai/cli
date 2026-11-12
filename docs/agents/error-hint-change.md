@@ -43,7 +43,7 @@ runtime/create-cli.ts: 每次调用创建 reporter，统一捕获初始化/解�
   ↓
 runtime/error-handler.ts:
   - 服务端错误(BailianError(GENERAL)) → text 直接打 message
-  - 内部 AUTH/USAGE/NETWORK/TIMEOUT → 走 errorHint(只 AUTH 还有增强)
+  - 内部 AUTH/USAGE/NETWORK/TIMEOUT → 走 errorHint(AUTH 增强;另可对已知可恢复服务端错误追加 hint)
   - TypeError("fetch failed") → 读 err.cause.code 翻成 NETWORK
   - Node fs errno → 翻成 GENERAL + errno hint
   - reporter：JSON 错误、warning、debug 各占 stderr 一行，无空行；stdout 仅保留最终业务结果
@@ -104,8 +104,13 @@ process.exit(err.exitCode)
 
 ### B. runtime 增强(`errorHint`)
 
-- [ ] `packages/runtime/src/error-handler.ts:errorHint`:**当前只为 internal AUTH 增强**(因为 resolver / authStage 等内部位置会发 AUTH)
+- [ ] `packages/runtime/src/error-handler.ts:errorHint`:**主要为 internal AUTH 增强**(resolver / authStage 等内部位置会发 AUTH)
+- [ ] **允许的有限扩展**:对已知可恢复的服务端错误,**追加**恢复 hint(保留原 message / exitCode)。当前仅 `AllocationQuota.FreeTierOnly`(及同义英文 message 短语)。message / apiCode 匹配**只用于追加**,不参与分类、归并或替换 message(勿与下方反面 case 3 的关键词归并混淆)
+- [ ] 追加时若已有 hint(如 video task id),拼接并对**完整恢复文本**去重;不要 `hint` 非空就跳过，也不要用 `"usage freetier"` 子串匹配
+- [ ] 命令层不得自行拼 `usage free` / `usage freetier` 恢复指引；该指引只由 runtime `errorHint` 生成
+- [ ] 渲染产品命令前须经能力门控(`hasCommand(path)`),不要对 `kscli` 等缺命令的产品硬拼 `usage freetier`
 - [ ] 命令名使用 `commandPrefix`,不要硬编码 `bl`
+- [ ] 恢复命令经 `recoveryCommand` 渲染；Profile 名用 `resolveRecoveryConfigName` / `Settings.recoveryConfigName`（显式 `--config default` 保留，隐式 default 不加）。API Key capability fallback 到 `default` 时，runtime 须把恢复 hint 的 profile 改写为 `default`（当前命令自身的控制台会话 hint `consoleRecoveryHint` 不改）。理由：恢复命令要跟随实际报错的 API Key 所属 Profile——此时报错（如 `AllocationQuota.FreeTierOnly`）来自 `default` 的 API Key 所属账号，免费额度恢复虽是 Console 命令，也须钉 `default`；钉回原命名 Profile 可能用另一账号的 Console token 静默改错账号的计费设置。`default` 缺 Console token 时报 AUTH 并给出 `auth login --console --config default`，可恢复且账号正确。不要拆成 api-key / console 两套 Profile 名
 - [ ] URL 必须是 `import { API_KEY_PAGE } from "./urls.ts"`
 
 ### C. command / runtime 直接抛错

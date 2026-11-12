@@ -141,8 +141,10 @@ export default defineCommand({
       type: "string",
       valueHint: "<model>",
       description: {
-        "en-US": "Model ID (default: qwen3.5-omni-plus)",
-        "zh-CN": "模型 ID（默认：qwen3.5-omni-plus）",
+        "en-US":
+          "Model ID (default: qwen3.8-omni-flash; when --model is omitted and --text-only is absent, auto-switches to qwen3.5-omni-plus for audio output)",
+        "zh-CN":
+          "模型 ID（默认：qwen3.8-omni-flash；省略 --model 且未带 --text-only 时，自动切换为支持音频输出的 qwen3.5-omni-plus）",
       },
     },
     system: {
@@ -275,11 +277,25 @@ export default defineCommand({
     // --- Parse messages ---
     const userMessages = flags.message ?? [];
 
-    const model = flags.model || settings.defaultOmniModel || "qwen3.5-omni-plus";
+    // Default to flash; switch to plus when --model is omitted and --text-only is absent (flash has no audio out).
+    const textOnly = flags.textOnly === true;
+    let model = flags.model || settings.defaultOmniModel || "qwen3.8-omni-flash";
+    if (!flags.model && !textOnly && model === "qwen3.8-omni-flash") {
+      model = "qwen3.5-omni-plus";
+    }
     const voice = flags.voice || "Tina";
     const audioFormat = flags.audioFormat || "wav";
-    const textOnly = flags.textOnly === true;
     const format = settings.output;
+
+    // Explicit flash + audio path will be rejected by the server; warn locally without overriding --model.
+    if (flags.model === "qwen3.8-omni-flash" && !textOnly) {
+      ctx.output.warning({
+        "en-US":
+          "qwen3.8-omni-flash does not support audio output. Add --text-only, or omit --model to auto-switch to qwen3.5-omni-plus.",
+        "zh-CN":
+          "qwen3.8-omni-flash 不支持音频输出。请添加 --text-only，或省略 --model 以自动切换为 qwen3.5-omni-plus。",
+      });
+    }
 
     // --- Build messages array ---
     const allMessages: ChatMessage[] = [];
