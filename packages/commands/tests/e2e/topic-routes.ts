@@ -179,6 +179,21 @@ export const CONSOLE_READ_ROUTES: E2eRouteExports = {
   "dataset groups": "datasetGroups",
 };
 
+export const APP_CONTROL_ROUTES: E2eRouteExports = {
+  "app list": "appList",
+  "app create": "appCreate",
+  "app get": "appGet",
+  "app update": "appUpdate",
+  "app publish": "appPublish",
+  "app delete": "appDelete",
+  "app copy": "appCopy",
+  "app versions": "appVersions",
+  "app workflow get": "appWorkflowGet",
+  "app workflow save": "appWorkflowSave",
+  "app workflow publish": "appWorkflowPublish",
+  "app workflow export": "appWorkflowExport",
+};
+
 export const ADVISOR_ROUTES: E2eRouteExports = {
   "advisor recommend": "advisorRecommend",
 };
