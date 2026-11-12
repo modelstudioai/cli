@@ -14,6 +14,24 @@ interface BatchResultFailure {
   errorCode: string;
 }
 
+/** Require a positive success signal; empty successModels must not count as success. */
+function isModelOperationConfirmed(
+  resultData: Record<string, unknown>,
+  modelName: string,
+): boolean {
+  const failureModels = (resultData.failureModels as BatchResultFailure[] | undefined) ?? [];
+  if (failureModels.length > 0) return false;
+  const successModels = resultData.successModels;
+  if (Array.isArray(successModels)) {
+    return successModels.includes(modelName);
+  }
+  if (typeof resultData.successCount === "number") {
+    return resultData.successCount > 0;
+  }
+  // Legacy responses without a success list still use the boolean flag.
+  return resultData.success === true;
+}
+
 export default defineCommand({
   description: {
     "en-US":
@@ -79,6 +97,8 @@ export default defineCommand({
     const modelFlag = flags.model || undefined;
     const off = Boolean(flags.off);
     const format = settings.output;
+    const action = off ? "disable" : "enable";
+    const actionZh = off ? "停用" : "启用";
 
     let models: string[];
     if (modelFlag) {
@@ -113,6 +133,7 @@ export default defineCommand({
 
     const skipped: string[] = [];
     const processed: { model: string; result: unknown }[] = [];
+    const confirmed: string[] = [];
     const failed: string[] = [];
     const timedOut: string[] = [];
     const textLines: string[] = [];
@@ -125,6 +146,38 @@ export default defineCommand({
       stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
     }
 
+    let resultWritten = false;
+    /** Empty JSON is a valid success; only skip empty output when catching with no progress. */
+    const writeBusinessResult = (options?: { requireProgress?: boolean }) => {
+      if (resultWritten) return;
+      if (format === "text" && textLines.length === 0) return;
+      if (
+        options?.requireProgress &&
+        processed.length === 0 &&
+        skipped.length === 0 &&
+        textLines.length === 0
+      ) {
+        return;
+      }
+      ctx.output.result(
+        off ? { processed, skipped } : processed.map((item) => item.result),
+        format === "text" ? { text: textLines.join("\n") } : undefined,
+      );
+      resultWritten = true;
+    };
+
+    const progressMessage = (failedModel: string) =>
+      ctx.localize({
+        "en-US": [
+          `Confirmed ${action} auto-stop for ${confirmed.length} model(s)${confirmed.length > 0 ? `: ${confirmed.join(", ")}` : ""}.`,
+          `Model "${failedModel}" failed; its outcome is unconfirmed. Later models were not executed.`,
+        ].join("\n"),
+        "zh-CN": [
+          `已确认${actionZh}自动停止 ${confirmed.length} 个模型${confirmed.length > 0 ? `：${confirmed.join("、")}` : ""}。`,
+          `模型 "${failedModel}" 失败，结果未确认。后续模型未执行。`,
+        ].join("\n"),
+      });
+
     for (const name of models) {
       if (off && stopMap.get(name) === false) {
         skipped.push(name);
@@ -134,10 +187,33 @@ export default defineCommand({
         });
         continue;
       }
-      const result = await pollFreeTierBatch(ctx.client, api, requestKey, [name]);
+
+      let result: unknown;
+      try {
+        result = await pollFreeTierBatch(ctx.client, api, requestKey, [name]);
+      } catch (error) {
+        // Keep stdout progress, but do not wrap the original error (preserves cause.code /
+        // ERROR_STACK). Surface confirmed work via warning instead.
+        writeBusinessResult({ requireProgress: true });
+        if (confirmed.length > 0 || processed.length > 0 || skipped.length > 0) {
+          ctx.output.warning({
+            code: "FREETIER_PARTIAL_PROGRESS",
+            message: progressMessage(name),
+            details: {
+              confirmed,
+              failed_model: name,
+              processed_count: processed.length,
+              skipped_count: skipped.length,
+            },
+          });
+        }
+        throw error;
+      }
+
       processed.push({ model: name, result });
       const resultData = result ? unwrapResponse(result as Record<string, unknown>) : undefined;
       const failureModels = (resultData?.failureModels as BatchResultFailure[] | undefined) ?? [];
+
       if (!result) {
         timedOut.push(name);
         ctx.output.warning({
@@ -148,7 +224,10 @@ export default defineCommand({
           },
           details: { model: name },
         });
-      } else if (failureModels.length > 0) {
+        break;
+      }
+
+      if (failureModels.length > 0) {
         failed.push(name);
         const errorCode = failureModels[0].errorCode;
         ctx.output.warning({
@@ -164,34 +243,42 @@ export default defineCommand({
               },
           details: { model: name, error_code: errorCode },
         });
-      } else {
-        textLines.push(
-          ctx.localize(
-            off
-              ? {
-                  "en-US": `Disabled auto-stop for "${name}".`,
-                  "zh-CN": `已为模型 "${name}" 停用自动停止。`,
-                }
-              : {
-                  "en-US": `Enabled auto-stop for "${name}".`,
-                  "zh-CN": `已为模型 "${name}" 启用自动停止。`,
-                },
-          ),
-        );
+        break;
       }
-    }
-    if (format === "json" || textLines.length > 0) {
-      ctx.output.result(
-        off ? { processed, skipped } : processed.map((item) => item.result),
-        format === "text" ? { text: textLines.join("\n") } : undefined,
+
+      if (!resultData || !isModelOperationConfirmed(resultData, name)) {
+        failed.push(name);
+        ctx.output.warning({
+          code: "FREETIER_OPERATION_FAILED",
+          message: {
+            "en-US": `Auto-stop ${action} for "${name}" was not confirmed by the server.`,
+            "zh-CN": `服务端未确认模型 "${name}" 的自动停止${actionZh}。`,
+          },
+          details: { model: name },
+        });
+        break;
+      }
+
+      confirmed.push(name);
+      textLines.push(
+        ctx.localize(
+          off
+            ? {
+                "en-US": `Disabled auto-stop for "${name}".`,
+                "zh-CN": `已为模型 "${name}" 停用自动停止。`,
+              }
+            : {
+                "en-US": `Enabled auto-stop for "${name}".`,
+                "zh-CN": `已为模型 "${name}" 启用自动停止。`,
+              },
+        ),
       );
     }
+
+    writeBusinessResult();
     if (failed.length === 0 && timedOut.length === 0) return;
 
     // Client poll timeout is internal TIMEOUT; server rejection stays GENERAL.
-    // Mixed batches use GENERAL and list both outcomes in the summary.
-    const action = off ? "disable" : "enable";
-    const actionZh = off ? "停用" : "启用";
     const summaryPartsEn: string[] = [];
     const summaryPartsZh: string[] = [];
     if (failed.length > 0) {

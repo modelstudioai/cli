@@ -224,7 +224,9 @@ let calls: Array<{ api: string; data: Record<string, unknown> }> = [];
 let openCalls: Record<string, unknown>[] = [];
 let failure = false;
 let alreadyOff = false;
+let emptyModelList = false;
 let batchResult: unknown = batch;
+let batchHandler: ((api: string, data: Record<string, unknown>) => unknown) | undefined;
 let overviewResult: unknown = stat;
 let modelRows: unknown[] = [
   { model: "qwen-test", callSuccessCount: 3, usage: { input_tokens: 2 } },
@@ -239,7 +241,9 @@ afterEach(() => {
   openCalls = [];
   failure = false;
   alreadyOff = false;
+  emptyModelList = false;
   batchResult = batch;
+  batchHandler = undefined;
   overviewResult = stat;
   modelRows = [{ model: "qwen-test", callSuccessCount: 3, usage: { input_tokens: 2 } }];
 });
@@ -291,7 +295,9 @@ async function invoke(
       calls.push({ api, data: structuredClone(data) });
       if (failure) throw new BailianError("Original console failure", ExitCode.GENERAL);
       if (api === MODEL_LIST_API)
-        return { list: [{ model: "qwen-test", capabilities: ["TG"] }], total: 1 };
+        return emptyModelList
+          ? { list: [], total: 0 }
+          : { list: [{ model: "qwen-test", capabilities: ["TG"] }], total: 1 };
       if (api.includes("queryFreeTierQuota"))
         return { data: { data: { freeTierQuotas: [quota] } } };
       if (api.includes("queryFreeTierOnlyStatus"))
@@ -300,8 +306,13 @@ async function invoke(
             data: { freeTierOnlyStatuses: [{ model: "qwen-test", freeTierOnly: !alreadyOff }] },
           },
         };
-      if (api.includes("batchActivateFreeTierOnly") || api.includes("batchDeactivateFreeTierOnly"))
+      if (
+        api.includes("batchActivateFreeTierOnly") ||
+        api.includes("batchDeactivateFreeTierOnly")
+      ) {
+        if (batchHandler) return batchHandler(api, data);
         return structuredClone(batchResult);
+      }
       if (api.includes("getModelUsageStatistic")) return structuredClone(overviewResult);
       if (api.includes("listModelUsageStatisticData"))
         return { list: structuredClone(modelRows), totalCount: modelRows.length };
@@ -642,3 +653,131 @@ test.each(["text", "json"] as const)(
     }
   },
 );
+
+test("auto-stop fail-fast stops after the first model failure", async () => {
+  batchResult = { failureModels: [{ failureModelId: "qwen-a", errorCode: "Rejected" }] };
+  const result = await invoke(
+    { ...cases[1]!, flags: { model: "qwen-a,qwen-b,qwen-c", off: true } },
+    { format: "json", quiet: true },
+  );
+  expect(result.exitCode).toBe(ExitCode.GENERAL);
+  expect(calls.filter((call) => call.api.includes("batchDeactivate"))).toHaveLength(1);
+  expect(calls.find((call) => call.api.includes("batchDeactivate"))!.data).toEqual({
+    BatchDeactivateFreeTierOnlyRequest: { models: ["qwen-a"] },
+  });
+  expect(JSON.parse(result.stdout)).toEqual({
+    processed: [{ model: "qwen-a", result: batchResult }],
+    skipped: [],
+  });
+  expect(result.stderr).toContain("Failed to disable auto-stop for 1 model(s): qwen-a");
+});
+
+test("auto-stop empty success list is not treated as success", async () => {
+  batchResult = { successCount: 0, successModels: [], failureModels: [] };
+  const result = await invoke(
+    { ...cases[1]!, flags: { model: "qwen-test", off: true } },
+    { format: "json", quiet: true },
+  );
+  expect(result.exitCode).toBe(ExitCode.GENERAL);
+  expect(result.stdout).not.toContain("Disabled auto-stop");
+  expect(JSON.parse(result.stdout)).toEqual({
+    processed: [{ model: "qwen-test", result: batchResult }],
+    skipped: [],
+  });
+  expect(result.stderr).toContain("FREETIER_OPERATION_FAILED");
+  expect(result.stderr).toContain("was not confirmed by the server");
+  expect(result.stderr).toContain("Failed to disable auto-stop for 1 model(s): qwen-test");
+});
+
+test("auto-stop network error keeps prior confirmed progress", async () => {
+  let mutateCalls = 0;
+  batchHandler = () => {
+    mutateCalls += 1;
+    if (mutateCalls === 1) {
+      return {
+        success: true,
+        successCount: 1,
+        successModels: ["qwen-test"],
+        failureModels: [],
+      };
+    }
+    throw new BailianError("Upstream network failure", ExitCode.NETWORK);
+  };
+  const result = await invoke(
+    { ...cases[1]!, flags: { model: "qwen-test,qwen-other" } },
+    { format: "json", quiet: true },
+  );
+  expect(result.exitCode).toBe(ExitCode.NETWORK);
+  expect(mutateCalls).toBe(2);
+  expect(JSON.parse(result.stdout)).toEqual([
+    {
+      success: true,
+      successCount: 1,
+      successModels: ["qwen-test"],
+      failureModels: [],
+    },
+  ]);
+  expect(result.stderr).toContain("Upstream network failure");
+  expect(result.stderr).toContain("FREETIER_PARTIAL_PROGRESS");
+  expect(result.stderr).toContain("Confirmed enable auto-stop for 1 model(s): qwen-test");
+  expect(result.stderr).toContain("qwen-other");
+  expect(result.stderr).toContain("outcome is unconfirmed");
+  expect(result.stderr).toContain("Later models were not executed");
+});
+
+test.each([
+  { off: false, want: [] },
+  { off: true, want: { processed: [], skipped: [] } },
+] as const)(
+  "auto-stop --all with zero models still emits empty JSON (off=$off)",
+  async ({ off, want }) => {
+    emptyModelList = true;
+    const result = await invoke(
+      { ...cases[1]!, flags: { all: true, ...(off ? { off: true } : {}) } },
+      { format: "json", quiet: true },
+    );
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual(want);
+    expect(calls.some((call) => call.api.includes("batchActivate"))).toBe(false);
+    expect(calls.some((call) => call.api.includes("batchDeactivate"))).toBe(false);
+  },
+);
+
+test("auto-stop transport error preserves cause.code and verbose ERROR_STACK", async () => {
+  let mutateCalls = 0;
+  batchHandler = () => {
+    mutateCalls += 1;
+    if (mutateCalls === 1) {
+      return {
+        success: true,
+        successCount: 1,
+        successModels: ["qwen-test"],
+        failureModels: [],
+      };
+    }
+    const cause = Object.assign(new Error("getaddrinfo ENOTFOUND example.invalid"), {
+      code: "ENOTFOUND",
+    });
+    throw new TypeError("fetch failed", { cause });
+  };
+  const result = await invoke(
+    { ...cases[1]!, flags: { model: "qwen-test,qwen-other" } },
+    { format: "json", quiet: true, verbose: true },
+  );
+  expect(result.exitCode).toBe(ExitCode.NETWORK);
+  expect(JSON.parse(result.stdout)).toHaveLength(1);
+  const stderrLines = result.stderr
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+  expect(
+    stderrLines.some(
+      (line) => line.debug && (line.debug as { code?: string }).code === "ERROR_STACK",
+    ),
+  ).toBe(true);
+  const errorLine = stderrLines.find((line) => line.error) as {
+    error: { cause?: { code?: string; message?: string } };
+  };
+  expect(errorLine.error.cause?.code).toBe("ENOTFOUND");
+  expect(result.stderr).toContain("FREETIER_PARTIAL_PROGRESS");
+});
