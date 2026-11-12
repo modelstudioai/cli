@@ -121,6 +121,8 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 1. 本地 `~/.bailian/telemetry.jsonl`：权限 `0600`，超过 5 MB 后重建
 2. AEM：`pid=bailian-cli-node`，源码运行自动使用 `env=dev`，npm 安装或编译二进制使用 `env=prod`
 
+编译二进制的 `env=prod` 由 `BAILIAN_COMPILED=1` 决定，并且必须先于 `NODE_ENV`。`bun build --compile`（当前 pin 1.3.14）会把点访问 `process.env.NODE_ENV` 内联成构建机的值，未设置时是 `"development"`；`tools/release/lib/binary-compile.mjs` 同时 `--define process.env.NODE_ENV="production"`。这两处读取必须写成 `process.env.*`，包进别的变量后 `--define` 匹配不到。
+
 底层 Node tracker 还会附加公共设备字段：OS 类型/版本、Node 应用名与版本、平台，以及由本机网络标识计算的 MD5 `device_id`。
 
 从 2.8.2 起，每条命令事件通过 `commandPrefix` 显式记录调用入口，三种入口仍共用 `pid=bailian-cli-node`：
@@ -202,3 +204,4 @@ vp test packages/core/tests packages/runtime/tests/telemetry-stage.test.ts packa
 - ✗ 新增 bypass `fetch` 后漏掉应由网关消费的 source-config，或把它发给 OSS / npm / 第三方下载地址
 - ✗ 只改 `bl` 入口，导致 `kscli` 的产品名或版本标签错误
 - ✗ 把帮助、版本或参数校验失败算进“全部命令”；这些路径当前没有进入 telemetry middleware
+- ✗ 把 `NODE_ENV` 判断放在 `BAILIAN_COMPILED` 前面。Bun 编译会把 `process.env.NODE_ENV` 折成 `"development"`，二进制流量全部进 `env=dev`，生产看板为空
