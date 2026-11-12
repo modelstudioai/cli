@@ -9,6 +9,8 @@
  */
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 function parseArgs(argv) {
   let entry = null;
@@ -34,11 +36,14 @@ function parseArgs(argv) {
   return { entry, outfile, target };
 }
 
-const { entry, outfile, target } = parseArgs(process.argv.slice(2));
-
-const result = spawnSync(
-  "bun",
-  [
+/**
+ * Bun ≤1.3.14 inlines `process.env.NODE_ENV` during `bun build --compile`.
+ * Unset on the build machine becomes the string `"development"`, which
+ * `detectEnv()` would report as dev. Pin production here, and keep the
+ * compiled-marker define so the runtime check still wins if that default changes.
+ */
+export function bunCompileArguments(entry, outfile, target) {
+  return [
     "build",
     entry,
     "--compile",
@@ -48,18 +53,30 @@ const result = spawnSync(
     target,
     "--define",
     'process.env.BAILIAN_COMPILED="1"',
-  ],
-  { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] },
-);
-
-if (result.stdout) process.stdout.write(result.stdout);
-if (result.stderr) process.stderr.write(result.stderr);
-
-if (result.status !== 0) {
-  process.exit(result.status ?? 1);
+    "--define",
+    'process.env.NODE_ENV="production"',
+  ];
 }
 
-if (!existsSync(outfile)) {
-  console.error(`bun build --compile exited 0 but outfile missing: ${outfile}`);
-  process.exit(1);
+function compileBinary({ entry, outfile, target }) {
+  const result = spawnSync("bun", bunCompileArguments(entry, outfile, target), {
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
+
+  if (!existsSync(outfile)) {
+    console.error(`bun build --compile exited 0 but outfile missing: ${outfile}`);
+    process.exit(1);
+  }
+}
+
+if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
+  compileBinary(parseArgs(process.argv.slice(2)));
 }
