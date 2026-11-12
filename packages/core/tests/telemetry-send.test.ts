@@ -18,6 +18,18 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
+test("constructor uid reaches send config without replacing built-in device_id", () => {
+  const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const tracker = new Tracker({ pid: "fixture-pid", uid: id }) as unknown as {
+    getConfig(key: string): unknown;
+    _getSendConfig(): Record<string, unknown>;
+  };
+  expect(tracker.getConfig("uid")).toBe(id);
+  expect(tracker._getSendConfig().uid).toBe(id);
+  expect(tracker.getConfig("device_id")).toMatch(/^[0-9a-f]{32}$/);
+  expect(tracker._getSendConfig().device_id).toBe(tracker.getConfig("device_id"));
+});
+
 test("telemetry uses the bounded transport without a separate DNS preflight", async () => {
   const controller = new AbortController();
   const tracker = new Tracker({ pid: "fixture-pid", env: "dev" });

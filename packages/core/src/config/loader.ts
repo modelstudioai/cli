@@ -287,6 +287,21 @@ export function buildOutputSettings({
 }
 
 /**
+ * Config name for recovery hints (does not change IO-layer `configName` semantics).
+ * Explicit `--config default` is normalized to undefined in the loader; keep
+ * `"default"` here so copying the hint does not fall back to an active named profile.
+ */
+export function resolveRecoveryConfigName(sources: {
+  flags: { config?: unknown };
+  configName?: string;
+}): string | undefined {
+  if (sources.flags.config !== undefined) {
+    return sources.configName ?? "default";
+  }
+  return sources.configName;
+}
+
+/**
  * 纯解析 sources → Settings(命令唯一会读的配置面)。不含身份、baseUrl、鉴权。
  * 各字段链序 flag > env > file > 默认;锁定表 tests/config-priority.test.ts。
  */
@@ -304,6 +319,7 @@ export function buildSettings(s: ResolutionSources): Settings {
   return {
     configPath: s.configPath ?? getConfigPath(),
     configName: s.configName,
+    recoveryConfigName: resolveRecoveryConfigName(s),
     ...buildOutputSettings(s),
     outputDir: file.output_dir || undefined,
     timeout,

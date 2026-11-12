@@ -220,6 +220,11 @@ export interface Identity {
 export interface Settings {
   configPath?: string;
   configName?: string;
+  /**
+   * Profile name pinned in recovery command hints.
+   * Explicit `--config default` stays `"default"`; implicit default is undefined.
+   */
+  recoveryConfigName?: string;
   output: "text" | "json";
   /**
    * Whether `output` came from an explicit source (flag/env/file) rather than

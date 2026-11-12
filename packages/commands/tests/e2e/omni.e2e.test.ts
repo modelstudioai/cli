@@ -8,6 +8,7 @@ import {
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runCommandInProcess,
 } from "./helpers.ts";
 import { OMNI_ROUTES } from "./topic-routes.ts";
 
@@ -16,6 +17,36 @@ describe("e2e: omni", () => {
     const { stderr, exitCode } = await runCommandHelp(OMNI_ROUTES, ["omni", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/omni|--message|--audio|text-only/i);
+  });
+
+  test("omni --dry-run 无 --model/--text-only 时自动切换为 qwen3.5-omni-plus 并带 audio modalities", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      ["omni", "--dry-run", "--message", "hi", "--output", "json"],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; modalities?: string[]; audio?: unknown };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen3.5-omni-plus");
+    expect(data.request?.modalities).toEqual(["text", "audio"]);
+    expect(data.request?.audio).toBeTruthy();
+  });
+
+  test("omni --dry-run 无 --model 且带 --text-only 时使用 qwen3.8-omni-flash 且无 modalities", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      ["omni", "--dry-run", "--text-only", "--message", "hi", "--output", "json"],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; modalities?: string[]; audio?: unknown };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen3.8-omni-flash");
+    expect(data.request?.modalities).toBeUndefined();
+    expect(data.request?.audio).toBeUndefined();
   });
 });
 
@@ -38,7 +69,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       const { stderr, exitCode } = await runCommandE2e(OMNI_ROUTES, [
         "omni",
         "--model",
-        "qwen3.5-omni-flash",
+        "qwen3.8-omni-flash",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--message|Usage:/i);
@@ -48,7 +79,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       const { stderr, exitCode } = await runCommandE2e(OMNI_ROUTES, [
         "omni",
         "--model",
-        "qwen3.5-omni-flash",
+        "qwen3.8-omni-flash",
         "--audio",
         "https://example.com/sample.flac",
         "--text-only",
@@ -64,7 +95,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "omni",
         "--dry-run",
         "--model",
-        "qwen3.5-omni-flash",
+        "qwen3.8-omni-flash",
         "--audio",
         "https://example.com/sample.wav",
         "--text-only",
@@ -95,7 +126,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       expect(audioPart?.input_audio?.format).toBe("wav");
     });
 
-    test("【qwen3.5-omni-flash】本地音频理解", async () => {
+    test("【qwen3.8-omni-flash】本地音频理解", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const clipText = "端到端Omni音频测试";
       const clipWav = join(outDir, "e2e-omni-input.wav");
@@ -121,7 +152,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       const omni = await runCommandE2e(OMNI_ROUTES, [
         "omni",
         "--model",
-        "qwen3.5-omni-flash",
+        "qwen3.8-omni-flash",
         "--audio",
         clipWav,
         "--text-only",
