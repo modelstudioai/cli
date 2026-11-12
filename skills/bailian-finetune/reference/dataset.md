@@ -11,9 +11,11 @@ Index: [index.md](index.md)
 | --------------------- | -------------- | ------------------------------------------------------------------ |
 | `bl dataset delete`   | API Key        | Delete a dataset file by ID                                        |
 | `bl dataset get`      | API Key        | Get details of a single dataset file                               |
+| `bl dataset groups`   | Console        | List Console dataset groups                                        |
 | `bl dataset list`     | API Key        | List uploaded dataset files                                        |
 | `bl dataset upload`   | API Key        | Upload a dataset file (.jsonl or .zip) to Bailian                  |
 | `bl dataset validate` | No Auth        | Locally validate a dataset file (.jsonl or .zip) without uploading |
+| `bl dataset version`  | Console        | List Console dataset versions by group or get one version by ID    |
 
 ## Command details
 
@@ -79,6 +81,49 @@ bl dataset get --file-id file-xxx
 
 ```bash
 bl dataset get --file-id file-xxx --output json
+```
+
+### `bl dataset groups`
+
+| Field              | Value                                                              |
+| ------------------ | ------------------------------------------------------------------ |
+| **Name**           | `dataset groups`                                                   |
+| **Description**    | List Console dataset groups                                        |
+| **Authentication** | Console                                                            |
+| **Usage**          | `bl dataset groups [--page <n>] [--page-size <n>] [--name <name>]` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                                                   |
+| ------------------------------ | ------ | -------- | ----------------------------------------------------------------------------- |
+| `--page <n>`                   | number | no       | Page number, a positive safe integer (default: 1)                             |
+| `--page-size <n>`              | number | no       | Groups per page, a positive safe integer (default: 10)                        |
+| `--name <name>`                | string | no       | Nonblank dataset group name for server-side filtering; trimmed before sending |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                      |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                         |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                                         |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                      |
+
+#### Notes
+
+- Fetches only the requested page. records contains dataset groups; items is the server's total count for the query. All business-response fields are preserved. The API Key / file_id semantics of dataset list are unchanged.
+- Each group's datasets is only a one-version preview, not its complete version list. Pass datasetGroupId to dataset version --dataset-group-id for {result:[...]} (no completeness guarantee or pagination); use dataset version --dataset-id with a version's datasetId for details (--include-status is detail-only). Exactly one ID flag is required; they cannot be combined. fileId is not datasetId.
+- --name is trimmed and sent to the server without local filtering. No type filter is hardcoded, but server-side scope and defaults still affect results; this is not an account-wide exhaustive listing. There is no --all option.
+- The preview requests one import task per version, without guaranteeing the latest task or all tasks. Status codes are preserved as returned; no release, validation, or training readiness is inferred.
+- A selected workspace is resolved to its Console identity before business requests, overriding --console-switch-agent for this invocation only. Resolution failure stops the query; dry-run only previews this step.
+
+#### Examples
+
+```bash
+bl dataset groups
+```
+
+```bash
+bl dataset groups --page 2 --page-size 20
+```
+
+```bash
+bl dataset groups --name example-dataset --dry-run
 ```
 
 ### `bl dataset list`
@@ -231,4 +276,53 @@ bl dataset validate --file eval.jsonl --full-validate
 
 ```bash
 bl dataset validate --file train.jsonl --output json
+```
+
+### `bl dataset version`
+
+| Field              | Value                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| **Name**           | `dataset version`                                                                      |
+| **Description**    | List Console dataset versions by group or get one version by ID                        |
+| **Authentication** | Console                                                                                |
+| **Usage**          | `bl dataset version (--dataset-group-id <id> \| --dataset-id <id> [--include-status])` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                                                       |
+| ------------------------------ | ------ | -------- | --------------------------------------------------------------------------------- |
+| `--dataset-group-id <id>`      | string | no       | List versions of this Console dataset group; mutually exclusive with --dataset-id |
+| `--dataset-id <id>`            | string | no       | Console dataset version ID, not an API file ID                                    |
+| `--include-status`             | switch | no       | Also query import/release state; only valid with --dataset-id                     |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                          |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                             |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                                             |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                          |
+
+#### Notes
+
+- Exactly one of --dataset-group-id or --dataset-id is required; they cannot be combined. --include-status is only valid with --dataset-id, not group listing. IDs are never inferred from their format.
+- Find datasetGroupId with dataset groups, then list versions with --dataset-group-id and get details with a returned datasetId via --dataset-id. An optional fileId belongs to the file/training workflow and cannot substitute for either Console ID; dataset list still returns API file IDs.
+- Group listing returns result and preserves all other service fields; a raw array is wrapped as result. There are no pagination flags and no guarantee of exhaustive results. Version/task fields are included when returned; listing does not issue individual detail queries.
+- Uses the .m_efm APIs without guessing a corpus suffix. dataset contains metadata; --include-status adds version and status_query. The file query using --file-id remains separate.
+- Version releaseStatus: 0 draft, 1 publishing, 2 published, 3 failed. Import taskStatus: 0 initializing, 3 importing, 10 failed, 20 succeeded, 23 partially succeeded. Codes are preserved; unknown/missing states never imply success. No separate validation result or training readiness is inferred.
+- The status query requests one import task; it does not assert that task is the latest or includes all tasks. No exact match means status was not obtained, not that the version does not exist. A second-query failure preserves metadata and exits nonzero; a returned failed resource state is still a successful query.
+- A selected workspace is resolved to its Console identity before business requests, overriding --console-switch-agent for this invocation only. Resolution failure stops the query; dry-run only previews this step.
+
+#### Examples
+
+```bash
+bl dataset version --dataset-group-id example-group-id
+```
+
+```bash
+bl dataset version --dataset-group-id example-group-id --dry-run
+```
+
+```bash
+bl dataset version --dataset-id example-version-id
+```
+
+```bash
+bl dataset version --dataset-id example-version-id --include-status --output json
 ```

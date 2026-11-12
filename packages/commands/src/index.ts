@@ -98,6 +98,7 @@ export { default as speechVocabularyGet } from "./commands/speech/vocabulary/get
 export { default as speechVocabularyUpdate } from "./commands/speech/vocabulary/update.ts";
 export { default as speechVocabularyDelete } from "./commands/speech/vocabulary/delete.ts";
 export { default as fileUpload } from "./commands/file/upload.ts";
+export { default as fileUrl } from "./commands/file/url.ts";
 export { default as consoleCall } from "./commands/console/call.ts";
 export { default as securityOverview } from "./commands/security/overview.ts";
 export { default as securityAlerts } from "./commands/security/alerts.ts";
@@ -164,6 +165,8 @@ export { default as permissionRevoke } from "./commands/permission/revoke.ts";
 export { default as datasetUpload } from "./commands/dataset/upload.ts";
 export { default as datasetList } from "./commands/dataset/list.ts";
 export { default as datasetGet } from "./commands/dataset/get.ts";
+export { default as datasetVersion } from "./commands/dataset/version.ts";
+export { default as datasetGroups } from "./commands/dataset/groups.ts";
 export { default as datasetDelete } from "./commands/dataset/delete.ts";
 export { default as datasetValidate } from "./commands/dataset/validate.ts";
 export {
@@ -198,6 +201,7 @@ export {
   deployImageCreate,
 } from "./commands/deploy/create.ts";
 export { default as deployList } from "./commands/deploy/list.ts";
+export { default as deployInstances } from "./commands/deploy/instances.ts";
 export { default as deployGet } from "./commands/deploy/get.ts";
 export { default as deployCapacityList } from "./commands/deploy/capacity-list.ts";
 export { default as deployCapacityGet } from "./commands/deploy/capacity-get.ts";

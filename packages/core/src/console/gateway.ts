@@ -183,9 +183,27 @@ export async function callConsoleGateway(
         { rawResponse },
       );
     }
-    throw new BailianError(`Console gateway error: ${errorCode}`, ExitCode.GENERAL, undefined, {
-      rawResponse,
-    });
+    const serviceMessage =
+      typeof innerData.errorMsg === "string" && innerData.errorMsg
+        ? innerData.errorMsg
+        : typeof innerData.message === "string" && innerData.message
+          ? innerData.message
+          : errorCode;
+    const requestId = [
+      json.requestId,
+      json.request_id,
+      innerData.requestId,
+      innerData.request_id,
+    ].find((value): value is string => typeof value === "string" && value.length > 0);
+    throw new BailianError(
+      `${serviceMessage} (HTTP ${res.status}; code=${errorCode})`,
+      ExitCode.GENERAL,
+      undefined,
+      {
+        api: { httpStatus: res.status, apiCode: errorCode, requestId },
+        rawResponse,
+      },
+    );
   }
 
   return json;

@@ -4,6 +4,7 @@ export * from "./constants.ts";
 export * from "./plans.ts";
 export * from "./lifecycle.ts";
 export * from "./reservation.ts";
+export * from "./instances.ts";
 export {
   deploymentCapacityInstancesPath,
   deploymentCapacityInstancePath,

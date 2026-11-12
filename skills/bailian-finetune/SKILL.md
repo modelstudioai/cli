@@ -1,7 +1,7 @@
 ---
 name: bailian-finetune
 metadata:
-  version: "2.8.5"
+  version: "2.8.6"
   requires:
     bins: ["bl"]
 description: >-
@@ -9,6 +9,7 @@ description: >-
   覆盖文本、语音、图像）、校验或上传训练数据集、看训练进度和日志、挑 checkpoint、导出精调产物、
   把专属模型部署成服务时使用 `bl dataset` / `bl finetune` / `bl deploy`。链路是 validate 校验数据 →
   upload 拿 file-id → finetune create 建任务 → watch 看进度 → export 导出 → 可选 compress 量化压缩 → deploy 上线，需要 API key；
+  Console 版本状态与独立部署服务查询使用 Console 鉴权。
   写操作先用 `--dry-run` 预览。反触发：用户点名火山方舟/ark 的精调不走本 skill；只是要选哪个模型走
   bailian-model-recommend；用现成模型生图生视频走 bailian-gen；百炼其他资源管理走 bailian-cli。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
@@ -16,7 +17,7 @@ description: >-
 
 # Bailian fine-tuning pipeline (`bl dataset` / `bl finetune` / `bl deploy`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) (dataset / finetune / deploy) and `bl <command> --help` — do not guess flags. Examples in `reference/` stay bare; wrap with Call attribution when running. The whole pipeline requires an API key. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist), Call attribution (every Agent `bl` command), Setup & auth, and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) (dataset / finetune / deploy) and `bl <command> --help` — do not guess flags. Examples in `reference/` stay bare; wrap with Call attribution when running. The training pipeline uses an API key; Console dataset-version and independent-deployment queries use Console authentication. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 **Call attribution:** Examples below and in `reference/` stay bare `bl …`. When running a command, wrap it with [`bailian-protocol` → Call attribution](../bailian-protocol/SKILL.md#call-attribution-mandatory-for-every-agent-bl-command) (bash or PowerShell). One sample for this skill (`BAILIAN_SKILL_NAME=bailian-finetune`; replace `codex` with this host). After deploy, `bl text chat` is owned by `bailian-cli`. **When copying commands into a reusable script / template / task definition, switch to the protocol `script` template (never keep `agent`); the sample below is for this-turn inline execution only. Strip attribution when handing a command to the user to paste.**
 
@@ -46,29 +47,34 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-f
 
 ## When to use which command
 
-| Intent                                 | Command                                                                                                |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Validate / upload training data        | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                                  |
-| Dataset list / detail / delete         | `bl dataset list` / `get` / `delete`                                                                   |
-| Create a fine-tuning job               | `bl finetune text\|audio\|image create`                                                                |
-| Job list / detail / follow             | `bl finetune list` / `get` / `watch` / `logs`                                                          |
-| Artifacts and export                   | `bl finetune checkpoints` / `export`                                                                   |
-| Quantize / compress a full model       | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                        |
-| Cancel / delete a compression job      | `bl finetune compress cancel` / `delete`                                                               |
-| Cancel / delete a fine-tuning job      | `bl finetune cancel` / `delete`                                                                        |
-| Import an external OSS LoRA model      | Hand-off: `bl cmodel import *` — hub-owned commands; see `bailian-cli` reference or `bl cmodel --help` |
-| Trainable capability lookup            | `bl finetune capability`                                                                               |
-| Deploy / lifecycle                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models`       |
-| Query throughput reservations          | `bl deploy list --plan ptu` / `bl deploy get`                                                          |
-| Query capacity instances               | `bl deploy capacity list` / `get`                                                                      |
-| Query / wait for a capacity operation  | `bl deploy operation get` / `wait`                                                                     |
-| Buy / scale / renew / release capacity | `bl deploy capacity create` / `scale` / `renew` / `delete`                                             |
-| Unsubscribe a prepaid instance         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                              |
-| Configure ModelCode overflow strategy  | `bl deploy overflow`                                                                                   |
+| Intent                                                 | Command                                                                                                |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Validate / upload training data                        | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                                  |
+| Dataset list / detail / delete                         | `bl dataset list` / `get` / `delete`                                                                   |
+| Console dataset groups / discover version and file IDs | `bl dataset groups` → `bl dataset version --dataset-group-id <group-id>` (Console auth)                |
+| Console version detail / import and release state      | `bl dataset version --dataset-id <version-id>` (Console auth; optional `--include-status`)             |
+| Console independent deployment services                | `bl deploy instances` (Console auth; not capacity instances or replicas)                               |
+| Create a fine-tuning job                               | `bl finetune text\|audio\|image create`                                                                |
+| Job list / detail / follow                             | `bl finetune list` / `get` / `watch` / `logs`                                                          |
+| Artifacts and export                                   | `bl finetune checkpoints` / `export`                                                                   |
+| Quantize / compress a full model                       | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                        |
+| Cancel / delete a compression job                      | `bl finetune compress cancel` / `delete`                                                               |
+| Cancel / delete a fine-tuning job                      | `bl finetune cancel` / `delete`                                                                        |
+| Import an external OSS LoRA model                      | Hand-off: `bl cmodel import *` — hub-owned commands; see `bailian-cli` reference or `bl cmodel --help` |
+| Trainable capability lookup                            | `bl finetune capability`                                                                               |
+| Deploy / lifecycle                                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models`       |
+| Query throughput reservations                          | `bl deploy list --plan ptu` / `bl deploy get`                                                          |
+| Query capacity instances                               | `bl deploy capacity list` / `get`                                                                      |
+| Query / wait for a capacity operation                  | `bl deploy operation get` / `wait`                                                                     |
+| Buy / scale / renew / release capacity                 | `bl deploy capacity create` / `scale` / `renew` / `delete`                                             |
+| Unsubscribe a prepaid instance                         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                              |
+| Configure ModelCode overflow strategy                  | `bl deploy overflow`                                                                                   |
 
 The `capacity list` / `get`, `operation get` / `wait` and `deploy list` / `get` queries are read-only. Capacity values are kTPM; effective, configured and target capacities are distinct. `deploy list --status` filters only the fetched page locally, with the server total left unfiltered. `operation get` reports status as data; `operation wait` exits non-zero on failure or timeout and refreshes capacity after success. Use IDs returned by the API; waiting never retries a write.
 
 The `capacity create` / `scale` / `renew` / `delete` and `overflow` commands are high-risk writes: preview with `--dry-run`, then confirm with the runtime-injected `--yes`. Each write is submitted once and never auto-retried; HTTP 200 is not success, so pass `--wait` or check `operation_status`. Scale values are one instance's absolute kTPM, not deltas or ModelCode totals, and zero is not release. `capacity delete` releases an instance but keeps the ModelCode; active prepaid instances cannot be DELETEd — run `capacity unsubscribe --instance-id <id>` to get the billing console refund link and finish there (no API exists for refunds). Release is confirmed by `deleted=true`. `overflow` applies to the whole ModelCode, not one instance. There is no estimator or standalone auto-renewal endpoint — renewal settings ride along purchase/scale/renew.
+
+Console reads are separate from API-key file/deployment queries; the API Key / `file_id` semantics of `dataset list` are unchanged. Discover `records[].datasetGroupId` with `dataset groups`, then pass it to `dataset version --dataset-group-id <group-id>` to get `{result:[...]}` with `result[].datasetId` and an optional `fileId`. Use `dataset version --dataset-id <version-id>` for details; exactly one of `--dataset-group-id` and `--dataset-id` is required, and they cannot be combined. `fileId` is not `datasetId`; never pass a file ID from `dataset list` as a Console version ID. Groups are paginated and contain only one nested version preview; `version --dataset-group-id` normalizes array responses to `result` without promising exhaustive results or exposing pagination. Keep the same workspace throughout this chain. `--include-status` is available only in detail mode (`dataset version --dataset-id <version-id> --include-status`) and preserves raw version and task state; missing/unknown state never means validation success or training readiness, and the returned task is not guaranteed to be the latest. A failed follow-up query retains metadata and exits nonzero. `deploy instances` returns one page (`records` is the list, `items` the total); reading does not establish inference or pause permission. With `--workspace-id`, these commands resolve that workspace's Console identity before business requests and stop on resolution failure. For an error-report file key, hand off to `bailian-cli` (`file url`); an existing report URL can be used directly.
 
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
 

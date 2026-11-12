@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.8.6] - 2026-11-12
+
+### Added
+
+- **Console dataset queries**: Add `bl dataset groups` with pagination and name filtering, and `bl dataset version` to list versions by `--dataset-group-id` or query one version by `--dataset-id`, with optional `--include-status`.
+- **Console file URLs**: Add `bl file url --file-key` to resolve a Console file key to a download URL without downloading the file.
+- **Console deployment queries**: Add `bl deploy instances` with pagination, keyword and model-service-ID filters. Existing API-key `dataset list/get` and `deploy list` commands remain unchanged.
+
+### Fixed
+
+- **Console response handling**: Correctly parse nested success and failure responses, preserve service error messages, codes and request IDs, and avoid treating valid workspace lists as empty.
+- **Workspace validation**: Reject an explicitly blank `--workspace-id` instead of silently falling back to another configured workspace.
+
 ## [2.8.5] - 2026-11-10
 
 ### Fixed

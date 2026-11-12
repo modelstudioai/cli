@@ -6,6 +6,19 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.8.6] - 2026-11-12
+
+### 新增
+
+- **Console 数据集查询**：新增 `bl dataset groups`，支持分页和名称筛选；新增 `bl dataset version`，通过 `--dataset-group-id` 列出组内版本，或通过 `--dataset-id` 查询单版本详情，可选 `--include-status` 补充状态。
+- **Console 文件地址解析**：新增 `bl file url --file-key`，将 Console 文件键解析为下载 URL，不自动下载文件。
+- **Console 部署查询**：新增 `bl deploy instances`，支持分页、关键词和模型服务 ID 筛选。原有 API Key 域的 `dataset list/get` 与 `deploy list` 保持不变。
+
+### 修复
+
+- **Console 响应处理**：正确解析嵌套成功与失败响应，保留服务端错误消息、错误码及请求 ID，避免将有效工作空间列表误判为空。
+- **工作空间参数校验**：拒绝显式传入空白 `--workspace-id`，避免静默回退到其他已配置工作空间。
+
 ## [2.8.5] - 2026-11-10
 
 ### 修复

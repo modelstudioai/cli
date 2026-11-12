@@ -172,6 +172,13 @@ export const FILE_UPLOAD_ROUTES: E2eRouteExports = {
   "file upload": "fileUpload",
 };
 
+export const CONSOLE_READ_ROUTES: E2eRouteExports = {
+  "dataset version": "datasetVersion",
+  "file url": "fileUrl",
+  "deploy instances": "deployInstances",
+  "dataset groups": "datasetGroups",
+};
+
 export const ADVISOR_ROUTES: E2eRouteExports = {
   "advisor recommend": "advisorRecommend",
 };

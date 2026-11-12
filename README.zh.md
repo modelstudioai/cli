@@ -138,6 +138,20 @@ bl knowledge init --workspace-id <workspace-id> --dry-run
 
 保留返回的 ID 和恢复记录。退出 CLI 或后续步骤失败不会停止计费；按返回的清理动作删除不再需要的知识库。检索及清理示例见 [Knowledge Studio 快速开始](packages/kscli/README.zh.md#快速开始)。知识库 Skill `bailian-knowledge` 通过 `bl skill init` 安装。
 
+### Console 数据集与部署查询
+
+```bash
+bl dataset groups --page 1 --page-size 10 --output json
+bl dataset version --dataset-group-id <组ID> --output json
+bl dataset version --dataset-id <版本ID> --include-status --output json
+bl file url --file-key <Console文件键> --output json
+bl deploy instances --page 1 --page-size 10 --output json
+```
+
+先用 `dataset groups`（可加 `--name` 服务端筛选）获取 `records[].datasetGroupId`，再用 `dataset version --dataset-group-id <组ID>` 获取 `{result:[...]}`，其中包含 `result[].datasetId` 及可能返回的 `fileId`。查询详情用 `dataset version --dataset-id <版本ID>`，`--include-status` 仅详情模式可用。`--dataset-group-id` 与 `--dataset-id` 必选一个且不能同传。`fileId` 不是 `datasetId`，不能作为版本 ID 传入。组列表仅取一页，每组附带一条版本预览；`version --dataset-group-id` 不承诺返回全部版本，也不提供分页选项。原有 `dataset list` 的 API Key / `file_id` 语义保持不变。
+
+以上只读命令使用 Console 鉴权。可选 `--workspace-id` 会在查询前解析对应空间的 Console 身份，解析失败即停止。`dataset version --dataset-id` 分开保留元信息与版本/任务状态，不推导校验成功或训练就绪；`file url` 仅解析下载地址；`deploy instances` 返回独立部署服务的单页数据（`records` 为列表、`items` 为总数），不是容量实例。原有 API Key 域的 `dataset get --file-id` 与 `deploy list` 保持不变。添加 `--dry-run` 可预览且不发送业务请求；框架更新检查和埋点遵循其配置。
+
 ### RAG 音视频接入
 
 `bl knowledge doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 只隐藏进度和过程提示，保留最终结果及完整 JSON 字段。参阅 [命令指南](docs/knowledge/knowledge-cli-guide.md)。
