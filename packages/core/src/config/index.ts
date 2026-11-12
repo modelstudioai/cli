@@ -23,6 +23,7 @@ export {
   buildSources,
   buildSettings,
   buildOutputSettings,
+  resolveRecoveryConfigName,
   selectApiKeyResolutionSources,
   type ApiKeyResolutionSourceSelection,
   type ResolutionSources,

@@ -214,7 +214,14 @@ test("命名 config 仍保持 flag > env > selected file", () => {
   expect(buildSettings(sources)).toMatchObject({
     defaultTextModel: "custom-text",
     defaultImageModel: "custom-image",
+    recoveryConfigName: "token-plan",
   });
+  expect(
+    buildSettings(src({ flags: { config: "default" }, configName: undefined, file: {} })),
+  ).toMatchObject({ recoveryConfigName: "default" });
+  expect(
+    buildSettings(src({ flags: {}, configName: undefined, file: {} })).recoveryConfigName,
+  ).toBe(undefined);
   expect(
     resolveApiKey(
       src({

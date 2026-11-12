@@ -104,12 +104,16 @@ bl usage free --model qwen3-max --console-region cn-beijing
 
 ### `bl usage freetier`
 
-| Field              | Value                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------ |
-| **Name**           | `usage freetier`                                                                           |
-| **Description**    | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
-| **Authentication** | Console                                                                                    |
-| **Usage**          | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                |
+| Field              | Value                                                                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `usage freetier`                                                                                                                                                      |
+| **Description**    | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable                                                                            |
+| **Authentication** | Console                                                                                                                                                               |
+| **Usage**          | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                                                                                           |
+| **Risk**           | `high`                                                                                                                                                                |
+| **Risk message**   | This changes free-tier auto-stop. Enabling it makes calls fail once free quota is exhausted; disabling it allows pay-as-you-go charges after free quota is exhausted. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -119,35 +123,46 @@ bl usage free --model qwen3-max --console-region cn-beijing
 | `--all`                        | switch | no       | Apply to all free-tier models                            |
 | `--on`                         | switch | no       | Enable auto-stop (default behavior)                      |
 | `--off`                        | switch | no       | Disable auto-stop                                        |
+| `--yes`                        | switch | no       | Confirm this high-risk operation                         |
 | `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
+#### Notes
+
+- Requires `--yes` (exit code 7 / requires_confirmation without it). Applies to both enabling and disabling auto-stop.
+
 #### Examples
 
 ```bash
-bl usage freetier --model qwen3-max
+# Only after explicit user confirmation:
+bl usage freetier --model qwen3-max --yes
 ```
 
 ```bash
-bl usage freetier --model qwen3-max,qwen-turbo
+# Only after explicit user confirmation:
+bl usage freetier --model qwen3-max,qwen-turbo --yes
 ```
 
 ```bash
-bl usage freetier --all
+# Only after explicit user confirmation:
+bl usage freetier --all --yes
 ```
 
 ```bash
-bl usage freetier --on --model qwen3-max
+# Only after explicit user confirmation:
+bl usage freetier --on --model qwen3-max --yes
 ```
 
 ```bash
-bl usage freetier --off --model qwen3-max
+# Only after explicit user confirmation:
+bl usage freetier --off --model qwen3-max --yes
 ```
 
 ```bash
-bl usage freetier --off --all
+# Only after explicit user confirmation:
+bl usage freetier --off --all --yes
 ```
 
 ### `bl usage stats`

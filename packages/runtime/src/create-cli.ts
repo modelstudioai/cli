@@ -32,6 +32,7 @@ import {
   buildSources,
   buildSettings,
   buildOutputSettings,
+  resolveRecoveryConfigName,
   describeAuthState,
   resolveModelBaseUrlState,
   makeConfigStore,
@@ -174,6 +175,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     ...(opts.commandInvocation ? { commandInvocation: opts.commandInvocation } : {}),
   };
   const commandPrefix = formatCommand(identity);
+  // Static product command map only (Command Packs are not included).
+  const hasCommand = (path: string) => path in commands;
   const commandPackPolicy = opts.commandPacks ?? { supported: {} };
   let loadedCommandPacksPromise: ReturnType<typeof loadCommandPacks> | undefined;
 
@@ -313,6 +316,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             configStore: makeConfigStore(sources.configName),
             authStore: makeAuthStore(sources),
             commandPacks: createCommandPackManager(identity, commandPackPolicy, reporter.output),
+            setRecoveryConfigName: (name) => reporter.setRecoveryConfigName(name),
             client: new Client({
               identity,
               settings,
@@ -346,21 +350,31 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         settings: initialSettings,
         localize,
         commandPrefix,
+        hasCommand,
       });
       const warnings: OutputDiagnostic[] = [];
       const cleanup = installProcessHandlers(() => reporter, localize);
       try {
         const sources = buildSources(flags, (warning) => warnings.push(warning));
+        const recoveryConfigName = resolveRecoveryConfigName(sources);
         translator = createTranslator(sources.file.language ?? DEFAULT_LANGUAGE);
         reporter = createOutputReporter({
           settings: buildOutputSettings(sources),
           localize,
           commandPrefix,
+          hasCommand,
+          configName: recoveryConfigName,
         });
         setupProxyFromEnv();
         const registry = await getRegistry(translator);
         await dispatch(registry, argv, localize, sources, (settings) => {
-          reporter = createOutputReporter({ settings, localize, commandPrefix });
+          reporter = createOutputReporter({
+            settings,
+            localize,
+            commandPrefix,
+            hasCommand,
+            configName: recoveryConfigName,
+          });
           for (const warning of warnings.splice(0)) reporter.output.warning(warning);
           return reporter;
         });

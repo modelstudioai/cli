@@ -146,9 +146,14 @@ test("authStage 为不支持的 capability 注入 default API Key，同时保留
     "company-plan",
   );
   const context = makeContext(["text", "chat"]);
+  const recoveryPins: Array<string | undefined> = [];
+  context.setRecoveryConfigName = (name) => {
+    recoveryPins.push(name);
+  };
 
   await runAuth(context);
 
+  expect(recoveryPins).toEqual(["default"]);
   expect(context.client.exportApiCredential()).toMatchObject({
     token: "sk-default",
     baseUrl: "https://default.example.com",
@@ -156,6 +161,7 @@ test("authStage 为不支持的 capability 注入 default API Key，同时保留
   });
   expect(context.settings).toMatchObject({
     configName: "company-plan",
+    recoveryConfigName: "company-plan",
     defaultTextModel: "plan-text-model",
   });
 });
