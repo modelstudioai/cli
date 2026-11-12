@@ -6,7 +6,7 @@ import {
   formatCommand,
   BailianError,
   ExitCode,
-  unwrapResponse,
+  unwrapConsoleResponse,
   type Client,
   type CommandContext,
   type FlagsDef,
@@ -53,8 +53,12 @@ export interface ConsoleWorkspaceInfo {
 /** 复用 workspace list 的只读接口；保留用于查询身份映射的 tenantId。 */
 export async function listConsoleWorkspaces(client: Client): Promise<ConsoleWorkspaceInfo[]> {
   const result = await client.console<Record<string, unknown>>(LIST_WORKSPACES_API, {});
-  const response = unwrapResponse(result);
-  const workspaces = Array.isArray(response) ? response : response.data;
+  const response = unwrapConsoleResponse(result);
+  const workspaces = Array.isArray(response)
+    ? response
+    : response && typeof response === "object" && "data" in response
+      ? response.data
+      : undefined;
   return Array.isArray(workspaces)
     ? workspaces.filter((workspace) => workspace && typeof workspace === "object")
     : [];

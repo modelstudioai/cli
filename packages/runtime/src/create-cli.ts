@@ -281,6 +281,14 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             ...Object.keys(GLOBAL_FLAGS),
             ...Object.keys(credDefs),
           ]) as Partial<SourceFlags>;
+          if (typeof globalFlags.workspaceId === "string" && !globalFlags.workspaceId.trim()) {
+            throw new UsageError(
+              localize({
+                "en-US": "--workspace-id must not be empty or whitespace.",
+                "zh-CN": "--workspace-id 不能为空或仅包含空白字符。",
+              }),
+            );
+          }
           const ownFlags = pick(
             parsedFlags,
             Object.keys(res.command.flags ?? {}),

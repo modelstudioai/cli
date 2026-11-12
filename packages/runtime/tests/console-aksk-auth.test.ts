@@ -226,7 +226,7 @@ test("permission errors are not treated as expired tokens", async () => {
       authStage(ctx, () => ctx.client.console("test.api", {}).then(() => {})),
     ).rejects.toMatchObject({
       exitCode: 1,
-      message: "Console gateway error: Original.Permission.Denied",
+      message: "Original.Permission.Denied (HTTP 200; code=Original.Permission.Denied)",
     });
     expect(requests.generations()).toHaveLength(0);
   });

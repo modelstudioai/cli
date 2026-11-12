@@ -1,3 +1,4 @@
+export { unwrapConsoleResponse } from "./response.ts";
 export type {
   ConsoleCall,
   ConsoleGatewayRequest,

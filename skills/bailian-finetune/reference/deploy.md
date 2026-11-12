@@ -20,6 +20,7 @@ Index: [index.md](index.md)
 | `bl deploy delete`               | API Key        | Delete a model deployment (PTU must be STOPPED with all capacity released)        |
 | `bl deploy get`                  | API Key        | Get details of a single model deployment                                          |
 | `bl deploy image create`         | API Key        | Create an image generation model deployment                                       |
+| `bl deploy instances`            | Console        | List Console independent deployment services                                      |
 | `bl deploy list`                 | API Key        | List model deployments and throughput reservations                                |
 | `bl deploy models`               | API Key        | List models available for deployment                                              |
 | `bl deploy operation get`        | API Key        | Query a throughput reservation capacity operation once                            |
@@ -510,6 +511,48 @@ bl deploy image create --model-name my-wan-ft --display-name my-wan-mu --plan mu
 
 ```bash
 bl deploy image create --model-name my-wan-ft --display-name my-wan --dry-run
+```
+
+### `bl deploy instances`
+
+| Field              | Value                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy instances`                                                                                   |
+| **Description**    | List Console independent deployment services                                                         |
+| **Authentication** | Console                                                                                              |
+| **Usage**          | `bl deploy instances [--page <n>] [--page-size <n>] [--keyword <keyword>] [--model-service-id <id>]` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--page <n>`                   | number | no       | Page number (default: 1)                                 |
+| `--page-size <n>`              | number | no       | Results per page (default: 10)                           |
+| `--keyword <keyword>`          | string | no       | Server-side name keyword filter                          |
+| `--model-service-id <id>`      | string | no       | Server-side model service ID filter                      |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Notes
+
+- Lists Console independent deployment services, not capacity instances or replicas. Fetches only the requested page; records is the list and items is the server's total count. Preserves all business-response fields without deriving callable status.
+- --keyword and --model-service-id may be supplied together and are forwarded to the API without local filtering. Successful reading does not prove inference or pause permission. This command does not change the API-key deployment list contract.
+- A selected workspace is resolved to its Console identity before business requests, overriding --console-switch-agent for this invocation only. Resolution failure stops the query; dry-run only previews this step.
+
+#### Examples
+
+```bash
+bl deploy instances
+```
+
+```bash
+bl deploy instances --page 2 --page-size 20
+```
+
+```bash
+bl deploy instances --keyword example --model-service-id example-service-id
 ```
 
 ### `bl deploy list`

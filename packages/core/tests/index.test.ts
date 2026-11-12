@@ -308,6 +308,7 @@ test("callConsoleGateway keeps readable message and raw gateway response separat
       success: false,
       errorCode: "BailianGateway.Team.NotAuthorised",
       errorMsg: "team not authorised",
+      requestId: "inner-request-fixture",
     },
   };
 
@@ -327,7 +328,12 @@ test("callConsoleGateway keeps readable message and raw gateway response separat
         data: {},
       }),
     ).rejects.toMatchObject({
-      message: "Console gateway error: BailianGateway.Team.NotAuthorised",
+      message: "team not authorised (HTTP 200; code=BailianGateway.Team.NotAuthorised)",
+      api: {
+        httpStatus: 200,
+        apiCode: "BailianGateway.Team.NotAuthorised",
+        requestId: "inner-request-fixture",
+      },
       rawResponse: JSON.stringify(responseBody),
       exitCode: ExitCode.GENERAL,
     });

@@ -139,6 +139,20 @@ Knowledge bases accrue running-time charges from creation, even without queries.
 
 Keep the returned IDs and recovery record. Closing the CLI or a later failure does not stop billing; follow the reported cleanup actions to delete unused knowledge bases. See the [Knowledge Studio quick start](packages/kscli/README.md#quick-start) for retrieval and cleanup. The `bailian-knowledge` Skill is available through `bl skill init`.
 
+### Console dataset and deployment queries
+
+```bash
+bl dataset groups --page 1 --page-size 10 --output json
+bl dataset version --dataset-group-id <group-id> --output json
+bl dataset version --dataset-id <version-id> --include-status --output json
+bl file url --file-key <console-file-key> --output json
+bl deploy instances --page 1 --page-size 10 --output json
+```
+
+Use `dataset groups` (`--name` optionally filters on the server) to obtain `records[].datasetGroupId`, then `dataset version --dataset-group-id <group-id>` to get `{result:[...]}` with `result[].datasetId` and its optional `fileId`. Use `dataset version --dataset-id <version-id>` for details; `--include-status` is available only in detail mode. Exactly one of `--dataset-group-id` and `--dataset-id` is required; they cannot be combined. `fileId` is not `datasetId` and must not be passed as a version ID. Groups fetch one page with one embedded version preview per group; `version --dataset-group-id` does not promise exhaustive results or expose pagination. The API Key / `file_id` semantics of `dataset list` are unchanged.
+
+These read-only commands use Console authentication. An optional `--workspace-id` resolves the workspace's Console identity before querying; resolution failure stops the request. `dataset version --dataset-id` keeps metadata and version/task state separate and does not infer validation success or training readiness. `file url` only resolves a download address. `deploy instances` returns one page of independent services (`records` is the list, `items` the total), not capacity instances. The API-key `dataset get --file-id` and `deploy list` commands are unchanged. Add `--dry-run` to preview without business requests; framework update checks/telemetry follow their settings.
+
 ### RAG audio and video
 
 `bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode hides progress and informational messages while preserving the final result, including every JSON field. See the [command guide](docs/knowledge/knowledge-cli-guide.md).

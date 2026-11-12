@@ -407,7 +407,7 @@ for (const scenario of cases) {
     expect(result.strayOut + result.strayErr).toBe("");
     expect(diagnostics(result.stderr)).toHaveLength(1);
     expect(diagnostics(result.stderr)[0].error.message).toBe(
-      "Console gateway error: Original.Rejected",
+      "original failure (HTTP 200; code=Original.Rejected)",
     );
     expect(calls.map((call) => call.api)).toEqual([workspaceApi, statusApi, scenario.api]);
   });
