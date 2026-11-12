@@ -6,7 +6,7 @@ import {
   readFileSync,
   renameSync,
   unlinkSync,
-  writeSync,
+  writeFileSync,
 } from "fs";
 import { join } from "path";
 import { getConfigDir } from "../config/paths.ts";
@@ -51,7 +51,8 @@ function publishUid(path: string, id: string): void {
   try {
     const fd = openSync(tmp, "wx", 0o600);
     try {
-      writeSync(fd, `${id}\n`);
+      // writeFileSync(fd) loops until the full buffer is written; writeSync can short-write.
+      writeFileSync(fd, `${id}\n`);
     } finally {
       closeSync(fd);
     }
