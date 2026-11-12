@@ -6,6 +6,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.9.0] - 2026-11-12
+
+### Added
+
+- **App control-plane commands**: Manage Bailian applications from the CLI via the console gateway.
+  - `bl app create` / `get` / `update` / `publish` / `delete` / `copy` / `versions` for agents (app-control 2.0) and workflows; `delete` is high-risk and requires `--yes`.
+  - `bl app workflow get` / `save` / `publish` / `export` for workflow canvases; `save` replaces the whole draft with optimistic-lock versioning, `publish` normalizes triggers like the console editor.
+  - Agent config updates read the current draft and merge `--model` / `--instructions` / `--config-json` / `--config-file`.
+- **App list filtering**: `bl app list --type workflow` lists workflows using the console exclusion filter.
+
+### Changed
+
+- **Omni default model**: `bl omni` now defaults to `qwen3.8-omni-flash` (was `qwen3.5-omni-plus`).
+
+### Fixed
+
+- **Free-tier model operations**: Tighten confirmation gating and error handling; recovery stays behind the confirmation gate.
+- **Recovery hints**: Preserve the explicit `--config` profile after API Key fallback, and append `--config` for named profiles.
+
+### Internal
+
+- **Telemetry identity**: Replace the anonymous device_id with a persisted anonymous uid, published atomically (temp+rename) to avoid short-writes and stale-lock races.
+
 ## [2.8.6] - 2026-11-12
 
 ### Added

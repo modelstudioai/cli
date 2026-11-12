@@ -6,6 +6,29 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.9.0] - 2026-11-12
+
+### 新增
+
+- **应用控制面命令**：通过控制台网关在命令行管理百炼应用。
+  - `bl app create` / `get` / `update` / `publish` / `delete` / `copy` / `versions`：管理智能体（app-control 2.0）与工作流；`delete` 为高风险操作，需 `--yes`。
+  - `bl app workflow get` / `save` / `publish` / `export`：管理工作流画布；`save` 整幅替换草稿并带乐观锁版本，`publish` 按控制台编辑器逻辑规范化触发器。
+  - 智能体配置更新先读取当前草稿，再合并 `--model` / `--instructions` / `--config-json` / `--config-file`。
+- **应用列表筛选**：`bl app list --type workflow` 按控制台排除法列出工作流。
+
+### 变更
+
+- **Omni 默认模型**：`bl omni` 默认模型改为 `qwen3.8-omni-flash`（原 `qwen3.5-omni-plus`）。
+
+### 修复
+
+- **免费额度模型操作**：收紧确认闸门与错误处理；恢复操作保持在确认闸门之后。
+- **恢复提示**：API Key 回退后保留显式 `--config` 配置 profile，并为命名 profile 追加 `--config` 提示。
+
+### 内部
+
+- **遥测身份**：以持久化的匿名 uid 替代匿名 device_id，采用原子发布（临时文件+重命名），避免短写与陈旧锁竞争。
+
 ## [2.8.6] - 2026-11-12
 
 ### 新增
