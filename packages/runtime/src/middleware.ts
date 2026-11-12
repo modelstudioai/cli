@@ -1,4 +1,4 @@
-import { consoleRecoveryHint, resolveRecoveryConfigName } from "./error-handler.ts";
+import { consoleRecoveryHint } from "./error-handler.ts";
 import type {
   AnyCommand,
   CommandOutput,
@@ -74,6 +74,8 @@ export interface RunContext {
   commandPacks: CommandPackManager;
   /** Network surface with the credential baked in — set by {@link authStage}. */
   client: Client;
+  /** Rewrite the profile pinned in runtime recovery hints (API Key fallback). */
+  setRecoveryConfigName?: (name: string | undefined) => void;
 }
 
 /** Koa-style onion middleware: do work, call `next()`, do work after it returns. */
@@ -190,9 +192,10 @@ export const authStage: Middleware = async (ctx, next) => {
   const base = {
     identity: ctx.identity,
     settings,
+    // Console credentials do not fall back; keep the selected profile pin.
     consoleRecoveryHint: consoleRecoveryHint(
       formatCommand(ctx.identity),
-      resolveRecoveryConfigName(sources),
+      settings.recoveryConfigName,
     ),
     debug: (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic),
     ...resolveModelBaseUrlState(sources),
@@ -207,6 +210,9 @@ export const authStage: Middleware = async (ctx, next) => {
     const apiSources = selection.sources;
     if (selection.fallbackFrom) {
       writeApiKeyFallbackNotice(ctx, selection.fallbackFrom);
+      // API Key now comes from default; recovery commands must pin default, not
+      // the profile that was selected and then bypassed.
+      ctx.setRecoveryConfigName?.("default");
     }
     const provenance = resolveModelConnectionProvenance(apiSources);
     if (

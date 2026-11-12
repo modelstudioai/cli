@@ -82,7 +82,7 @@ OpenAgentPack SDK 没有 logger 注入接口：仅在 SDK 调用上下文内，�
 - [ ] JSON 诊断每条一行；stdout 为单个业务 JSON 文档，stderr 单独解析
 - [ ] speech synthesize 的原始音频仅在 text 流式模式下直接写 stdout；JSON 流式需 --out 文件并返回元数据，未指定文件时在请求和文件操作前报用法错误；dry-run 仍允许 JSON 预览。--list-voices 的 JSON 返回音色条目与已有文档链接，内置列表未知时 voices/total 为 null
 - [ ] speech recognize 的同步 JSON 返回完整服务响应；异步完成后返回原始任务响应并附加 transcriptions 数组，保留失败子任务和 request_id。text 保留转写、说话人和批量分隔；--out 仍保存原有转写文件结构，下载及写盘失败不提前输出最终结果；部分子任务失败不改变原有退出码
-- [ ] usage freetier 的启用 JSON 保留原始响应数组；停用 JSON 返回 `{ processed: [{ model, result }], skipped: [model] }`，跳过项仍不发起停用请求。失败与超时用 warning 提示，保留原有退出策略，不把部分失败丢出结果。
+- [ ] usage freetier 的启用 JSON 保留原始响应数组；停用 JSON 返回 `{ processed: [{ model, result }], skipped: [model] }`，跳过项仍不发起停用请求。失败与超时先用 warning 提示并保留业务结果，再抛摘要：仅轮询超时 → `TIMEOUT(5)`（文案用「超时未确认」）；仅服务端拒绝或混合 → `GENERAL(1)`；成功文案（Enabled / Disabled）仅在该模型操作成功时输出
 - [ ] Token Plan 创建密钥的完整响应和一次性明文仍属于业务结果，quiet 不裁剪；不得通过 warning/debug 泄露明文。
 - [ ] 原始流与原生交互仅限上表；Command Pack API 1 由宿主缓存并提交一次结果，不再直接转发 stdout
 - [ ] 每个调用使用独立 reporter，不共享结果状态、不替换全局 stdout/stderr；SDK console 桥接只能读取调用上下文，不缓存上一个 host

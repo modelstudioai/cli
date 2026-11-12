@@ -1,23 +1,27 @@
-import { BailianError, ExitCode, mapApiError } from "bailian-cli-core";
+import { BailianError, ExitCode, mapApiError, resolveRecoveryConfigName } from "bailian-cli-core";
 import { expect, test, vi } from "vite-plus/test";
-import { errorHint, handleError, resolveRecoveryConfigName } from "../src/error-handler.ts";
+import { errorHint, handleError } from "../src/error-handler.ts";
 import { createOutputReporter } from "../src/output/reporter.ts";
 import { ConfirmationRequiredError } from "../src/confirm.ts";
+
+const blHasCommand = (path: string) => path === "usage free" || path === "usage freetier";
+const kscliHasCommand = () => false;
 
 function render(
   error: unknown,
   output: "text" | "json" = "json",
   options: {
     commandPrefix?: string;
-    supportsFreeTierRecovery?: boolean;
+    hasCommand?: (path: string) => boolean;
     configName?: string;
   } = {},
+  beforeError?: (reporter: ReturnType<typeof createOutputReporter>) => void,
 ) {
   let stderr = "";
   const reporter = createOutputReporter({
     settings: { output, quiet: true, verbose: false },
     commandPrefix: options.commandPrefix ?? "kscli",
-    supportsFreeTierRecovery: options.supportsFreeTierRecovery,
+    hasCommand: options.hasCommand,
     configName: options.configName,
     stderr: {
       write: (chunk) => {
@@ -25,6 +29,7 @@ function render(
       },
     },
   });
+  beforeError?.(reporter);
   const exit = vi.spyOn(process, "exit").mockImplementation((code) => {
     throw new Error(`process.exit:${code ?? 0}`);
   });
@@ -88,7 +93,7 @@ test("free-tier hint appends for AllocationQuota.FreeTierOnly when product suppo
     api: { httpStatus: 403, apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", supportsFreeTierRecovery: true }),
+    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.code).toBe(ExitCode.GENERAL);
   expect(payload.message).toBe(FREE_TIER_MESSAGE);
@@ -96,7 +101,7 @@ test("free-tier hint appends for AllocationQuota.FreeTierOnly when product suppo
   expect(payload.hint).toContain("bl usage freetier --off --model <model>");
   expect(payload.hint).not.toContain("--yes");
   expect(payload.hint).not.toContain("--all");
-  const text = render(error, "text", { commandPrefix: "bl", supportsFreeTierRecovery: true });
+  const text = render(error, "text", { commandPrefix: "bl", hasCommand: blHasCommand });
   expect(text).toContain("Hint:");
   expect(text).toContain("usage freetier --off");
   expect(text).not.toContain("--yes");
@@ -112,7 +117,7 @@ test("free-tier hint uses message fallback when type shadows AllocationQuota.Fre
   });
   expect(error.api?.apiCode).toBe("invalid_request_error");
   const hint = errorHint(error, "bl", (text) => (typeof text === "string" ? text : text["en-US"]), {
-    supportsFreeTierRecovery: true,
+    hasCommand: blHasCommand,
   });
   expect(hint).toContain("bl usage freetier --off");
 });
@@ -120,7 +125,7 @@ test("free-tier hint uses message fallback when type shadows AllocationQuota.Fre
 test("OpenAI-compat Free quota exhausted copy matches via use free tier only phrase", () => {
   const error = new BailianError(FREE_QUOTA_MESSAGE, ExitCode.GENERAL);
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", supportsFreeTierRecovery: true }),
+    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.hint).toContain("bl usage freetier --off --model <model>");
   expect(payload.hint).not.toContain("--yes");
@@ -134,7 +139,7 @@ test("insufficient_quota TPS/TPM message does not get free-tier recovery", () =>
     { api: { apiCode: "insufficient_quota" } },
   );
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", supportsFreeTierRecovery: true }),
+    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.hint).toBeUndefined();
 });
@@ -144,7 +149,7 @@ test("free-tier hint is skipped when the product does not expose usage commands"
     api: { apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "kscli", supportsFreeTierRecovery: false }),
+    render(error, "json", { commandPrefix: "kscli", hasCommand: kscliHasCommand }),
   ).error;
   expect(payload.hint).toBeUndefined();
   expect(payload.message).toBe(FREE_TIER_MESSAGE);
@@ -154,23 +159,43 @@ test("free-tier hint appends after an existing hint without replacing it", () =>
   const existing = "Task id: task-demo";
   const error = new BailianError(FREE_QUOTA_MESSAGE, ExitCode.GENERAL, existing);
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", supportsFreeTierRecovery: true }),
+    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.hint?.startsWith(existing)).toBe(true);
   expect(payload.hint).toContain("usage freetier --off");
   expect(payload.hint).not.toContain("--yes");
 });
 
-test("free-tier hint does not duplicate when existing hint already mentions usage freetier", () => {
+test("free-tier hint does not duplicate when existing hint already contains full recovery text", () => {
+  const recovery = errorHint(
+    new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, undefined, {
+      api: { apiCode: FREE_TIER_ONLY_API_CODE },
+    }),
+    "bl",
+    (text) => (typeof text === "string" ? text : text["en-US"]),
+    { hasCommand: blHasCommand },
+  );
+  expect(recovery).toBeTruthy();
+  const error = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, recovery, {
+    api: { apiCode: FREE_TIER_ONLY_API_CODE },
+  });
+  const payload = JSON.parse(
+    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
+  ).error;
+  expect(payload.hint).toBe(recovery);
+  expect(payload.hint?.split("usage freetier").length - 1).toBe(1);
+});
+
+test("free-tier hint still appends when existing hint only mentions usage freetier loosely", () => {
   const existing = "Already guided: bl usage freetier --off --model demo";
   const error = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, existing, {
     api: { apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", supportsFreeTierRecovery: true }),
+    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
-  expect(payload.hint).toBe(existing);
-  expect(payload.hint?.split("usage freetier").length - 1).toBe(1);
+  expect(payload.hint?.startsWith(existing)).toBe(true);
+  expect(payload.hint?.split("usage freetier").length - 1).toBe(2);
 });
 
 test("recovery hints append --config when a named profile is active", () => {
@@ -180,7 +205,7 @@ test("recovery hints append --config when a named profile is active", () => {
   const freeTierHint = JSON.parse(
     render(freeTier, "json", {
       commandPrefix: "bl",
-      supportsFreeTierRecovery: true,
+      hasCommand: blHasCommand,
       configName: "prod",
     }),
   ).error.hint as string;
@@ -231,4 +256,32 @@ test("recovery hints keep explicit --config default when active profile is named
   ).error.hint as string;
   expect(hint).toContain("bl auth login --api-key <your-key> --config default");
   expect(hint).toContain("bl auth status --config default");
+});
+
+test("setRecoveryConfigName retargets free-tier and missing-api-key hints to default", () => {
+  const freeTier = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, undefined, {
+    api: { httpStatus: 403, apiCode: FREE_TIER_ONLY_API_CODE },
+  });
+  const freeTierHint = JSON.parse(
+    render(
+      freeTier,
+      "json",
+      { commandPrefix: "bl", hasCommand: blHasCommand, configName: "prod" },
+      (reporter) => reporter.setRecoveryConfigName("default"),
+    ),
+  ).error.hint as string;
+  expect(freeTierHint).toContain("bl usage freetier --off --model <model> --config default");
+  expect(freeTierHint).not.toContain("--config prod");
+
+  const authHint = JSON.parse(
+    render(
+      new BailianError("No key", ExitCode.AUTH),
+      "json",
+      { commandPrefix: "bl", configName: "prod" },
+      (reporter) => reporter.setRecoveryConfigName("default"),
+    ),
+  ).error.hint as string;
+  expect(authHint).toContain("bl auth login --api-key <your-key> --config default");
+  expect(authHint).toContain("bl auth status --config default");
+  expect(authHint).not.toContain("--config prod");
 });

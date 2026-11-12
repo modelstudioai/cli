@@ -107,7 +107,7 @@ export default defineCommand({
           error,
           formatCommand(ctx.identity),
           ctx.localize,
-          ctx.settings.configName,
+          ctx.settings.recoveryConfigName,
         );
         const failedBatch = completedBatches.length + 1;
         const progress = [

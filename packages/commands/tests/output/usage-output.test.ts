@@ -431,18 +431,48 @@ test("auto-stop already-off skip is retained in the JSON report", async () => {
   expect(JSON.parse(result.stdout)).toEqual({ processed: [], skipped: ["qwen-test"] });
   expect(calls.some((call) => call.api.includes("batchDeactivate"))).toBe(false);
 });
-test("auto-stop failure retains raw result and a structured warning under quiet", async () => {
+test("auto-stop enable failure retains raw result, warning, and non-zero exit", async () => {
   batchResult = { failureModels: [{ failureModelId: "qwen-test", errorCode: "Rejected" }] };
   const result = await invoke(cases[1]!, { format: "json", quiet: true });
-  expect(result.exitCode).toBe(0);
+  expect(result.exitCode).toBe(ExitCode.GENERAL);
   expect(JSON.parse(result.stdout)).toEqual([batchResult]);
   expect(result.strayOut).toBe("");
   expect(result.strayErr).toBe("");
-  expect(JSON.parse(result.stderr).warning).toMatchObject({
+  const stderrLines = result.stderr.trim().split("\n");
+  expect(JSON.parse(stderrLines[0]!).warning).toMatchObject({
     code: "FREETIER_OPERATION_FAILED",
     details: { model: "qwen-test", error_code: "Rejected" },
   });
+  expect(JSON.parse(stderrLines[1]!).error.message).toContain(
+    "Failed to enable auto-stop for 1 model(s): qwen-test",
+  );
 });
+
+test.each(["text", "json"] as const)(
+  "auto-stop --off failure omits Disabled success copy and exits non-zero in %s",
+  async (format) => {
+    batchResult = { failureModels: [{ failureModelId: "qwen-test", errorCode: "Rejected" }] };
+    const result = await invoke(
+      { ...cases[1]!, flags: { model: "qwen-test", off: true } },
+      { format, quiet: true },
+    );
+    expect(result.exitCode).toBe(ExitCode.GENERAL);
+    expect(result.strayOut + result.strayErr).toBe("");
+    expect(result.stdout).not.toContain("Disabled auto-stop");
+    expect(result.stderr).toContain("Failed to disable auto-stop for");
+    expect(result.stderr).toContain("qwen-test");
+    expect(result.stderr).toContain("Failed to disable auto-stop for 1 model(s): qwen-test");
+    if (format === "json") {
+      expect(JSON.parse(result.stdout)).toEqual({
+        processed: [{ model: "qwen-test", result: batchResult }],
+        skipped: [],
+      });
+      expect(result.stderr).toContain("FREETIER_OPERATION_FAILED");
+    } else {
+      expect(result.stdout).toBe("");
+    }
+  },
+);
 test("OpenAPI parameters and one-time key disclosure stay unchanged", async () => {
   const scenario = cases.find((item) => item.name === "token-plan create-key")!;
   const result = await invoke(scenario, { format: "json", quiet: true });
@@ -551,7 +581,7 @@ test.each(["text", "json"] as const)(
   },
 );
 test.each(["text", "json"] as const)(
-  "timeout warnings retain the original exit and result policy in %s",
+  "timeout warnings keep the result then exit TIMEOUT in %s",
   async (format) => {
     batchResult = { taskId: "task-test" };
     vi.useFakeTimers({ toFake: ["setTimeout"] });
@@ -559,19 +589,53 @@ test.each(["text", "json"] as const)(
       const pending = invoke(cases[1]!, { format, quiet: true });
       await vi.runAllTimersAsync();
       const result = await pending;
-      expect(result.exitCode).toBe(0);
+      expect(result.exitCode).toBe(ExitCode.TIMEOUT);
       expect(result.strayOut + result.strayErr).toBe("");
       expect(calls).toHaveLength(20);
       expect(calls[1]!.data).toEqual({ BatchActivateFreeTierOnlyRequest: { taskId: "task-test" } });
+      expect(result.stderr).toContain(
+        "Timed out waiting to confirm enable auto-stop for 1 model(s): qwen-test",
+      );
       if (format === "json") {
         expect(JSON.parse(result.stdout)).toEqual([null]);
-        expect(JSON.parse(result.stderr).warning).toMatchObject({
-          code: "FREETIER_OPERATION_TIMEOUT",
-          details: { model: "qwen-test" },
-        });
+        expect(result.stderr).toContain("FREETIER_OPERATION_TIMEOUT");
       } else {
         expect(result.stdout).toBe("");
         expect(result.stderr).toContain('Operation timed out for "qwen-test".');
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+
+test.each(["text", "json"] as const)(
+  "auto-stop --off timeout omits Disabled success copy and exits TIMEOUT in %s",
+  async (format) => {
+    batchResult = { taskId: "task-test" };
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const pending = invoke(
+        { ...cases[1]!, flags: { model: "qwen-test", off: true } },
+        { format, quiet: true },
+      );
+      await vi.runAllTimersAsync();
+      const result = await pending;
+      expect(result.exitCode).toBe(ExitCode.TIMEOUT);
+      expect(result.stdout).not.toContain("Disabled auto-stop");
+      expect(result.stderr).toContain("Operation timed out for");
+      expect(result.stderr).toContain("qwen-test");
+      expect(result.stderr).toContain(
+        "Timed out waiting to confirm disable auto-stop for 1 model(s): qwen-test",
+      );
+      if (format === "json") {
+        expect(JSON.parse(result.stdout)).toEqual({
+          processed: [{ model: "qwen-test", result: null }],
+          skipped: [],
+        });
+        expect(result.stderr).toContain("FREETIER_OPERATION_TIMEOUT");
+      } else {
+        expect(result.stdout).toBe("");
       }
     } finally {
       vi.useRealTimers();

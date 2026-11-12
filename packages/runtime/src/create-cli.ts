@@ -32,6 +32,7 @@ import {
   buildSources,
   buildSettings,
   buildOutputSettings,
+  resolveRecoveryConfigName,
   describeAuthState,
   resolveModelBaseUrlState,
   makeConfigStore,
@@ -40,7 +41,7 @@ import {
   Client,
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
-import { handleError, resolveRecoveryConfigName } from "./error-handler.ts";
+import { handleError } from "./error-handler.ts";
 import { type OutputReporter, createOutputReporter } from "./output/reporter.ts";
 import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
@@ -174,8 +175,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     ...(opts.commandInvocation ? { commandInvocation: opts.commandInvocation } : {}),
   };
   const commandPrefix = formatCommand(identity);
-  // Product capability gate: only render usage free / freetier recovery when those paths exist.
-  const supportsFreeTierRecovery = "usage free" in commands && "usage freetier" in commands;
+  // Static product command map only (Command Packs are not included).
+  const hasCommand = (path: string) => path in commands;
   const commandPackPolicy = opts.commandPacks ?? { supported: {} };
   let loadedCommandPacksPromise: ReturnType<typeof loadCommandPacks> | undefined;
 
@@ -307,6 +308,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             configStore: makeConfigStore(sources.configName),
             authStore: makeAuthStore(sources),
             commandPacks: createCommandPackManager(identity, commandPackPolicy, reporter.output),
+            setRecoveryConfigName: (name) => reporter.setRecoveryConfigName(name),
             client: new Client({
               identity,
               settings,
@@ -340,7 +342,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         settings: initialSettings,
         localize,
         commandPrefix,
-        supportsFreeTierRecovery,
+        hasCommand,
       });
       const warnings: OutputDiagnostic[] = [];
       const cleanup = installProcessHandlers(() => reporter, localize);
@@ -352,7 +354,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           settings: buildOutputSettings(sources),
           localize,
           commandPrefix,
-          supportsFreeTierRecovery,
+          hasCommand,
           configName: recoveryConfigName,
         });
         setupProxyFromEnv();
@@ -362,7 +364,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             settings,
             localize,
             commandPrefix,
-            supportsFreeTierRecovery,
+            hasCommand,
             configName: recoveryConfigName,
           });
           for (const warning of warnings.splice(0)) reporter.output.warning(warning);

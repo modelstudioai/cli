@@ -23,14 +23,16 @@ export interface OutputReporterOptions {
   stderr?: OutputWriter;
   localize?: (text: LocalizedText) => string;
   commandPrefix?: string;
-  /** When true, free-tier recovery may render usage free / usage freetier commands. */
-  supportsFreeTierRecovery?: boolean;
+  /** Product command existence check for recovery hint capability gating. */
+  hasCommand?: (path: string) => boolean;
   /** Profile pinned in recovery hints (via resolveRecoveryConfigName). */
   configName?: string;
 }
 
 export interface OutputReporter {
   output: CommandOutput;
+  /** Override the profile pinned in recovery hints (e.g. after API Key fallback). */
+  setRecoveryConfigName(name: string | undefined): void;
   /** Runtime-only terminal error rendering. The lifecycle owns process exit. */
   error(error: unknown): ExitCode;
 }
@@ -44,6 +46,7 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
   const localize = options.localize ?? ((text: LocalizedText) => translator.localize(text));
   let resultWritten = false;
   let errorCode: ExitCode | undefined;
+  let recoveryConfigName = options.configName;
 
   function diagnostic(level: "warning" | "debug", input: OutputMessage): void {
     const payload = diagnosticPayload(input, localize);
@@ -97,17 +100,20 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
         if (verbose) diagnostic("debug", details);
       },
     },
+    setRecoveryConfigName(name) {
+      recoveryConfigName = name;
+    },
     error(error) {
       if (errorCode !== undefined) return errorCode;
       const failure = normalizeError(
         error,
         options.commandPrefix ?? "cli",
         localize,
-        options.configName,
+        recoveryConfigName,
       );
       const hint = errorHint(failure, options.commandPrefix ?? "cli", localize, {
-        supportsFreeTierRecovery: options.supportsFreeTierRecovery,
-        configName: options.configName,
+        hasCommand: options.hasCommand,
+        configName: recoveryConfigName,
       });
       if (verbose && error instanceof Error && !(error instanceof BailianError)) {
         diagnostic("debug", {

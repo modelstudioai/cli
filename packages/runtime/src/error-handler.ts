@@ -34,21 +34,6 @@ type Localize = (text: LocalizedText) => string;
 const english: Localize = (text) => (typeof text === "string" ? text : text["en-US"]);
 
 /**
- * Config name for recovery hints (does not change IO-layer `configName` semantics).
- * Explicit `--config default` is normalized to undefined in the loader; keep
- * `"default"` here so copying the hint does not fall back to an active named profile.
- */
-export function resolveRecoveryConfigName(sources: {
-  flags: { config?: unknown };
-  configName?: string;
-}): string | undefined {
-  if (sources.flags.config !== undefined) {
-    return sources.configName ?? "default";
-  }
-  return sources.configName;
-}
-
-/**
  * Format a recovery command; append `--config <name>` when a profile must be pinned
  * so following the hint does not hit the wrong credentials/billing config.
  */
@@ -67,10 +52,10 @@ const FREE_TIER_ONLY_API_CODE = "AllocationQuota.FreeTierOnly";
 
 export interface ErrorHintOptions {
   /**
-   * When true, free-tier recovery may render `usage free` / `usage freetier`
-   * under this product's commandPrefix. Derived from the product command map.
+   * Product command existence check. Free-tier recovery renders only when both
+   * `usage free` and `usage freetier` exist in the product command map.
    */
-  supportsFreeTierRecovery?: boolean;
+  hasCommand?: (path: string) => boolean;
   /**
    * Profile to pin in recovery commands (via `resolveRecoveryConfigName`).
    * Implicit default is undefined; explicit `--config default` is `"default"`.
@@ -138,14 +123,15 @@ export function errorHint(
   }
   // Append free-tier recovery before the AUTH-only early return so GENERAL
   // service errors (and async paths that already set a hint) still get guidance.
-  // Skip when recovery guidance is already present (command-owned or upstream).
-  if (
-    options.supportsFreeTierRecovery &&
-    isFreeTierOnlyExhausted(error) &&
-    !hint?.includes("usage freetier")
-  ) {
+  // Dedup against the full recovery text only — commands must not assemble this
+  // guidance themselves (see docs/agents/error-hint-change.md).
+  const supportsFreeTier =
+    options.hasCommand?.("usage free") === true && options.hasCommand?.("usage freetier") === true;
+  if (supportsFreeTier && isFreeTierOnlyExhausted(error)) {
     const recovery = freeTierRecoveryHint(commandPrefix, localize, configName);
-    hint = hint ? `${hint}\n${recovery}` : recovery;
+    if (!hint?.includes(recovery)) {
+      hint = hint ? `${hint}\n${recovery}` : recovery;
+    }
   }
   if (error.exitCode !== ExitCode.AUTH) return hint;
   if (

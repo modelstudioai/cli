@@ -1,4 +1,4 @@
-import { defineCommand, unwrapResponse } from "bailian-cli-core";
+import { BailianError, ExitCode, defineCommand, unwrapResponse } from "bailian-cli-core";
 import {
   FREE_TIER_ONLY_STATUS_API,
   extractFreeTierOnlyStatuses,
@@ -113,6 +113,8 @@ export default defineCommand({
 
     const skipped: string[] = [];
     const processed: { model: string; result: unknown }[] = [];
+    const failed: string[] = [];
+    const timedOut: string[] = [];
     const textLines: string[] = [];
     let stopMap = new Map<string, boolean>();
     if (off) {
@@ -137,6 +139,7 @@ export default defineCommand({
       const resultData = result ? unwrapResponse(result as Record<string, unknown>) : undefined;
       const failureModels = (resultData?.failureModels as BatchResultFailure[] | undefined) ?? [];
       if (!result) {
+        timedOut.push(name);
         ctx.output.warning({
           code: "FREETIER_OPERATION_TIMEOUT",
           message: {
@@ -146,6 +149,7 @@ export default defineCommand({
           details: { model: name },
         });
       } else if (failureModels.length > 0) {
+        failed.push(name);
         const errorCode = failureModels[0].errorCode;
         ctx.output.warning({
           code: "FREETIER_OPERATION_FAILED",
@@ -160,9 +164,7 @@ export default defineCommand({
               },
           details: { model: name, error_code: errorCode },
         });
-      }
-      // Keep the existing disable response policy; the JSON report retains the raw response.
-      if (off || (result && failureModels.length === 0)) {
+      } else {
         textLines.push(
           ctx.localize(
             off
@@ -184,5 +186,34 @@ export default defineCommand({
         format === "text" ? { text: textLines.join("\n") } : undefined,
       );
     }
+    if (failed.length === 0 && timedOut.length === 0) return;
+
+    // Client poll timeout is internal TIMEOUT; server rejection stays GENERAL.
+    // Mixed batches use GENERAL and list both outcomes in the summary.
+    const action = off ? "disable" : "enable";
+    const actionZh = off ? "停用" : "启用";
+    const summaryPartsEn: string[] = [];
+    const summaryPartsZh: string[] = [];
+    if (failed.length > 0) {
+      summaryPartsEn.push(
+        `Failed to ${action} auto-stop for ${failed.length} model(s): ${failed.join(", ")}.`,
+      );
+      summaryPartsZh.push(`${failed.length} 个模型${actionZh}自动停止失败：${failed.join("、")}。`);
+    }
+    if (timedOut.length > 0) {
+      summaryPartsEn.push(
+        `Timed out waiting to confirm ${action} auto-stop for ${timedOut.length} model(s): ${timedOut.join(", ")}.`,
+      );
+      summaryPartsZh.push(
+        `${timedOut.length} 个模型${actionZh}自动停止超时未确认：${timedOut.join("、")}。`,
+      );
+    }
+    throw new BailianError(
+      ctx.localize({
+        "en-US": summaryPartsEn.join(" "),
+        "zh-CN": summaryPartsZh.join(""),
+      }),
+      failed.length > 0 ? ExitCode.GENERAL : ExitCode.TIMEOUT,
+    );
   },
 });
