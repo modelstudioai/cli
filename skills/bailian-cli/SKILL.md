@@ -1,12 +1,12 @@
 ---
 name: bailian-cli
 metadata:
-  version: "2.8.6"
+  version: "2.9.0"
   requires:
     bins: ["bl"]
 description: >-
   阿里云百炼 / Aliyun Bailian / DashScope 资源管理与 `bl` CLI hub：
-  应用调用（bl app）、决策模型推理（bl decision）、模型目录/模型列表、用量/额度/配额、免费额度、
+  应用调用与管理（bl app：调用/创建/更新/发布/删除/复制/版本、工作流画布）、决策模型推理（bl decision）、模型目录/模型列表、用量/额度/配额、免费额度、
   工作空间、MCP 市场、pipeline、文件上传、ParseX 文档/音视频解析与字段抽取、Batch 批量推理与 CSV 转换、同步 Batch Chat、console API、登录鉴权与配置、
   Agent skill 安装/列表/更新/卸载（bl skill add|list|update|remove，百炼 skill registry）。
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
@@ -74,7 +74,9 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Typed decision model inference                        | `bl decision`                                                                                                  | Workspace endpoint; returns `choice` / `noul` / `score` values and probabilities, not generated text                                                         |
 | Explicit ParseX parsing / structured field extraction | `bl parsex parse submit` / `result`; `bl parsex extract submit` / `result`                                     | Workspace + API key; submit returns biz_id, result --follow waits. HTTP(S) source URLs; extraction can reuse a parsed document. See `reference/parsex.md`.   |
 | Bailian agent / workflow                              | `bl app call`                                                                                                  | Needs `--app-id`                                                                                                                                             |
-| Find app by name                                      | `bl app list` then `bl app call`                                                                               | Console auth                                                                                                                                                 |
+| Find app by name                                      | `bl app list` then `bl app call`                                                                               | Console auth; `--type workflow` lists workflows                                                                                                              |
+| Create / update / publish / delete / copy an app      | `bl app create` / `update` / `publish` / `delete` / `copy` / `get` / `versions`                                | Console auth; agent config via `--model`/`--instructions`/`--config-json`; `delete` needs `--yes`; see [`reference/app.md`](reference/app.md)                |
+| Workflow canvas read / save / publish / export        | `bl app workflow get` / `save` / `publish` / `export`                                                          | Console auth; `save` replaces the whole draft canvas; see [`reference/app.md`](reference/app.md)                                                             |
 | Personal memory / Bailian memory resources            | → skill `bailian-memory`                                                                                       | User-enabled personal memory; explicit resource operations use `bl memory --help` as fallback.                                                               |
 | Personal documents / Bailian knowledge workflows      | Read skill `bailian-knowledge`                                                                                 | If missing: `bl knowledge --help` or `bl skill init`                                                                                                         |
 | Resolve a Console file key / error-report URL         | `bl file url`                                                                                                  | Console auth; use the returned business file key, not a file ID or upload URI. Resolves only; no download or fixed expiry. Existing URLs need no resolution. |
@@ -115,6 +117,7 @@ bl text chat --message "Write a poem about spring in Chinese"
 bl decision --workspace-id <id> --state "Is this requesting a refund?" --questions '{"refund":{"type":"noul"}}'
 bl app list --output json
 bl app call --app-id <code> --prompt "Hello"
+bl app create --name "My agent" --model qwen3-max
 bl usage stats
 bl model list --model qwen
 ```
@@ -130,6 +133,13 @@ More examples per command: see `reference/<group>.md` (e.g. [`reference/text.md`
 1. `bl app list --name <keyword> --output json`
 2. Pick `code` (app ID); handle `user_prompt_params` via `--biz-params '{"key":"value"}'`
 3. `bl app call --app-id <code> --prompt "..."`
+
+### Create and configure an app
+
+1. `bl app create --name <name> [--type workflow] --output json` → returns `app_code`
+2. Agent: `bl app update --app-id <code> --model <model> --instructions "..."` (reads the draft, merges, writes)
+3. `bl app publish --app-id <code>` to release; `bl app get --app-id <code>` to inspect
+4. Workflow canvas: `bl app workflow get --app-id <code> --output-file canvas.json` → edit → `bl app workflow save --app-id <code> --config-file canvas.json` → `bl app workflow publish --app-id <code>`
 
 ### Batch 文件工作流
 
