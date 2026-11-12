@@ -80,7 +80,7 @@ export const UI_MODEL_DEFAULTS: Record<string, string> = {
   default_reference_to_video_model: "wan3.0-video",
   default_speech_model: "cosyvoice-v3-flash",
   default_speech_recognition_model: "fun-asr",
-  default_omni_model: "qwen3.5-omni-plus",
+  default_omni_model: "qwen3.8-omni-flash",
 };
 
 /** One selectable model plus a short note on where the CLI uses it. */
@@ -131,7 +131,8 @@ export const UI_MODEL_CATALOG: Record<string, ModelOption[]> = {
     { id: "qwen-audio-3.0-asr-flash", role: "Token Plan speech/recognize (ASR)" },
   ],
   default_omni_model: [
-    { id: "qwen3.5-omni-plus", role: "omni/chat default" },
+    { id: "qwen3.8-omni-flash", role: "omni/chat default · --text-only" },
+    { id: "qwen3.5-omni-plus", role: "omni/chat · audio output path (without --text-only)" },
     { id: "qwen3-vl-plus", role: "vision/describe · multimodal input" },
   ],
 };

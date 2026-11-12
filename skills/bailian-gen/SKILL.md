@@ -35,17 +35,17 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-g
 
 ## When to use which command
 
-| User intent                              | Command                                   | Default model                                       |
-| ---------------------------------------- | ----------------------------------------- | --------------------------------------------------- |
-| Text-to-image                            | `bl image generate`                       | `qwen-image-3.0`                                    |
-| Image edit / multi-image merge           | `bl image edit` (repeat `--image`)        | `qwen-image-3.0`                                    |
-| Text-to-video / image-to-video           | `bl video generate`                       | `wan3.0-video`                                      |
-| Video edit / style transfer              | `bl video edit`                           | `happyhorse-1.0-video-edit`                         |
-| Reference-to-video + voice               | `bl video ref`                            | `wan3.0-video`                                      |
-| Speech synthesis (TTS / voiceover)       | `bl speech synthesize`                    | `cosyvoice-v3-flash`                                |
-| Speech recognition (ASR / transcription) | `bl speech recognize`                     | `fun-asr`                                           |
-| Image describe                           | `bl vision describe`                      | `qwen3-vl-plus`；宿主能做且未点名 → host-first      |
-| Video / A-V understand                   | `bl vision describe --video` 或 `bl omni` | 视频理解默认走百炼；`omni` 默认 `qwen3.5-omni-plus` |
+| User intent                              | Command                                   | Default model                                                                                                          |
+| ---------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Text-to-image                            | `bl image generate`                       | `qwen-image-3.0`                                                                                                       |
+| Image edit / multi-image merge           | `bl image edit` (repeat `--image`)        | `qwen-image-3.0`                                                                                                       |
+| Text-to-video / image-to-video           | `bl video generate`                       | `wan3.0-video`                                                                                                         |
+| Video edit / style transfer              | `bl video edit`                           | `happyhorse-1.0-video-edit`                                                                                            |
+| Reference-to-video + voice               | `bl video ref`                            | `wan3.0-video`                                                                                                         |
+| Speech synthesis (TTS / voiceover)       | `bl speech synthesize`                    | `cosyvoice-v3-flash`                                                                                                   |
+| Speech recognition (ASR / transcription) | `bl speech recognize`                     | `fun-asr`                                                                                                              |
+| Image describe                           | `bl vision describe`                      | `qwen3-vl-plus`；宿主能做且未点名 → host-first                                                                         |
+| Video / A-V understand                   | `bl vision describe --video` 或 `bl omni` | 视频理解默认走百炼；`omni` 默认 `qwen3.8-omni-flash`，省略 `--model` 且无 `--text-only` 时自动切换 `qwen3.5-omni-plus` |
 
 Unless the user explicitly specifies a model, omit `--model` and let the CLI use the active Profile’s default.
 
