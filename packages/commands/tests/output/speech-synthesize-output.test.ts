@@ -1,12 +1,12 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawn } from "child_process";
 import { fileURLToPath } from "node:url";
-import { createServer, type Server } from "node:http";
+import { createServer, type Server, type ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { parse as parseYaml } from "yaml";
-import { buildSettings, Client, type LocalizedText } from "bailian-cli-core";
+import { buildSettings, Client, ExitCode, type LocalizedText } from "bailian-cli-core";
 import { createOutputReporter } from "bailian-cli-runtime";
 import synthesize from "../../src/commands/speech/synthesize.ts";
 
@@ -15,23 +15,66 @@ let server: Server;
 let origin: string;
 let requests: Array<{ path: string; body: unknown; stream: boolean }>;
 let downloads: number;
-let failure: "none" | "submit" | "empty" | "download";
+let failure:
+  | "none"
+  | "submit"
+  | "empty"
+  | "download"
+  | "stalled-headers"
+  | "stalled-body"
+  | "combined-budget"
+  | "concurrent-peer";
+let failPeer: ServerResponse | undefined;
+let stalledPeer: ServerResponse | undefined;
+let stalledPeerClosed: boolean;
 const audio = Buffer.from([0, 255, 13, 10, 1, 2, 3]);
 beforeEach(async () => {
   directory = mkdtempSync(join(tmpdir(), "bl-synthesize-output-"));
   requests = [];
   downloads = 0;
   failure = "none";
+  failPeer = stalledPeer = undefined;
+  stalledPeerClosed = false;
   server = createServer(async (request, response) => {
     if (request.url?.startsWith("/audio/")) {
       downloads++;
+      if (failure === "concurrent-peer") {
+        if (request.url === "/audio/1.mp3") {
+          stalledPeer = response;
+          response.on("close", () => {
+            stalledPeerClosed = true;
+          });
+          const watchdog = setTimeout(() => response.destroy(), 1_500);
+          response.on("close", () => clearTimeout(watchdog));
+          response.writeHead(200, { "content-length": String(audio.length) });
+          response.write(audio.subarray(0, 3));
+        } else {
+          failPeer = response;
+        }
+        if (stalledPeer && failPeer) failPeer.writeHead(503).end();
+        return;
+      }
       if (failure === "download") {
         response.writeHead(503).end();
         return;
       }
+      if (failure === "stalled-headers" || failure === "stalled-body") {
+        const watchdog = setTimeout(() => response.destroy(), 1_500);
+        response.on("close", () => clearTimeout(watchdog));
+        if (failure === "stalled-body") {
+          response.writeHead(200, { "content-length": String(audio.length) });
+          response.write(audio.subarray(0, 3));
+        }
+        return;
+      }
       response.writeHead(200, { "content-length": String(audio.length) });
       response.write(audio.subarray(0, 3));
-      response.end(audio.subarray(3));
+      if (failure === "combined-budget") {
+        const finish = setTimeout(() => response.end(audio.subarray(3)), 600);
+        response.on("close", () => clearTimeout(finish));
+      } else {
+        response.end(audio.subarray(3));
+      }
       return;
     }
     let raw = "";
@@ -58,6 +101,9 @@ beforeEach(async () => {
         `data: ${JSON.stringify({ output: { audio: { data: audio.subarray(3).toString("base64"), url: `${origin}/audio/full.mp3` }, finish_reason: "stop" } })}\n\n`,
       );
     } else {
+      if (failure === "combined-budget") {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
       response.writeHead(200, { "content-type": "application/json" }).end(
         JSON.stringify({
           output: {
@@ -91,6 +137,7 @@ async function invoke(
     tty?: boolean;
     dryRun?: boolean;
     chinese?: boolean;
+    timeout?: number;
   },
 ) {
   const chunks: Buffer[] = [];
@@ -116,7 +163,7 @@ async function invoke(
       dryRun: display.dryRun,
     },
     env: {},
-    file: { output_dir: directory, timeout: 2 },
+    file: { output_dir: directory, timeout: display.timeout ?? 2 },
     configPath: join(directory, "config.json"),
   });
   const localize = (text: LocalizedText) =>
@@ -329,6 +376,51 @@ test.each(["submit", "empty", "download"] as const)(
       });
   },
 );
+test.each(["stalled-headers", "stalled-body", "combined-budget"] as const)(
+  "nonstream synthesis times out and leaves no incomplete output for %s",
+  async (mode) => {
+    failure = mode;
+    const destination = join(directory, "timed-out.wav");
+    const result = await invoke(
+      { ...flags, model: "cosyvoice-v3-flash", format: "wav", out: destination },
+      { format: "json", quiet: true, timeout: mode === "combined-budget" ? 1 : 0.3 },
+    );
+    expect(downloads).toBe(1);
+    expect(result.exitCode, result.stderr).toBe(ExitCode.TIMEOUT);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toMatchObject({ error: { code: ExitCode.TIMEOUT } });
+    expect(existsSync(destination)).toBe(false);
+  },
+);
+test("a timed-out retry preserves the existing WAV", async () => {
+  failure = "stalled-body";
+  const destination = join(directory, "existing.wav");
+  writeFileSync(destination, audio);
+  const result = await invoke(
+    { ...flags, format: "wav", out: destination },
+    { format: "json", quiet: true, timeout: 0.3 },
+  );
+  expect(result.exitCode).toBe(ExitCode.TIMEOUT);
+  expect(readFileSync(destination)).toEqual(audio);
+  expect(readdirSync(directory).sort()).toEqual(["existing.wav", "speech"]);
+  expect(readdirSync(join(directory, "speech"))).toEqual([]);
+});
+test("a failed download cancels its peer and keeps the original error", async () => {
+  failure = "concurrent-peer";
+  const result = await invoke(
+    { ...flags, concurrent: 2 },
+    { format: "json", quiet: true, timeout: 3 },
+  );
+  expect(downloads).toBe(2);
+  expect(result.stdout).toBe("");
+  expect(result.exitCode).toBe(ExitCode.GENERAL);
+  expect(JSON.parse(result.stderr)).toMatchObject({
+    error: { message: "Download failed: HTTP 503" },
+  });
+  await vi.waitFor(() => expect(stalledPeerClosed).toBe(true), { timeout: 600 });
+  const audioDirectory = join(directory, "speech");
+  if (existsSync(audioDirectory)) expect(readdirSync(audioDirectory)).toEqual([]);
+});
 test("text-file parsing and explicit audio parameters remain unchanged", async () => {
   const textFile = join(directory, "text.txt");
   writeFileSync(textFile, "  File text  ");
@@ -399,7 +491,15 @@ test("model and voice-list process prose supports Chinese", async () => {
   expect(list.stdout).toContain("未提供内置音色列表");
 });
 
-const cliModes = ["raw", "raw-quiet", "stream-file", "conflict", "download", "voices"] as const;
+const cliModes = [
+  "raw",
+  "raw-quiet",
+  "stream-file",
+  "conflict",
+  "download",
+  "voices",
+  "timeout",
+] as const;
 test.each(cliModes)("real CLI preserves binary/JSON boundaries for %s", async (mode) => {
   writeFileSync(join(directory, "config.json"), JSON.stringify({ language: "en-US" }));
   const destination = join(directory, mode === "stream-file" ? "cli.pcm" : "cli.mp3");
@@ -407,7 +507,12 @@ test.each(cliModes)("real CLI preserves binary/JSON boundaries for %s", async (m
   if (mode === "voices") args.push("--list-voices");
   else args.push("--text", "Hello", "--voice", flags.voice);
   if (["raw", "raw-quiet", "stream-file", "conflict"].includes(mode)) args.push("--stream");
-  if (mode === "stream-file" || mode === "download") args.push("--out", destination);
+  if (mode === "stream-file" || mode === "download" || mode === "timeout")
+    args.push("--out", destination);
+  if (mode === "timeout") {
+    failure = "stalled-body";
+    args.push("--timeout", "0.3");
+  }
   const raw = mode === "raw" || mode === "raw-quiet";
   args.push("--output", raw ? "text" : "json");
   if (mode !== "raw") args.push("--quiet");
@@ -469,7 +574,15 @@ test.each(cliModes)("real CLI preserves binary/JSON boundaries for %s", async (m
           .split("\n")
           .map((line) => JSON.parse(line))
       : [];
-    if (mode === "conflict") {
+    if (mode === "timeout") {
+      expect(exitCode, stderr).toBe(ExitCode.TIMEOUT);
+      expect(bytes.length).toBe(0);
+      expect(records.filter((record) => record.error)).toMatchObject([
+        { error: { code: ExitCode.TIMEOUT } },
+      ]);
+      expect(existsSync(destination)).toBe(false);
+      expect(downloads).toBe(1);
+    } else if (mode === "conflict") {
       expect(exitCode).toBe(2);
       expect(bytes.length).toBe(0);
       expect(records).toHaveLength(1);
