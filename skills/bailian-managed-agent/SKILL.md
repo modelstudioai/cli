@@ -11,7 +11,7 @@ description: >-
   `bl managed-agent`。Agent/Environment/Skill/Vault/Deployment/Memory Store 仍以 agents.yaml 为唯一事实源做 IaC；Webhook 使用无需项目文件的工作空间 API；公开 API 能力按资源透出
   list/get/search/versions/download、数据面和运行时动作命令。apply / destroy 与破坏性 API 命令受统一高风险确认闸门保护；
   务必先展示预览再让用户确认，禁止自动添加 `--yes`。
-  反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
+  反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl flow-agent`；宿主 agent 自身的记忆、技能、
   子代理不走本 skill；生图生视频走 bailian-gen。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
 ---
@@ -241,7 +241,7 @@ Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <comma
 
 软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `bl skill init`）：
 
-- Call an already published Bailian app/assistant → `bailian-app-call`, or skill `bailian-cli` (`bl app list` / `call`; fallback: `bl app --help`).
+- Call an already published Bailian app/assistant → `bailian-app-call`, or skill `bailian-cli` (`bl flow-agent list` / `call`; fallback: `bl flow-agent --help`).
 - Choosing the model referenced in agents.yaml → `bailian-model-recommend`.
 - Deployment quota / billing questions → skill `bailian-cli` (fallback: `bl quota` / `bl usage --help`).
 

@@ -194,7 +194,7 @@ After a successful console login, the callback may persist `console_site` in `~/
 { "console_site": "international" }
 ```
 
-Use the same `--console-site` on console-gateway commands when it differs from the saved default, e.g. `bl app list --console-site international`.
+Use the same `--console-site` on console-gateway commands when it differs from the saved default, e.g. `bl flow-agent list --console-site international`.
 
 ### AK/SK for OpenAPI and Console tokens
 

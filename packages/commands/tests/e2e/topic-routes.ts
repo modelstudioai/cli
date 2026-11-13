@@ -180,18 +180,24 @@ export const CONSOLE_READ_ROUTES: E2eRouteExports = {
 };
 
 export const APP_CONTROL_ROUTES: E2eRouteExports = {
+  "app call": "appCall",
   "app list": "appList",
-  "app create": "appCreate",
-  "app get": "appGet",
-  "app update": "appUpdate",
-  "app publish": "appPublish",
-  "app delete": "appDelete",
-  "app copy": "appCopy",
-  "app versions": "appVersions",
-  "app workflow get": "appWorkflowGet",
-  "app workflow save": "appWorkflowSave",
-  "app workflow publish": "appWorkflowPublish",
-  "app workflow export": "appWorkflowExport",
+};
+
+export const FLOW_AGENT_ROUTES: E2eRouteExports = {
+  "flow-agent call": "appCall",
+  "flow-agent list": "appList",
+  "flow-agent create": "appCreate",
+  "flow-agent get": "appGet",
+  "flow-agent update": "appUpdate",
+  "flow-agent publish": "appPublish",
+  "flow-agent delete": "appDelete",
+  "flow-agent copy": "appCopy",
+  "flow-agent versions": "appVersions",
+  "flow-agent workflow get": "appWorkflowGet",
+  "flow-agent workflow save": "appWorkflowSave",
+  "flow-agent workflow publish": "appWorkflowPublish",
+  "flow-agent workflow export": "appWorkflowExport",
 };
 
 export const ADVISOR_ROUTES: E2eRouteExports = {

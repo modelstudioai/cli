@@ -6,19 +6,23 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [2.9.0] - 2026-11-12
+## [2.9.0] - 2026-11-13
 
 ### 新增
 
-- **应用控制面命令**：通过控制台网关在命令行管理百炼应用。
-  - `bl app create` / `get` / `update` / `publish` / `delete` / `copy` / `versions`：管理智能体（app-control 2.0）与工作流；`delete` 为高风险操作，需 `--yes`。
-  - `bl app workflow get` / `save` / `publish` / `export`：管理工作流画布；`save` 整幅替换草稿并带乐观锁版本，`publish` 按控制台编辑器逻辑规范化触发器。
+- **flow-agent 命令组**：新增 `bl flow-agent` 组，通过控制台网关管理百炼应用。
+  - `bl flow-agent create` / `get` / `update` / `publish` / `delete` / `copy` / `versions`：管理智能体（app-control 2.0）与工作流；`delete` 为高风险操作，需 `--yes`。
+  - `bl flow-agent workflow get` / `save` / `publish` / `export`：管理工作流画布；`save` 整幅替换草稿并带乐观锁版本，`publish` 按控制台编辑器逻辑规范化触发器。
   - 智能体配置更新先读取当前草稿，再合并 `--model` / `--instructions` / `--config-json` / `--config-file`。
-- **应用列表筛选**：`bl app list --type workflow` 按控制台排除法列出工作流。
+  - `bl flow-agent list --type workflow` 按控制台排除法列出工作流。
 
 ### 变更
 
 - **Omni 默认模型**：`bl omni` 默认模型改为 `qwen3.8-omni-flash`（原 `qwen3.5-omni-plus`）。
+
+### 已弃用
+
+- **app 组**：`bl app call` / `bl app list` 已废弃，请改用 `bl flow-agent call` / `bl flow-agent list`，将在未来版本移除。应用控制面命令现仅位于 `bl flow-agent` 下。
 
 ### 修复
 

@@ -61,6 +61,8 @@ const GROUP_OWNER_SKILL: Readonly<Record<string, string>> = {
   // bailian-memory — personal memory and explicit Memory resource operations
   memory: "bailian-memory",
   knowledge: "bailian-knowledge",
+  // bailian-cli (hub) — application / flow-agent control plane
+  "flow-agent": "bailian-cli",
   // everything else → bailian-cli (hub)
 };
 
