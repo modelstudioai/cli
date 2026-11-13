@@ -1,4 +1,13 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { spawn } from "child_process";
 import { fileURLToPath } from "node:url";
 import { createServer, type Server, type ServerResponse } from "node:http";
@@ -405,6 +414,23 @@ test("a timed-out retry preserves the existing WAV", async () => {
   expect(readdirSync(directory).sort()).toEqual(["existing.wav", "speech"]);
   expect(readdirSync(join(directory, "speech"))).toEqual([]);
 });
+test.skipIf(process.platform === "win32").each([0o600, 0o664])(
+  "a successful overwrite preserves the existing WAV permissions (%i)",
+  async (mode) => {
+    const destination = join(directory, "existing.wav");
+    writeFileSync(destination, "previous recording");
+    chmodSync(destination, mode);
+
+    const result = await invoke(
+      { ...flags, format: "wav", out: destination },
+      { format: "json", quiet: true },
+    );
+
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(readFileSync(destination)).toEqual(audio);
+    expect(statSync(destination).mode & 0o777).toBe(mode);
+  },
+);
 test("a failed download cancels its peer and keeps the original error", async () => {
   failure = "concurrent-peer";
   const result = await invoke(

@@ -1,7 +1,7 @@
 import { httpTransport } from "bailian-cli-core";
 import { createWriteStream, mkdirSync, unlinkSync } from "fs";
 import { dirname, join } from "path";
-import { mkdtemp, rename, rm } from "node:fs/promises";
+import { chmod, mkdtemp, rename, rm, stat } from "node:fs/promises";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { BailianError, ExitCode } from "bailian-cli-core";
@@ -102,6 +102,13 @@ async function downloadWithDeadline(
       },
     });
     await pipeline(Readable.fromWeb(body), meter, createWriteStream(partialPath), { signal });
+    signal.throwIfAborted();
+    // Replacing the inode would otherwise reset an existing file's permissions to the umask.
+    const existing = await stat(destPath).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+      return undefined;
+    });
+    if (existing?.isFile()) await chmod(partialPath, existing.mode & 0o777);
     signal.throwIfAborted();
     await rename(partialPath, destPath);
     return { size: received };
