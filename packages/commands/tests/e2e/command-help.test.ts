@@ -8,7 +8,7 @@ test("captureCommandHelp 用 topic 最小路由渲染真实命令帮助", async 
   expect(helpOutput).toContain("Usage: bl quota list");
   expect(helpOutput).toContain("--model <model>");
   expect(helpOutput).toContain("--name <name>");
-  expect(helpOutput).toContain("--output <format>");
+  expect(helpOutput).toContain("--output <text|json>");
 });
 
 test("runCommandHelp 保持 commands E2E 的 stderr 与 exitCode 断言接口", async () => {

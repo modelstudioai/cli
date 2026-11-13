@@ -400,6 +400,51 @@ test.each(cases)("$name dry-run is one JSON result without API calls", async (sc
   expect(calls).toEqual([]);
   expect(openCalls).toEqual([]);
 });
+
+test.each(["text", "json"] as const)(
+  "auto-stop --all dry-run marks unresolved full scope in %s",
+  async (format) => {
+    const result = await invoke(
+      { ...cases[1]!, flags: { all: true } },
+      { format, quiet: true, dryRun: true },
+    );
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(result.strayOut + result.strayErr).toBe("");
+    expect(calls).toEqual([]);
+    const preview = {
+      api: "zeldaEasy.bailian-commerce.freeTrial.batchActivateFreeTierOnly",
+      scope: "all",
+      models_resolved: false,
+      data: { BatchActivateFreeTierOnlyRequest: { models: [] } },
+    };
+    if (format === "json") expect(JSON.parse(result.stdout)).toMatchObject(preview);
+    else {
+      expect(result.stdout).toContain("scope: all");
+      expect(result.stdout).toContain("models_resolved: false");
+    }
+  },
+);
+
+test.each(["text", "json"] as const)(
+  "usage free dry-run without --model marks unresolved full scope in %s",
+  async (format) => {
+    const result = await invoke({ ...cases[0]!, flags: {} }, { format, quiet: true, dryRun: true });
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(result.strayOut + result.strayErr).toBe("");
+    expect(calls).toEqual([]);
+    const preview = {
+      api: "zeldaEasy.bailian-commerce.freeTrial.queryFreeTierQuota",
+      scope: "all",
+      models_resolved: false,
+      data: { queryFreeTierQuotaRequest: { models: [] } },
+    };
+    if (format === "json") expect(JSON.parse(result.stdout)).toMatchObject(preview);
+    else {
+      expect(result.stdout).toContain("scope: all");
+      expect(result.stdout).toContain("models_resolved: false");
+    }
+  },
+);
 test.each(cases)("$name failure is one structured error", async (scenario) => {
   failure = true;
   const result = await invoke(scenario, { format: "json", quiet: true });

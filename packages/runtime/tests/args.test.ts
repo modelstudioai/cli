@@ -267,6 +267,21 @@ test("parseFlags validates number flags", () => {
   );
 });
 
+test("parseFlags rejects illegal --output values", () => {
+  expect(() => parseFlags(["--prompt", "x", "--output", "yaml"], OPTS)).toThrowError(
+    expect.objectContaining({
+      name: "UsageError",
+      exitCode: ExitCode.USAGE,
+      message: expect.stringContaining("Flag --output must be one of: text, json"),
+    }),
+  );
+});
+
+test("parseFlags accepts legal --output values", () => {
+  expect(parseFlags(["--prompt", "x", "--output", "json"], OPTS).output).toBe("json");
+  expect(parseFlags(["--prompt", "x", "--output", "text"], OPTS).output).toBe("text");
+});
+
 test("parseFlags throws UsageError when a required flag is missing", () => {
   expect(() => parseFlags(["--model", "qwen-image-2.0"], OPTS)).toThrowError(
     expect.objectContaining({

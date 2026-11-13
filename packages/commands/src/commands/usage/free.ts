@@ -96,7 +96,11 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      ctx.output.result({ api: FREE_TIER_API, data: requestData });
+      ctx.output.result({
+        api: FREE_TIER_API,
+        data: requestData,
+        ...(!modelFlag ? { scope: "all", models_resolved: false } : {}),
+      });
       return;
     }
 

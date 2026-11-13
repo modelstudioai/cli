@@ -80,7 +80,8 @@ export const GLOBAL_FLAGS = {
   },
   output: {
     type: "string",
-    valueHint: "<format>",
+    valueHint: "<text|json>",
+    choices: ["text", "json"] as const,
     description: { "en-US": "Output format: text, json", "zh-CN": "输出格式：text、json" },
   },
   timeout: {
