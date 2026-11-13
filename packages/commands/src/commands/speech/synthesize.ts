@@ -617,14 +617,63 @@ async function handleNonStreamMode(
   body: DashScopeTTSRequest,
   flags: SynthesizeFlags,
 ): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () =>
+      controller.abort(
+        new BailianError(
+          `Audio synthesis timed out after ${settings.timeout}s. / 音频合成在 ${settings.timeout} 秒后超时。`,
+          ExitCode.TIMEOUT,
+        ),
+      ),
+    settings.timeout * 1000,
+  );
+  const pending: Promise<unknown>[] = [];
+  const track = <Result>(operation: Promise<Result>): Promise<Result> => {
+    pending.push(operation);
+    return operation;
+  };
+  try {
+    await synthesizeAndDownload(
+      client,
+      commandOutput,
+      settings,
+      body,
+      flags,
+      controller.signal,
+      track,
+    );
+  } catch (error) {
+    // A network error cancels peers too, but keeps its original diagnostics.
+    const reason = controller.signal.aborted ? controller.signal.reason : error;
+    controller.abort(reason);
+    await Promise.allSettled(pending);
+    throw reason;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function synthesizeAndDownload(
+  client: Client,
+  commandOutput: CommandOutput,
+  settings: Settings,
+  body: DashScopeTTSRequest,
+  flags: SynthesizeFlags,
+  signal: AbortSignal,
+  track: <Result>(operation: Promise<Result>) => Promise<Result>,
+): Promise<void> {
   const concurrent = getConcurrency(flags);
 
   const results = await runConcurrent(concurrent, commandOutput, () =>
-    client.requestJson<DashScopeTTSResponse>({
-      path: speechSynthesizePath(),
-      method: "POST",
-      body,
-    }),
+    track(
+      client.requestJson<DashScopeTTSResponse>({
+        path: speechSynthesizePath(),
+        method: "POST",
+        body,
+        signal,
+      }),
+    ),
   );
 
   const audioUrls = results.map((result) => result.output?.audio?.url).filter(Boolean) as string[];
@@ -650,9 +699,11 @@ async function handleNonStreamMode(
     return { url: audioUrl, destPath: destPath! };
   });
 
-  const saved = await downloadParallel(items, downloadFile, {
-    quiet: settings.quiet || settings.output === "json",
-  });
+  const saved = await downloadParallel(
+    items,
+    (url, destPath, options) => track(downloadFile(url, destPath, { ...options, signal })),
+    { quiet: settings.quiet || settings.output === "json" },
+  );
 
   if (saved.length === 1) {
     const expiresAt = results[0]!.output?.audio?.expires_at;
