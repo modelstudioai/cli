@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.10.0] - 2026-11-13
+
+### Added
+
+- **Flow-agent command group**: New `bl flow-agent` group for managing Bailian applications via the console gateway.
+  - `bl flow-agent create` / `get` / `update` / `publish` / `delete` / `copy` / `versions` for agents (app-control 2.0) and workflows; `delete` is high-risk and requires `--yes`.
+  - `bl flow-agent workflow get` / `save` / `publish` / `export` for workflow canvases; `save` replaces the whole draft with optimistic-lock versioning, `publish` normalizes triggers like the console editor.
+  - Agent config updates read the current draft and merge `--model` / `--instructions` / `--config-json` / `--config-file`.
+  - `bl flow-agent list --type workflow` lists workflows using the console exclusion filter.
+
+### Deprecated
+
+- **App group**: `bl app call` / `bl app list` are deprecated in favor of `bl flow-agent call` / `bl flow-agent list` and will be removed in a future release. The application control-plane commands introduced in 2.9.0 now live only under `bl flow-agent`.
+
 ## [2.9.0] - 2026-11-12
 
 ### Added

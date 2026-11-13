@@ -192,7 +192,7 @@ Synchronous Batch Chat is non-streaming; explicit realtime/international/Token P
 
 ### Console Login (OAuth, Recommended)
 
-Required for console capability commands (model list, app list, MCP list, workspace, usage queries, rate-limit increases, direct console calls). It can create an ordinary API key when needed. Token Plan and other subscription plans cannot use `--console`; use the API Key login below.
+Required for console capability commands (model list, flow-agent list, MCP list, workspace, usage queries, rate-limit increases, direct console calls). It can create an ordinary API key when needed. Token Plan and other subscription plans cannot use `--console`; use the API Key login below.
 
 ```bash
 bl auth login --console

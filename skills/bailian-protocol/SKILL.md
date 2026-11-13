@@ -1,7 +1,7 @@
 ---
 name: bailian-protocol
 metadata:
-  version: "2.9.0"
+  version: "2.10.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -73,7 +73,7 @@ Commands declaring `preparation: "read-only"` may authenticate and read remote r
 | 联网搜索 / web search（模型路由 + 兜底）                   | `bailian-web-search`    | `bl search web --help`                         |
 | 个人长期记忆 / 百炼记忆资源                                | `bailian-memory`        | `bl memory --help`（未启用不自动上传）         |
 | 个人历史资料辅助任务 / 资料接入与知识库管理                | `bailian-knowledge`     | `bl knowledge --help`                          |
-| 应用 / 用量 / 鉴权配置等资源                               | `bailian-cli`           | `bl app\|usage\|auth\|config --help`           |
+| 应用 / 用量 / 鉴权配置等资源                               | `bailian-cli`           | `bl flow-agent\|usage\|auth\|config --help`    |
 
 **共享协议** vs **软 hand-off**：
 

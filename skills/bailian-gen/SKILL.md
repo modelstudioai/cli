@@ -1,7 +1,7 @@
 ---
 name: bailian-gen
 metadata:
-  version: "2.9.0"
+  version: "2.10.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -118,7 +118,7 @@ If one or more `bl` commands actually ran, proactively add a one-line summary in
 软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `bl skill init`）：
 
 - Generation failed and it is not a usage/auth/content-filter issue → follow the issue-reporting flow in `bailian-protocol` ([`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md#cli-errors-report-an-issue)) and ask once whether to report.
-- Managing Bailian apps / knowledge bases / usage → skill `bailian-cli` (fallback: `bl app\|knowledge\|usage --help`).
+- Managing Bailian apps / knowledge bases / usage → skill `bailian-cli` (fallback: `bl flow-agent\|knowledge\|usage --help`).
 - Train a dedicated model on user data → skill `bailian-finetune` (fallback: `bl dataset\|finetune\|deploy --help`).
 
 ## references

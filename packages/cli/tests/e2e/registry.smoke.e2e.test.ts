@@ -62,8 +62,8 @@ describe("e2e: bl registry smoke", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/\bbl\b/i);
     expect(stderr).not.toMatch(/COMMAND\s+AUTH\s+DESCRIPTION/);
-    expect(stderr).toMatch(/app call\s+\[API Key\]\s+Call a Bailian application/);
-    expect(stderr).toMatch(/app list\s+\[Console\]\s+List Bailian applications/);
+    expect(stderr).toMatch(/app call\s+\[API Key\]\s+\[Deprecated\] Call a Bailian application/);
+    expect(stderr).toMatch(/app list\s+\[Console\]\s+\[Deprecated\] List Bailian applications/);
     expect(stderr).toMatch(/token-plan create-key\s+\[AK\/SK\]\s+Create a Token Plan API key/);
     expect(stderr).toMatch(/config show\s+\[No Auth\]\s+Display current configuration/);
     expect(stderr).toMatch(/--base-url/);
@@ -76,8 +76,8 @@ describe("e2e: bl registry smoke", () => {
   test("分组帮助按叶子命令展示不同鉴权域", async () => {
     const { stderr, exitCode } = await runCliSmoke(["app", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/app call\s+\[API Key\]\s+Call a Bailian application/);
-    expect(stderr).toMatch(/app list\s+\[Console\]\s+List Bailian applications/);
+    expect(stderr).toMatch(/app call\s+\[API Key\]\s+\[Deprecated\] Call a Bailian application/);
+    expect(stderr).toMatch(/app list\s+\[Console\]\s+\[Deprecated\] List Bailian applications/);
   });
 
   test.each([
