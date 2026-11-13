@@ -19,23 +19,23 @@ bl knowledge category add --name <text> [flags]
 
 ### Flags
 
-| Flag                 | Type   | Required | Description                                                        |
-| -------------------- | ------ | -------- | ------------------------------------------------------------------ |
-| --api-key <key>      | string | —        | API key                                                            |
-| --base-url <url>     | string | —        | API base URL                                                       |
-| --collection-id <id> | string | —        | Create under this collection (defaults to the platform collection) |
-| --config <name>      | string | —        | Use a config profile for this command                              |
-| --dry-run            | switch | —        | Dry run mode                                                       |
-| --help               | switch | —        | Show help                                                          |
-| --introspect         | switch | —        | Print the machine-readable command schema (JSON) and exit          |
-| --name <text>        | string | yes      | Category name (1-20 chars)                                         |
-| --output <format>    | string | —        | Output format: text, json                                          |
-| --parent-id <id>     | string | —        | Create as a sub-category of this category                          |
-| --quiet              | switch | —        | Suppress non-essential output                                      |
-| --timeout <seconds>  | number | —        | Request timeout                                                    |
-| --verbose            | switch | —        | Print HTTP request/response details                                |
-| --version            | switch | —        | Print version                                                      |
-| --workspace-id <id>  | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)    |
+| Flag                  | Type   | Required | Description                                                        |
+| --------------------- | ------ | -------- | ------------------------------------------------------------------ |
+| --api-key <key>       | string | —        | API key                                                            |
+| --base-url <url>      | string | —        | API base URL                                                       |
+| --collection-id <id>  | string | —        | Create under this collection (defaults to the platform collection) |
+| --config <name>       | string | —        | Use a config profile for this command                              |
+| --dry-run             | switch | —        | Dry run mode                                                       |
+| --help                | switch | —        | Show help                                                          |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit          |
+| --name <text>         | string | yes      | Category name (1-20 chars)                                         |
+| --output <text\|json> | string | —        | Output format: text, json                                          |
+| --parent-id <id>      | string | —        | Create as a sub-category of this category                          |
+| --quiet               | switch | —        | Suppress non-essential output                                      |
+| --timeout <seconds>   | number | —        | Request timeout                                                    |
+| --verbose             | switch | —        | Print HTTP request/response details                                |
+| --version             | switch | —        | Print version                                                      |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)    |
 
 ### Notes
 
@@ -70,22 +70,22 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --category-id <id>  | string | yes      | Category ID to delete                                           |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| --yes               | switch | —        | Confirm this high-risk operation                                |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --category-id <id>    | string | yes      | Category ID to delete                                           |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| --yes                 | switch | —        | Confirm this high-risk operation                                |
 
 ### Notes
 
@@ -114,25 +114,25 @@ bl knowledge category list [flags]
 
 ### Flags
 
-| Flag                 | Type   | Required | Description                                                           |
-| -------------------- | ------ | -------- | --------------------------------------------------------------------- |
-| --api-key <key>      | string | —        | API key                                                               |
-| --base-url <url>     | string | —        | API base URL                                                          |
-| --collection-id <id> | string | —        | Filter by exact collection ID                                         |
-| --config <name>      | string | —        | Use a config profile for this command                                 |
-| --dry-run            | switch | —        | Dry run mode                                                          |
-| --help               | switch | —        | Show help                                                             |
-| --introspect         | switch | —        | Print the machine-readable command schema (JSON) and exit             |
-| --max-result <n>     | number | —        | Items per page (default: 20)                                          |
-| --name <text>        | string | —        | Filter by category name (exact match, unlike the knowledge base list) |
-| --next-token <token> | string | —        | Cursor for the next page (from previous output)                       |
-| --output <format>    | string | —        | Output format: text, json                                             |
-| --parent-id <id>     | string | —        | List sub-categories of this exact parent category                     |
-| --quiet              | switch | —        | Suppress non-essential output                                         |
-| --timeout <seconds>  | number | —        | Request timeout                                                       |
-| --verbose            | switch | —        | Print HTTP request/response details                                   |
-| --version            | switch | —        | Print version                                                         |
-| --workspace-id <id>  | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)       |
+| Flag                  | Type   | Required | Description                                                           |
+| --------------------- | ------ | -------- | --------------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                               |
+| --base-url <url>      | string | —        | API base URL                                                          |
+| --collection-id <id>  | string | —        | Filter by exact collection ID                                         |
+| --config <name>       | string | —        | Use a config profile for this command                                 |
+| --dry-run             | switch | —        | Dry run mode                                                          |
+| --help                | switch | —        | Show help                                                             |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit             |
+| --max-result <n>      | number | —        | Items per page (default: 20)                                          |
+| --name <text>         | string | —        | Filter by category name (exact match, unlike the knowledge base list) |
+| --next-token <token>  | string | —        | Cursor for the next page (from previous output)                       |
+| --output <text\|json> | string | —        | Output format: text, json                                             |
+| --parent-id <id>      | string | —        | List sub-categories of this exact parent category                     |
+| --quiet               | switch | —        | Suppress non-essential output                                         |
+| --timeout <seconds>   | number | —        | Request timeout                                                       |
+| --verbose             | switch | —        | Print HTTP request/response details                                   |
+| --version             | switch | —        | Print version                                                         |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)       |
 
 ### Notes
 
@@ -181,7 +181,7 @@ bl knowledge chat --message <text> --agent-id <id> [flags]
 | --introspect                         | switch  | —        | Print the machine-readable command schema (JSON) and exit                                                                              |
 | --message <text>                     | array   | —        | Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format |
 | --messages-file <path>               | string  | —        | Complete messages JSON array, including tool history (excludes --message/--image)                                                      |
-| --output <format>                    | string  | —        | Output format: text, json                                                                                                              |
+| --output <text\|json>                | string  | —        | Output format: text, json                                                                                                              |
 | --quiet                              | switch  | —        | Suppress non-essential output                                                                                                          |
 | --request-id <id>                    | string  | —        | Business request ID                                                                                                                    |
 | --session-file-id <fileId>           | array   | —        | Session file ID (repeatable, up to 10; requires service file preprocessing)                                                            |
@@ -243,7 +243,7 @@ bl knowledge chunk add --index-id <id> (--content <text> | --field <k=v>) [flags
 | --image-url <url>     | array  | —        | Chunk image URL (repeatable, up to 10; document-type)                                                                                                     |
 | --index-id <id>       | string | yes      | Knowledge base ID                                                                                                                                         |
 | --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit                                                                                                 |
-| --output <format>     | string | —        | Output format: text, json                                                                                                                                 |
+| --output <text\|json> | string | —        | Output format: text, json                                                                                                                                 |
 | --quiet               | switch | —        | Suppress non-essential output                                                                                                                             |
 | --timeout <seconds>   | number | —        | Request timeout                                                                                                                                           |
 | --title <text>        | string | —        | Chunk title, up to 50 chars (document-type)                                                                                                               |
@@ -296,23 +296,23 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                           |
-| ------------------- | ------ | -------- | --------------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                               |
-| --base-url <url>    | string | —        | API base URL                                                          |
-| --chunk-id <id>     | array  | yes      | Chunk ID to delete (repeatable; batches of 10 are sent automatically) |
-| --config <name>     | string | —        | Use a config profile for this command                                 |
-| --dry-run           | switch | —        | Dry run mode                                                          |
-| --help              | switch | —        | Show help                                                             |
-| --index-id <id>     | string | yes      | Knowledge base ID                                                     |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit             |
-| --output <format>   | string | —        | Output format: text, json                                             |
-| --quiet             | switch | —        | Suppress non-essential output                                         |
-| --timeout <seconds> | number | —        | Request timeout                                                       |
-| --verbose           | switch | —        | Print HTTP request/response details                                   |
-| --version           | switch | —        | Print version                                                         |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)       |
-| --yes               | switch | —        | Confirm this high-risk operation                                      |
+| Flag                  | Type   | Required | Description                                                           |
+| --------------------- | ------ | -------- | --------------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                               |
+| --base-url <url>      | string | —        | API base URL                                                          |
+| --chunk-id <id>       | array  | yes      | Chunk ID to delete (repeatable; batches of 10 are sent automatically) |
+| --config <name>       | string | —        | Use a config profile for this command                                 |
+| --dry-run             | switch | —        | Dry run mode                                                          |
+| --help                | switch | —        | Show help                                                             |
+| --index-id <id>       | string | yes      | Knowledge base ID                                                     |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit             |
+| --output <text\|json> | string | —        | Output format: text, json                                             |
+| --quiet               | switch | —        | Suppress non-essential output                                         |
+| --timeout <seconds>   | number | —        | Request timeout                                                       |
+| --verbose             | switch | —        | Print HTTP request/response details                                   |
+| --version             | switch | —        | Print version                                                         |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)       |
+| --yes                 | switch | —        | Confirm this high-risk operation                                      |
 
 ### Notes
 
@@ -341,24 +341,24 @@ bl knowledge chunk list --index-id <id> [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --doc-id <id>       | string | —        | Only show chunks belonging to this document                     |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --index-id <id>     | string | yes      | Knowledge base ID                                               |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --page-number <n>   | number | —        | Page number (default: 1)                                        |
-| --page-size <n>     | number | —        | Page size per request                                           |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --doc-id <id>         | string | —        | Only show chunks belonging to this document                     |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --index-id <id>       | string | yes      | Knowledge base ID                                               |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --page-number <n>     | number | —        | Page number (default: 1)                                        |
+| --page-size <n>       | number | —        | Page size per request                                           |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Notes
 
@@ -404,7 +404,7 @@ bl knowledge chunk update --index-id <id> --chunk-id <id> --doc-id <id> [flags]
 | --include             | switch | —        | Include this chunk in retrieval (default)                                 |
 | --index-id <id>       | string | yes      | Knowledge base ID                                                         |
 | --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit                 |
-| --output <format>     | string | —        | Output format: text, json                                                 |
+| --output <text\|json> | string | —        | Output format: text, json                                                 |
 | --quiet               | switch | —        | Suppress non-essential output                                             |
 | --timeout <seconds>   | number | —        | Request timeout                                                           |
 | --title <text>        | string | —        | Chunk title, 0-50 chars (empty string clears it; omit to keep unchanged)  |
@@ -443,25 +443,25 @@ bl knowledge collection create --name <text> --description <text> [flags]
 
 ### Flags
 
-| Flag                 | Type   | Required | Description                                                                         |
-| -------------------- | ------ | -------- | ----------------------------------------------------------------------------------- |
-| --api-key <key>      | string | —        | API key                                                                             |
-| --base-url <url>     | string | —        | API base URL                                                                        |
-| --config <name>      | string | —        | Use a config profile for this command                                               |
-| --description <text> | string | yes      | What this collection holds and what it is for — tells collections apart in the list |
-| --dry-run            | switch | —        | Dry run mode                                                                        |
-| --help               | switch | —        | Show help                                                                           |
-| --introspect         | switch | —        | Print the machine-readable command schema (JSON) and exit                           |
-| --name <text>        | string | yes      | Collection name                                                                     |
-| --oss-bucket <name>  | string | —        | OSS bucket name (required with --store-type custom)                                 |
-| --oss-region <id>    | string | —        | OSS region id (required with --store-type custom)                                   |
-| --output <format>    | string | —        | Output format: text, json                                                           |
-| --quiet              | switch | —        | Suppress non-essential output                                                       |
-| --store-type <type>  | string | —        | Storage: platform (managed) or custom (your own OSS bucket)                         |
-| --timeout <seconds>  | number | —        | Request timeout                                                                     |
-| --verbose            | switch | —        | Print HTTP request/response details                                                 |
-| --version            | switch | —        | Print version                                                                       |
-| --workspace-id <id>  | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                     |
+| Flag                  | Type   | Required | Description                                                                         |
+| --------------------- | ------ | -------- | ----------------------------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                                             |
+| --base-url <url>      | string | —        | API base URL                                                                        |
+| --config <name>       | string | —        | Use a config profile for this command                                               |
+| --description <text>  | string | yes      | What this collection holds and what it is for — tells collections apart in the list |
+| --dry-run             | switch | —        | Dry run mode                                                                        |
+| --help                | switch | —        | Show help                                                                           |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit                           |
+| --name <text>         | string | yes      | Collection name                                                                     |
+| --oss-bucket <name>   | string | —        | OSS bucket name (required with --store-type custom)                                 |
+| --oss-region <id>     | string | —        | OSS region id (required with --store-type custom)                                   |
+| --output <text\|json> | string | —        | Output format: text, json                                                           |
+| --quiet               | switch | —        | Suppress non-essential output                                                       |
+| --store-type <type>   | string | —        | Storage: platform (managed) or custom (your own OSS bucket)                         |
+| --timeout <seconds>   | number | —        | Request timeout                                                                     |
+| --verbose             | switch | —        | Print HTTP request/response details                                                 |
+| --version             | switch | —        | Print version                                                                       |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                     |
 
 ### Notes
 
@@ -494,22 +494,22 @@ bl knowledge collection get (--collection-id <id> | --name <text>) [flags]
 
 ### Flags
 
-| Flag                 | Type   | Required | Description                                                     |
-| -------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>      | string | —        | API key                                                         |
-| --base-url <url>     | string | —        | API base URL                                                    |
-| --collection-id <id> | string | —        | Collection ID; alternative to --name                            |
-| --config <name>      | string | —        | Use a config profile for this command                           |
-| --dry-run            | switch | —        | Dry run mode                                                    |
-| --help               | switch | —        | Show help                                                       |
-| --introspect         | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --name <text>        | string | —        | Collection name; alternative to --collection-id                 |
-| --output <format>    | string | —        | Output format: text, json                                       |
-| --quiet              | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds>  | number | —        | Request timeout                                                 |
-| --verbose            | switch | —        | Print HTTP request/response details                             |
-| --version            | switch | —        | Print version                                                   |
-| --workspace-id <id>  | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --collection-id <id>  | string | —        | Collection ID; alternative to --name                            |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --name <text>         | string | —        | Collection name; alternative to --collection-id                 |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Examples
 
@@ -551,7 +551,7 @@ bl knowledge create --name <text> --description <text> (--doc-id <id> | --catego
 | --knowledge-type <document\|multimedia> | string | —        | Knowledge type: document or multimedia                                                                    |
 | --multimodal-embedding-model <name>     | string | —        | Multimodal embedding model (multimedia/visual scene: alias of --embedding-model)                          |
 | --name <text>                           | string | yes      | Knowledge base name (1-20 chars, unique in workspace)                                                     |
-| --output <format>                       | string | —        | Output format: text, json                                                                                 |
+| --output <text\|json>                   | string | —        | Output format: text, json                                                                                 |
 | --poll-interval <seconds>               | number | —        | Polling interval when waiting (default: 5)                                                                |
 | --quiet                                 | switch | —        | Suppress non-essential output                                                                             |
 | --timeout <seconds>                     | number | —        | Request timeout                                                                                           |
@@ -604,22 +604,22 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --index-id <id>     | string | yes      | Knowledge base ID                                               |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| --yes               | switch | —        | Confirm this high-risk operation                                |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --index-id <id>       | string | yes      | Knowledge base ID                                               |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| --yes                 | switch | —        | Confirm this high-risk operation                                |
 
 ### Notes
 
@@ -656,23 +656,23 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --doc-id <id>       | array  | yes      | Document ID to delete (repeatable)                              |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --index-id <id>     | string | yes      | Knowledge base ID                                               |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| --yes               | switch | —        | Confirm this high-risk operation                                |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --doc-id <id>         | array  | yes      | Document ID to delete (repeatable)                              |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --index-id <id>       | string | yes      | Knowledge base ID                                               |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| --yes                 | switch | —        | Confirm this high-risk operation                                |
 
 ### Notes
 
@@ -721,7 +721,7 @@ bl knowledge doc import --index-id <id> (--doc-id <fileId> ... | --category-id <
 | --help                                                 | switch  | —        | Show help                                                         |
 | --index-id <id>                                        | string  | yes      | Existing knowledge base ID                                        |
 | --introspect                                           | switch  | —        | Print the machine-readable command schema (JSON) and exit         |
-| --output <format>                                      | string  | —        | Output format: text, json                                         |
+| --output <text\|json>                                  | string  | —        | Output format: text, json                                         |
 | --overlap-size <characters>                            | number  | —        | Document overlap size, 0-1024 characters                          |
 | --poll-interval <seconds>                              | number  | —        | Polling interval (default: 5 seconds)                             |
 | --quiet                                                | switch  | —        | Suppress non-essential output                                     |
@@ -770,7 +770,7 @@ bl knowledge doc import-oss --bucket <name> --region <id> --oss-key <key> [flags
 | --help                      | switch | —        | Show help                                                       |
 | --introspect                | switch | —        | Print the machine-readable command schema (JSON) and exit       |
 | --oss-key <key>             | array  | yes      | OSS object key to import (repeatable, 1-10 per call)            |
-| --output <format>           | string | —        | Output format: text, json                                       |
+| --output <text\|json>       | string | —        | Output format: text, json                                       |
 | --overwrite                 | switch | —        | Overwrite files previously imported from the same OSS keys      |
 | --parser <name>             | string | —        | File parser (e.g. AUTO_SELECT or DOCMIND_LLM_VERSION_MEDIA)     |
 | --parser-config-file <path> | string | —        | JSON object containing parser configuration                     |
@@ -813,24 +813,24 @@ bl knowledge doc list --index-id <id> [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --details           | switch | —        | Include file-level chunk configuration (page size up to 10)     |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --index-id <id>     | string | yes      | Knowledge base ID                                               |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --page-number <n>   | number | —        | Page number (default: 1)                                        |
-| --page-size <n>     | number | —        | Page size per request                                           |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --details             | switch | —        | Include file-level chunk configuration (page size up to 10)     |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --index-id <id>       | string | yes      | Knowledge base ID                                               |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --page-number <n>     | number | —        | Page number (default: 1)                                        |
+| --page-size <n>       | number | —        | Page size per request                                           |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Notes
 
@@ -871,7 +871,7 @@ bl knowledge doc status --index-id <id> --job-id <id> [flags]
 | --index-id <id>           | string | yes      | Knowledge base ID                                               |
 | --introspect              | switch | —        | Print the machine-readable command schema (JSON) and exit       |
 | --job-id <id>             | string | yes      | Import job ID (ingestionId returned by import commands)         |
-| --output <format>         | string | —        | Output format: text, json                                       |
+| --output <text\|json>     | string | —        | Output format: text, json                                       |
 | --page-number <n>         | number | —        | Page number (default: 1)                                        |
 | --page-size <n>           | number | —        | Page size per request                                           |
 | --poll-interval <seconds> | number | —        | Polling interval when waiting (default: 5)                      |
@@ -933,7 +933,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --help                    | switch | —        | Show help                                                                             |
 | --index-id <id>           | string | yes      | Target knowledge base ID                                                              |
 | --introspect              | switch | —        | Print the machine-readable command schema (JSON) and exit                             |
-| --output <format>         | string | —        | Output format: text, json                                                             |
+| --output <text\|json>     | string | —        | Output format: text, json                                                             |
 | --poll-interval <seconds> | number | —        | Polling interval (default: 5 seconds)                                                 |
 | --quiet                   | switch | —        | Suppress non-essential output                                                         |
 | --state-file <path>       | string | —        | Checkpoint path (default: <dir>/.bailian/sync/<key>.json, keyed by knowledge base ID) |
@@ -977,23 +977,23 @@ bl knowledge doc tag --doc-id <id> --tag <text> [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --doc-id <id>       | array  | yes      | Data-center file ID to tag (repeatable, 1-20 per call)          |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --mode <mode>       | string | —        | Update mode: append (default) or overwrite                      |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --tag <text>        | array  | yes      | Tag applied to every --doc-id (repeatable, each up to 32 chars) |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --doc-id <id>         | array  | yes      | Data-center file ID to tag (repeatable, 1-20 per call)          |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --mode <mode>         | string | —        | Update mode: append (default) or overwrite                      |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --tag <text>          | array  | yes      | Tag applied to every --doc-id (repeatable, each up to 32 chars) |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Notes
 
@@ -1036,7 +1036,7 @@ bl knowledge doc upload --file <path> [flags]
 | --help                                       | switch | —        | Show help                                                                                                       |
 | --index-id <id>                              | string | —        | Import into this knowledge base after registration (one job for all files)                                      |
 | --introspect                                 | switch | —        | Print the machine-readable command schema (JSON) and exit                                                       |
-| --output <format>                            | string | —        | Output format: text, json                                                                                       |
+| --output <text\|json>                        | string | —        | Output format: text, json                                                                                       |
 | --parser <name>                              | string | —        | File parser (e.g. AUTO_SELECT or DOCMIND_LLM_VERSION_MEDIA)                                                     |
 | --parser-config-file <path>                  | string | —        | JSON object containing parser configuration                                                                     |
 | --poll-interval <seconds>                    | number | —        | Polling interval when waiting (default: 5)                                                                      |
@@ -1097,22 +1097,22 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --file-id <id>      | string | yes      | Data-center file ID to delete                                   |
-| --help              | switch | —        | Show help                                                       |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| --yes               | switch | —        | Confirm this high-risk operation                                |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --file-id <id>        | string | yes      | Data-center file ID to delete                                   |
+| --help                | switch | —        | Show help                                                       |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| --yes                 | switch | —        | Confirm this high-risk operation                                |
 
 ### Notes
 
@@ -1143,21 +1143,21 @@ bl knowledge file get --file-id <id> [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --file-id <id>      | string | yes      | Data-center file ID                                             |
-| --help              | switch | —        | Show help                                                       |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --file-id <id>        | string | yes      | Data-center file ID                                             |
+| --help                | switch | —        | Show help                                                       |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Examples
 
@@ -1178,25 +1178,25 @@ bl knowledge file list --category-id <id> [flags]
 
 ### Flags
 
-| Flag                 | Type   | Required | Description                                                            |
-| -------------------- | ------ | -------- | ---------------------------------------------------------------------- |
-| --api-key <key>      | string | —        | API key                                                                |
-| --base-url <url>     | string | —        | API base URL                                                           |
-| --category-id <id>   | string | yes      | Category to list (find ids via the category list command); exact match |
-| --config <name>      | string | —        | Use a config profile for this command                                  |
-| --dry-run            | switch | —        | Dry run mode                                                           |
-| --file-id <id>       | array  | —        | Filter by exact file ID (repeatable)                                   |
-| --help               | switch | —        | Show help                                                              |
-| --introspect         | switch | —        | Print the machine-readable command schema (JSON) and exit              |
-| --max-result <n>     | number | —        | Items per page                                                         |
-| --name <text>        | string | —        | Filter by exact file name without its extension (a.md → pass a)        |
-| --next-token <token> | string | —        | Cursor for the next page (from previous output)                        |
-| --output <format>    | string | —        | Output format: text, json                                              |
-| --quiet              | switch | —        | Suppress non-essential output                                          |
-| --timeout <seconds>  | number | —        | Request timeout                                                        |
-| --verbose            | switch | —        | Print HTTP request/response details                                    |
-| --version            | switch | —        | Print version                                                          |
-| --workspace-id <id>  | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)        |
+| Flag                  | Type   | Required | Description                                                            |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                                |
+| --base-url <url>      | string | —        | API base URL                                                           |
+| --category-id <id>    | string | yes      | Category to list (find ids via the category list command); exact match |
+| --config <name>       | string | —        | Use a config profile for this command                                  |
+| --dry-run             | switch | —        | Dry run mode                                                           |
+| --file-id <id>        | array  | —        | Filter by exact file ID (repeatable)                                   |
+| --help                | switch | —        | Show help                                                              |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit              |
+| --max-result <n>      | number | —        | Items per page                                                         |
+| --name <text>         | string | —        | Filter by exact file name without its extension (a.md → pass a)        |
+| --next-token <token>  | string | —        | Cursor for the next page (from previous output)                        |
+| --output <text\|json> | string | —        | Output format: text, json                                              |
+| --quiet               | switch | —        | Suppress non-essential output                                          |
+| --timeout <seconds>   | number | —        | Request timeout                                                        |
+| --verbose             | switch | —        | Print HTTP request/response details                                    |
+| --version             | switch | —        | Print version                                                          |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)        |
 
 ### Notes
 
@@ -1229,21 +1229,21 @@ bl knowledge info --index-id <id> [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --index-id <id>     | string | yes      | Knowledge base ID                                               |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --index-id <id>       | string | yes      | Knowledge base ID                                               |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Notes
 
@@ -1286,7 +1286,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --help                    | switch | —        | Show help                                                                                        |
 | --introspect              | switch | —        | Print the machine-readable command schema (JSON) and exit                                        |
 | --name <name>             | string | —        | Knowledge base name (1-20 characters; default: cli-demo)                                         |
-| --output <format>         | string | —        | Output format: text, json                                                                        |
+| --output <text\|json>     | string | —        | Output format: text, json                                                                        |
 | --poll-interval <seconds> | number | —        | Polling interval (default: 5 seconds)                                                            |
 | --quiet                   | switch | —        | Suppress non-essential output                                                                    |
 | --state-file <path>       | string | —        | Recovery checkpoint (default: ~/.bailian/knowledge/init/<key>.json, keyed by workspace and name) |
@@ -1331,23 +1331,23 @@ bl knowledge list [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --name <text>       | string | —        | Filter by knowledge base name (fuzzy match, 1-20 chars)         |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --page-number <n>   | number | —        | Page number (default: 1)                                        |
-| --page-size <n>     | number | —        | Page size per request                                           |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --name <text>         | string | —        | Filter by knowledge base name (fuzzy match, 1-20 chars)         |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --page-number <n>     | number | —        | Page number (default: 1)                                        |
+| --page-size <n>       | number | —        | Page size per request                                           |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Notes
 
@@ -1392,7 +1392,7 @@ bl knowledge search --agent-id <id> (--query <text> | --image <url>) [flags]
 | --image <url>                   | array  | —        | Image URL for multimodal retrieval (repeatable)                                                                    |
 | --introspect                    | switch | —        | Print the machine-readable command schema (JSON) and exit                                                          |
 | --kb-search-configs-file <path> | string | —        | JSON array of knowledge IDs and online search_filters                                                              |
-| --output <format>               | string | —        | Output format: text, json                                                                                          |
+| --output <text\|json>           | string | —        | Output format: text, json                                                                                          |
 | --query <text>                  | string | —        | Search text (or provide --image)                                                                                   |
 | --quiet                         | switch | —        | Suppress non-essential output                                                                                      |
 | --timeout <seconds>             | number | —        | Request timeout                                                                                                    |
@@ -1433,21 +1433,21 @@ bl knowledge service copy --agent-id <id> [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --agent-id <id>     | string | yes      | Source service (agent) ID to copy                               |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --agent-id <id>       | string | yes      | Source service (agent) ID to copy                               |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Notes
 
@@ -1474,25 +1474,25 @@ bl knowledge service create --name <text> --scene <chat|search> [flags]
 
 ### Flags
 
-| Flag                 | Type   | Required | Description                                                                                                            |
-| -------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
-| --api-key <key>      | string | —        | API key                                                                                                                |
-| --base-url <url>     | string | —        | API base URL                                                                                                           |
-| --config <name>      | string | —        | Use a config profile for this command                                                                                  |
-| --config-file <path> | string | —        | Complete agent_config JSON file (excludes --index-id)                                                                  |
-| --description <text> | string | —        | What this service answers and who it serves — recommended: agents read it to pick the right service (up to 1000 chars) |
-| --dry-run            | switch | —        | Dry run mode                                                                                                           |
-| --help               | switch | —        | Show help                                                                                                              |
-| --index-id <id>      | string | —        | Bind this knowledge base; other settings use server defaults                                                           |
-| --introspect         | switch | —        | Print the machine-readable command schema (JSON) and exit                                                              |
-| --name <text>        | string | yes      | Service name (up to 200 chars, unique per scene in the workspace)                                                      |
-| --output <format>    | string | —        | Output format: text, json                                                                                              |
-| --quiet              | switch | —        | Suppress non-essential output                                                                                          |
-| --scene <scene>      | string | yes      | Service scene: chat (Q&A) or search (retrieval)                                                                        |
-| --timeout <seconds>  | number | —        | Request timeout                                                                                                        |
-| --verbose            | switch | —        | Print HTTP request/response details                                                                                    |
-| --version            | switch | —        | Print version                                                                                                          |
-| --workspace-id <id>  | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                        |
+| Flag                  | Type   | Required | Description                                                                                                            |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                                                                                |
+| --base-url <url>      | string | —        | API base URL                                                                                                           |
+| --config <name>       | string | —        | Use a config profile for this command                                                                                  |
+| --config-file <path>  | string | —        | Complete agent_config JSON file (excludes --index-id)                                                                  |
+| --description <text>  | string | —        | What this service answers and who it serves — recommended: agents read it to pick the right service (up to 1000 chars) |
+| --dry-run             | switch | —        | Dry run mode                                                                                                           |
+| --help                | switch | —        | Show help                                                                                                              |
+| --index-id <id>       | string | —        | Bind this knowledge base; other settings use server defaults                                                           |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit                                                              |
+| --name <text>         | string | yes      | Service name (up to 200 chars, unique per scene in the workspace)                                                      |
+| --output <text\|json> | string | —        | Output format: text, json                                                                                              |
+| --quiet               | switch | —        | Suppress non-essential output                                                                                          |
+| --scene <scene>       | string | yes      | Service scene: chat (Q&A) or search (retrieval)                                                                        |
+| --timeout <seconds>   | number | —        | Request timeout                                                                                                        |
+| --verbose             | switch | —        | Print HTTP request/response details                                                                                    |
+| --version             | switch | —        | Print version                                                                                                          |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                        |
 
 ### Notes
 
@@ -1533,22 +1533,22 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --agent-id <id>     | string | yes      | Service (agent) ID                                              |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| --yes               | switch | —        | Confirm this high-risk operation                                |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --agent-id <id>       | string | yes      | Service (agent) ID                                              |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| --yes                 | switch | —        | Confirm this high-risk operation                                |
 
 ### Notes
 
@@ -1596,7 +1596,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --dry-run             | switch | —        | Dry run mode                                                    |
 | --help                | switch | —        | Show help                                                       |
 | --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --output <format>     | string | —        | Output format: text, json                                       |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
 | --quiet               | switch | —        | Suppress non-essential output                                   |
 | --timeout <seconds>   | number | —        | Request timeout                                                 |
 | --verbose             | switch | —        | Print HTTP request/response details                             |
@@ -1646,7 +1646,7 @@ bl knowledge service get --agent-id <id> [flags]
 | --dry-run                 | switch | —        | Dry run mode                                                                    |
 | --help                    | switch | —        | Show help                                                                       |
 | --introspect              | switch | —        | Print the machine-readable command schema (JSON) and exit                       |
-| --output <format>         | string | —        | Output format: text, json                                                       |
+| --output <text\|json>     | string | —        | Output format: text, json                                                       |
 | --quiet                   | switch | —        | Suppress non-essential output                                                   |
 | --timeout <seconds>       | number | —        | Request timeout                                                                 |
 | --verbose                 | switch | —        | Print HTTP request/response details                                             |
@@ -1682,27 +1682,27 @@ bl knowledge service list --scene <chat|search> [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                     |
-| ------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --agent-id <id>     | string | —        | Filter by exact agent ID                                        |
-| --api-key <key>     | string | —        | API key                                                         |
-| --base-url <url>    | string | —        | API base URL                                                    |
-| --config <name>     | string | —        | Use a config profile for this command                           |
-| --dry-run           | switch | —        | Dry run mode                                                    |
-| --help              | switch | —        | Show help                                                       |
-| --index-id <id>     | string | —        | Filter by exact linked knowledge base (pipeline) ID             |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --name <text>       | string | —        | Filter by service name (fuzzy match)                            |
-| --output <format>   | string | —        | Output format: text, json                                       |
-| --page-number <n>   | number | —        | Page number (default: 1)                                        |
-| --page-size <n>     | number | —        | Page size per request                                           |
-| --quiet             | switch | —        | Suppress non-essential output                                   |
-| --scene <scene>     | string | yes      | Service scene: chat (Q&A) or search (retrieval)                 |
-| --status <status>   | string | —        | Filter by status: draft, deployed (includes edited) or deleted  |
-| --timeout <seconds> | number | —        | Request timeout                                                 |
-| --verbose           | switch | —        | Print HTTP request/response details                             |
-| --version           | switch | —        | Print version                                                   |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| --agent-id <id>       | string | —        | Filter by exact agent ID                                        |
+| --api-key <key>       | string | —        | API key                                                         |
+| --base-url <url>      | string | —        | API base URL                                                    |
+| --config <name>       | string | —        | Use a config profile for this command                           |
+| --dry-run             | switch | —        | Dry run mode                                                    |
+| --help                | switch | —        | Show help                                                       |
+| --index-id <id>       | string | —        | Filter by exact linked knowledge base (pipeline) ID             |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit       |
+| --name <text>         | string | —        | Filter by service name (fuzzy match)                            |
+| --output <text\|json> | string | —        | Output format: text, json                                       |
+| --page-number <n>     | number | —        | Page number (default: 1)                                        |
+| --page-size <n>       | number | —        | Page size per request                                           |
+| --quiet               | switch | —        | Suppress non-essential output                                   |
+| --scene <scene>       | string | yes      | Service scene: chat (Q&A) or search (retrieval)                 |
+| --status <status>     | string | —        | Filter by status: draft, deployed (includes edited) or deleted  |
+| --timeout <seconds>   | number | —        | Request timeout                                                 |
+| --verbose             | switch | —        | Print HTTP request/response details                             |
+| --version             | switch | —        | Print version                                                   |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 
 ### Notes
 
@@ -1753,7 +1753,7 @@ bl knowledge service update --agent-id <id> [flags]
 | --max-llm-calls <n>          | number | —        | Max LLM calls per request, range 1-30                                                                                                |
 | --model <name>               | string | —        | Generation model code (must be in the platform allowlist)                                                                            |
 | --name <text>                | string | —        | New service name (up to 200 chars)                                                                                                   |
-| --output <format>            | string | —        | Output format: text, json                                                                                                            |
+| --output <text\|json>        | string | —        | Output format: text, json                                                                                                            |
 | --policy <policy>            | string | —        | Agent policy: turbo (fast) or agentic (multi-turn)                                                                                   |
 | --quiet                      | switch | —        | Suppress non-essential output                                                                                                        |
 | --temperature <n>            | number | —        | Sampling temperature, range 0-2                                                                                                      |
@@ -1804,23 +1804,23 @@ bl knowledge stats --index-id <id> [flags]
 
 ### Flags
 
-| Flag                | Type   | Required | Description                                                                        |
-| ------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
-| --api-key <key>     | string | —        | API key                                                                            |
-| --base-url <url>    | string | —        | API base URL                                                                       |
-| --config <name>     | string | —        | Use a config profile for this command                                              |
-| --dry-run           | switch | —        | Dry run mode                                                                       |
-| --end <time>        | string | —        | Range end: Unix seconds or ISO date, must be in the past (default: now)            |
-| --help              | switch | —        | Show help                                                                          |
-| --index-id <id>     | string | yes      | Knowledge base ID                                                                  |
-| --introspect        | switch | —        | Print the machine-readable command schema (JSON) and exit                          |
-| --output <format>   | string | —        | Output format: text, json                                                          |
-| --quiet             | switch | —        | Suppress non-essential output                                                      |
-| --start <time>      | string | —        | Range start: Unix seconds or ISO date, must be in the past (default: 24 hours ago) |
-| --timeout <seconds> | number | —        | Request timeout                                                                    |
-| --verbose           | switch | —        | Print HTTP request/response details                                                |
-| --version           | switch | —        | Print version                                                                      |
-| --workspace-id <id> | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                    |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| --api-key <key>       | string | —        | API key                                                                            |
+| --base-url <url>      | string | —        | API base URL                                                                       |
+| --config <name>       | string | —        | Use a config profile for this command                                              |
+| --dry-run             | switch | —        | Dry run mode                                                                       |
+| --end <time>          | string | —        | Range end: Unix seconds or ISO date, must be in the past (default: now)            |
+| --help                | switch | —        | Show help                                                                          |
+| --index-id <id>       | string | yes      | Knowledge base ID                                                                  |
+| --introspect          | switch | —        | Print the machine-readable command schema (JSON) and exit                          |
+| --output <text\|json> | string | —        | Output format: text, json                                                          |
+| --quiet               | switch | —        | Suppress non-essential output                                                      |
+| --start <time>        | string | —        | Range start: Unix seconds or ISO date, must be in the past (default: 24 hours ago) |
+| --timeout <seconds>   | number | —        | Request timeout                                                                    |
+| --verbose             | switch | —        | Print HTTP request/response details                                                |
+| --version             | switch | —        | Print version                                                                      |
+| --workspace-id <id>   | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                    |
 
 ### Notes
 
@@ -1864,7 +1864,7 @@ bl knowledge update --index-id <id> [flags]
 | --index-id <id>            | string | yes      | Knowledge base ID                                                     |
 | --introspect               | switch | —        | Print the machine-readable command schema (JSON) and exit             |
 | --name <text>              | string | —        | New knowledge base name (1-20 chars)                                  |
-| --output <format>          | string | —        | Output format: text, json                                             |
+| --output <text\|json>      | string | —        | Output format: text, json                                             |
 | --quiet                    | switch | —        | Suppress non-essential output                                         |
 | --rerank-min-score <score> | number | —        | Rerank minimum score threshold, range 0-1 (chunks below are filtered) |
 | --timeout <seconds>        | number | —        | Request timeout                                                       |
