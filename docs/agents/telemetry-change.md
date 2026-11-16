@@ -101,6 +101,24 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 - `callerName`：`agent` 与 `script` 时发送（缺省/非法 → `"unknown"`）；`skillName` / `skillVersion` 仅 `agent` 时可选发送
 - 失败时的 `errorMessage`、`exitCode`、`httpStatus`、`requestId`
 - 安全 allowlist 过滤后的 `params`
+- 仅 `npmPackage=bailian-cli`：已有合法 `~/.bailian/install.json` 时，命令事件带 `installChannel`，不带安装日，也不发 `first_install`。新用户的 `first_installed_at` 在安装成功写盘后单独发一条事件名 `first_install` 的事件，`ext` 里是 `firstInstalledAt`、`installChannel`、`timestamp`（上报时刻）和 `cliVersion`。每个安装日只入队一次，次数记在 `~/.bailian/first-install-reported.json`；远端入队失败不计入，也不改由后续命令补发。`DO_NOT_TRACK=1` 不写文件、不发事件。没有安装日的老用户不发 `first_install`。命令不创建、不修补 `install.json`。`kscli` 不读这份文件。bootstrap 事件也不读取它
+
+`first_install` 由安装成功路径拉起，不经过命令 middleware：
+
+```text
+install.sh report_first_install
+install.ps1 Send-FirstInstallReport
+postinstall.js launchFirstInstallReport
+  └─ bl / dist/bailian.mjs --bailian-first-install-report
+     环境变量 BAILIAN_FIRST_INSTALL_REPORT=1，最多等 8 秒
+       create-cli.ts run
+         tracker.ts reportFirstInstallNow
+           event.ts createFirstInstallEvent
+           sink.ts remoteSink → remoteSendEvent("first_install", ...)
+           first-install.ts noteFirstInstallReportQueued
+```
+
+普通 `bl` 命令的 `trackCommandExecution` 只把 `installChannel` 放进命令事件。
 
 调用方归因只认本次进程的 `BAILIAN_CALLER_*`（由 `readCaller` 归一化后写入事件）：
 
@@ -145,16 +163,16 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 AEM 映射：
 
-| AEM 字段   | 内容                                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------------- |
-| event name | 命令路径                                                                                          |
-| `et`       | `EXP`                                                                                             |
-| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType` 与失败时的 `exitCode` |
-| `c1`       | allowlist 参数                                                                                    |
-| `c2`       | `success` / `failure`                                                                             |
-| `c3`       | HTTP status                                                                                       |
-| `c4`       | 错误文案，最多 500 字符                                                                           |
-| `c5`       | request ID                                                                                        |
+| AEM 字段   | 内容                                                                                                                                                |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| event name | 命令路径                                                                                                                                            |
+| `et`       | `EXP`                                                                                                                                               |
+| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType`、失败时的 `exitCode`，以及读到的 `installChannel`。安装日不在命令事件里 |
+| `c1`       | allowlist 参数                                                                                                                                      |
+| `c2`       | `success` / `failure`                                                                                                                               |
+| `c3`       | HTTP status                                                                                                                                         |
+| `c4`       | 错误文案，最多 500 字符                                                                                                                             |
+| `c5`       | request ID                                                                                                                                          |
 
 远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。
 
@@ -185,6 +203,7 @@ AEM 映射：
 - [ ] 调用方字段经 `readCaller` → `TrackingDeps.caller` → 事件；显式 `agent` / `ai_agent` → `agent`，显式 `script` → `script`，其余 → `unknown`
 - [ ] 成功与失败均覆盖；遥测异常必须静默且不改变业务退出码
 - [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
+- [ ] 安装日只在新用户安装成功写盘后，由 `BAILIAN_FIRST_INSTALL_REPORT=1` 且参数 `--bailian-first-install-report` 进入 `reportFirstInstallNow`，事件名 `first_install`。只剩环境变量时普通命令照常执行。拉起最多等 8 秒。命令事件只带 `installChannel`。缺失或无法识别时不创建 `install.json`，不把当前时间补进 `firstInstalledAt`。每个安装日只入队一次；入队失败不记次数，也不改由后续命令补发。`kscli` 和 bootstrap 都不发这条事件
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口
 - [ ] `remoteSink` 从调用到 `remoteSendEvent` 入队之间不得出现 `await`（flush 只排空已入队事件）
 - [ ] 测试中调用 `remoteSink` 的用例必须使用 `enterIsolatedHome()`，避免写入真实配置目录

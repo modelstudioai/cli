@@ -38,6 +38,8 @@ import {
   makeConfigStore,
   makeAuthStore,
   flushTelemetry,
+  reportFirstInstallNow,
+  isFirstInstallReportLaunch,
   Client,
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
@@ -357,6 +359,12 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
   return {
     async run(argv: string[] = process.argv.slice(2)) {
+      // Installers launch `bl --bailian-first-install-report` with the env var
+      // after a new user's install.json is written. Either one alone is a normal run.
+      if (isFirstInstallReportLaunch(argv)) {
+        await reportFirstInstallNow(identity);
+        return;
+      }
       const flags = presentationFlags(argv);
       let translator = createTranslator(DEFAULT_LANGUAGE);
       const localize = (text: LocalizedText) => translator.localize(text);
