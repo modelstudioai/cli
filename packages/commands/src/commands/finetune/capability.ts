@@ -7,6 +7,7 @@ import {
   isTrainingTypeCli,
   trainingTypeMethodVariant,
   TRAINING_TYPES_CLI,
+  FINETUNE_CATALOG_SUPPORTS,
   anonymousConsoleCall,
   UsageError,
   type HttpDeps,
@@ -16,16 +17,20 @@ import {
 } from "bailian-cli-core";
 
 /**
- * Page through every foundation-model page (listFoundationModels, public — no
- * console login needed, so the gateway is called anonymously). Returns raw
- * records so capability fields (`supports` / `trainingTypes`) are preserved
- * for filtering.
+ * Page through the trainable foundation-model catalog (listFoundationModels
+ * scoped by `fineTune`, public — no console login needed, so the gateway is
+ * called anonymously). The default inference-scoped catalog omits training-only
+ * base models and their snapshots; scoping matches the console training selector.
+ * Returns raw records so capability fields (`supports` / `trainingTypes`) are
+ * preserved for filtering.
  */
 async function fetchAllFoundationModels(
   settings: Settings,
   diagnostics: Pick<HttpDeps, "debug">,
 ): Promise<ModelCapability[]> {
-  const all = await fetchModelListAll(anonymousConsoleCall(settings, diagnostics));
+  const all = await fetchModelListAll(anonymousConsoleCall(settings, diagnostics), {
+    supports: FINETUNE_CATALOG_SUPPORTS,
+  });
   return all as ModelCapability[];
 }
 

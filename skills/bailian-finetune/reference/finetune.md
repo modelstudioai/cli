@@ -28,8 +28,26 @@ Index: [index.md](index.md)
 | `bl finetune list`               | API Key        | List fine-tune jobs                                                                                                             |
 | `bl finetune logs`               | API Key        | Fetch training logs for a fine-tune job                                                                                         |
 | `bl finetune metrics`            | API Key        | Query the training metrics of a fine-tune job                                                                                   |
+| `bl finetune opd authorize`      | Console        | Check and authorize OPD distillation access (whitelist, service roles, enablement)                                              |
+| `bl finetune opd cancel`         | API Key        | Cancel a running OPD job                                                                                                        |
+| `bl finetune opd delete`         | API Key        | Delete an OPD job record                                                                                                        |
+| `bl finetune opd get`            | API Key        | Get an OPD job                                                                                                                  |
+| `bl finetune opd list`           | API Key        | List OPD jobs                                                                                                                   |
+| `bl finetune opd logs`           | API Key        | Fetch OPD job logs                                                                                                              |
+| `bl finetune opd run`            | API Key        | Submit an OPD distillation training job (pg_opd with a teacher model)                                                           |
+| `bl finetune opd watch`          | API Key        | Probe an OPD job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                           |
 | `bl finetune params`             | API Key        | Query the training hyper-parameter configuration for a base model                                                               |
 | `bl finetune price`              | Console        | Estimate the training cost for a fine-tune job (token billing)                                                                  |
+| `bl finetune rl authorize`       | Console        | Check and authorize reinforcement-learning access (whitelist, service roles, enablement)                                        |
+| `bl finetune rl cancel`          | API Key        | Cancel a running RL job                                                                                                         |
+| `bl finetune rl delete`          | API Key        | Delete an RL job record                                                                                                         |
+| `bl finetune rl get`             | API Key        | Get an RL job                                                                                                                   |
+| `bl finetune rl list`            | API Key        | List RL jobs                                                                                                                    |
+| `bl finetune rl logs`            | API Key        | Fetch RL job logs                                                                                                               |
+| `bl finetune rl run`             | API Key        | Submit a reinforcement-learning training job                                                                                    |
+| `bl finetune rl watch`           | API Key        | Probe an RL job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                            |
+| `bl finetune runtime doctor`     | No Auth        | Check the RL runtime and sandbox isolation (credential deny, home redirect, SDK import)                                         |
+| `bl finetune runtime prepare`    | No Auth        | Prepare the managed Python/SDK runtime used by RL and OPD jobs                                                                  |
 | `bl finetune text create`        | API Key        | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   |
 | `bl finetune video create`       | API Key        | Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)                                                     |
 | `bl finetune watch`              | API Key        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      |
@@ -757,6 +775,328 @@ bl finetune metrics --job-id ft-xxx --output json
 bl finetune metrics --job-id ft-xxx --dry-run
 ```
 
+### `bl finetune opd authorize`
+
+| Field              | Value                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Name**           | `finetune opd authorize`                                                                               |
+| **Description**    | Check and authorize OPD distillation access (whitelist, service roles, enablement)                     |
+| **Authentication** | Console                                                                                                |
+| **Usage**          | `bl finetune opd authorize [--authorize]`                                                              |
+| **Risk**           | `high`                                                                                                 |
+| **Risk message**   | With --authorize this creates service-linked roles and enables the OPD training mode for your account. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                                                         |
+| ------------------------------ | ------ | -------- | ----------------------------------------------------------------------------------- |
+| `--authorize`                  | switch | no       | Permit creating missing service roles and enabling OPD (read-only probe without it) |
+| `--yes`                        | switch | no       | Confirm this high-risk operation                                                    |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                            |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                               |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                                               |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                            |
+
+#### Notes
+
+- Without --authorize this is a read-only probe. Each capability reports READY / MISSING / UNKNOWN / REQUIRES_USER_ACTION / FAILED; a failed query is UNKNOWN, never assumed enabled.
+- Only OPD is enabled; RL is never auto-enabled. In CI pass --authorize --yes to permit changes; --yes alone does not expand permissions.
+- A selected workspace is resolved to its Console identity before business requests, overriding --console-switch-agent for this invocation only. Resolution failure stops the query; dry-run only previews this step.
+
+#### Examples
+
+```bash
+bl finetune opd authorize
+```
+
+```bash
+# Only after explicit user confirmation:
+bl finetune opd authorize --authorize --yes
+```
+
+```bash
+bl finetune opd authorize --dry-run
+```
+
+### `bl finetune opd cancel`
+
+| Field              | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| **Name**           | `finetune opd cancel`                                   |
+| **Description**    | Cancel a running OPD job                                |
+| **Authentication** | API Key                                                 |
+| **Usage**          | `bl finetune opd cancel --job-id <id>`                  |
+| **Risk**           | `high`                                                  |
+| **Risk message**   | This cancels the running OPD job; progress may be lost. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--job-id <id>`    | string | yes      | OPD job ID (required)            |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
+
+#### Examples
+
+```bash
+bl finetune opd cancel --job-id ft-xxx
+```
+
+```bash
+bl finetune opd cancel --job-id ft-xxx --dry-run
+```
+
+```bash
+# Only after explicit user confirmation:
+bl finetune opd cancel --job-id ft-xxx --yes
+```
+
+### `bl finetune opd delete`
+
+| Field              | Value                                                             |
+| ------------------ | ----------------------------------------------------------------- |
+| **Name**           | `finetune opd delete`                                             |
+| **Description**    | Delete an OPD job record                                          |
+| **Authentication** | API Key                                                           |
+| **Usage**          | `bl finetune opd delete --job-id <id>`                            |
+| **Risk**           | `high`                                                            |
+| **Risk message**   | This permanently deletes the OPD job record and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--job-id <id>`    | string | yes      | OPD job ID (required)            |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
+
+#### Notes
+
+- Deletes the job record via the fine-tunes endpoint directly in the host (no sandbox runtime needed); RL and OPD jobs share this backend.
+
+#### Examples
+
+```bash
+bl finetune opd delete --job-id ft-xxx
+```
+
+```bash
+bl finetune opd delete --job-id ft-xxx --dry-run
+```
+
+```bash
+# Only after explicit user confirmation:
+bl finetune opd delete --job-id ft-xxx --yes
+```
+
+### `bl finetune opd get`
+
+| Field              | Value                               |
+| ------------------ | ----------------------------------- |
+| **Name**           | `finetune opd get`                  |
+| **Description**    | Get an OPD job                      |
+| **Authentication** | API Key                             |
+| **Usage**          | `bl finetune opd get --job-id <id>` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description           |
+| ------------------ | ------ | -------- | --------------------- |
+| `--job-id <id>`    | string | yes      | OPD job ID (required) |
+| `--api-key <key>`  | string | no       | API key               |
+| `--base-url <url>` | string | no       | API base URL          |
+
+#### Examples
+
+```bash
+bl finetune opd get --job-id ft-xxx
+```
+
+### `bl finetune opd list`
+
+| Field              | Value                                            |
+| ------------------ | ------------------------------------------------ |
+| **Name**           | `finetune opd list`                              |
+| **Description**    | List OPD jobs                                    |
+| **Authentication** | API Key                                          |
+| **Usage**          | `bl finetune opd list [--page <n>] [--size <n>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description  |
+| ------------------ | ------ | -------- | ------------ |
+| `--page <n>`       | number | no       | Page number  |
+| `--size <n>`       | number | no       | Page size    |
+| `--api-key <key>`  | string | no       | API key      |
+| `--base-url <url>` | string | no       | API base URL |
+
+#### Notes
+
+- RL and OPD jobs share the same job backend; both command groups list the same job records.
+
+#### Examples
+
+```bash
+bl finetune opd list --page 1 --size 20
+```
+
+### `bl finetune opd logs`
+
+| Field              | Value                                                             |
+| ------------------ | ----------------------------------------------------------------- |
+| **Name**           | `finetune opd logs`                                               |
+| **Description**    | Fetch OPD job logs                                                |
+| **Authentication** | API Key                                                           |
+| **Usage**          | `bl finetune opd logs --job-id <id> [--offset <n>] [--lines <n>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description           |
+| ------------------ | ------ | -------- | --------------------- |
+| `--job-id <id>`    | string | yes      | OPD job ID (required) |
+| `--offset <n>`     | number | no       | Log offset            |
+| `--lines <n>`      | number | no       | Number of log lines   |
+| `--api-key <key>`  | string | no       | API key               |
+| `--base-url <url>` | string | no       | API base URL          |
+
+#### Examples
+
+```bash
+bl finetune opd logs --job-id ft-xxx
+```
+
+```bash
+bl finetune opd logs --job-id ft-xxx --offset 0 --lines 100
+```
+
+### `bl finetune opd run`
+
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `finetune opd run`                                                      |
+| **Description**    | Submit an OPD distillation training job (pg_opd with a teacher model)   |
+| **Authentication** | API Key                                                                 |
+| **Usage**          | `bl finetune opd run --model <id> --teacher-model <id> [flags]`         |
+| **Risk**           | `high`                                                                  |
+| **Risk message**   | This creates a billed OPD training job that consumes compute resources. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                                    | Type   | Required | Description                                                                             |
+| --------------------------------------- | ------ | -------- | --------------------------------------------------------------------------------------- |
+| `--config-file <path>`                  | string | no       | Optional job YAML file; explicit CLI flags override it                                  |
+| `--name <name>`                         | string | no       | Job name                                                                                |
+| `--model <id>`                          | string | no       | Base model ID                                                                           |
+| `--train-file <path>`                   | array  | no       | Local training file (repeatable)                                                        |
+| `--train-file-id <id>`                  | array  | no       | Uploaded training file ID (repeatable)                                                  |
+| `--validation-file <path>`              | array  | no       | Local validation file (repeatable)                                                      |
+| `--validation-file-id <id>`             | array  | no       | Uploaded validation file ID (repeatable)                                                |
+| `--code-dir <path>`                     | string | no       | Function package source directory                                                       |
+| `--requirements <path>`                 | string | no       | Requirements path relative to the code dir                                              |
+| `--include <glob>`                      | array  | no       | Package include glob (repeatable)                                                       |
+| `--exclude <glob>`                      | array  | no       | Package exclude glob (repeatable)                                                       |
+| `--rollout <classpath>`                 | string | no       | Rollout function classpath                                                              |
+| `--reward <name=classpath>`             | array  | no       | Reward function (repeatable)                                                            |
+| `--clear-functions`                     | switch | no       | Clear functions defined in the YAML                                                     |
+| `--function-timeout <name=sec>`         | array  | no       | Function timeout in seconds (repeatable)                                                |
+| `--function-runtime <name.field=value>` | array  | no       | Function runtime field (repeatable)                                                     |
+| `--reward-weight <name=num>`            | array  | no       | Reward weight (repeatable)                                                              |
+| `--reward-metric <name.metric=num>`     | array  | no       | Reward metric weight (repeatable)                                                       |
+| `--function-env <name.KEY=value>`       | array  | no       | Function environment variable (repeatable)                                              |
+| `--hp <key=value>`                      | array  | no       | Hyper-parameter (repeatable, parsed by type)                                            |
+| `--charge-type <value>`                 | string | no       | Resource charge type                                                                    |
+| `--mtu-spec <code>`                     | string | no       | MTU spec code                                                                           |
+| `--mtu-count <int>`                     | number | no       | MTU capacity                                                                            |
+| `--instance-id <id>`                    | string | no       | Prepaid resource instance ID                                                            |
+| `--set <key=value>`                     | array  | no       | Top-level spec override (repeatable, JSON value)                                        |
+| `--watch`                               | switch | no       | Wait for the job to reach a terminal state                                              |
+| `--wait-timeout <seconds>`              | number | no       | Maximum seconds to poll with --watch (default: no limit; does not cancel the cloud job) |
+| `--install-runtime`                     | switch | no       | Allow first-time managed runtime preparation                                            |
+| `--teacher-model <id>`                  | string | yes      | Teacher model ID for distillation (required)                                            |
+| `--yes`                                 | switch | no       | Confirm this high-risk operation                                                        |
+| `--api-key <key>`                       | string | no       | API key                                                                                 |
+| `--base-url <url>`                      | string | no       | API base URL                                                                            |
+
+#### Notes
+
+- Forces training.type=pg_opd. Pure OPD needs no --rollout / --reward / --code-dir; the job is submitted with a teacher model and no functions.
+- The reviewed dashscope runtime 1.25.23 does not support pg_opd: real submission fails fast (dry-run still previews the spec). Job query commands (get/list/logs/watch/cancel/delete) are unaffected.
+- Runs inside an isolated sandbox. Prepare the runtime first with `finetune runtime prepare`, or pass --install-runtime.
+- Timing out with --watch stops waiting only; it does not cancel the cloud job.
+
+#### Examples
+
+```bash
+bl finetune opd run --model qwen3.5-9b --teacher-model qwen3.5-397b-a17b --train-file ./data/train.jsonl --charge-type mtu_postpaid --mtu-spec MTU4 --mtu-count 24 --watch
+```
+
+```bash
+bl finetune opd run --config-file job.yaml --teacher-model qwen3.5-397b-a17b --watch
+```
+
+```bash
+bl finetune opd run --model qwen3.5-9b --teacher-model qwen3.5-397b-a17b --train-file ./data/train.jsonl --dry-run
+```
+
+### `bl finetune opd watch`
+
+| Field              | Value                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune opd watch`                                                                                  |
+| **Description**    | Probe an OPD job's status (default: single non-blocking fetch). Pass --follow to poll until terminal. |
+| **Authentication** | API Key                                                                                               |
+| **Usage**          | `bl finetune opd watch --job-id <id> [--follow] [--interval <sec>] [--poll-timeout <sec>]`            |
+
+#### Flags
+
+| Flag                   | Type   | Required | Description                                                                                                                |
+| ---------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `--job-id <id>`        | string | yes      | OPD job ID (required)                                                                                                      |
+| `--follow`             | switch | no       | Block and poll until a terminal state. Without it, a single status probe is performed and the command returns immediately. |
+| `--interval <sec>`     | number | no       | Seconds between polls with --follow (default: 10, min: 1). Ignored without --follow.                                       |
+| `--poll-timeout <sec>` | number | no       | With --follow, stop polling after this many seconds (default: no limit). Ignored without --follow.                         |
+| `--api-key <key>`      | string | no       | API key                                                                                                                    |
+| `--base-url <url>`     | string | no       | API base URL                                                                                                               |
+
+#### Notes
+
+- Default (no --follow) is a NON-BLOCKING single status probe: one fetch, then return immediately. The caller owns the polling cadence, so the CLI never holds the terminal.
+- A terminal FAILED/CANCELED status raises a normal CLI error (non-zero exit); SUCCEEDED or still-running returns 0. With --follow, exceeding --poll-timeout raises a timeout error but does not cancel the cloud job.
+- Queries the fine-tunes endpoint directly in the host (no sandbox runtime needed). For per-step training output use `finetune opd logs`.
+
+#### Examples
+
+```bash
+bl finetune opd watch --job-id ft-xxx
+```
+
+```bash
+bl finetune opd watch --job-id ft-xxx --output json
+```
+
+```bash
+bl finetune opd watch --job-id ft-xxx --follow
+```
+
+```bash
+bl finetune opd watch --job-id ft-xxx --follow --interval 5
+```
+
+```bash
+bl finetune opd watch --job-id ft-xxx --follow --poll-timeout 3600
+```
+
 ### `bl finetune params`
 
 | Field              | Value                                                                                                                                                                                                                                 |
@@ -857,6 +1197,393 @@ bl finetune price --base-model qwen3-8b --datasets file-ft-xxx,file-ft-yyy --n-e
 
 ```bash
 bl finetune price --base-model qwen3-8b --datasets file-ft-xxx --training-type cpt
+```
+
+### `bl finetune rl authorize`
+
+| Field              | Value                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune rl authorize`                                                                               |
+| **Description**    | Check and authorize reinforcement-learning access (whitelist, service roles, enablement)              |
+| **Authentication** | Console                                                                                               |
+| **Usage**          | `bl finetune rl authorize [--authorize]`                                                              |
+| **Risk**           | `high`                                                                                                |
+| **Risk message**   | With --authorize this creates service-linked roles and enables the RL training mode for your account. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                                                        |
+| ------------------------------ | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--authorize`                  | switch | no       | Permit creating missing service roles and enabling RL (read-only probe without it) |
+| `--yes`                        | switch | no       | Confirm this high-risk operation                                                   |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                           |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                              |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                                              |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                           |
+
+#### Notes
+
+- Without --authorize this is a read-only probe. Each capability reports READY / MISSING / UNKNOWN / REQUIRES_USER_ACTION / FAILED; a failed query is UNKNOWN, never assumed enabled.
+- Only RL is enabled; OPD is never auto-enabled. In CI pass --authorize --yes to permit changes; --yes alone does not expand permissions.
+- A selected workspace is resolved to its Console identity before business requests, overriding --console-switch-agent for this invocation only. Resolution failure stops the query; dry-run only previews this step.
+
+#### Examples
+
+```bash
+bl finetune rl authorize
+```
+
+```bash
+# Only after explicit user confirmation:
+bl finetune rl authorize --authorize --yes
+```
+
+```bash
+bl finetune rl authorize --dry-run
+```
+
+### `bl finetune rl cancel`
+
+| Field              | Value                                                  |
+| ------------------ | ------------------------------------------------------ |
+| **Name**           | `finetune rl cancel`                                   |
+| **Description**    | Cancel a running RL job                                |
+| **Authentication** | API Key                                                |
+| **Usage**          | `bl finetune rl cancel --job-id <id>`                  |
+| **Risk**           | `high`                                                 |
+| **Risk message**   | This cancels the running RL job; progress may be lost. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--job-id <id>`    | string | yes      | RL job ID (required)             |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
+
+#### Examples
+
+```bash
+bl finetune rl cancel --job-id rl-xxx
+```
+
+```bash
+bl finetune rl cancel --job-id rl-xxx --dry-run
+```
+
+```bash
+# Only after explicit user confirmation:
+bl finetune rl cancel --job-id rl-xxx --yes
+```
+
+### `bl finetune rl delete`
+
+| Field              | Value                                                            |
+| ------------------ | ---------------------------------------------------------------- |
+| **Name**           | `finetune rl delete`                                             |
+| **Description**    | Delete an RL job record                                          |
+| **Authentication** | API Key                                                          |
+| **Usage**          | `bl finetune rl delete --job-id <id>`                            |
+| **Risk**           | `high`                                                           |
+| **Risk message**   | This permanently deletes the RL job record and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--job-id <id>`    | string | yes      | RL job ID (required)             |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
+
+#### Notes
+
+- Deletes the job record via the fine-tunes endpoint directly in the host (no sandbox runtime needed); RL and OPD jobs share this backend.
+
+#### Examples
+
+```bash
+bl finetune rl delete --job-id rl-xxx
+```
+
+```bash
+bl finetune rl delete --job-id rl-xxx --dry-run
+```
+
+```bash
+# Only after explicit user confirmation:
+bl finetune rl delete --job-id rl-xxx --yes
+```
+
+### `bl finetune rl get`
+
+| Field              | Value                              |
+| ------------------ | ---------------------------------- |
+| **Name**           | `finetune rl get`                  |
+| **Description**    | Get an RL job                      |
+| **Authentication** | API Key                            |
+| **Usage**          | `bl finetune rl get --job-id <id>` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description          |
+| ------------------ | ------ | -------- | -------------------- |
+| `--job-id <id>`    | string | yes      | RL job ID (required) |
+| `--api-key <key>`  | string | no       | API key              |
+| `--base-url <url>` | string | no       | API base URL         |
+
+#### Examples
+
+```bash
+bl finetune rl get --job-id rl-xxx
+```
+
+### `bl finetune rl list`
+
+| Field              | Value                                           |
+| ------------------ | ----------------------------------------------- |
+| **Name**           | `finetune rl list`                              |
+| **Description**    | List RL jobs                                    |
+| **Authentication** | API Key                                         |
+| **Usage**          | `bl finetune rl list [--page <n>] [--size <n>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description  |
+| ------------------ | ------ | -------- | ------------ |
+| `--page <n>`       | number | no       | Page number  |
+| `--size <n>`       | number | no       | Page size    |
+| `--api-key <key>`  | string | no       | API key      |
+| `--base-url <url>` | string | no       | API base URL |
+
+#### Notes
+
+- RL and OPD jobs share the same job backend; both command groups list the same job records.
+
+#### Examples
+
+```bash
+bl finetune rl list --page 1 --size 20
+```
+
+### `bl finetune rl logs`
+
+| Field              | Value                                                            |
+| ------------------ | ---------------------------------------------------------------- |
+| **Name**           | `finetune rl logs`                                               |
+| **Description**    | Fetch RL job logs                                                |
+| **Authentication** | API Key                                                          |
+| **Usage**          | `bl finetune rl logs --job-id <id> [--offset <n>] [--lines <n>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description          |
+| ------------------ | ------ | -------- | -------------------- |
+| `--job-id <id>`    | string | yes      | RL job ID (required) |
+| `--offset <n>`     | number | no       | Log offset           |
+| `--lines <n>`      | number | no       | Number of log lines  |
+| `--api-key <key>`  | string | no       | API key              |
+| `--base-url <url>` | string | no       | API base URL         |
+
+#### Examples
+
+```bash
+bl finetune rl logs --job-id rl-xxx
+```
+
+```bash
+bl finetune rl logs --job-id rl-xxx --offset 0 --lines 100
+```
+
+### `bl finetune rl run`
+
+| Field              | Value                                                                  |
+| ------------------ | ---------------------------------------------------------------------- |
+| **Name**           | `finetune rl run`                                                      |
+| **Description**    | Submit a reinforcement-learning training job                           |
+| **Authentication** | API Key                                                                |
+| **Usage**          | `bl finetune rl run --model <id> [flags]`                              |
+| **Risk**           | `high`                                                                 |
+| **Risk message**   | This creates a billed RL training job that consumes compute resources. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                                    | Type   | Required | Description                                                                             |
+| --------------------------------------- | ------ | -------- | --------------------------------------------------------------------------------------- |
+| `--config-file <path>`                  | string | no       | Optional job YAML file; explicit CLI flags override it                                  |
+| `--name <name>`                         | string | no       | Job name                                                                                |
+| `--model <id>`                          | string | no       | Base model ID                                                                           |
+| `--train-file <path>`                   | array  | no       | Local training file (repeatable)                                                        |
+| `--train-file-id <id>`                  | array  | no       | Uploaded training file ID (repeatable)                                                  |
+| `--validation-file <path>`              | array  | no       | Local validation file (repeatable)                                                      |
+| `--validation-file-id <id>`             | array  | no       | Uploaded validation file ID (repeatable)                                                |
+| `--code-dir <path>`                     | string | no       | Function package source directory                                                       |
+| `--requirements <path>`                 | string | no       | Requirements path relative to the code dir                                              |
+| `--include <glob>`                      | array  | no       | Package include glob (repeatable)                                                       |
+| `--exclude <glob>`                      | array  | no       | Package exclude glob (repeatable)                                                       |
+| `--rollout <classpath>`                 | string | no       | Rollout function classpath                                                              |
+| `--reward <name=classpath>`             | array  | no       | Reward function (repeatable)                                                            |
+| `--clear-functions`                     | switch | no       | Clear functions defined in the YAML                                                     |
+| `--function-timeout <name=sec>`         | array  | no       | Function timeout in seconds (repeatable)                                                |
+| `--function-runtime <name.field=value>` | array  | no       | Function runtime field (repeatable)                                                     |
+| `--reward-weight <name=num>`            | array  | no       | Reward weight (repeatable)                                                              |
+| `--reward-metric <name.metric=num>`     | array  | no       | Reward metric weight (repeatable)                                                       |
+| `--function-env <name.KEY=value>`       | array  | no       | Function environment variable (repeatable)                                              |
+| `--hp <key=value>`                      | array  | no       | Hyper-parameter (repeatable, parsed by type)                                            |
+| `--charge-type <value>`                 | string | no       | Resource charge type                                                                    |
+| `--mtu-spec <code>`                     | string | no       | MTU spec code                                                                           |
+| `--mtu-count <int>`                     | number | no       | MTU capacity                                                                            |
+| `--instance-id <id>`                    | string | no       | Prepaid resource instance ID                                                            |
+| `--set <key=value>`                     | array  | no       | Top-level spec override (repeatable, JSON value)                                        |
+| `--watch`                               | switch | no       | Wait for the job to reach a terminal state                                              |
+| `--wait-timeout <seconds>`              | number | no       | Maximum seconds to poll with --watch (default: no limit; does not cancel the cloud job) |
+| `--install-runtime`                     | switch | no       | Allow first-time managed runtime preparation                                            |
+| `--yes`                                 | switch | no       | Confirm this high-risk operation                                                        |
+| `--api-key <key>`                       | string | no       | API key                                                                                 |
+| `--base-url <url>`                      | string | no       | API base URL                                                                            |
+
+#### Notes
+
+- Runs inside an isolated sandbox. Prepare the runtime first with `finetune runtime prepare`, or pass --install-runtime.
+- Timing out with --watch stops waiting only; it does not cancel the cloud job.
+
+#### Examples
+
+```bash
+bl finetune rl run --model qwen3.5-9b --train-file ./data/train.jsonl --code-dir . --rollout functions.rollout.MyRollout --charge-type mtu_postpaid --mtu-spec MTU4 --mtu-count 24 --watch
+```
+
+```bash
+bl finetune rl run --config-file job.yaml --watch
+```
+
+```bash
+bl finetune rl run --model qwen3.5-9b --train-file ./data/train.jsonl --dry-run
+```
+
+### `bl finetune rl watch`
+
+| Field              | Value                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune rl watch`                                                                                  |
+| **Description**    | Probe an RL job's status (default: single non-blocking fetch). Pass --follow to poll until terminal. |
+| **Authentication** | API Key                                                                                              |
+| **Usage**          | `bl finetune rl watch --job-id <id> [--follow] [--interval <sec>] [--poll-timeout <sec>]`            |
+
+#### Flags
+
+| Flag                   | Type   | Required | Description                                                                                                                |
+| ---------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `--job-id <id>`        | string | yes      | RL job ID (required)                                                                                                       |
+| `--follow`             | switch | no       | Block and poll until a terminal state. Without it, a single status probe is performed and the command returns immediately. |
+| `--interval <sec>`     | number | no       | Seconds between polls with --follow (default: 10, min: 1). Ignored without --follow.                                       |
+| `--poll-timeout <sec>` | number | no       | With --follow, stop polling after this many seconds (default: no limit). Ignored without --follow.                         |
+| `--api-key <key>`      | string | no       | API key                                                                                                                    |
+| `--base-url <url>`     | string | no       | API base URL                                                                                                               |
+
+#### Notes
+
+- Default (no --follow) is a NON-BLOCKING single status probe: one fetch, then return immediately. The caller owns the polling cadence, so the CLI never holds the terminal.
+- A terminal FAILED/CANCELED status raises a normal CLI error (non-zero exit); SUCCEEDED or still-running returns 0. With --follow, exceeding --poll-timeout raises a timeout error but does not cancel the cloud job.
+- Queries the fine-tunes endpoint directly in the host (no sandbox runtime needed). For per-step training output use `finetune rl logs`.
+
+#### Examples
+
+```bash
+bl finetune rl watch --job-id ft-xxx
+```
+
+```bash
+bl finetune rl watch --job-id ft-xxx --output json
+```
+
+```bash
+bl finetune rl watch --job-id ft-xxx --follow
+```
+
+```bash
+bl finetune rl watch --job-id ft-xxx --follow --interval 5
+```
+
+```bash
+bl finetune rl watch --job-id ft-xxx --follow --poll-timeout 3600
+```
+
+### `bl finetune runtime doctor`
+
+| Field              | Value                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| **Name**           | `finetune runtime doctor`                                                               |
+| **Description**    | Check the RL runtime and sandbox isolation (credential deny, home redirect, SDK import) |
+| **Authentication** | No Auth                                                                                 |
+| **Usage**          | `bl finetune runtime doctor`                                                            |
+
+#### Flags
+
+_No command-specific flags._
+
+#### Notes
+
+- Read-only self-check; it creates no cloud resources. Required checks must pass; when the runtime is missing they are skipped (not treated as passed) and the command exits non-zero.
+- Enhanced hardening (kernel network enforcement, process tree, memory) degrades with a notice when unavailable and does not fail the overall check.
+
+#### Examples
+
+```bash
+bl finetune runtime doctor
+```
+
+```bash
+bl finetune runtime doctor --dry-run
+```
+
+```bash
+bl finetune runtime doctor --output json
+```
+
+### `bl finetune runtime prepare`
+
+| Field              | Value                                                          |
+| ------------------ | -------------------------------------------------------------- |
+| **Name**           | `finetune runtime prepare`                                     |
+| **Description**    | Prepare the managed Python/SDK runtime used by RL and OPD jobs |
+| **Authentication** | No Auth                                                        |
+| **Usage**          | `bl finetune runtime prepare [--manifest <path>]`              |
+
+#### Flags
+
+| Flag                | Type   | Required | Description                                                                |
+| ------------------- | ------ | -------- | -------------------------------------------------------------------------- |
+| `--manifest <path>` | string | no       | Optional runtime manifest file (defaults to the bundled reviewed manifest) |
+
+#### Notes
+
+- Downloads and verifies the runtime locally; it never creates a training job. Set BAILIAN_RL_RUNTIME to a local dashscope Python directory to reuse a development runtime instead.
+- On an unsupported platform this reports RUNTIME_UNAVAILABLE; no cloud resources are created.
+- CPython downloads fall back to a built-in npmmirror mirror when GitHub is unreachable; set BAILIAN_RL_PYTHON_MIRROR to a custom mirror prefix. Integrity is always verified against the reviewed SHA256 regardless of source.
+- In regions where the PyPI CDN stalls, set BAILIAN_RL_PIP_INDEX_URL to a stable PyPI mirror (e.g. https://pypi.tuna.tsinghua.edu.cn/simple/ or https://mirrors.aliyun.com/pypi/simple/); pip still verifies every package hash via --require-hashes. Mirrors lag PyPI: if a mirror lacks a pinned version, pip reports 'No matching distribution found for X==ver' — use a fresher mirror or the default PyPI.
+
+#### Examples
+
+```bash
+bl finetune runtime prepare
+```
+
+```bash
+bl finetune runtime prepare --manifest ./runtime-manifest.json
+```
+
+```bash
+bl finetune runtime prepare --dry-run
 ```
 
 ### `bl finetune text create`

@@ -10,6 +10,8 @@ description: >-
   把专属模型部署成服务时使用 `bl dataset` / `bl finetune` / `bl deploy`。链路是 validate 校验数据 →
   upload 拿 file-id → finetune create 建任务 → watch 看进度 → export 导出 → 可选 compress 量化压缩 → deploy 上线，需要 API key；
   Console 版本状态与独立部署服务查询使用 Console 鉴权。
+  强化学习（RL）与 OPD 蒸馏训练走 `bl finetune rl` / `bl finetune opd`，在隔离沙箱内执行，需先 `bl finetune runtime prepare` 准备运行时；
+  授权检查与开通走 `bl finetune rl authorize` / `bl finetune opd authorize`（Console 鉴权）。沙箱当前仅支持 macOS / Linux。
   写操作先用 `--dry-run` 预览。反触发：用户点名火山方舟/ark 的精调不走本 skill；只是要选哪个模型走
   bailian-model-recommend；用现成模型生图生视频走 bailian-gen；百炼其他资源管理走 bailian-cli。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
@@ -47,28 +49,32 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-f
 
 ## When to use which command
 
-| Intent                                                 | Command                                                                                                |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Validate / upload training data                        | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                                  |
-| Dataset list / detail / delete                         | `bl dataset list` / `get` / `delete`                                                                   |
-| Console dataset groups / discover version and file IDs | `bl dataset groups` → `bl dataset version --dataset-group-id <group-id>` (Console auth)                |
-| Console version detail / import and release state      | `bl dataset version --dataset-id <version-id>` (Console auth; optional `--include-status`)             |
-| Console independent deployment services                | `bl deploy instances` (Console auth; not capacity instances or replicas)                               |
-| Create a fine-tuning job                               | `bl finetune text\|audio\|image create`                                                                |
-| Job list / detail / follow                             | `bl finetune list` / `get` / `watch` / `logs`                                                          |
-| Artifacts and export                                   | `bl finetune checkpoints` / `export`                                                                   |
-| Quantize / compress a full model                       | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                        |
-| Cancel / delete a compression job                      | `bl finetune compress cancel` / `delete`                                                               |
-| Cancel / delete a fine-tuning job                      | `bl finetune cancel` / `delete`                                                                        |
-| Import an external OSS LoRA model                      | Hand-off: `bl cmodel import *` — hub-owned commands; see `bailian-cli` reference or `bl cmodel --help` |
-| Trainable capability lookup                            | `bl finetune capability`                                                                               |
-| Deploy / lifecycle                                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models`       |
-| Query throughput reservations                          | `bl deploy list --plan ptu` / `bl deploy get`                                                          |
-| Query capacity instances                               | `bl deploy capacity list` / `get`                                                                      |
-| Query / wait for a capacity operation                  | `bl deploy operation get` / `wait`                                                                     |
-| Buy / scale / renew / release capacity                 | `bl deploy capacity create` / `scale` / `renew` / `delete`                                             |
-| Unsubscribe a prepaid instance                         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                              |
-| Configure ModelCode overflow strategy                  | `bl deploy overflow`                                                                                   |
+| Intent                                                 | Command                                                                                                                         |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Validate / upload training data                        | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                                                           |
+| Dataset list / detail / delete                         | `bl dataset list` / `get` / `delete`                                                                                            |
+| Console dataset groups / discover version and file IDs | `bl dataset groups` → `bl dataset version --dataset-group-id <group-id>` (Console auth)                                         |
+| Console version detail / import and release state      | `bl dataset version --dataset-id <version-id>` (Console auth; optional `--include-status`)                                      |
+| Console independent deployment services                | `bl deploy instances` (Console auth; not capacity instances or replicas)                                                        |
+| Create a fine-tuning job                               | `bl finetune text\|audio\|image create`                                                                                         |
+| Job list / detail / follow                             | `bl finetune list` / `get` / `watch` / `logs`                                                                                   |
+| Artifacts and export                                   | `bl finetune checkpoints` / `export`                                                                                            |
+| Quantize / compress a full model                       | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                                                 |
+| Cancel / delete a compression job                      | `bl finetune compress cancel` / `delete`                                                                                        |
+| Cancel / delete a fine-tuning job                      | `bl finetune cancel` / `delete`                                                                                                 |
+| Reinforcement-learning (RL) training                   | `bl finetune rl run` / `get` / `list` / `watch` / `logs` / `cancel` / `delete` (sandbox)                                        |
+| RL / OPD authorization check and enablement            | `bl finetune rl authorize` / `bl finetune opd authorize` (Console auth; `--authorize` to mutate)                                |
+| OPD distillation training                              | `bl finetune opd run --teacher-model <id>` / `get` / `list` / `watch` / `logs` / `cancel` / `delete` (sandbox; forces `pg_opd`) |
+| Prepare / check the RL sandbox runtime                 | `bl finetune runtime prepare` / `doctor`                                                                                        |
+| Import an external OSS LoRA model                      | Hand-off: `bl cmodel import *` — hub-owned commands; see `bailian-cli` reference or `bl cmodel --help`                          |
+| Trainable capability lookup                            | `bl finetune capability`                                                                                                        |
+| Deploy / lifecycle                                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models`                                |
+| Query throughput reservations                          | `bl deploy list --plan ptu` / `bl deploy get`                                                                                   |
+| Query capacity instances                               | `bl deploy capacity list` / `get`                                                                                               |
+| Query / wait for a capacity operation                  | `bl deploy operation get` / `wait`                                                                                              |
+| Buy / scale / renew / release capacity                 | `bl deploy capacity create` / `scale` / `renew` / `delete`                                                                      |
+| Unsubscribe a prepaid instance                         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                                                       |
+| Configure ModelCode overflow strategy                  | `bl deploy overflow`                                                                                                            |
 
 The `capacity list` / `get`, `operation get` / `wait` and `deploy list` / `get` queries are read-only. Capacity values are kTPM; effective, configured and target capacities are distinct. `deploy list --status` filters only the fetched page locally, with the server total left unfiltered. `operation get` reports status as data; `operation wait` exits non-zero on failure or timeout and refreshes capacity after success. Use IDs returned by the API; waiting never retries a write.
 
@@ -77,6 +83,26 @@ The `capacity create` / `scale` / `renew` / `delete` and `overflow` commands are
 Console reads are separate from API-key file/deployment queries; the API Key / `file_id` semantics of `dataset list` are unchanged. Discover `records[].datasetGroupId` with `dataset groups`, then pass it to `dataset version --dataset-group-id <group-id>` to get `{result:[...]}` with `result[].datasetId` and an optional `fileId`. Use `dataset version --dataset-id <version-id>` for details; exactly one of `--dataset-group-id` and `--dataset-id` is required, and they cannot be combined. `fileId` is not `datasetId`; never pass a file ID from `dataset list` as a Console version ID. Groups are paginated and contain only one nested version preview; `version --dataset-group-id` normalizes array responses to `result` without promising exhaustive results or exposing pagination. Keep the same workspace throughout this chain. `--include-status` is available only in detail mode (`dataset version --dataset-id <version-id> --include-status`) and preserves raw version and task state; missing/unknown state never means validation success or training readiness, and the returned task is not guaranteed to be the latest. A failed follow-up query retains metadata and exits nonzero. `deploy instances` returns one page (`records` is the list, `items` the total); reading does not establish inference or pause permission. With `--workspace-id`, these commands resolve that workspace's Console identity before business requests and stop on resolution failure. For an error-report file key, hand off to `bailian-cli` (`file url`); an existing report URL can be used directly.
 
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
+
+## RL / OPD sandbox training
+
+`bl finetune rl` and `bl finetune opd` submit reinforcement-learning and OPD distillation jobs. Unlike the SFT/DPO pipeline, the DashScope SDK runs inside an isolated sandbox (credential deny-read, home redirect, whitelist proxy), so the host Python environment is never used. The sandbox is a local black box: on first run it downloads and verifies a fixed CPython + dashscope runtime from a bundled reviewed manifest, caches it, and reuses the cache afterwards.
+
+```
+1. Authorize     bl finetune rl authorize            # read-only probe (Console auth)
+                 bl finetune rl authorize --authorize --yes   # create roles + enable RL
+2. Prepare runtime  bl finetune runtime prepare      # trigger first-run download / verify cache; or set BAILIAN_RL_RUNTIME for dev
+3. Check sandbox    bl finetune runtime doctor       # isolation self-check, exits non-zero on failure
+4. Submit job       bl finetune rl run --model <id> --train-file <path> --code-dir . --rollout <classpath> --watch
+5. Manage job       bl finetune rl get|list|watch|logs|cancel|delete <job-id>
+```
+
+- RL and OPD are distinct training types with symmetric command groups; OPD jobs are managed with `bl finetune opd get|list|watch|logs|cancel|delete` (same job backend as RL). `bl finetune opd run` forces `training.type=pg_opd` and requires `--teacher-model`; pure OPD needs no `--rollout` / `--reward` / `--code-dir`.
+- `rl run` / `opd run` are billed (`risk: high`, reason billing); `rl` / `opd` `cancel` / `delete` are destructive. Preview with `--dry-run`, then confirm with the runtime-injected `--yes`; never add `--yes` automatically.
+- `authorize` only enables the requested target (RL never auto-enables OPD and vice versa). A failed query reports `UNKNOWN`, never assumed enabled. In CI, permission changes require explicit `--authorize --yes`.
+- `rl|opd run --watch` / `rl|opd watch --follow` poll to a terminal state; `--wait-timeout` / `--poll-timeout` only stop waiting (default: no limit), never cancel the cloud job. `watch` without `--follow` is a single non-blocking probe. The sandbox is macOS / Linux only — on Windows it fails closed with "Not supported on Windows yet."
+- Runtime downloads fall back to a built-in npmmirror mirror when GitHub is unreachable; set `BAILIAN_RL_PYTHON_MIRROR` to a custom mirror prefix. Where the PyPI CDN stalls, set `BAILIAN_RL_PIP_INDEX_URL` to a stable PyPI mirror (e.g. `https://pypi.tuna.tsinghua.edu.cn/simple/` or `https://mirrors.aliyun.com/pypi/simple/`). Mirrors lag PyPI — if a mirror lacks a pinned version, pip fails closed with `No matching distribution found for X==ver`; use a fresher mirror or the default PyPI. Integrity is always verified against the reviewed SHA256 / per-package hashes regardless of source.
+- Flags, usage, and examples: see [`reference/finetune.md`](reference/finetune.md) or `bl finetune rl --help` — do not guess flags.
 
 ## Quick examples
 
@@ -91,6 +117,10 @@ bl finetune compress templates --model my-qwen-sft
 bl finetune compress create --model my-qwen-sft --template-id quant-xxx --suffix int4
 bl finetune compress watch --job-id quant-xxx --follow
 bl deploy text create --model-name <my-qwen-sft-or-quantized-output> --display-name my-svc
+# RL / OPD sandbox training (macOS / Linux)
+bl finetune runtime prepare
+bl finetune rl run --model qwen3.5-9b --train-file ./data/train.jsonl --code-dir . --rollout functions.rollout.MyRollout --charge-type mtu_postpaid --mtu-spec MTU4 --mtu-count 24 --watch
+bl finetune opd run --model qwen3.5-9b --teacher-model qwen3.5-397b-a17b --train-file ./data/train.jsonl --charge-type mtu_postpaid --mtu-spec MTU4 --mtu-count 24 --watch
 ```
 
 ## Common hand-offs
