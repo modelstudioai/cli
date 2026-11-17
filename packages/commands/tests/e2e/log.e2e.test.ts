@@ -922,7 +922,8 @@ describe("e2e: log", () => {
       apis?: string[];
       data?: { reqDTO?: { telemetryType?: string; resourceId?: string } };
     }>(stdout);
-    expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.createTelemetrySlr");
+    expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus");
+    expect(data.apis).not.toContain("zeldaEasy.bailian-telemetry.activate.createTelemetrySlr");
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.initTelemetryStoreInstance");
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.telemetryGroup.enableTelemetryGroup");
     expect(data.data?.reqDTO?.telemetryType).toBe("AuditLog");
@@ -1048,7 +1049,8 @@ describe("e2e: log", () => {
       apis?: string[];
       data?: { reqDTO?: { telemetryType?: string; resourceId?: string } };
     }>(stdout);
-    expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.createTelemetrySlr");
+    expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus");
+    expect(data.apis).not.toContain("zeldaEasy.bailian-telemetry.activate.createTelemetrySlr");
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.initTelemetryStoreInstance");
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.telemetryGroup.enableTelemetryGroup");
     expect(data.data?.reqDTO?.telemetryType).toBe("InferenceLog");

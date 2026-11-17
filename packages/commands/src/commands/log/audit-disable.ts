@@ -24,6 +24,7 @@ export default defineTelemetryCommand({
         output: ctx.output,
         settings: ctx.settings,
         commandPrefix: formatCommand(ctx.identity),
+        localize: ctx.localize,
       },
       "audit",
       true,

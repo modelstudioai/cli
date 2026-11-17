@@ -151,7 +151,7 @@ describe("e2e: monitor", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ apis?: string[] }>(stdout);
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus");
-    expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.createTelemetrySlr");
+    expect(data.apis).not.toContain("zeldaEasy.bailian-telemetry.activate.createTelemetrySlr");
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.getTelemetryServiceStatus");
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.initCmsService");
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.activate.initTelemetryStoreInstance");

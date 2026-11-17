@@ -69,12 +69,12 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl flow-agent workflow save`    | Console        | Save a workflow canvas (replaces the current draft)                                                                | [flow-agent.md](flow-agent.md) |
 | `bl log audit count`             | Console        | Count model audit logs in a time range (useful before exporting)                                                   | [log.md](log.md)               |
 | `bl log audit disable`           | Console        | Disable audit log delivery for all models in the workspace                                                         | [log.md](log.md)               |
-| `bl log audit enable`            | Console        | Enable audit log delivery to SLS (SLR authorization → SLS instance → log switch)                                   | [log.md](log.md)               |
+| `bl log audit enable`            | Console        | Enable audit log delivery to SLS (SLR check → SLS instance → log switch)                                           | [log.md](log.md)               |
 | `bl log audit get`               | Console        | Show a single audit log entry with its raw origin record                                                           | [log.md](log.md)               |
 | `bl log audit list`              | Console        | Query model audit logs (call metadata; request/response content is not recorded)                                   | [log.md](log.md)               |
 | `bl log inference count`         | Console        | Count model inference logs in a time range (useful before exporting)                                               | [log.md](log.md)               |
 | `bl log inference disable`       | Console        | Disable inference log delivery for all models in the workspace                                                     | [log.md](log.md)               |
-| `bl log inference enable`        | Console        | Enable inference log delivery to SLS (SLR authorization → SLS instance → log switch)                               | [log.md](log.md)               |
+| `bl log inference enable`        | Console        | Enable inference log delivery to SLS (SLR check → SLS instance → log switch)                                       | [log.md](log.md)               |
 | `bl log inference get`           | Console        | Show a single inference log entry with full request/response content                                               | [log.md](log.md)               |
 | `bl log inference list`          | Console        | Query model inference logs (requires inference log delivery; use `log inference get` for request/response content) | [log.md](log.md)               |
 | `bl log status`                  | Console        | Show model log delivery status (SLS authorization, audit / inference service and switches)                         | [log.md](log.md)               |
@@ -90,7 +90,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl model list`                  | No Auth        | Browse model families or show detailed model info in the Bailian model marketplace                                 | [model.md](model.md)           |
 | `bl model search`                | No Auth        | Search the model catalog by keyword, ranked by relevance                                                           | [model.md](model.md)           |
 | `bl monitor delivery disable`    | Console        | Disable monitor delivery for all models in the workspace                                                           | [monitor.md](monitor.md)       |
-| `bl monitor delivery enable`     | Console        | Activate monitoring delivery: CMS SLR authorization, CMS service, and the dedicated Prometheus instance            | [monitor.md](monitor.md)       |
+| `bl monitor delivery enable`     | Console        | Activate monitoring delivery: CMS SLR check, CMS service, and the dedicated Prometheus instance                    | [monitor.md](monitor.md)       |
 | `bl monitor delivery status`     | Console        | Show monitoring delivery (Prometheus instance) status                                                              | [monitor.md](monitor.md)       |
 | `bl monitor errors`              | Console        | Show failure breakdown by HTTP status code and error code                                                          | [monitor.md](monitor.md)       |
 | `bl monitor metrics`             | Console        | Query time-series monitor metrics (RPM/TPM, latency percentiles, token usage)                                      | [monitor.md](monitor.md)       |
