@@ -120,9 +120,11 @@ export default defineCommand({
       : "BatchActivateFreeTierOnlyRequest";
 
     if (settings.dryRun) {
+      const unresolvedAll = Boolean(flags.all) && !modelFlag;
       ctx.output.result({
         api,
         data: { [requestKey]: { models } },
+        ...(unresolvedAll ? { scope: "all", models_resolved: false } : {}),
       });
       return;
     }

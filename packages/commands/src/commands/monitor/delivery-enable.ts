@@ -4,16 +4,15 @@ import {
   buildGroupSwitchReqDTO,
   ENABLE_GROUP_API,
   ensureTelemetryRegionSupported,
-  ensureTelemetrySlrAuthorized,
+  requireTelemetrySlrAuthorized,
   getTelemetryGroupSwitch,
   getTelemetryServiceStatus,
   pollTelemetryData,
+  SLR_STATUS_API,
   TELEMETRY_SERVICE_STATUS_API,
   type TelemetryServiceStatus,
 } from "../shared/telemetry.ts";
 
-const SLR_STATUS_API = "zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus";
-const CREATE_SLR_API = "zeldaEasy.bailian-telemetry.activate.createTelemetrySlr";
 const INIT_CMS_API = "zeldaEasy.bailian-telemetry.activate.initCmsService";
 const INIT_STORE_API = "zeldaEasy.bailian-telemetry.activate.initTelemetryStoreInstance";
 const SERVICE_TYPE = "ModelMonitor";
@@ -41,8 +40,8 @@ async function waitFor(
 export default defineTelemetryCommand({
   description: {
     "en-US":
-      "Activate monitoring delivery: CMS SLR authorization, CMS service, and the dedicated Prometheus instance",
-    "zh-CN": "开通监控数据投递：CMS SLR 授权、开通 CMS 服务、创建用户独享 Prometheus 实例",
+      "Activate monitoring delivery: CMS SLR check, CMS service, and the dedicated Prometheus instance",
+    "zh-CN": "开通监控数据投递：校验 CMS SLR 授权、开通 CMS 服务、创建用户独享 Prometheus 实例",
   },
   auth: "console",
   usageArgs: "[--no-wait] [flags]",
@@ -58,9 +57,9 @@ export default defineTelemetryCommand({
   notes: [
     {
       "en-US":
-        "Steps: 1) authorize the CMS service-linked role, 2) open the CMS service (async, polled via openStatus), 3) create the dedicated Prometheus instance (async, polled until Ready), 4) turn on the monitor delivery switch for all models. Server-side throttles duplicate submissions within 30s.",
+        "Steps: 1) verify the CMS service-linked role is authorized (stops with manual-authorization guidance when missing), 2) open the CMS service (async, polled via openStatus), 3) create the dedicated Prometheus instance (async, polled until Ready), 4) turn on the monitor delivery switch for all models. Server-side throttles duplicate submissions within 30s.",
       "zh-CN":
-        "开通链路：1）授权 CMS 服务关联角色；2）开通 CMS 服务（异步，以 openStatus 为准）；3）创建用户独享 Prometheus 实例（异步，等待 Ready）；4）为全部模型打开监控投递开关。服务端对 30 秒内的重复提交做节流。",
+        "开通链路：1）校验 CMS 服务关联角色已授权（未授权时停止并引导手动开通）；2）开通 CMS 服务（异步，以 openStatus 为准）；3）创建用户独享 Prometheus 实例（异步，等待 Ready）；4）为全部模型打开监控投递开关。服务端对 30 秒内的重复提交做节流。",
     },
   ],
   exampleArgs: ["", "--no-wait", "--output json"],
@@ -72,7 +71,6 @@ export default defineTelemetryCommand({
       ctx.output.result({
         apis: [
           SLR_STATUS_API,
-          CREATE_SLR_API,
           TELEMETRY_SERVICE_STATUS_API,
           INIT_CMS_API,
           INIT_STORE_API,
@@ -111,11 +109,8 @@ export default defineTelemetryCommand({
       return;
     }
 
-    // Step 1: CMS service-linked role.
-    await ensureTelemetrySlrAuthorized(ctx.client, "Cms", settings.workspaceId, {
-      onProgress: (message) =>
-        ctx.output.progress({ "en-US": message, "zh-CN": "正在授权服务关联角色……" }),
-    });
+    // Step 1: CMS service-linked role must already be authorized; never auto-create.
+    await requireTelemetrySlrAuthorized(ctx.client, "Cms", settings.workspaceId, ctx.localize);
 
     // Step 2: open the CMS service (only submits when still closed; poll openStatus).
     if (!status.openStatus) {

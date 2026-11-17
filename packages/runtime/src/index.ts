@@ -40,6 +40,7 @@ export {
   MCP_WEBSEARCH_PAGE,
   mcpMarketplaceDetailPage,
   VOICE_TTS_PAGE,
+  MODEL_TELEMETRY_DOC,
   refundConsolePage,
 } from "./urls.ts";
 

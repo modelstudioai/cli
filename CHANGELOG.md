@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.10.1] - 2026-11-13
+
+### Fixed
+
+- **Output format**: `--output` accepts only `text` or `json`. Any other value is rejected before the command runs.
+- **Free-tier dry run**: A dry run of `bl usage free` or `bl usage freetier` that targets every model without resolving the model list now marks the preview as covering all models and not yet resolved, so it is not mistaken for a concrete model set.
+- **API key login**: Key validation follows the configured request timeout instead of stopping at a fixed short limit.
+
 ## [2.10.0] - 2026-11-13
 
 ### Added

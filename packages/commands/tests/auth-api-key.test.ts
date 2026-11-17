@@ -1,6 +1,6 @@
 import { httpTransport } from "bailian-cli-core";
 import { BailianError, ExitCode, type Identity, type Settings } from "bailian-cli-core";
-import { expect, test } from "vite-plus/test";
+import { expect, test, vi } from "vite-plus/test";
 import {
   apiKeyValidationCandidates,
   validateApiKey,
@@ -331,6 +331,48 @@ test("同一优先级的 HTTP 错误保持候选顺序", async () => {
       requestId: "req-first",
     });
   } finally {
+    httpTransport.fetch = originalFetch;
+  }
+});
+
+test("API Key 校验超时跟随 settings.timeout，不再被 5 秒硬顶截断", async () => {
+  const originalFetch = httpTransport.fetch;
+  httpTransport.fetch = async (_input, init) => {
+    const signal = init?.signal;
+    return await new Promise<never>((_resolve, reject) => {
+      if (signal?.aborted) {
+        reject(signal.reason ?? new Error("aborted"));
+        return;
+      }
+      signal?.addEventListener(
+        "abort",
+        () => {
+          reject(signal.reason ?? new Error("aborted"));
+        },
+        { once: true },
+      );
+    });
+  };
+
+  vi.useFakeTimers({ toFake: ["setTimeout"] });
+  try {
+    const pending = validateApiKey(
+      { identity, settings: { ...settings, timeout: 60 } },
+      "sk-placeholder",
+      { explicitBaseUrl: "https://ws-explicit.ap-southeast-1.maas.aliyuncs.com" },
+    ).then(
+      () => "resolved" as const,
+      () => "rejected" as const,
+    );
+
+    // 旧硬顶是 5 秒：若仍封顶，这里应已结束；跟随 settings.timeout=60 时仍应挂起
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(await Promise.race([pending, Promise.resolve("pending")])).toBe("pending");
+
+    await vi.advanceTimersByTimeAsync(55_000);
+    expect(await pending).toBe("rejected");
+  } finally {
+    vi.useRealTimers();
     httpTransport.fetch = originalFetch;
   }
 });

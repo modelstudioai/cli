@@ -98,7 +98,7 @@ describe("e2e: bl registry smoke", () => {
     expect(stderr).toMatch(/--console-region <region>/);
     expect(stderr).toMatch(/--model <model>/);
     expect(stderr).toMatch(/--period <minutes>/);
-    expect(stderr).toMatch(/--output <format>/);
+    expect(stderr).toMatch(/--output <text\|json>/);
     expect(stderr).not.toMatch(/API region \(default: cn-beijing\)/);
   });
 

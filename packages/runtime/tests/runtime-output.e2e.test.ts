@@ -120,6 +120,13 @@ test.each(
   expect(diagnostics(result.stderr)[0].error.code).toBe(2);
 });
 
+test("illegal --output value is a usage error instead of silent text fallback", async () => {
+  const result = await invoke(["probe", "--output", "yaml"]);
+  expect(result.exitCode).toBe(2);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toContain("Flag --output must be one of: text, json");
+});
+
 test("corrupt configuration preserves defaults with a structured warning", async () => {
   const result = await invoke(["probe", "--output", "json"], {
     corrupt: true,

@@ -15,9 +15,10 @@ import {
   telemetryGatewayPreview,
   buildGroupSwitchReqDTO,
   ensureTelemetryRegionSupported,
-  ensureTelemetrySlrAuthorized,
+  requireTelemetrySlrAuthorized,
   ENABLE_GROUP_API,
   DISABLE_GROUP_API,
+  SLR_STATUS_API,
   getTelemetryGroupSwitch,
   getTelemetryServiceStatus,
   pollTelemetryData,
@@ -241,7 +242,6 @@ export const LOG_GROUP_TYPES = {
 
 export type LogKind = keyof typeof LOG_GROUP_TYPES;
 
-const CREATE_SLR_API = "zeldaEasy.bailian-telemetry.activate.createTelemetrySlr";
 const INIT_STORE_API = "zeldaEasy.bailian-telemetry.activate.initTelemetryStoreInstance";
 
 const WAIT_INTERVAL_MS = 3000;
@@ -295,13 +295,15 @@ export interface LogEnableContext {
   client: Client;
   settings: Settings;
   commandPrefix: string;
+  localize: (text: LocalizedText) => string;
   noWait?: boolean;
 }
 
 /**
  * Enable one log delivery switch, mirroring the console flow:
- * 1) authorize the SLS service-linked role, 2) initialize the SLS store
- * instance when missing (async), 3) flip the telemetry group switch.
+ * 1) verify the SLS service-linked role is authorized (stop with guidance when
+ * missing), 2) initialize the SLS store instance when missing (async),
+ * 3) flip the telemetry group switch.
  */
 export async function enableLogDelivery(
   ctx: LogEnableContext,
@@ -313,7 +315,7 @@ export async function enableLogDelivery(
 
   if (settings.dryRun) {
     ctx.output.result({
-      apis: [CREATE_SLR_API, INIT_STORE_API, ENABLE_GROUP_API],
+      apis: [SLR_STATUS_API, INIT_STORE_API, ENABLE_GROUP_API],
       data: { reqDTO: groupReqDTO(settings, kind) },
       ...telemetryGatewayPreview(settings),
     });
@@ -322,12 +324,8 @@ export async function enableLogDelivery(
 
   ensureTelemetryRegionSupported(settings);
 
-  // Step 1: SLS service-linked role.
-  await ensureTelemetrySlrAuthorized(client, "Log", settings.workspaceId, {
-    pollRetries: 5,
-    onProgress: (message) =>
-      ctx.output.progress({ "en-US": message, "zh-CN": "正在授权服务关联角色……" }),
-  });
+  // Step 1: SLS service-linked role must already be authorized; never auto-create.
+  await requireTelemetrySlrAuthorized(client, "Log", settings.workspaceId, ctx.localize);
 
   // Step 2: SLS store instance (async creation, poll until Ready).
   let serviceStatus = await getTelemetryServiceStatus(client, serviceType, settings.workspaceId);

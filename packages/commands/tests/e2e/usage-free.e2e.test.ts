@@ -4,6 +4,7 @@ import {
   isConsoleAuthFailure,
   parseStdoutJson,
   runCommandHelp,
+  runCommandInProcess,
   runConsoleCommandE2e,
 } from "./helpers.ts";
 import { USAGE_ROUTES } from "./topic-routes.ts";
@@ -21,6 +22,27 @@ describe("e2e: usage free", () => {
     expect(stderr).toContain("bl usage free");
     expect(stderr).toContain("bl usage free --model qwen3-max");
     expect(stderr).toContain("bl usage free --model qwen3-max,qwen-turbo");
+  });
+
+  test("usage free --dry-run 无 --model 标注全量范围未解析", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(USAGE_ROUTES, [
+      "usage",
+      "free",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      api: string;
+      scope: string;
+      models_resolved: boolean;
+      data: { queryFreeTierQuotaRequest: { models: string[] } };
+    }>(stdout);
+    expect(data.api).toContain("queryFreeTierQuota");
+    expect(data.scope).toBe("all");
+    expect(data.models_resolved).toBe(false);
+    expect(data.data.queryFreeTierQuotaRequest.models).toEqual([]);
   });
 });
 

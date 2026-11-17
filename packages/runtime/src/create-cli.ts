@@ -83,19 +83,34 @@ function presentationFlags(argv: string[]): Partial<SourceFlags> {
   for (let index = 0; index < argv.length; index++) {
     const argument = argv[index]!;
     if (argument === "--") break;
-    if (argument === "--quiet") flags.quiet = true;
-    else if (argument === "--verbose") flags.verbose = true;
-    else
-      for (const key of ["output", "config"] as const) {
-        if (argument.startsWith(`--${key}=`)) flags[key] = argument.slice(key.length + 3);
-        else if (argument === `--${key}`) {
-          const value = argv[index + 1];
-          if (value !== undefined && !value.startsWith("--")) {
-            flags[key] = value;
-            index++;
-          }
+    if (argument === "--quiet") {
+      flags.quiet = true;
+      continue;
+    }
+    if (argument === "--verbose") {
+      flags.verbose = true;
+      continue;
+    }
+
+    for (const key of ["output", "config"] as const) {
+      let value: string | undefined;
+      if (argument.startsWith(`--${key}=`)) value = argument.slice(key.length + 3);
+      else if (argument === `--${key}`) {
+        const next = argv[index + 1];
+        if (next !== undefined && !next.startsWith("--")) {
+          value = next;
+          index++;
         }
+      } else continue;
+
+      if (value === undefined) continue;
+      if (key === "config") {
+        flags.config = value;
+        continue;
       }
+      // Only accept legal formats here; illegal values are rejected by parseFlags.
+      if (value === "text" || value === "json") flags.output = value;
+    }
   }
   return flags;
 }

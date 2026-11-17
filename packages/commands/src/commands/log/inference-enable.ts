@@ -5,8 +5,8 @@ import { LOG_SERVICE_TYPES } from "./status.ts";
 
 export default defineTelemetryCommand({
   description: {
-    "en-US": "Enable inference log delivery to SLS (SLR authorization → SLS instance → log switch)",
-    "zh-CN": "开启推理日志投递到 SLS（SLR 授权 → SLS 实例初始化 → 打开日志开关）",
+    "en-US": "Enable inference log delivery to SLS (SLR check → SLS instance → log switch)",
+    "zh-CN": "开启推理日志投递到 SLS（SLR 校验 → SLS 实例初始化 → 打开日志开关）",
   },
   auth: "console",
   usageArgs: "[--no-wait] [flags]",
@@ -14,9 +14,9 @@ export default defineTelemetryCommand({
   notes: [
     {
       "en-US":
-        "Steps: 1) authorize the SLS service-linked role, 2) initialize the SLS store instance (async), 3) turn on inference log delivery for all models in the workspace.",
+        "Steps: 1) verify the SLS service-linked role is authorized (stops with manual-authorization guidance when missing), 2) initialize the SLS store instance (async), 3) turn on inference log delivery for all models in the workspace.",
       "zh-CN":
-        "开启链路：1）授权 SLS 服务关联角色；2）初始化 SLS 存储实例（异步）；3）为当前业务空间全部模型打开推理日志开关。",
+        "开启链路：1）校验 SLS 服务关联角色已授权（未授权时停止并引导手动开通）；2）初始化 SLS 存储实例（异步）；3）为当前业务空间全部模型打开推理日志开关。",
     },
     {
       "en-US":
@@ -31,6 +31,7 @@ export default defineTelemetryCommand({
       output: ctx.output,
       settings: ctx.settings,
       commandPrefix: formatCommand(ctx.identity),
+      localize: ctx.localize,
       noWait: ctx.flags.noWait,
     };
 

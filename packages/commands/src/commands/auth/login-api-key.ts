@@ -51,7 +51,6 @@ export interface ApiKeyValidationResult {
   kind: ApiKeyEndpointKind;
 }
 
-const API_KEY_VALIDATION_TIMEOUT_SECONDS = 5;
 const ORDINARY_WORKSPACE_REGIONS = [
   "cn-beijing",
   "ap-southeast-1",
@@ -197,7 +196,7 @@ export async function validateApiKey(
         await requestJson<unknown>(deps, {
           url: candidate.modelsUrl,
           headers: { Authorization: `Bearer ${key}` },
-          timeout: Math.min(deps.settings.timeout, API_KEY_VALIDATION_TIMEOUT_SECONDS),
+          timeout: deps.settings.timeout,
         });
         return { candidate };
       } catch (error) {

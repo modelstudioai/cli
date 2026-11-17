@@ -92,4 +92,26 @@ describe("e2e: usage freetier", () => {
     expect(data.api).toBe("zeldaEasy.bailian-commerce.freeTrial.batchDeactivateFreeTierOnly");
     expect(data.data.BatchDeactivateFreeTierOnlyRequest.models).toEqual(["qwen-plus"]);
   });
+
+  test("usage freetier --all --dry-run 标注全量范围未解析，不把空列表当执行计划", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(USAGE_ROUTES, [
+      "usage",
+      "freetier",
+      "--all",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      api: string;
+      scope: string;
+      models_resolved: boolean;
+      data: { BatchActivateFreeTierOnlyRequest: { models: string[] } };
+    }>(stdout);
+    expect(data.api).toBe("zeldaEasy.bailian-commerce.freeTrial.batchActivateFreeTierOnly");
+    expect(data.scope).toBe("all");
+    expect(data.models_resolved).toBe(false);
+    expect(data.data.BatchActivateFreeTierOnlyRequest.models).toEqual([]);
+  });
 });
