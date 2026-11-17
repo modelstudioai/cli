@@ -7,15 +7,15 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                       | Authentication | Description                                                                                             |
-| ----------------------------- | -------------- | ------------------------------------------------------------------------------------------------------- |
-| `bl monitor delivery disable` | Console        | Disable monitor delivery for all models in the workspace                                                |
-| `bl monitor delivery enable`  | Console        | Activate monitoring delivery: CMS SLR authorization, CMS service, and the dedicated Prometheus instance |
-| `bl monitor delivery status`  | Console        | Show monitoring delivery (Prometheus instance) status                                                   |
-| `bl monitor errors`           | Console        | Show failure breakdown by HTTP status code and error code                                               |
-| `bl monitor metrics`          | Console        | Query time-series monitor metrics (RPM/TPM, latency percentiles, token usage)                           |
-| `bl monitor models`           | Console        | List per-model / per-API-key call statistics with server-side sort and paging                           |
-| `bl monitor overview`         | Console        | Show aggregated model call statistics (calls, failures, latency, token usage)                           |
+| Command                       | Authentication | Description                                                                                     |
+| ----------------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| `bl monitor delivery disable` | Console        | Disable monitor delivery for all models in the workspace                                        |
+| `bl monitor delivery enable`  | Console        | Activate monitoring delivery: CMS SLR check, CMS service, and the dedicated Prometheus instance |
+| `bl monitor delivery status`  | Console        | Show monitoring delivery (Prometheus instance) status                                           |
+| `bl monitor errors`           | Console        | Show failure breakdown by HTTP status code and error code                                       |
+| `bl monitor metrics`          | Console        | Query time-series monitor metrics (RPM/TPM, latency percentiles, token usage)                   |
+| `bl monitor models`           | Console        | List per-model / per-API-key call statistics with server-side sort and paging                   |
+| `bl monitor overview`         | Console        | Show aggregated model call statistics (calls, failures, latency, token usage)                   |
 
 ## Command details
 
@@ -59,12 +59,12 @@ bl monitor delivery disable --output json
 
 ### `bl monitor delivery enable`
 
-| Field              | Value                                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------------------- |
-| **Name**           | `monitor delivery enable`                                                                               |
-| **Description**    | Activate monitoring delivery: CMS SLR authorization, CMS service, and the dedicated Prometheus instance |
-| **Authentication** | Console                                                                                                 |
-| **Usage**          | `bl monitor delivery enable [--no-wait] [flags]`                                                        |
+| Field              | Value                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| **Name**           | `monitor delivery enable`                                                                       |
+| **Description**    | Activate monitoring delivery: CMS SLR check, CMS service, and the dedicated Prometheus instance |
+| **Authentication** | Console                                                                                         |
+| **Usage**          | `bl monitor delivery enable [--no-wait] [flags]`                                                |
 
 #### Flags
 
@@ -78,7 +78,7 @@ bl monitor delivery disable --output json
 
 #### Notes
 
-- Steps: 1) authorize the CMS service-linked role, 2) open the CMS service (async, polled via openStatus), 3) create the dedicated Prometheus instance (async, polled until Ready), 4) turn on the monitor delivery switch for all models. Server-side throttles duplicate submissions within 30s.
+- Steps: 1) verify the CMS service-linked role is authorized (stops with manual-authorization guidance when missing), 2) open the CMS service (async, polled via openStatus), 3) create the dedicated Prometheus instance (async, polled until Ready), 4) turn on the monitor delivery switch for all models. Server-side throttles duplicate submissions within 30s.
 - Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
 - When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
 

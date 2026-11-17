@@ -37,6 +37,14 @@ export const MCP_WEBSEARCH_PAGE = mcpMarketplaceDetailPage("WebSearch");
 export const VOICE_TTS_PAGE = "https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list";
 
 /**
+ * Model telemetry doc — guides users to manually authorize the service-linked
+ * roles (SLR) required by monitor / log delivery. The CLI only checks SLR
+ * status and never creates roles on the user's behalf.
+ */
+export const MODEL_TELEMETRY_DOC =
+  "https://docs.bailian.console.aliyun.com/zh/model-studio/model-telemetry";
+
+/**
  * Aliyun billing console refund (unsubscribe) page for one prepaid instance.
  * Unsubscribing a prepaid PTU capacity instance is a billing action that has
  * no API; users complete it here with the account that placed the order.

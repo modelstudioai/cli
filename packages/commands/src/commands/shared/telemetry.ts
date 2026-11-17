@@ -8,8 +8,10 @@ import {
   type Client,
   type Command,
   type FlagsDef,
+  type LocalizedText,
   type Settings,
 } from "bailian-cli-core";
+import { MODEL_TELEMETRY_DOC } from "bailian-cli-runtime";
 import { parseCommaList } from "./params.ts";
 import { consoleWorkspaceIdentityPreview, resolveConsoleWorkspaceAgent } from "./workspace.ts";
 
@@ -331,8 +333,7 @@ export async function ensureTelemetryReady(
 // Service-linked role (SLR) helpers
 // ---------------------------------------------------------------------------
 
-const SLR_STATUS_API = "zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus";
-const CREATE_SLR_API = "zeldaEasy.bailian-telemetry.activate.createTelemetrySlr";
+export const SLR_STATUS_API = "zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus";
 
 export type TelemetrySlrType = "Log" | "Xtrace" | "Cms";
 
@@ -348,34 +349,29 @@ export async function getTelemetrySlrAuthorized(
 }
 
 /**
- * Authorize a service-linked role when missing. The role takes effect with a
- * short delay, so after submitting we poll the status API briefly; a lagging
- * status is not treated as a failure (downstream APIs re-check anyway).
+ * Gate a delivery-enable command on the service-linked role being authorized.
+ * Creating an SLR grants cross-service permissions on the user's account, so
+ * the CLI never does it automatically: when the role is missing we stop with
+ * AUTH and point at the doc that walks the user through manual authorization.
  */
-export async function ensureTelemetrySlrAuthorized(
+export async function requireTelemetrySlrAuthorized(
   client: Client,
   slrType: TelemetrySlrType,
-  workspaceId?: string,
-  opts: {
-    pollRetries?: number;
-    pollIntervalMs?: number;
-    onProgress?: (message: string) => void;
-  } = {},
-): Promise<boolean> {
-  if (await getTelemetrySlrAuthorized(client, slrType, workspaceId)) return true;
-
-  opts.onProgress?.("Authorizing the service-linked role...");
-  await client.console(CREATE_SLR_API, {
-    reqDTO: { ...(workspaceId ? { workspaceId } : {}), slrType },
-  });
-
-  const retries = opts.pollRetries ?? 10;
-  const intervalMs = opts.pollIntervalMs ?? 2000;
-  for (let attempt = 0; attempt < retries; attempt += 1) {
-    if (await getTelemetrySlrAuthorized(client, slrType, workspaceId)) return true;
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-  }
-  return false;
+  workspaceId: string | undefined,
+  localize: (text: LocalizedText) => string,
+): Promise<void> {
+  if (await getTelemetrySlrAuthorized(client, slrType, workspaceId)) return;
+  throw new BailianError(
+    localize({
+      "en-US": "The service-linked role (SLR) required for telemetry delivery is not authorized.",
+      "zh-CN": "遥测投递所需的服务关联角色（SLR）尚未授权。",
+    }),
+    ExitCode.AUTH,
+    localize({
+      "en-US": `The CLI does not create service-linked roles automatically. Follow ${MODEL_TELEMETRY_DOC} to authorize the role in the console, then retry.`,
+      "zh-CN": `CLI 不会自动创建服务关联角色。请参照 ${MODEL_TELEMETRY_DOC} 在控制台完成授权后重试。`,
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
