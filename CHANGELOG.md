@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.10.3] - 2026-11-18
+
+### Fixed
+
+- **Workspace list**: `bl workspace list` now returns every accessible workspace instead of only the gateway's default first page (10). Console workspace resolution used by telemetry, alert, log, dataset, file and deploy commands also covers workspaces beyond the first page.
+
+## [2.10.2] - 2026-11-17
+
+### Changed
+
+- **Telemetry service-linked role**: `bl monitor delivery enable` and `bl log audit/inference enable` no longer create the service-linked role automatically. They check the role status and stop with bilingual guidance to the model-telemetry documentation when it is missing, so cross-service permissions are never granted silently.
+
 ## [2.10.1] - 2026-11-13
 
 ### Fixed
