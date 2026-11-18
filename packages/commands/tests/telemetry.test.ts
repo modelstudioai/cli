@@ -29,7 +29,7 @@ const telemetryCommands = await loadRouteCommands({
   ...MONITOR_ROUTES,
   ...LOG_ROUTES,
 });
-const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
 const workspaceId = "ws-telemetry-test";
 const mappedAgent = 87654321;
 const originalAgent = 12345678;
@@ -97,7 +97,10 @@ function mockTelemetryGateway(
       new URLSearchParams(init.body).get("params") ?? "{}",
     );
     requests.push(request);
-    const payload = request.Api === workspaceApi ? { data: workspaces } : respond(request);
+    const payload =
+      request.Api === workspaceApi
+        ? { list: workspaces, total: workspaces.length, pageNo: 1, pageSize: 100 }
+        : respond(request);
     return new Response(JSON.stringify({ data: { DataV2: { data: { data: payload } } } }));
   });
 }

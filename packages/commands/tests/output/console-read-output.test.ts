@@ -15,6 +15,7 @@ import datasetVersion from "../../src/commands/dataset/version.ts";
 import datasetGroups from "../../src/commands/dataset/groups.ts";
 import fileUrl from "../../src/commands/file/url.ts";
 import deployInstances from "../../src/commands/deploy/instances.ts";
+import { workspaceListRequest } from "../../src/commands/shared/workspace.ts";
 
 const identity = { binName: "bl", version: "test", clientName: "test", npmPackage: "test" };
 const datasetApi = "zeldaEasy.broadscope-platform.dataset.queryByDatasetId.m_efm";
@@ -23,7 +24,7 @@ const versionsApi = "zeldaEasy.broadscope-platform.dataset.query.m_efm";
 const fileApi = "zeldaEasy.bmp.ossRpcService.download";
 const instancesApi =
   "zeldaEasy.broadscope-platform.modelInstance.listIndependentDeployedModel.m_efm";
-const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
 const retained = { future: { enabled: false, count: 0, missing: null, values: [] } };
 const dataset = {
   datasetId: "fixture-version",
@@ -293,7 +294,7 @@ beforeEach(() => {
     // simplified envelopes hid a production workspace-resolution regression.
     const responseData =
       params.Api === workspaceApi && Array.isArray(payload)
-        ? { data: payload, maxResults: 100, totalCount: payload.length }
+        ? { list: payload, total: payload.length, pageNo: 1, pageSize: 100 }
         : payload;
     return Response.json({
       code: "200",
@@ -422,7 +423,10 @@ function diagnostics(stderr: string): Array<{ debug?: unknown; error: { message:
     : [];
 }
 function expectGatewayCalls(scenario: Scenario, scoped = false) {
-  const expected = [...(scoped ? [{ api: workspaceApi, data: {} }] : []), ...scenario.requests];
+  const expected = [
+    ...(scoped ? [{ api: workspaceApi, data: workspaceListRequest(1) }] : []),
+    ...scenario.requests,
+  ];
   expect(calls).toHaveLength(expected.length);
   for (const [index, request] of expected.entries()) {
     const call = calls[index]!;

@@ -12,7 +12,7 @@ import { createOutputReporter } from "bailian-cli-runtime";
 import * as commands from "../../src/index.ts";
 
 const identity = { binName: "bl", version: "test", clientName: "test", npmPackage: "test" };
-const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
 const statusApi = "zeldaEasy.bailian-telemetry.activate.getTelemetryServiceStatus";
 const ruleApi = "zeldaEasy.bailian-telemetry.alertRule.";
 const templateApi = "zeldaEasy.bailian-telemetry.alertTemplate.";
@@ -256,9 +256,10 @@ beforeEach(() => {
         data: { success: false, errorCode: "Original.Rejected", message: "original failure" },
       });
     let payload: unknown;
-    if (params.Api === workspaceApi)
-      payload = missingWorkspace ? [] : [{ workspaceId: "ws-test", tenantId: "7654321" }];
-    else if (params.Api === statusApi) {
+    if (params.Api === workspaceApi) {
+      const workspaces = missingWorkspace ? [] : [{ workspaceId: "ws-test", tenantId: "7654321" }];
+      payload = { list: workspaces, total: workspaces.length, pageNo: 1, pageSize: 100 };
+    } else if (params.Api === statusApi) {
       if (pending && calls.filter((call) => call.api === statusApi).length === 1)
         payload = { taskId: "pending-one" };
       else payload = { openStatus: !closed };

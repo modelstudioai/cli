@@ -7,6 +7,10 @@ import auditCount from "../../src/commands/log/audit-count.ts";
 import inferenceCount from "../../src/commands/log/inference-count.ts";
 import inferenceList from "../../src/commands/log/inference-list.ts";
 import workspaceList from "../../src/commands/workspace/list.ts";
+import {
+  MAX_WORKSPACE_LIST_PAGES,
+  WORKSPACE_LIST_PAGE_SIZE,
+} from "../../src/commands/shared/workspace.ts";
 import { parseStdoutJson, runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import { LOG_ROUTES } from "./topic-routes.ts";
 
@@ -27,12 +31,18 @@ describe("审计与推理日志请求与响应契约", () => {
     usage: '{"input_tokens":23,"output_tokens":7,"total_tokens":30}',
   };
   const rawEntry = { originLog, channel: "default", source: "model" };
-  const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+  const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
+  const legacyWorkspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
   const mappedAgent = 87654321;
   let stdoutChunks: string[] = [];
   let requests: {
     Api: string;
-    Data: { reqDTO: Record<string, unknown>; cornerstoneParam: Record<string, unknown> };
+    Data: {
+      reqDTO: Record<string, unknown>;
+      cornerstoneParam: Record<string, unknown>;
+      skip?: number;
+      maxResults?: number;
+    };
   }[] = [];
 
   async function runAudit(
@@ -48,6 +58,8 @@ describe("审计与推理日志请求与响应契约", () => {
       listError?: string;
       listPayload?: unknown;
       workspaceEnvelope?: "bare" | "direct";
+      workspacePages?: (pageNo: number) => { list: unknown[]; total: number };
+      workspaceLegacyShape?: boolean;
       countPayload?: unknown;
     } = {},
   ) {
@@ -83,6 +95,10 @@ describe("审计与推理日志请求与响应契约", () => {
             }),
           );
         }
+        if (mockOptions.workspacePages) {
+          const page = mockOptions.workspacePages(request.Data.reqDTO.pageNo as number);
+          return new Response(JSON.stringify({ data: { DataV2: { data: { data: page } } } }));
+        }
         const workspaces = mockOptions.workspaces ?? [
           { workspaceId: "ws-default", tenantId: "12345678", defaultAgent: true },
           {
@@ -92,12 +108,25 @@ describe("审计与推理日志请求与响应契约", () => {
             defaultAgent: false,
           },
         ];
-        payload = { data: workspaces, totalCount: workspaces.length };
+        if (mockOptions.workspaceLegacyShape) {
+          // 旧形状（无 list 字段）触发回退旧接口。
+          return new Response(
+            JSON.stringify({
+              data: {
+                DataV2: { data: { data: { data: workspaces, totalCount: workspaces.length } } },
+              },
+            }),
+          );
+        }
+        payload = { list: workspaces, total: workspaces.length, pageNo: 1, pageSize: 100 };
         if (mockOptions.workspaceEnvelope) {
           return new Response(
             JSON.stringify(mockOptions.workspaceEnvelope === "bare" ? payload : { data: payload }),
           );
         }
+      } else if (request.Api === legacyWorkspaceApi) {
+        const workspaces = mockOptions.workspaces ?? [];
+        payload = { data: workspaces, totalCount: workspaces.length };
       } else if (request.Api === "zeldaEasy.bailian-telemetry.model.countModelLogs") {
         // 旧计数接口与两类列表总数不一致，用差异化响应锁住计数口径回归。
         payload = "countPayload" in mockOptions ? mockOptions.countPayload : { totalCount: 0 };
@@ -785,6 +814,134 @@ describe("审计与推理日志请求与响应契约", () => {
     expect(JSON.parse(result.stdout)).toEqual([
       { workspaceId: "ws-audit-test", name: "测试空间", default: false },
     ]);
+  });
+
+  test("workspace list 按 total 翻页聚合全部空间并逐页推进 pageNo", async () => {
+    const allWorkspaces = Array.from({ length: 25 }, (_unused, index) => ({
+      workspaceId: `ws-page-${index}`,
+      tenantId: String(10000 + index),
+      agentName: `空间${index}`,
+      defaultAgent: index === 0,
+    }));
+    const result = await runAudit(workspaceList, [], {}, {}, "en-US", {
+      workspacePages: (pageNo) => ({
+        list: allWorkspaces.slice((pageNo - 1) * 10, pageNo * 10),
+        total: allWorkspaces.length,
+      }),
+    });
+    const items = JSON.parse(result.stdout) as { workspaceId: string }[];
+    expect(items.map((item) => item.workspaceId)).toEqual(
+      allWorkspaces.map((workspace) => workspace.workspaceId),
+    );
+    const workspaceRequests = result.requests.filter((request) => request.Api === workspaceApi);
+    expect(workspaceRequests.map((request) => request.Data.reqDTO.pageNo)).toEqual([1, 2, 3]);
+    for (const request of workspaceRequests) {
+      expect(request.Data.reqDTO.pageSize).toBe(WORKSPACE_LIST_PAGE_SIZE);
+    }
+  });
+
+  test("workspace list 单页 total 已覆盖时只发一次请求", async () => {
+    const result = await runAudit(workspaceList, [], {}, {}, "en-US", {
+      workspacePages: (pageNo) => ({
+        list:
+          pageNo === 1
+            ? [{ workspaceId: "ws-only", agentName: "唯一空间", defaultAgent: true }]
+            : [],
+        total: 1,
+      }),
+    });
+    expect(JSON.parse(result.stdout)).toEqual([
+      { workspaceId: "ws-only", name: "唯一空间", default: true },
+    ]);
+    expect(result.requests.filter((request) => request.Api === workspaceApi)).toHaveLength(1);
+  });
+
+  test("workspace list 新接口返回旧形状时回退旧接口且不丢空间", async () => {
+    const result = await runAudit(workspaceList, [], {}, {}, "en-US", {
+      workspaces: [{ workspaceId: "ws-legacy", agentName: "旧响应", defaultAgent: true }],
+      workspaceLegacyShape: true,
+    });
+    expect(JSON.parse(result.stdout)).toEqual([
+      { workspaceId: "ws-legacy", name: "旧响应", default: true },
+    ]);
+    expect(result.requests.map((request) => request.Api)).toEqual([
+      workspaceApi,
+      legacyWorkspaceApi,
+    ]);
+  });
+
+  test("workspace list 空页提前终止，不因 total 虚高继续翻页", async () => {
+    const firstPage = Array.from({ length: 10 }, (_unused, index) => ({
+      workspaceId: `ws-short-${index}`,
+      agentName: `空间${index}`,
+      defaultAgent: index === 0,
+    }));
+    const result = await runAudit(workspaceList, [], {}, {}, "en-US", {
+      workspacePages: (pageNo) => ({
+        list: pageNo === 1 ? firstPage : [],
+        total: 20,
+      }),
+    });
+    const items = JSON.parse(result.stdout) as { workspaceId: string }[];
+    expect(items.map((item) => item.workspaceId)).toEqual(
+      firstPage.map((workspace) => workspace.workspaceId),
+    );
+    expect(result.requests.filter((request) => request.Api === workspaceApi)).toHaveLength(2);
+  });
+
+  test("workspace list 分页不收敛时在上限处报错而非静默截断", async () => {
+    await expect(
+      runAudit(workspaceList, [], {}, {}, "en-US", {
+        workspacePages: (pageNo) => ({
+          list: [
+            { workspaceId: `ws-endless-${pageNo}`, agentName: "无尽空间", defaultAgent: false },
+          ],
+          total: Number.MAX_SAFE_INTEGER,
+        }),
+      }),
+    ).rejects.toMatchObject({ exitCode: ExitCode.GENERAL });
+    expect(stdoutChunks).toEqual([]);
+    expect(requests.filter((request) => request.Api === workspaceApi)).toHaveLength(
+      MAX_WORKSPACE_LIST_PAGES,
+    );
+  });
+
+  test("workspace list dry-run 展示首页分页参数且零网络请求", async () => {
+    const result = await runAudit(workspaceList, [], { dryRun: true });
+    expect(result.requests).toEqual([]);
+    expect(parseStdoutJson(result.stdout)).toEqual({
+      api: workspaceApi,
+      data: { reqDTO: { pageNo: 1, pageSize: WORKSPACE_LIST_PAGE_SIZE } },
+      pagination: "Follows total until all workspaces are collected.",
+    });
+  });
+
+  test("空间身份解析跨页命中第二页的空间", async () => {
+    const result = await runAudit(
+      auditList,
+      [rawEntry],
+      { workspaceId: "ws-audit-test" },
+      {},
+      "en-US",
+      {
+        workspacePages: (pageNo) =>
+          pageNo === 1
+            ? {
+                list: Array.from({ length: 10 }, (_unused, index) => ({
+                  workspaceId: `ws-first-${index}`,
+                  tenantId: String(20000 + index),
+                })),
+                total: 11,
+              }
+            : {
+                list: [{ workspaceId: "ws-audit-test", tenantId: String(mappedAgent) }],
+                total: 11,
+              },
+      },
+    );
+    expect(result.request.Data.cornerstoneParam.switchAgent).toBe(mappedAgent);
+    const workspaceRequests = result.requests.filter((request) => request.Api === workspaceApi);
+    expect(workspaceRequests.map((request) => request.Data.reqDTO.pageNo)).toEqual([1, 2]);
   });
 
   test.each(["bare", "direct"] as const)(
