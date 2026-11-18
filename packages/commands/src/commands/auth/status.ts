@@ -56,7 +56,7 @@ export default defineCommand({
         hint: [
           `API key (model):   ${formatCommand(identity, "auth login --api-key <key>")} or DASHSCOPE_API_KEY`,
           `Console gateway:   ${formatCommand(identity, "auth login --console")}`,
-          `OpenAPI (AK/SK):   ${formatCommand(identity, "auth login --open-api --access-key-id <id> --access-key-secret <secret>")}`,
+          `OpenAPI (AK/SK):   ${formatCommand(identity, "auth login --open-api")} (or paste --access-key-id / --access-key-secret)`,
           `Get API Key: ${API_KEY_PAGE}`,
         ].join("\n"),
       });
@@ -97,9 +97,12 @@ export default defineCommand({
     if (openapi) {
       lines.push(`  OpenAPI (AK/SK):  ${openapi.source}  ${openapi.access_key_id}`);
     } else {
-      lines.push(
-        `  OpenAPI (AK/SK):  not configured (run ${formatCommand(identity, "auth login --open-api")})`,
-      );
+      // 与 Console 行一致：状态一行说完，避免再重复 “未配置”
+      const openApiHint = localize({
+        "en-US": `run ${formatCommand(identity, "auth login --open-api")} to get an AccessKey via the guide; if you already have one, configure with ${formatCommand(identity, "auth login --open-api --access-key-id <id> --access-key-secret <secret>")}`,
+        "zh-CN": `运行 ${formatCommand(identity, "auth login --open-api")} 按照引导获取 AccessKey，若已有 AccessKey，使用 ${formatCommand(identity, "auth login --open-api --access-key-id <id> --access-key-secret <secret>")} 进行配置`,
+      });
+      lines.push(`  OpenAPI (AK/SK):  not configured (${openApiHint})`);
     }
     ctx.output.result(
       {
