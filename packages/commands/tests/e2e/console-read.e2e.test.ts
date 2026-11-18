@@ -43,7 +43,7 @@ const versionsApi = "zeldaEasy.broadscope-platform.dataset.query.m_efm";
 const fileApi = "zeldaEasy.bmp.ossRpcService.download";
 const instancesApi =
   "zeldaEasy.broadscope-platform.modelInstance.listIndependentDeployedModel.m_efm";
-const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
 const leaves = [
   {
     path: "dataset version",

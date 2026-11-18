@@ -43,6 +43,23 @@ export function resolveWorkspaceId(ctx: {
 
 export const LIST_WORKSPACES_API = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
 
+/**
+ * Paginated workspace list. The plain listWorkspaces zelda service has no
+ * pagination inputs (the console frontend pages via the BailianControl POP
+ * layer, which the CLI gateway does not expose), while listMyWorkSpaces
+ * accepts reqDTO.pageNo/pageSize and returns { list, total }.
+ */
+export const LIST_MY_WORKSPACES_API = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
+
+export const WORKSPACE_LIST_PAGE_SIZE = 100;
+/** Hard stop so a server that ignores pageNo/total cannot loop forever. */
+export const MAX_WORKSPACE_LIST_PAGES = 100;
+
+/** listMyWorkSpaces contract: pagination lives inside reqDTO. */
+export function workspaceListRequest(pageNo: number): Record<string, unknown> {
+  return { reqDTO: { pageNo, pageSize: WORKSPACE_LIST_PAGE_SIZE } };
+}
+
 export interface ConsoleWorkspaceInfo {
   workspaceId: string;
   agentName: string;
@@ -50,18 +67,63 @@ export interface ConsoleWorkspaceInfo {
   tenantId?: unknown;
 }
 
-/** 复用 workspace list 的只读接口；保留用于查询身份映射的 tenantId。 */
-export async function listConsoleWorkspaces(client: Client): Promise<ConsoleWorkspaceInfo[]> {
+function workspaceTotalCount(value: unknown): number | undefined {
+  const total = typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
+  return typeof total === "number" && Number.isSafeInteger(total) && total >= 0 ? total : undefined;
+}
+
+function workspaceRows(value: unknown): ConsoleWorkspaceInfo[] {
+  return Array.isArray(value)
+    ? value.filter((workspace) => workspace && typeof workspace === "object")
+    : [];
+}
+
+/** Legacy single-page read; kept as a fallback when listMyWorkSpaces is unavailable. */
+async function listConsoleWorkspacesLegacy(client: Client): Promise<ConsoleWorkspaceInfo[]> {
   const result = await client.console<Record<string, unknown>>(LIST_WORKSPACES_API, {});
   const response = unwrapConsoleResponse(result);
-  const workspaces = Array.isArray(response)
+  const pageItems = Array.isArray(response)
     ? response
     : response && typeof response === "object" && "data" in response
       ? response.data
       : undefined;
-  return Array.isArray(workspaces)
-    ? workspaces.filter((workspace) => workspace && typeof workspace === "object")
-    : [];
+  return workspaceRows(pageItems);
+}
+
+/** 复用 workspace list 的只读接口；按 total 翻页取全量，保留用于查询身份映射的 tenantId。 */
+export async function listConsoleWorkspaces(client: Client): Promise<ConsoleWorkspaceInfo[]> {
+  const collected: ConsoleWorkspaceInfo[] = [];
+  let pageNo = 1;
+  for (let page = 0; page < MAX_WORKSPACE_LIST_PAGES; page++) {
+    const result = await client.console<Record<string, unknown>>(
+      LIST_MY_WORKSPACES_API,
+      workspaceListRequest(pageNo),
+    );
+    const response = unwrapConsoleResponse(result);
+    const record =
+      response && typeof response === "object" && !Array.isArray(response)
+        ? (response as Record<string, unknown>)
+        : undefined;
+    if (!Array.isArray(record?.list)) {
+      // Unrecognized shape (e.g. an older gateway): fall back to the legacy
+      // single-page read rather than guessing. Server errors still propagate.
+      return await listConsoleWorkspacesLegacy(client);
+    }
+    const workspaces = workspaceRows(record.list);
+    // Keep duplicates: identity resolution must still reject ambiguous mappings.
+    collected.push(...workspaces);
+    const total = workspaceTotalCount(record.total);
+    // An empty page stops early even if total claims more rows.
+    if (workspaces.length === 0) return collected;
+    if (total === undefined) return await listConsoleWorkspacesLegacy(client);
+    if (collected.length >= total) return collected;
+    pageNo += 1;
+  }
+  throw new BailianError(
+    "Workspace list pagination did not reach total. / 工作空间列表分页未达到 total。",
+    ExitCode.GENERAL,
+    "Retry the command; use --verbose to inspect the workspace list responses.",
+  );
 }
 
 /** workspaceId 是资源标识，tenantId 是同一空间的 Console switchAgent；只覆盖本次请求。 */
@@ -116,7 +178,7 @@ export function consoleWorkspaceIdentityPreview(settings: Pick<Settings, "worksp
   return settings.workspaceId
     ? {
         workspaceIdentity: {
-          api: LIST_WORKSPACES_API,
+          api: LIST_MY_WORKSPACES_API,
           workspaceId: settings.workspaceId,
           switchAgentFrom: "tenantId",
         },

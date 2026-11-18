@@ -3,8 +3,9 @@ import { ansi } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 import {
-  LIST_WORKSPACES_API,
+  LIST_MY_WORKSPACES_API,
   listConsoleWorkspaces,
+  workspaceListRequest,
   type ConsoleWorkspaceInfo,
 } from "../shared/workspace.ts";
 
@@ -73,7 +74,11 @@ export default defineCommand({
     const format = settings.output;
 
     if (settings.dryRun) {
-      ctx.output.result({ api: LIST_WORKSPACES_API, data: {} });
+      ctx.output.result({
+        api: LIST_MY_WORKSPACES_API,
+        data: workspaceListRequest(1),
+        pagination: "Follows total until all workspaces are collected.",
+      });
       return;
     }
 
