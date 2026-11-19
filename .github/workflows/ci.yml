@@ -19,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # Partner skill contribution check needs the PR base commit for path diffs.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
@@ -28,6 +31,11 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      - name: Check partner skill contribution
+        env:
+          GITHUB_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+        run: node tools/check-skill-contribution.mjs
 
       - run: pnpm run sync:skill-assets
 

@@ -1,13 +1,27 @@
 # Skill 文案 / 路由 / 安装约定
 
+> **合作方投稿（非 `bailian-*`）**请看 [docs/skill-contribute/](../skill-contribute/)。本文只服务本团队维护的官方 `bailian-*` 家族。
+
 ## 触发条件
 
 - 改 `skills/*/SKILL.md` 的 description、路由表、consent、安全闸、hand-off、references 落款
 - 调整 `bailian-protocol` 与业务 skill 的关系，或业务 skill 之间的软 hand-off 约定
 - 新增 / 拆分 / 合并 `bailian-*` 业务 skill，或改 `tools/generate-reference.ts` 的 `GROUP_OWNER_SKILL` 归属（与命令增删改交叉时两边都看）
 - 给业务 skill 补安装说明、README，或统一「勿猜 flag → `reference/`」类约定
+- 在总入口 `bailian-cli` 中提及某个已合入的合作方 skill（见下方「在总入口中提及合作方 skill」）
 
 纯改生成物 `skills/*/reference/*.md`（由命令 metadata 驱动）→ 走 [command-add-remove.md](command-add-remove.md) / [command-flag-change.md](command-flag-change.md)，**不要手改 reference**。
+
+## 在总入口中提及合作方 skill
+
+合作方投稿合入后，用户用 `bl skill add --name bailian-protocol,<name>` 即可安装；Agent 靠该 skill 自己的 `description` 触发，**不必**改总入口也能用。
+
+有时希望用户先命中总入口 skill `bailian-cli`，再被指引到某个合作方 skill。这时：
+
+- **只由本团队**另开一个 PR，在 `skills/bailian-cli/SKILL.md` 里加**一行**说明（例如「某类业务场景 → 读 `<partner-skill>`」）
+- **不要**和合作方投稿 PR、或工程改动（`packages/**` / `tools/**`）混在同一 PR
+- 加不加、怎么写由团队决定；不加这一行也不影响合作方 skill 安装后单独被触发
+- 合作方投稿规范见 [docs/skill-contribute/](../skill-contribute/)；对方 PR **不应**改 `bailian-cli`
 
 ## 统一口径（安装）
 
