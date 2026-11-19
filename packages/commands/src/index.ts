@@ -216,14 +216,15 @@ export { default as finetuneRlCancel } from "./commands/finetune/rl-cancel.ts";
 export { default as finetuneRlDelete } from "./commands/finetune/rl-delete.ts";
 export { default as finetuneOpdAuthorize } from "./commands/finetune/opd-authorize.ts";
 export { default as finetuneOpdRun } from "./commands/finetune/opd-run.ts";
+export { default as finetuneOpdParams } from "./commands/finetune/opd-params.ts";
 export { default as finetuneOpdGet } from "./commands/finetune/opd-get.ts";
-export { default as finetuneOpdList } from "./commands/finetune/opd-list.ts";
 export { default as finetuneOpdWatch } from "./commands/finetune/opd-watch.ts";
 export { default as finetuneOpdLogs } from "./commands/finetune/opd-logs.ts";
 export { default as finetuneOpdCancel } from "./commands/finetune/opd-cancel.ts";
 export { default as finetuneOpdDelete } from "./commands/finetune/opd-delete.ts";
 export { default as finetuneRuntimePrepare } from "./commands/finetune/runtime-prepare.ts";
 export { default as finetuneRuntimeDoctor } from "./commands/finetune/runtime-doctor.ts";
+export { default as finetuneRuntimeClean } from "./commands/finetune/runtime-clean.ts";
 export {
   deployTextCreate,
   deployAudioCreate,

@@ -13,7 +13,7 @@ import { ExitCode } from "../errors/codes.ts";
 import { executeIsolatedRun } from "../isolation/app-layer.ts";
 import { createTaskDir } from "../isolation/paths.ts";
 import { startWhitelistProxy } from "../isolation/proxy.ts";
-import { createIsolationAdapter, detectIsolation } from "../isolation/os-isolation/detect.ts";
+import { createIsolationAdapter } from "../isolation/os-isolation/detect.ts";
 import type { IIsolationAdapter } from "../isolation/types.ts";
 import type { IResolvedRuntime } from "./manager.ts";
 
@@ -75,8 +75,9 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
   const timeoutMs = options.timeoutMs ?? SELF_CHECK_TIMEOUT_MS;
   const checks: IDoctorCheck[] = [];
 
-  // 1. 凭据隔离机制探测（硬性）。
-  const capability = await detectIsolation(platform);
+  // 1. 凭据隔离机制探测（硬性）。用实际执行所用的 adapter 探测，
+  // 保证机制判定与后续沙箱执行一致（含注入自定义 adapter 的场景）。
+  const capability = await adapter.detect();
   const mechanismAvailable = capability.credentialDenyRead.available;
   checks.push({
     name: "credential-isolation-mechanism",
@@ -142,9 +143,16 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
     return finalize(checks);
   }
 
-  const layout = createTaskDir();
-  const runPython = (code: string, extraArgs: string[] = [], sdkEnv?: Record<string, string>) =>
-    executeIsolatedRun(
+  // taskDir 随 executeIsolatedRun 单次调用消费（finally 无条件销毁），
+  // 每个探针必须各自创建 layout；共享会让下一个探针的 prepare 向已销毁
+  // 目录写文件（如 darwin profile.sb）而 ENOENT。
+  const runPython = async (
+    code: string,
+    extraArgs: string[] = [],
+    sdkEnv?: Record<string, string>,
+  ) => {
+    const layout = createTaskDir();
+    const result = await executeIsolatedRun(
       {
         layout,
         runtimeRoot: runtime.runtimeRoot,
@@ -157,14 +165,17 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
       },
       adapter,
     );
+    return { result, layout };
+  };
 
   try {
     const version = await runPython("import sys; print(sys.version.split()[0])");
     checks.push({
       name: "python-version",
       required: true,
-      status: version.exitCode === 0 ? "pass" : "fail",
-      detail: version.exitCode === 0 ? version.stdout.trim() : version.stderr.trim(),
+      status: version.result.exitCode === 0 ? "pass" : "fail",
+      detail:
+        version.result.exitCode === 0 ? version.result.stdout.trim() : version.result.stderr.trim(),
     });
 
     // 1.25.23 包根无 __version__ 属性；版本经 importlib.metadata 读取，
@@ -175,8 +186,11 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
     checks.push({
       name: "sdk-import",
       required: true,
-      status: sdkImport.exitCode === 0 ? "pass" : "fail",
-      detail: sdkImport.exitCode === 0 ? sdkImport.stdout.trim() : sdkImport.stderr.trim(),
+      status: sdkImport.result.exitCode === 0 ? "pass" : "fail",
+      detail:
+        sdkImport.result.exitCode === 0
+          ? sdkImport.result.stdout.trim()
+          : sdkImport.result.stderr.trim(),
     });
 
     // FC_PYPI_LIB 注入链真实断言：沙箱内必须读到与提交端运行时锁步的版本
@@ -185,23 +199,25 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
     const fcEnv = await runPython("import os; print(os.environ.get('FC_PYPI_LIB', ''))", [], {
       FC_PYPI_LIB: expectedFcPypiLib,
     });
-    const fcOk = fcEnv.exitCode === 0 && fcEnv.stdout.trim() === expectedFcPypiLib;
+    const fcOk = fcEnv.result.exitCode === 0 && fcEnv.result.stdout.trim() === expectedFcPypiLib;
     checks.push({
       name: "fc-pypi-lib-injected",
       required: true,
       status: fcOk ? "pass" : "fail",
       detail: fcOk
         ? expectedFcPypiLib
-        : `expected ${expectedFcPypiLib}, got ${fcEnv.stdout.trim() || fcEnv.stderr.trim()}`,
+        : `expected ${expectedFcPypiLib}, got ${fcEnv.result.stdout.trim() || fcEnv.result.stderr.trim()}`,
     });
 
     const home = await runPython("import os; print(os.path.expanduser('~'))");
-    const homeOk = home.exitCode === 0 && home.stdout.trim() === layout.homeDir;
+    const homeOk = home.result.exitCode === 0 && home.result.stdout.trim() === home.layout.homeDir;
     checks.push({
       name: "home-redirect",
       required: true,
       status: homeOk ? "pass" : "fail",
-      detail: homeOk ? layout.homeDir : `expected ${layout.homeDir}, got ${home.stdout.trim()}`,
+      detail: homeOk
+        ? home.layout.homeDir
+        : `expected ${home.layout.homeDir}, got ${home.result.stdout.trim()}`,
     });
 
     // 环境闭环负向测试：沙箱内读真实凭据路径必须失败（exit!=0 才算通过）。
@@ -220,9 +236,9 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
       checks.push({
         name: "credential-deny-negative",
         required: true,
-        status: negative.exitCode !== 0 ? "pass" : "fail",
+        status: negative.result.exitCode !== 0 ? "pass" : "fail",
         detail:
-          negative.exitCode !== 0
+          negative.result.exitCode !== 0
             ? "real credential path is blocked inside the sandbox"
             : "real credential path was readable inside the sandbox",
       });

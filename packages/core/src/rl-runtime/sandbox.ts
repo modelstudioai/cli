@@ -124,6 +124,10 @@ export async function executeInSandbox(input: ISandboxRunInput): Promise<unknown
       // SDK 版本决定，FC_PYPI_LIB 只管 FC 装什么；两者错配会启动即崩）。
       // 用户零感知：无需手动注册任何环境变量。
       sdkEnv: { FC_PYPI_LIB: `dashscope==${runtime.dashscopeVersion}` },
+      // SDK 相对进程 cwd 写 start.sh 再按 zipdir 打包（原 demo 流程 cwd==zipdir）。
+      // cwd 必须是可写的 deploy-copy：taskDir 不在写允许集会 EPERM，且落在包外
+      // 会导致上传 zip 缺启动脚本。
+      cwd: layout.deployCopyDir,
       signal: input.signal,
     },
     input.adapter ?? createIsolationAdapter(),

@@ -23,7 +23,8 @@ export function buildSbplProfile(spec: IIsolationSpec): string {
   const proxyPort = spec.proxyPort ?? 0;
   const readPaths = [
     spec.runtimeRoot,
-    // cwd 设为 taskDir，getcwd() 需读 cwd 目录本身；仅允许子目录会让 rich 等库的 os.getcwd() 报 EPERM。
+    // cwd 由调用方指定（默认 taskDir，带代码包的命令为 deploy-copy），getcwd() 需读 cwd 目录本身；
+    // 两者都在读允许集，仅允许子目录会让 rich 等库的 os.getcwd() 报 EPERM。
     spec.taskDir,
     spec.snapshotDir,
     spec.dataDir,

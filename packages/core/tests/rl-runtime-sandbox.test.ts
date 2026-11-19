@@ -148,6 +148,8 @@ describe("executeInSandbox (black-box orchestration)", () => {
       ]);
       // FC_PYPI_LIB 与提交端运行时版本锁步，用户零感知。
       expect(input.sdkEnv).toEqual({ FC_PYPI_LIB: `dashscope==${RL_DASHSCOPE_VERSION}` });
+      // SDK 相对 cwd 写 start.sh：cwd 必须是可写的 deploy-copy（与 zipdir 一致）。
+      expect(input.cwd).toBe(input.layout.deployCopyDir);
       expect(readFileSync(input.layout.configPath, "utf8")).toBe("name: test\n");
     });
   });

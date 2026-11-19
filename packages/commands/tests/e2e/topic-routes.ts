@@ -349,14 +349,15 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune rl delete": "finetuneRlDelete",
   "finetune opd authorize": "finetuneOpdAuthorize",
   "finetune opd run": "finetuneOpdRun",
+  "finetune opd params": "finetuneOpdParams",
   "finetune opd get": "finetuneOpdGet",
-  "finetune opd list": "finetuneOpdList",
   "finetune opd watch": "finetuneOpdWatch",
   "finetune opd logs": "finetuneOpdLogs",
   "finetune opd cancel": "finetuneOpdCancel",
   "finetune opd delete": "finetuneOpdDelete",
   "finetune runtime prepare": "finetuneRuntimePrepare",
   "finetune runtime doctor": "finetuneRuntimeDoctor",
+  "finetune runtime clean": "finetuneRuntimeClean",
 };
 
 export const CONSOLE_FLAGS_DRY_RUN_ROUTES: E2eRouteExports = {

@@ -1,4 +1,5 @@
 import {
+  cleanupSandboxArtifacts,
   defineCommand,
   resolveRuntime,
   RUNTIME_OVERRIDE_ENV,
@@ -52,6 +53,12 @@ export default defineCommand({
       "zh-CN":
         "PyPI CDN 受限地区可设 BAILIAN_RL_PIP_INDEX_URL 指向稳定 PyPI 镜像（如 https://pypi.tuna.tsinghua.edu.cn/simple/ 或 https://mirrors.aliyun.com/pypi/simple/）；pip 仍以 --require-hashes 逐包校验哈希。镜像同步滞后于 PyPI：若镜像缺锁文件钉的版本，pip 报 No matching distribution found for X==ver，换更新更快的镜像或回默认 PyPI。",
     },
+    {
+      "en-US":
+        "Prepare also reclaims orphaned run directories older than 24 hours (crash leftovers); normal runs are disposed automatically when the invocation ends. Use runtime clean to preview or reclaim superseded runtime versions.",
+      "zh-CN":
+        "prepare 会顺手回收超过 24 小时的孤儿任务目录（崩溃残留）；正常调用的任务目录在结束时自动销毁。预览或回收旧版本运行时请用 runtime clean。",
+    },
   ],
   async run(ctx) {
     if (ctx.settings.dryRun) {
@@ -59,8 +66,16 @@ export default defineCommand({
         manifest: ctx.flags.manifest,
         override_env: RUNTIME_OVERRIDE_ENV,
         allow_install: true,
+        prune_orphan_runs: true,
       });
       return;
+    }
+    // 顺手回收崩溃孤儿 runs（TTL 兜底）；best-effort，绝不阻断 prepare 主流程。
+    let prunedRuns = 0;
+    try {
+      prunedRuns = cleanupSandboxArtifacts({ pruneRuntimes: false }).removedCount;
+    } catch {
+      // 清理失败留给 runtime clean
     }
     const runtime = await resolveRuntime({
       allowInstall: true,
@@ -71,6 +86,7 @@ export default defineCommand({
       python_path: runtime.pythonPath,
       dashscope_version: runtime.dashscopeVersion,
       source: runtime.source,
+      pruned_runs: prunedRuns,
     });
   },
 });

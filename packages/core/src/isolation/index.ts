@@ -5,6 +5,7 @@ export * from "./snapshot.ts";
 export * from "./proxy.ts";
 export * from "./process.ts";
 export * from "./app-layer.ts";
+export * from "./cleanup.ts";
 export * from "./os-isolation/detect.ts";
 export * from "./os-isolation/darwin.ts";
 export * from "./os-isolation/linux.ts";

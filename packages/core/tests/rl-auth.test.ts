@@ -3,13 +3,9 @@ import { RL_AUTH_API, extractEnabledFlag, runRlAuthorization } from "../src/inde
 
 const READY = { data: { enabled: true } };
 const MISSING = { data: { enabled: false } };
+const MANUAL_DOC = "https://docs.example.com/rl-training-overview#env-prep";
 
-const MUTATION_APIS: string[] = [
-  RL_AUTH_API.createFineTuningSlr,
-  RL_AUTH_API.createTelemetrySlr,
-  RL_AUTH_API.enableReinforcement,
-  RL_AUTH_API.enableOpd,
-];
+const MUTATION_APIS: string[] = [RL_AUTH_API.enableReinforcement, RL_AUTH_API.enableOpd];
 
 function consoleMock(
   overrides: Record<string, unknown> = {},
@@ -36,7 +32,11 @@ function reqDTO(data: Record<string, unknown> | undefined): Record<string, unkno
 describe("rl authorization state machine", () => {
   test("read-only probe performs no mutations", async () => {
     const { caller, calls } = consoleMock();
-    const report = await runRlAuthorization({ target: "rl", console: caller });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     expect(report.ok).toBe(true);
     expect(apis(calls).filter((api) => MUTATION_APIS.includes(api))).toHaveLength(0);
   });
@@ -46,7 +46,11 @@ describe("rl authorization state machine", () => {
       {},
       { [RL_AUTH_API.queryReinforcementEnabled]: new Error("gateway down") },
     );
-    const report = await runRlAuthorization({ target: "rl", console: caller });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     const enabled = report.checks.find((check) => check.name === "business-enabled");
     expect(enabled?.status).toBe("UNKNOWN");
     expect(report.ok).toBe(false);
@@ -54,14 +58,24 @@ describe("rl authorization state machine", () => {
 
   test("authorize enables RL only, never OPD", async () => {
     const { caller, calls } = consoleMock({ [RL_AUTH_API.queryReinforcementEnabled]: MISSING });
-    await runRlAuthorization({ target: "rl", console: caller, authorize: true });
+    await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      authorize: true,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     expect(apis(calls)).toContain(RL_AUTH_API.enableReinforcement);
     expect(apis(calls)).not.toContain(RL_AUTH_API.enableOpd);
   });
 
   test("authorize enables OPD only, never RL", async () => {
     const { caller, calls } = consoleMock({ [RL_AUTH_API.queryOpdEnabled]: MISSING });
-    await runRlAuthorization({ target: "opd", console: caller, authorize: true });
+    await runRlAuthorization({
+      target: "opd",
+      console: caller,
+      authorize: true,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     expect(apis(calls)).toContain(RL_AUTH_API.enableOpd);
     expect(apis(calls)).not.toContain(RL_AUTH_API.enableReinforcement);
   });
@@ -71,26 +85,46 @@ describe("rl authorization state machine", () => {
       [RL_AUTH_API.checkUserWhitelist]: MISSING,
       [RL_AUTH_API.queryReinforcementEnabled]: MISSING,
     });
-    const report = await runRlAuthorization({ target: "rl", console: caller, authorize: true });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      authorize: true,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     const whitelist = report.checks.find((check) => check.name === "whitelist");
     expect(whitelist?.status).toBe("REQUIRES_USER_ACTION");
     expect(apis(calls)).not.toContain(RL_AUTH_API.enableReinforcement);
     expect(report.ok).toBe(false);
   });
 
-  test("missing fine-tuning SLR is created only when authorized", async () => {
-    const { caller, calls } = consoleMock({ [RL_AUTH_API.checkFineTuningSlrAuth]: MISSING });
-    await runRlAuthorization({ target: "rl", console: caller, authorize: true });
-    expect(apis(calls)).toContain(RL_AUTH_API.createFineTuningSlr);
-
-    const readOnly = consoleMock({ [RL_AUTH_API.checkFineTuningSlrAuth]: MISSING });
-    await runRlAuthorization({ target: "rl", console: readOnly.caller });
-    expect(apis(readOnly.calls)).not.toContain(RL_AUTH_API.createFineTuningSlr);
+  test("missing fine-tuning SLR requires manual authorization and blocks enablement", async () => {
+    const { caller, calls } = consoleMock({
+      [RL_AUTH_API.checkFineTuningSlrAuth]: MISSING,
+      [RL_AUTH_API.queryReinforcementEnabled]: MISSING,
+    });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      authorize: true,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
+    const slr = report.checks.find((check) => check.name === "finetune-slr");
+    expect(slr?.status).toBe("REQUIRES_USER_ACTION");
+    expect(slr?.detail).toContain(MANUAL_DOC);
+    expect(
+      apis(calls).some((api) => api.includes("createSLR") || api.includes("createTelemetrySlr")),
+    ).toBe(false);
+    expect(apis(calls)).not.toContain(RL_AUTH_API.enableReinforcement);
+    expect(report.ok).toBe(false);
   });
 
   test("AppTrace without a service interface requires user action (advisory)", async () => {
     const { caller } = consoleMock({ [RL_AUTH_API.getTelemetryServiceStatus]: MISSING });
-    const report = await runRlAuthorization({ target: "rl", console: caller });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     const appTrace = report.checks.find((check) => check.name === "apptrace-service");
     expect(appTrace?.status).toBe("REQUIRES_USER_ACTION");
     expect(report.ok).toBe(true);
@@ -98,14 +132,24 @@ describe("rl authorization state machine", () => {
 
   test("workspace id is forwarded to the telemetry reqDTO", async () => {
     const { caller, calls } = consoleMock();
-    await runRlAuthorization({ target: "rl", console: caller, workspaceId: "ws-123" });
+    await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      workspaceId: "ws-123",
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     const scoped = calls.find((call) => call.api === RL_AUTH_API.getTelemetrySlrStatus);
     expect(reqDTO(scoped?.data).workspaceId).toBe("ws-123");
   });
 
   test("request bodies match the console gateway contract", async () => {
     const { caller, calls } = consoleMock();
-    await runRlAuthorization({ target: "rl", console: caller, workspaceId: "ws-1" });
+    await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      workspaceId: "ws-1",
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     const bodyOf = (api: string) => calls.find((call) => call.api === api)?.data;
     expect(bodyOf(RL_AUTH_API.checkUserWhitelist)).toEqual({ reqDTO: { type: "agentic_rl" } });
     expect(bodyOf(RL_AUTH_API.checkFineTuningSlrAuth)).toEqual({ input: { role: "fine-tuning" } });
@@ -118,11 +162,33 @@ describe("rl authorization state machine", () => {
     expect(bodyOf(RL_AUTH_API.queryReinforcementEnabled)).toEqual({ reqDTO: {} });
   });
 
-  test("createFineTuningSlr sends the roles array under input", async () => {
-    const { caller, calls } = consoleMock({ [RL_AUTH_API.checkFineTuningSlrAuth]: MISSING });
-    await runRlAuthorization({ target: "rl", console: caller, authorize: true });
-    const create = calls.find((call) => call.api === RL_AUTH_API.createFineTuningSlr);
-    expect(create?.data).toEqual({ input: { roles: ["fine-tuning"] } });
+  test("missing telemetry SLR reports manual guidance without blocking (advisory)", async () => {
+    const { caller, calls } = consoleMock({ [RL_AUTH_API.getTelemetrySlrStatus]: MISSING });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      authorize: true,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
+    const telemetry = report.checks.find((check) => check.name === "telemetry-slr");
+    expect(telemetry?.status).toBe("REQUIRES_USER_ACTION");
+    expect(telemetry?.required).toBe(false);
+    expect(telemetry?.detail).toContain(MANUAL_DOC);
+    expect(apis(calls).some((api) => api.includes("createTelemetrySlr"))).toBe(false);
+    expect(report.ok).toBe(true);
+  });
+
+  test("SLR guidance honors the localize seam (zh-CN)", async () => {
+    const { caller } = consoleMock({ [RL_AUTH_API.checkFineTuningSlrAuth]: MISSING });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      manualAuthDocUrl: MANUAL_DOC,
+      localize: (text) => (typeof text === "string" ? text : text["zh-CN"]),
+    });
+    const slr = report.checks.find((check) => check.name === "finetune-slr");
+    expect(slr?.detail).toContain("服务关联角色");
+    expect(slr?.detail).toContain(MANUAL_DOC);
   });
 
   test("telemetry result flag and AppTrace openStatus are parsed", async () => {
@@ -132,7 +198,11 @@ describe("rl authorization state machine", () => {
         data: { openStatus: true, instanceStatus: "Running" },
       },
     });
-    const report = await runRlAuthorization({ target: "rl", console: caller });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     expect(report.checks.find((check) => check.name === "telemetry-slr")?.status).toBe("READY");
     expect(report.checks.find((check) => check.name === "apptrace-service")?.status).toBe("READY");
   });
@@ -141,7 +211,12 @@ describe("rl authorization state machine", () => {
 describe("rl authorization SLS step", () => {
   test("SLS is a static manual advisory, never probed or opened", async () => {
     const { caller, calls } = consoleMock();
-    const report = await runRlAuthorization({ target: "rl", console: caller, authorize: true });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      authorize: true,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     const sls = report.checks.find((check) => check.name === "sls-service");
     expect(sls?.status).toBe("REQUIRES_USER_ACTION");
     expect(sls?.required).toBe(false);
@@ -154,7 +229,11 @@ describe("rl authorization SLS step", () => {
 
   test("SLS guidance defaults to en-US without a localize seam", async () => {
     const { caller } = consoleMock();
-    const report = await runRlAuthorization({ target: "rl", console: caller });
+    const report = await runRlAuthorization({
+      target: "rl",
+      console: caller,
+      manualAuthDocUrl: MANUAL_DOC,
+    });
     const sls = report.checks.find((check) => check.name === "sls-service");
     expect(sls?.detail).toContain("manually");
   });
@@ -164,6 +243,7 @@ describe("rl authorization SLS step", () => {
     const report = await runRlAuthorization({
       target: "rl",
       console: caller,
+      manualAuthDocUrl: MANUAL_DOC,
       localize: (text) => (typeof text === "string" ? text : text["zh-CN"]),
     });
     const sls = report.checks.find((check) => check.name === "sls-service");

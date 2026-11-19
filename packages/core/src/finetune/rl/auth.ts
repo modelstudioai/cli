@@ -1,12 +1,14 @@
 /**
  * RL / OPD authorization state machine.
  *
- * Auditable flow: check -> plan -> (confirm) -> remediate -> recheck -> enable
- * the requested target -> final recheck. Every capability resolves to one of
- * READY / MISSING / UNKNOWN / REQUIRES_USER_ACTION / FAILED; a failed query is
- * UNKNOWN (never silently treated as enabled or disabled). Mutations only run
- * when the caller passes `authorize: true`, and only the requested target is
- * enabled — RL never auto-enables OPD and vice versa.
+ * Auditable flow: check -> plan -> (confirm) -> enable the requested target ->
+ * final recheck. Every capability resolves to one of READY / MISSING / UNKNOWN /
+ * REQUIRES_USER_ACTION / FAILED; a failed query is UNKNOWN (never silently
+ * treated as enabled or disabled). Service-linked roles are account-level
+ * grants the CLI never creates: a missing role reports REQUIRES_USER_ACTION
+ * with manual-authorization guidance and blocks enablement. Business
+ * enablement only runs when the caller passes `authorize: true`, and only the
+ * requested target is enabled — RL never auto-enables OPD and vice versa.
  *
  * The zelda API names and request bodies below mirror the model-training
  * console (customFetcherIo wraps payloads in `{input}` and appends `.m_efm`;
@@ -51,10 +53,12 @@ export interface IRlAuthOptions {
   target: RlAuthTarget;
   console: RlConsoleCaller;
   workspaceId?: string;
-  /** Permit role creation / enablement. Read-only probe when false (default). */
+  /** Permit business enablement. Read-only probe when false (default). */
   authorize?: boolean;
   /** Locale selector for user-facing guidance; defaults to en-US when omitted. */
   localize?: (text: LocalizedText) => string;
+  /** Console doc URL guiding manual SLR authorization; injected by the command layer. */
+  manualAuthDocUrl: string;
 }
 
 /**
@@ -69,9 +73,7 @@ export const RL_AUTH_API = {
     "zeldaHttp.dashscopeFinetune./zelda/api/v1/finetune/reinforcement/query_reinforcement_enabled",
   queryOpdEnabled: "zeldaHttp.dashscopeFinetune./zelda/api/v1/finetune/opd/query_opd_enabled",
   checkFineTuningSlrAuth: "zeldaEasy.broadscope-platform.modelInstance.checkSlrAuth.m_efm",
-  createFineTuningSlr: "zeldaEasy.broadscope-platform.modelInstance.createSLR.m_efm",
   getTelemetrySlrStatus: "zeldaEasy.bailian-telemetry.activate.getTelemetrySlrStatus",
-  createTelemetrySlr: "zeldaEasy.bailian-telemetry.activate.createTelemetrySlr",
   getTelemetryServiceStatus: "zeldaEasy.bailian-telemetry.activate.getTelemetryServiceStatus",
   enableReinforcement:
     "zeldaHttp.dashscopeFinetune./zelda/api/v1/finetune/reinforcement/enable_reinforcement",
@@ -96,6 +98,18 @@ const WHITELIST_PRODUCT: Record<RlAuthTarget, string> = {
   rl: "agentic_rl",
   opd: "pg_opd",
 };
+
+/**
+ * Manual SLR authorization guidance. Creating a service-linked role grants
+ * cross-service permissions on the user's account, so the CLI only checks the
+ * role status and points at the console doc instead of creating it.
+ */
+function slrManualGuidance(docUrl: string): LocalizedText {
+  return {
+    "en-US": `The CLI does not create service-linked roles. Follow ${docUrl} to authorize the required roles in the console, then re-run to continue.`,
+    "zh-CN": `CLI 不会自动创建服务关联角色。请参照 ${docUrl} 在控制台完成角色授权后重新执行。`,
+  };
+}
 
 interface IProbeResult {
   status: RlAuthStatus;
@@ -185,11 +199,12 @@ async function mutate(
 
 /**
  * Run the authorization state machine for one target. Read-only by default;
- * pass `authorize: true` to create missing roles and enable the target. SLS
- * activation is always a manual console step (static advisory).
+ * pass `authorize: true` to enable the target once its prerequisites (manual
+ * role authorization included) are ready. Roles are never created by the CLI;
+ * SLS activation is always a manual console step (static advisory).
  */
 export async function runRlAuthorization(options: IRlAuthOptions): Promise<IRlAuthReport> {
-  const { target, console: call, authorize = false, workspaceId } = options;
+  const { target, console: call, authorize = false, workspaceId, manualAuthDocUrl } = options;
   const localize =
     options.localize ??
     ((text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]));
@@ -210,21 +225,13 @@ export async function runRlAuthorization(options: IRlAuthOptions): Promise<IRlAu
   });
 
   // 2. Fine-tuning service-linked role (shared by FC and SLS); `{input:{role}}`.
+  //    A missing role is a manual user action, never a CLI mutation.
   const slrCheckData = { input: { role: "fine-tuning" } };
   let slr = await probe(RL_AUTH_API.checkFineTuningSlrAuth, () =>
     call(RL_AUTH_API.checkFineTuningSlrAuth, slrCheckData),
   );
-  if (slr.status === "MISSING" && authorize) {
-    const created = await mutate(
-      RL_AUTH_API.createFineTuningSlr,
-      () => call(RL_AUTH_API.createFineTuningSlr, { input: { roles: ["fine-tuning"] } }),
-      actions,
-    );
-    slr = created
-      ? await probe(RL_AUTH_API.checkFineTuningSlrAuth, () =>
-          call(RL_AUTH_API.checkFineTuningSlrAuth, slrCheckData),
-        )
-      : { status: "FAILED" };
+  if (slr.status === "MISSING") {
+    slr = { status: "REQUIRES_USER_ACTION", detail: localize(slrManualGuidance(manualAuthDocUrl)) };
   }
   checks.push({ name: "finetune-slr", required: true, status: slr.status, detail: slr.detail });
 
@@ -233,17 +240,11 @@ export async function runRlAuthorization(options: IRlAuthOptions): Promise<IRlAu
   let telemetrySlr = await probe(RL_AUTH_API.getTelemetrySlrStatus, () =>
     call(RL_AUTH_API.getTelemetrySlrStatus, telemetrySlrData),
   );
-  if (telemetrySlr.status === "MISSING" && authorize) {
-    const created = await mutate(
-      RL_AUTH_API.createTelemetrySlr,
-      () => call(RL_AUTH_API.createTelemetrySlr, telemetrySlrData),
-      actions,
-    );
-    telemetrySlr = created
-      ? await probe(RL_AUTH_API.getTelemetrySlrStatus, () =>
-          call(RL_AUTH_API.getTelemetrySlrStatus, telemetrySlrData),
-        )
-      : { status: "FAILED" };
+  if (telemetrySlr.status === "MISSING") {
+    telemetrySlr = {
+      status: "REQUIRES_USER_ACTION",
+      detail: localize(slrManualGuidance(manualAuthDocUrl)),
+    };
   }
   checks.push({
     name: "telemetry-slr",
@@ -281,7 +282,8 @@ export async function runRlAuthorization(options: IRlAuthOptions): Promise<IRlAu
   let enabled = await probe(enabledApi, () => call(enabledApi, { reqDTO: {} }));
 
   // 7. Enable only the requested target, only when authorized and prerequisites
-  //    are ready. Never cross-enable the other training mode.
+  //    are ready (roles must already be authorized manually in the console).
+  //    Never cross-enable the other training mode.
   const prerequisitesReady = whitelist.status === "READY" && slr.status === "READY";
   if (authorize && prerequisitesReady && enabled.status === "MISSING") {
     const enableApi = target === "opd" ? RL_AUTH_API.enableOpd : RL_AUTH_API.enableReinforcement;

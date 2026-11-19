@@ -2,7 +2,8 @@
  * 任务目录与运行时目录布局。
  *
  * 数据目录统一经 getConfigDir() 派生（仓库约定，全平台一致，不做平台分支）：
- * runs/<run-id>/ 是 dashscope 的完整运行世界，宿主无残留。
+ * runs/<run-id>/ 随调用结束立即销毁（app-layer finally）；崩溃路径孤儿由
+ * runtime clean / prepare 按 TTL 兜底回收（见 cleanup.ts）。
  */
 
 import { randomBytes } from "node:crypto";
@@ -65,7 +66,12 @@ export function createTaskDir(runId: string = newRunId()): ITaskDirLayout {
 
 /** 托管运行时安装目录：<data>/runtimes/rl/<runtime-id>/。 */
 export function runtimeRoot(runtimeId: string): string {
-  return join(getConfigDir(), "runtimes", "rl", runtimeId);
+  return join(managedRuntimesRoot(), runtimeId);
+}
+
+/** 托管运行时版本目录的根：<data>/runtimes/rl/（旧版本回收的扫描范围）。 */
+export function managedRuntimesRoot(): string {
+  return join(getConfigDir(), "runtimes", "rl");
 }
 
 /** 运行时下载缓存目录。 */

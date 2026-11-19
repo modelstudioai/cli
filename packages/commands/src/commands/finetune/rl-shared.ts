@@ -18,6 +18,7 @@ import {
   type RlJobSpec,
   type RlRunParams,
 } from "bailian-cli-core";
+import { OPD_TRAINING_DOC, RL_TRAINING_DOC } from "bailian-cli-runtime";
 import { consoleReadTargetPreview } from "../shared/console-read.ts";
 
 /** Wall-clock budgets per command class (milliseconds). */
@@ -465,6 +466,7 @@ export async function runRlAuthorize<F extends FlagsDef>(
     workspaceId: ctx.settings.workspaceId,
     authorize: options.authorize,
     localize: ctx.localize,
+    manualAuthDocUrl: options.target === "opd" ? OPD_TRAINING_DOC : RL_TRAINING_DOC,
   });
   emitRlResult(ctx, report);
 }
@@ -517,8 +519,9 @@ export async function probeRlJob<F extends FlagsDef>(
   ctx: CommandContext<F>,
   jobId: string,
   jobLabel = "RL job",
+  workspaceId?: string,
 ): Promise<void> {
-  const response = await getFineTune(ctx.client, jobId);
+  const response = await getFineTune(ctx.client, jobId, undefined, workspaceId);
   const job = response.output ?? response.data;
   const status = String(job?.status ?? "").toUpperCase();
   const terminal = RL_TERMINAL_STATUSES.has(status);
@@ -539,6 +542,8 @@ export interface IRlFollowOptions {
   pollTimeoutSec?: number;
   /** Domain wording for terminal/timeout errors, e.g. "OPD job". */
   jobLabel?: string;
+  /** Sent as X-DashScope-WorkSpace on each poll; omit for the key-bound space. */
+  workspaceId?: string;
 }
 
 /**
@@ -567,7 +572,7 @@ export async function followRlJob<F extends FlagsDef>(
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const response = await getFineTune(ctx.client, jobId, controller.signal);
+      const response = await getFineTune(ctx.client, jobId, controller.signal, options.workspaceId);
       const job = response.output ?? response.data;
       const status = String(job?.status ?? "").toUpperCase();
 

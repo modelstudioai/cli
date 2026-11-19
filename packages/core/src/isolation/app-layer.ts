@@ -6,6 +6,7 @@
  * fail-closed；快照/临时 YAML 由命令层组装后经 layout 传入，本模块保持通用。
  */
 
+import { rmSync } from "node:fs";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { buildSandboxEnv, prepareTaskHome } from "./env.ts";
@@ -29,6 +30,9 @@ export interface IIsolatedRunInput {
   logLevel?: string;
   /** 受控 SDK 环境变量（如 FC_PYPI_LIB），由黑盒显式注入，绝不从宿主继承。 */
   sdkEnv?: Record<string, string>;
+  /** 沙箱进程 cwd，默认 taskDir。SDK 会相对 cwd 写部署文件（如 start.sh），
+   * 带代码包的命令须传 deployCopyDir，使相对写入落在可写的代码包内。 */
+  cwd?: string;
   signal?: AbortSignal;
 }
 
@@ -107,7 +111,7 @@ export async function executeIsolatedRun(
     const result = await runSandboxedProcess({
       command: spec.command,
       env,
-      cwd: spec.taskDir,
+      cwd: input.cwd ?? spec.taskDir,
       timeoutMs: spec.timeoutMs,
       maxOutputBytes: spec.maxOutputBytes,
       wrapCommand: (command) => adapter.wrapCommand(spec, command),
@@ -124,7 +128,18 @@ export async function executeIsolatedRun(
       hardening: capability.hardening,
     };
   } finally {
-    await proxy.close();
-    await adapter.dispose();
+    try {
+      await proxy.close();
+      await adapter.dispose();
+    } finally {
+      // 生命周期绑定调用：结束即销毁任务目录（成功/失败/超时同策，不保留）。
+      // 崩溃路径（SIGKILL/断电）finally 未执行的孤儿由 runtime clean / prepare
+      // 按 TTL 兜底回收。best-effort：清理失败不得掩盖执行结果。
+      try {
+        rmSync(spec.taskDir, { recursive: true, force: true });
+      } catch {
+        // 留给 TTL 兜底
+      }
+    }
   }
 }

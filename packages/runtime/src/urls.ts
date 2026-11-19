@@ -45,6 +45,19 @@ export const MODEL_TELEMETRY_DOC =
   "https://docs.bailian.console.aliyun.com/zh/model-studio/model-telemetry";
 
 /**
+ * RL / OPD training docs (environment-preparation section) — guide users to
+ * manually authorize the service-linked roles required by RL / OPD training.
+ * The CLI only checks role status and never creates roles on the user's behalf.
+ */
+export const RL_TRAINING_DOC =
+  "https://docs.bailian.console.aliyun.com/zh/model-studio/rl-training-overview#%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87";
+export const OPD_TRAINING_DOC =
+  "https://docs.bailian.console.aliyun.com/zh/model-studio/opd-training-overview#%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87";
+/** OPD docs "模型与训练单元" section: published student/teacher pairs and the recommended MTU capacity. */
+export const OPD_MODEL_MATRIX_DOC =
+  "https://docs.bailian.console.aliyun.com/zh/model-studio/opd-training-overview#%E6%A8%A1%E5%9E%8B%E4%B8%8E%E8%AE%AD%E7%BB%83%E5%8D%95%E5%85%83";
+
+/**
  * Aliyun billing console refund (unsubscribe) page for one prepaid instance.
  * Unsubscribing a prepaid PTU capacity instance is a billing action that has
  * no API; users complete it here with the account that placed the order.

@@ -29,16 +29,23 @@ import type {
   ListBasicMetricsResponse,
 } from "./types.ts";
 
+/** Optional workspace header; undefined means the API key's bound workspace. */
+function workspaceHeaders(workspaceId?: string): Record<string, string> | undefined {
+  return workspaceId ? { "X-DashScope-WorkSpace": workspaceId } : undefined;
+}
+
 /** POST /api/v1/fine-tunes */
 export async function createFineTune(
   client: Client,
   body: CreateFineTuneRequest,
   signal?: AbortSignal,
+  workspaceId?: string,
 ): Promise<CreateFineTuneResponse> {
   return client.requestJson<CreateFineTuneResponse>({
     path: finetuneJobsPath(),
     method: "POST",
     body,
+    headers: workspaceHeaders(workspaceId),
     signal,
   });
 }
@@ -49,6 +56,8 @@ export interface ListFineTunesParams {
   status?: string;
   /** Filter by base model ID (server-side). */
   model?: string;
+  /** Sent as X-DashScope-WorkSpace; use the job's owning workspace. */
+  workspaceId?: string;
   signal?: AbortSignal;
 }
 
@@ -67,6 +76,7 @@ export async function listFineTunes(
   return client.requestJson<ListFineTunesResponse>({
     path,
     method: "GET",
+    headers: workspaceHeaders(params.workspaceId),
     signal: params.signal,
   });
 }
@@ -76,10 +86,12 @@ export async function getFineTune(
   client: Client,
   jobId: string,
   signal?: AbortSignal,
+  workspaceId?: string,
 ): Promise<GetFineTuneResponse> {
   return client.requestJson<GetFineTuneResponse>({
     path: finetuneJobPath(jobId),
     method: "GET",
+    headers: workspaceHeaders(workspaceId),
     signal,
   });
 }
@@ -89,10 +101,12 @@ export async function cancelFineTune(
   client: Client,
   jobId: string,
   signal?: AbortSignal,
+  workspaceId?: string,
 ): Promise<CancelFineTuneResponse> {
   return client.requestJson<CancelFineTuneResponse>({
     path: finetuneCancelPath(jobId),
     method: "POST",
+    headers: workspaceHeaders(workspaceId),
     signal,
   });
 }
@@ -102,10 +116,12 @@ export async function deleteFineTune(
   client: Client,
   jobId: string,
   signal?: AbortSignal,
+  workspaceId?: string,
 ): Promise<DeleteFineTuneResponse> {
   return client.requestJson<DeleteFineTuneResponse>({
     path: finetuneJobPath(jobId),
     method: "DELETE",
+    headers: workspaceHeaders(workspaceId),
     signal,
   });
 }
@@ -113,6 +129,8 @@ export async function deleteFineTune(
 export interface GetFineTuneLogsParams {
   pageNo?: number;
   pageSize?: number;
+  /** Sent as X-DashScope-WorkSpace; use the job's owning workspace. */
+  workspaceId?: string;
   signal?: AbortSignal;
 }
 
@@ -130,6 +148,7 @@ export async function getFineTuneLogs(
   return client.requestJson<GetFineTuneLogsResponse>({
     path,
     method: "GET",
+    headers: workspaceHeaders(params.workspaceId),
     signal: params.signal,
   });
 }
@@ -218,10 +237,12 @@ export async function listCheckpoints(
   client: Client,
   jobId: string,
   signal?: AbortSignal,
+  workspaceId?: string,
 ): Promise<ListCheckpointsResponse> {
   return client.requestJson<ListCheckpointsResponse>({
     path: finetuneCheckpointsPath(jobId),
     method: "GET",
+    headers: workspaceHeaders(workspaceId),
     signal,
   });
 }
@@ -239,12 +260,14 @@ export async function exportCheckpoint(
   checkpoint: string,
   modelName: string,
   signal?: AbortSignal,
+  workspaceId?: string,
 ): Promise<ExportCheckpointResponse> {
   const qs = new URLSearchParams();
   qs.set("model_name", modelName);
   return client.requestJson<ExportCheckpointResponse>({
     path: `${finetuneExportPath(jobId, checkpoint)}?${qs.toString()}`,
     method: "GET",
+    headers: workspaceHeaders(workspaceId),
     signal,
   });
 }

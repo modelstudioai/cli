@@ -124,6 +124,22 @@ export function managedPythonPath(root: string, platform: NodeJS.Platform): stri
   return join(root, "python", "bin", `python${minor}`);
 }
 
+/** 运行时版本目录名：平台-架构-Python 版本-基线 SDK 版本（不可变寻址键）。 */
+function runtimeIdFor(entry: IRuntimeManifestEntry, manifest: IRuntimeManifest): string {
+  return `${entry.os}-${entry.arch}-${entry.pythonVersion}-${manifest.dashscopeVersion}`;
+}
+
+/** 当前基线的托管 runtime-id（随包受审查清单）；本平台无条目时返回 undefined。 */
+export function currentManagedRuntimeId(
+  platform: NodeJS.Platform = process.platform,
+  arch: string = process.arch,
+): string | undefined {
+  const manifest = bundledRuntimeManifest();
+  const entry = selectManifestEntry(manifest, platform, arch);
+  if (!entry) return undefined;
+  return runtimeIdFor(entry, manifest);
+}
+
 /** override 目录下的解释器候选（取首个存在者）。 */
 function overridePythonPath(dir: string, platform: NodeJS.Platform): string | undefined {
   const candidates =
@@ -200,7 +216,7 @@ export async function resolveRuntime(
     throw runtimeUnavailable(`no validated runtime for ${platform}/${arch}.`);
   }
 
-  const runtimeId = `${entry.os}-${entry.arch}-${entry.pythonVersion}-${manifest.dashscopeVersion}`;
+  const runtimeId = runtimeIdFor(entry, manifest);
   const root = runtimeRootDir(runtimeId);
   const pythonPath = managedPythonPath(root, platform);
   if (existsSync(join(root, "READY")) && existsSync(pythonPath)) {
