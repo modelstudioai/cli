@@ -20,7 +20,7 @@ const service = {
   instanceStatus: "Ready",
   instanceInfo: { instanceId: "instance-test", instanceUrl: "https://example.com/instance" },
 };
-const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
 const mappedAgent = 87654321;
 const entry = {
   workspaceId: "ws-test",
@@ -311,7 +311,12 @@ async function invoke(
         calls.push({ api, data: structuredClone(data), switchAgent });
         if (failure) throw new BailianError("Original gateway failure", ExitCode.GENERAL);
         if (api === workspaceApi)
-          return { data: [{ workspaceId: "ws-test", tenantId: String(mappedAgent) }] };
+          return {
+            list: [{ workspaceId: "ws-test", tenantId: String(mappedAgent) }],
+            total: 1,
+            pageNo: 1,
+            pageSize: 100,
+          };
         if (
           pendingFirst &&
           api.endsWith("getModelStatistic") &&

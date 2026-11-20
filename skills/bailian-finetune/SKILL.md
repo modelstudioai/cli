@@ -1,7 +1,7 @@
 ---
 name: bailian-finetune
 metadata:
-  version: "2.10.2"
+  version: "2.10.3"
   requires:
     bins: ["bl"]
 description: >-
