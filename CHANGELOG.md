@@ -6,6 +6,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.10.4] - 2026-11-20
+
+### Added
+
+- **RL training command group**: New `bl finetune rl` group for end-to-end reinforcement learning on Bailian.
+  - `bl finetune rl authorize` checks the admission whitelist, service-linked roles and service activation. Roles are never created automatically; a missing role stops with bilingual manual-authorization guidance. `--authorize` enables the RL training mode (high-risk, requires `--yes`).
+  - `bl finetune rl run` submits jobs from flags or a YAML spec and packages Rollout/Reward function code. Submission executes inside a managed, OS-sandboxed Python runtime (macOS/Linux only). Creating a job consumes billed MTU capacity and is gated by dry-run → explicit confirmation → `--yes`; `--watch` polls to a terminal state and a timeout does not cancel the cloud job.
+  - `bl finetune rl get` / `list` / `watch` / `logs` / `cancel` / `delete` manage jobs through the shared fine-tunes backend; `get` returns the full OpenAPI response including datasets and MTU spec/capacity.
+- **OPD distillation command group**: New `bl finetune opd` group for pure-model online distillation (`pg_opd`) from a platform-registered teacher model.
+  - `bl finetune opd authorize` / `run` / `params` / `get` / `watch` / `logs` / `cancel` / `delete`; `run` previews the job spec with `--dry-run` before the billed submit, and `params` queries supported hyper-parameters for a student base model.
+- **Managed runtime commands**: New `bl finetune runtime prepare` / `doctor` / `clean` for the RL/OPD sandbox runtime.
+  - `prepare` downloads a pinned CPython + dashscope runtime from reviewed multi-source manifests with SHA256 verification and mirror fallback, then caches it for reuse; `BAILIAN_RL_PYTHON_MIRROR` / `BAILIAN_RL_PIP_INDEX_URL` cover restricted regions and `BAILIAN_RL_RUNTIME` reuses a local development runtime.
+  - `doctor` verifies sandbox isolation (credential read denial, home redirection, SDK import, proxy egress control) and probes host outbound network reachability as an advisory check, so agent sandboxes that block network are reported with guidance instead of failing mid-submission.
+  - `clean` reclaims orphaned task directories and superseded runtime versions with a `--dry-run` preview; the active baseline runtime is never touched.
+- **Sandbox network-denial hints**: Connect-level network denials (`EPERM` / `EACCES` / `ENETUNREACH` / `EHOSTUNREACH`) now produce bilingual hints explaining that the execution environment (for example an AI agent sandbox) may be blocking outbound network, with guidance to enable network access, run in a regular terminal, or set `HTTPS_PROXY`. Runtime download failures also carry the underlying errno.
+
+### Changed
+
+- **Proxy environment variables**: Lowercase `http_proxy` / `https_proxy` / `no_proxy` are now honored as a fallback when the uppercase variants are unset; uppercase still takes precedence.
+
 ## [2.10.3] - 2026-11-18
 
 ### Fixed

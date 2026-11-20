@@ -54,46 +54,42 @@ export class ConsoleSession {
   }
 
   async request<T>(api: string, data: Record<string, unknown>): Promise<T> {
+    return this.dispatch<T>(
+      (credential) =>
+        callConsoleGateway(
+          credential,
+          this.deps.settings.timeout,
+          { api, data },
+          { debug: this.deps.debug, recoveryHint: this.deps.consoleRecoveryHint },
+        ) as Promise<T>,
+    );
+  }
+
+  /** Shared credential lifecycle: lazy issuance and expired-session refresh. */
+  private async dispatch<T>(invoke: (credential: ConsoleCredential) => Promise<T>): Promise<T> {
     const credential = this.deps.consoleCred;
     if (!credential) {
       const failure = new BailianError("This command needs a console access token.", ExitCode.AUTH);
       if (!this.deps.resolveConsoleOpenApiCredential) throw failure;
-      return this.refreshConsole<T>(api, data, failure);
+      return this.refreshConsole<T>(invoke, failure);
     }
     try {
-      return await this.requestConsole<T>(credential, api, data);
+      return await invoke(credential);
     } catch (error) {
       if (!(error instanceof CredentialError) || error.reason !== "expired-console-session")
         throw error;
-      return this.refreshConsole<T>(api, data, error, credential);
+      return this.refreshConsole<T>(invoke, error, credential);
     }
-  }
-
-  private async requestConsole<T>(
-    credential: ConsoleCredential,
-    api: string,
-    data: Record<string, unknown>,
-  ): Promise<T> {
-    return (await callConsoleGateway(
-      credential,
-      this.deps.settings.timeout,
-      { api, data },
-      {
-        debug: this.deps.debug,
-        recoveryHint: this.deps.consoleRecoveryHint,
-      },
-    )) as T;
   }
 
   /** Share issuance only; every caller retries and validates its own business request. */
   private async refreshConsole<T>(
-    api: string,
-    data: Record<string, unknown>,
+    invoke: (credential: ConsoleCredential) => Promise<T>,
     failure: BailianError,
     previous?: ConsoleCredential,
   ): Promise<T> {
     if (this.deps.consoleCred && this.deps.consoleCred !== previous)
-      return this.requestConsole<T>(this.deps.consoleCred, api, data);
+      return invoke(this.deps.consoleCred);
 
     let refresh = this.consoleRefresh;
     if (!refresh || refresh.previous !== previous) {
@@ -108,7 +104,7 @@ export class ConsoleSession {
         throw error;
       });
       if (!exchange) throw failure;
-      const result = await this.requestConsole<T>(exchange.credential, api, data);
+      const result = await invoke(exchange.credential);
       refresh.commit ??= (async () => {
         if (this.deps.consoleCred !== previous) return;
         if (exchange.persist)

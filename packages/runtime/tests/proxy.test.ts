@@ -31,8 +31,30 @@ test("readProxyEnv: 读取代理变量", () => {
 });
 
 test("readProxyEnv: NO_PROXY 独立读取", () => {
-  const r = readProxyEnv({ NO_PROXY: "*.aliyuncs.com" });
-  expect(r.noProxy).toBe("*.aliyuncs.com");
-  expect(r.httpProxy).toBeUndefined();
-  expect(r.httpsProxy).toBeUndefined();
+  const result = readProxyEnv({ NO_PROXY: "*.aliyuncs.com" });
+  expect(result.noProxy).toBe("*.aliyuncs.com");
+  expect(result.httpProxy).toBeUndefined();
+  expect(result.httpsProxy).toBeUndefined();
+});
+
+test("readProxyEnv: 小写变量兜底（macOS/Linux 习惯）", () => {
+  expect(
+    readProxyEnv({
+      https_proxy: "http://127.0.0.1:7890",
+      http_proxy: "http://127.0.0.1:7891",
+      no_proxy: "localhost",
+    }),
+  ).toEqual({
+    httpProxy: "http://127.0.0.1:7891",
+    httpsProxy: "http://127.0.0.1:7890",
+    noProxy: "localhost",
+  });
+});
+
+test("readProxyEnv: 大写优先于小写", () => {
+  const result = readProxyEnv({
+    HTTPS_PROXY: "http://upper.example.com:8080",
+    https_proxy: "http://lower.example.com:8080",
+  });
+  expect(result.httpsProxy).toBe("http://upper.example.com:8080");
 });

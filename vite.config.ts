@@ -101,6 +101,15 @@ export default defineConfig({
         },
       },
       {
+        // RL/OPD 沙箱执行器把 API 凭证委托给隔离沙箱内嵌的 dashscope SDK（不经过
+        // core 的 request/requestJson 通道），与 managed-agent/_engine、advisor 的
+        // 嵌入式 SDK 委托同属受控例外；仅限执行器本身，不波及整个 finetune 命令族。
+        files: ["packages/commands/src/commands/finetune/rl-shared.ts"],
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("exportApiCredential"),
+        },
+      },
+      {
         // dsh 插件（下游宿主适配层）的 `_` 前缀是“有意不用”的声明：被忽略的 catch
         // 绑定用 `_原因` 命名解释为何可以忽略，测试 mock 的 `_path` 类参数则是为了
         // 钉住被 mock 函数的签名（删了就不再约束调用形状）。

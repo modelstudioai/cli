@@ -45,6 +45,20 @@ const job = {
   output_model: "trained-fixture",
   ...retained,
 };
+const opdJob = {
+  job_id: "ft-opd-fixture",
+  job_name: "opd-fixture",
+  model: "qwen3.5-9b",
+  status: "SUCCEEDED",
+  training_type: "pg_opd",
+  teacher_model: "qwen3.8-flash",
+  training_datasets: [{ type: "training", data_source_type: "file_id", file_id: "file-train" }],
+  validation_datasets: [{ type: "validation", data_source_type: "file_id", file_id: "file-val" }],
+  mtu_spec_code: "MTU4",
+  mtu_capacity: 16,
+  hyper_parameters: { n_epochs: 1 },
+  usage: 0,
+};
 const deployment = {
   deployed_model: "deploy-fixture",
   status: "RUNNING",
@@ -407,6 +421,18 @@ const scenarios: Scenario[] = [
     flags: { baseModel: "wan2.6-i2v", datasets: "file-fixture", batchSize: 4 },
     response: trainingParameters,
     dryRun: true,
+  },
+  {
+    name: "finetune opd get",
+    command: commands.finetuneOpdGet,
+    flags: { jobId: "ft-opd-fixture" },
+    response: { request_id: "request-fixture", output: opdJob },
+  },
+  {
+    name: "finetune get opd projection",
+    command: commands.finetuneGet,
+    flags: { jobId: "ft-opd-fixture" },
+    response: { request_id: "request-fixture", output: opdJob },
   },
 ];
 const displays = ["json", "text"].flatMap((format) =>

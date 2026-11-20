@@ -18,6 +18,7 @@ import { sftLoraProfile } from "./sft-lora.ts";
 import { dpoProfile } from "./dpo.ts";
 import { dpoLoraProfile } from "./dpo-lora.ts";
 import { cptProfile } from "./cpt.ts";
+import { pgOpdProfile } from "./pg-opd.ts";
 
 const PROFILES: TrainingProfile[] = [
   sftProfile,
@@ -25,6 +26,7 @@ const PROFILES: TrainingProfile[] = [
   dpoProfile,
   dpoLoraProfile,
   cptProfile,
+  pgOpdProfile,
 ];
 
 /** Look up a profile by its CLI training-type name. Throws USAGE if unknown. */

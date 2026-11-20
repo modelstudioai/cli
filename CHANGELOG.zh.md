@@ -6,6 +6,26 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.10.4] - 2026-11-20
+
+### 新增
+
+- **RL 训练命令组**：新增 `bl finetune rl` 组，覆盖百炼强化学习训练的端到端链路。
+  - `bl finetune rl authorize` 检查准入白名单、服务关联角色与业务开通状态；绝不自动创建角色，角色缺失时中止并给出双语手动授权指引。`--authorize` 开通 RL 训练模式（高风险，需 `--yes`）。
+  - `bl finetune rl run` 通过 flag 或 YAML 规格提交训练任务，并打包 Rollout/Reward 函数代码；提交在托管的 OS 沙箱 Python 运行时内执行（仅 macOS/Linux）。创建任务消耗计费的 MTU 算力，遵循试运行 → 显式确认 → `--yes` 闸门；`--watch` 轮询至终态，超时不会取消云端任务。
+  - `bl finetune rl get` / `list` / `watch` / `logs` / `cancel` / `delete` 经共享的 fine-tunes 后端管理任务；`get` 原样返回完整 OpenAPI 响应（含数据集与 MTU 规格/容量）。
+- **OPD 蒸馏命令组**：新增 `bl finetune opd` 组，使用平台登记的教师模型进行纯模型在线蒸馏（`pg_opd`）。
+  - `bl finetune opd authorize` / `run` / `params` / `get` / `watch` / `logs` / `cancel` / `delete`；`run` 在计费提交前可用 `--dry-run` 预览任务规格，`params` 查询学生基座模型支持的超参数。
+- **托管运行时命令**：新增 `bl finetune runtime prepare` / `doctor` / `clean`，管理 RL/OPD 沙箱运行时。
+  - `prepare` 按受审查的多源清单下载固定版本 CPython + dashscope 运行时，逐源 SHA256 校验并带镜像回退，缓存后长期复用；受限地区可设 `BAILIAN_RL_PYTHON_MIRROR` / `BAILIAN_RL_PIP_INDEX_URL`，`BAILIAN_RL_RUNTIME` 可复用本机开发态运行时。
+  - `doctor` 验证沙箱隔离（凭据禁读、home 重定向、SDK 导入、代理出口管控），并以增强项探测宿主出站网络可达性：阻断网络的 agent 沙箱会收到降级提示与指引，而不是在提交中途失败。
+  - `clean` 回收孤儿任务目录与旧版本运行时，支持 `--dry-run` 预览；绝不触碰当前基线运行时。
+- **沙箱网络拒绝提示**：连接级网络拒绝（`EPERM` / `EACCES` / `ENETUNREACH` / `EHOSTUNREACH`）现在给出双语提示，说明执行环境（如 AI agent 沙箱）可能阻断出站网络，并引导放行网络、改在普通终端执行或设置 `HTTPS_PROXY`；运行时下载失败也会携带底层 errno。
+
+### 变更
+
+- **代理环境变量**：大写变量未设置时，小写 `http_proxy` / `https_proxy` / `no_proxy` 现在作为兜底生效；大写仍优先。
+
 ## [2.10.3] - 2026-11-18
 
 ### 修复
