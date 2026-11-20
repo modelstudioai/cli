@@ -7,10 +7,11 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Authentication | Description                                                          |
-| ------------------- | -------------- | -------------------------------------------------------------------- |
-| `bl image edit`     | API Key        | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
-| `bl image generate` | API Key        | Generate images (Qwen-Image / wan2.x)                                |
+| Command              | Authentication | Description                                                          |
+| -------------------- | -------------- | -------------------------------------------------------------------- |
+| `bl image edit`      | API Key        | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
+| `bl image generate`  | API Key        | Generate images (Qwen-Image / wan2.x)                                |
+| `bl image translate` | API Key        | Translate text in an image (Qwen-MT-Image)                           |
 
 ## Command details
 
@@ -160,4 +161,48 @@ bl image generate --prompt "Pro quality" --model qwen-image-2.0-pro
 
 ```bash
 bl image generate --prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel
+```
+
+### `bl image translate`
+
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `image translate`                                                       |
+| **Description**    | Translate text in an image (Qwen-MT-Image)                              |
+| **Authentication** | API Key                                                                 |
+| **Usage**          | `bl image translate --image <url-or-path> --target-lang <lang> [flags]` |
+
+#### Flags
+
+| Flag                        | Type    | Required | Description                                                        |
+| --------------------------- | ------- | -------- | ------------------------------------------------------------------ |
+| `--image <url-or-path>`     | string  | yes      | Image URL or local file                                            |
+| `--source-lang <lang>`      | string  | no       | Source language name or code (default: auto)                       |
+| `--target-lang <lang>`      | string  | yes      | Target language name or code                                       |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-mt-image; optional: qwen-mt-image-2.0)     |
+| `--domain-hint <text>`      | string  | no       | English domain hint (maps to ext.domainHint)                       |
+| `--term <source=target>`    | array   | no       | Terminology pair source=target (repeatable; maps to terminologies) |
+| `--image-segment <bool>`    | boolean | no       | Skip translating text on image subjects (ext.config.imageSegment)  |
+| `--out-dir <path>`          | string  | no       | Download directory                                                 |
+| `--async`                   | switch  | no       | Return async task id without waiting                               |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                         |
+| `--api-key <key>`           | string  | no       | API key                                                            |
+| `--base-url <url>`          | string  | no       | API base URL                                                       |
+
+#### Notes
+
+- Always submits asynchronously. Use --async to return the task ID immediately, or wait and download the translated JPG. Query with `video task get --task-id`. Local files upload to temporary OSS (requires OssResourceResolve).
+
+#### Examples
+
+```bash
+bl image translate --image ./poster.png --target-lang en --dry-run --output json
+```
+
+```bash
+bl image translate --image https://example.com/poster.png --source-lang zh --target-lang en --async --output json
+```
+
+```bash
+bl image translate --image https://example.com/poster.png --target-lang en --term "百炼=Bailian" --domain-hint "ecommerce"
 ```

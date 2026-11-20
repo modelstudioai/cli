@@ -5,6 +5,7 @@ export {
   chatPath,
   imagePath,
   imageSyncPath,
+  multimodalGenerationPath,
   imageText2ImagePath,
   image2ImagePath,
   knowledgeChatEndpoint,

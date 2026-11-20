@@ -101,6 +101,11 @@ export function imageSyncPath(): string {
   return "/api/v1/services/aigc/multimodal-generation/generation";
 }
 
+/** Native multimodal generation path (OCR, qwen-mt-uni, image sync). Same as imageSyncPath. */
+export function multimodalGenerationPath(): string {
+  return imageSyncPath();
+}
+
 /** Legacy async text-to-image API (wan2.5/2.2/2.1-t2i, wanx-*-t2i). */
 export function imageText2ImagePath(): string {
   return "/api/v1/services/aigc/text2image/image-synthesis";

@@ -16,6 +16,11 @@ export const UPDATE_ROUTES: E2eRouteExports = {
 
 export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 
+export const TEXT_TRANSLATE_ROUTES: E2eRouteExports = {
+  "text translate": "textTranslate",
+  "text chat": "textChat",
+};
+
 export const BATCH_ROUTES: E2eRouteExports = {
   "batch convert": "batchConvert",
   "batch create": "batchCreate",
@@ -117,6 +122,12 @@ export const KNOWLEDGE_CHAT_ROUTES: E2eRouteExports = {
 export const IMAGE_ROUTES: E2eRouteExports = {
   "image generate": "imageGenerate",
   "image edit": "imageEdit",
+  "image translate": "imageTranslate",
+};
+
+export const IMAGE_TRANSLATE_ROUTES: E2eRouteExports = {
+  "image translate": "imageTranslate",
+  "video task get": "videoTaskGet",
 };
 
 export const VIDEO_ROUTES: E2eRouteExports = {
@@ -188,7 +199,14 @@ export const PIPELINE_ROUTES: E2eRouteExports = {
 
 export const OMNI_ROUTES: E2eRouteExports = {
   omni: "textOmni",
+  "omni translate": "omniTranslate",
   "speech synthesize": "speechSynthesize",
+};
+
+export const OMNI_TRANSLATE_ROUTES: E2eRouteExports = {
+  omni: "textOmni",
+  "omni translate": "omniTranslate",
+  "video task get": "videoTaskGet",
 };
 
 export const FILE_UPLOAD_ROUTES: E2eRouteExports = {

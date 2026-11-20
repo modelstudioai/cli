@@ -7,9 +7,10 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command   | Authentication | Description                                          |
-| --------- | -------------- | ---------------------------------------------------- |
-| `bl omni` | API Key        | Multimodal chat with text + audio output (Qwen-Omni) |
+| Command             | Authentication | Description                                             |
+| ------------------- | -------------- | ------------------------------------------------------- |
+| `bl omni`           | API Key        | Multimodal chat with text + audio output (Qwen-Omni)    |
+| `bl omni translate` | API Key        | Translate a document, image or audio file (Qwen-MT-Uni) |
 
 ## Command details
 
@@ -41,6 +42,10 @@ Index: [index.md](index.md)
 | `--temperature <n>`    | number | no       | Sampling temperature (0.0, 2.0]                                                                                                                |
 | `--api-key <key>`      | string | no       | API key                                                                                                                                        |
 | `--base-url <url>`     | string | no       | API base URL                                                                                                                                   |
+
+#### Notes
+
+- For file translation (documents / images / audio), use `omni translate` instead of this multimodal chat entry.
 
 #### Examples
 
@@ -78,4 +83,42 @@ bl omni --message "Hello" --text-only --output json
 
 ```bash
 bl omni --message "Read this passage aloud" --audio-out greeting.wav
+```
+
+### `bl omni translate`
+
+| Field              | Value                                                                 |
+| ------------------ | --------------------------------------------------------------------- |
+| **Name**           | `omni translate`                                                      |
+| **Description**    | Translate a document, image or audio file (Qwen-MT-Uni)               |
+| **Authentication** | API Key                                                               |
+| **Usage**          | `bl omni translate --file <url-or-path> --target-lang <lang> [flags]` |
+
+#### Flags
+
+| Flag                        | Type   | Required | Description                                             |
+| --------------------------- | ------ | -------- | ------------------------------------------------------- |
+| `--file <url-or-path>`      | string | yes      | Document, image or audio URL/local file                 |
+| `--target-lang <lang>`      | string | yes      | Target language code or name                            |
+| `--source-lang <lang>`      | string | no       | Source language (omit to auto-detect; do not send auto) |
+| `--format-hint <type>`      | string | no       | Format hint when URL has no extension (e.g. pdf, image) |
+| `--domain-hint <text>`      | string | no       | English domain hint ≤200 words (ext.domainHint)         |
+| `--out-dir <path>`          | string | no       | Download directory                                      |
+| `--async`                   | switch | no       | Return async task id without waiting                    |
+| `--poll-interval <seconds>` | number | no       | Polling interval when waiting (default: 5)              |
+| `--api-key <key>`           | string | no       | API key                                                 |
+| `--base-url <url>`          | string | no       | API base URL                                            |
+
+#### Notes
+
+- Always submits asynchronously. Use --async to return the task ID immediately. Task SUCCEEDED still requires output.Success=true before download. Query with `video task get --task-id`. Supported: pdf/docx/pptx/xlsx/txt/html/md/png/jpg/mp3/wav. Video and legacy doc/ppt are rejected.
+
+#### Examples
+
+```bash
+bl omni translate --file ./brochure.pdf --target-lang en --dry-run --output json
+```
+
+```bash
+bl omni translate --file https://example.com/brochure.pdf --target-lang en --format-hint pdf --async --output json
 ```
