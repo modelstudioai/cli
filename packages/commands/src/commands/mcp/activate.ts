@@ -1,7 +1,7 @@
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
 import { defineCommand } from "bailian-cli-core";
 import {
   batchServerFlag,
-  lifecycleRisks,
   prepareLifecycle,
   runLifecycle,
   validateServers,
@@ -9,6 +9,7 @@ import {
 } from "./server-lifecycle.ts";
 
 const flags = {
+  ...WORKSPACE_FLAG,
   server: batchServerFlag,
   noBrowser: {
     type: "switch",
@@ -27,14 +28,14 @@ export default defineCommand<typeof flags, LifecyclePlan>({
   },
   auth: "apiKey",
   flags,
-  risk: lifecycleRisks.activate,
-  usageArgs: "--server <code,...> [--yes] [--no-browser] [--dry-run]",
-  exampleArgs: ["--server mcp-example,mcp-weather --dry-run", "--server mcp-example --yes"],
+  usageArgs: "--server <code,...> [--no-browser] [--dry-run]",
+  exampleArgs: ["--server mcp-example,mcp-weather --dry-run", "--server mcp-example"],
   notes: [
     {
       "en-US":
-        "ACTIVATING means the deployment is still in progress. Use mcp list to see servers once they are active.",
-      "zh-CN": "ACTIVATING 表示部署仍在进行。部署完成后可用 mcp list 查询已启用的服务。",
+        "OneKey activation may place an order. ACTIVATING means the deployment is still in progress. Use mcp list to see servers once they are active.",
+      "zh-CN":
+        "开通 OneKey 服务可能下单。ACTIVATING 表示部署仍在进行。部署完成后可用 mcp list 查询已启用的服务。",
     },
   ],
   validate: (values) => validateServers(values.server),

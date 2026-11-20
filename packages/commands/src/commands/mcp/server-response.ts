@@ -1,12 +1,16 @@
 import {
   BailianError,
   ExitCode,
+  mcpBaseUrl,
   mcpServersPath,
   type ClientRequestOpts,
   type CommandContext,
 } from "bailian-cli-core";
 
-type ReadContext = Pick<CommandContext, "client" | "localize">;
+export type McpRequestContext = Pick<CommandContext, "client" | "localize" | "settings"> & {
+  flags: { workspaceId?: string };
+};
+
 // The gateway can omit pricing. Project only public, structured billing values.
 function publicBilling(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -61,13 +65,26 @@ export interface ServerDto {
   requiresManualSetup?: boolean;
 }
 
-export async function requestMcpData<Data>(ctx: ReadContext, options: ClientRequestOpts) {
+export async function requestMcpData<Data>(ctx: McpRequestContext, options: ClientRequestOpts) {
+  const path = ctx.client.url(options.path, () => {
+    const workspaceId = ctx.flags.workspaceId ?? ctx.settings.workspaceId;
+    if (workspaceId) return mcpBaseUrl(workspaceId);
+    throw new BailianError(
+      ctx.localize({
+        "en-US":
+          "Set workspace_id or BAILIAN_WORKSPACE_ID, pass --workspace-id, or provide --base-url to access the MCP API.",
+        "zh-CN":
+          "访问 MCP API 需要配置 workspace_id、设置 BAILIAN_WORKSPACE_ID，或传入 --workspace-id、--base-url。",
+      }),
+      ExitCode.USAGE,
+    );
+  });
   const response = await ctx.client.requestJson<{
     success: boolean;
     data?: Data;
     request_id?: string;
     requestId?: string;
-  }>(options);
+  }>({ ...options, path });
   const requestId = response?.request_id ?? response?.requestId;
   if (response?.success !== true || response.data == null) {
     throw new BailianError(
@@ -85,7 +102,7 @@ export async function requestMcpData<Data>(ctx: ReadContext, options: ClientRequ
 
 // Whitelist public fields. The detail DTO also carries saved credentials in mcp_config.
 export function publicServer(
-  ctx: ReadContext,
+  ctx: McpRequestContext,
   data: ServerDto,
   requestId?: string,
   expectedCode?: string,
@@ -126,7 +143,7 @@ export function publicServer(
 }
 
 export async function requestMcpServer(
-  ctx: ReadContext,
+  ctx: McpRequestContext,
   method: "GET" | "POST" | "DELETE",
   server?: string,
   body?: unknown,

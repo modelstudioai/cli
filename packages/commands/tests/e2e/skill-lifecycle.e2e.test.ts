@@ -374,7 +374,7 @@ test("list reconciles disk, scoped records and the catalog; update restores a mi
   ]);
 });
 
-test("package MCP dependencies use only serverCode, plan once, and require confirmation before billing or installing", async () => {
+test("skill add previews dependencies without writing and activates each required server once", async () => {
   const { home, project, run, requests, state } = fixture("ws-dependencies");
   state.manifest = JSON.stringify({
     finance: {
@@ -393,7 +393,7 @@ test("package MCP dependencies use only serverCode, plan once, and require confi
     join(home, "config", "skills", "skill-lock.json"),
     join(project, ".cursor", "skills", "reader"),
   ];
-  const preview = await run([...args, "--dry-run", "--yes"]);
+  const preview = await run([...args, "--dry-run"]);
   expect(preview.exitCode, preview.stderr).toBe(0);
   expect(JSON.parse(preview.stdout).mcp_dep_results).toMatchObject([
     {
@@ -406,15 +406,12 @@ test("package MCP dependencies use only serverCode, plan once, and require confi
     { code: "ready", reason: "ALREADY_ACTIVATED", status: "noop" },
     { code: "custom", action: "enable", status: "planned" },
   ]);
-  const confirm = await run(args);
-  expect(confirm.exitCode, confirm.stderr).toBe(7);
-  expect(confirm.stderr).toContain("requires_confirmation");
   expect(destinations.some((path) => existsSync(path))).toBe(false);
   expect(requests.some((path) => path.endsWith("/activate") || path.endsWith("/enable"))).toBe(
     false,
   );
   requests.length = 0;
-  const installed = await run([...args, "--yes"]);
+  const installed = await run(args);
   expect(installed.exitCode, installed.stderr).toBe(0);
   expect(destinations.every((path) => existsSync(path))).toBe(true);
   expect(requests.filter((path) => path.startsWith(base))).toEqual(
@@ -423,7 +420,7 @@ test("package MCP dependencies use only serverCode, plan once, and require confi
     ),
   );
   expect(requests.filter((path) => path === "/1.0")).toHaveLength(1);
-  expect(installed.stdout + installed.stderr + confirm.stderr + preview.stdout).not.toMatch(
+  expect(installed.stdout + installed.stderr + preview.stdout).not.toMatch(
     /private-placeholder|untrusted\.invalid/,
   );
   requests.length = 0;
@@ -468,7 +465,7 @@ test("OSS fan-out reads the same manifest, supports explicit credentials and kee
   });
   expect(existsSync(join(home, "config", "skills", "reader", "mcp-config.json"))).toBe(true);
   expect(requests).toEqual(["/index.json", "/reader/skill.tar.br"]);
-  const activated = await run([...args, "--yes"]);
+  const activated = await run(args);
   expect(activated.exitCode, activated.stderr).toBe(0);
   expect(JSON.parse(activated.stdout).mcp_dep_results).toMatchObject([
     { code: "market-finance", status: "succeeded" },
@@ -487,7 +484,7 @@ test("invalid manifests do not disclose their contents or issue MCP requests", a
   const { run, requests, state } = fixture();
   state.manifest = '{"DASHSCOPE_API_KEY":"private-placeholder",';
   const args = ["add", "--name", id, ...cursor];
-  const invalid = await run([...args, "--yes"]);
+  const invalid = await run(args);
   expect(invalid.exitCode, invalid.stderr).toBe(1);
   expect(invalid.stderr + invalid.stdout).not.toContain("private-placeholder");
   const disabled = await run([...args, "--with-mcp", "false"]);
@@ -531,7 +528,7 @@ test("bulk OSS installation activates a shared dependency once and identifies bo
   const { state, run, requests } = fixture();
   state.manifest = JSON.stringify({ shared: { serverCode: "shared" } });
   state.ossNames = ["reader", "writer"];
-  const result = await run(["add", "--all", "--source", "oss", "--yes"]);
+  const result = await run(["add", "--all", "--source", "oss"]);
   expect(result.exitCode, result.stderr).toBe(0);
   expect(JSON.parse(result.stdout)).toMatchObject({
     summary: { succeeded: 2 },

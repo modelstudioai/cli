@@ -10,9 +10,19 @@ import {
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vite-plus/test";
+import { httpTransport } from "bailian-cli-core";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vite-plus/test";
 import { runCommandHelp, runCommandInProcess } from "./helpers.ts";
-import { MCP_ROUTES } from "./topic-routes.ts";
+import { MCP_ROUTES, SKILL_ROUTES } from "./topic-routes.ts";
 
 const collection = "/api/v1/mcp/servers";
 const code = "mcp-example";
@@ -156,6 +166,48 @@ function expectRequests(...expected: [string, string, unknown?][]) {
   });
 }
 
+test("MCP OpenAPI selects the production workspace origin and honors explicit base URLs", async ({
+  onTestFinished,
+}) => {
+  const urls: string[] = [];
+  const fetch = vi.spyOn(httpTransport, "fetch").mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
+    urls.push(request.url);
+    expect(request.headers.get("Authorization")).toBe("Bearer offline-key");
+    return Response.json({ success: true, data: [] });
+  });
+  onTestFinished(() => fetch.mockRestore());
+  writeFileSync(join(directory, "config.json"), JSON.stringify({ workspace_id: "ws-config" }));
+  const env = { BAILIAN_CONFIG_DIR: directory, DASHSCOPE_BASE_URL: "" };
+  const args = ["tool", "list", ...target];
+  for (const [extra, overrides] of [
+    [[], {}],
+    [[], { BAILIAN_WORKSPACE_ID: "ws-env" }],
+    [["--workspace-id", "ws-flag"], { BAILIAN_WORKSPACE_ID: "ws-env" }],
+    [["--base-url", origin], {}],
+  ] as const) {
+    const result = await run([...args, ...extra], { ...env, ...overrides });
+    expect(result.exitCode, result.stderr).toBe(0);
+  }
+  expect(urls).toEqual(
+    [
+      "https://ws-config.cn-beijing.maas.aliyuncs.com",
+      "https://ws-env.cn-beijing.maas.aliyuncs.com",
+      "https://ws-flag.cn-beijing.maas.aliyuncs.com",
+      origin,
+    ].map((base) => base + item + "/tools"),
+  );
+  writeFileSync(join(directory, "config.json"), "{}");
+  const missing = await run(args, env);
+  expect(missing.exitCode, missing.stderr).toBe(2);
+  expect(missing.stderr).toContain("--workspace-id");
+  const invalid = await run([...args, "--workspace-id", "other.example/path"], env);
+  expect(invalid.exitCode, invalid.stderr).toBe(2);
+  const preview = await run([...args, "--dry-run"], env);
+  expect(preview.exitCode, preview.stderr).toBe(0);
+  expect(urls).toHaveLength(4);
+});
+
 describe("MCP tool discovery", () => {
   const properties = { orderId: { type: "object", additionalProperties: false } };
   const schema = { type: "object", properties, required: ["orderId"], additionalProperties: false };
@@ -167,22 +219,19 @@ describe("MCP tool discovery", () => {
   };
   const recommendation = `${collection}/tools/recommend`;
 
-  test("tool search confirms before recommendations and previews without requests", async () => {
+  test("tool search previews locally and requests recommendations directly", async () => {
     const args = ["tool", "search", "--query", " 查订单 "];
-    const preview = await run([...args, "--dry-run", "--yes"]);
+    const preview = await run([...args, "--dry-run"]);
     expect(preview.exitCode, preview.stderr).toBe(0);
     expect(JSON.parse(preview.stdout)).toMatchObject({
       plan: { query: "查订单", limit: 10 },
-      risk: { reason: "billing" },
+      risk: null,
     });
-    const refused = await run(args);
-    expect(refused.exitCode).toBe(7);
-    expect(refused.stderr).toContain("requires_confirmation");
     expectRequests();
     reply([]);
-    const confirmed = await run([...args, "--yes"]);
-    expect(confirmed.exitCode, confirmed.stderr).toBe(0);
-    expect(JSON.parse(confirmed.stdout)).toEqual([]);
+    const result = await run(args);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual([]);
     expectRequests(["GET", `${recommendation}?query=${encodeURIComponent("查订单")}&topN=10`]);
   });
 
@@ -197,7 +246,7 @@ describe("MCP tool discovery", () => {
       },
       { server_code: "three", tool_name: "discarded" },
     ]);
-    const result = await run(["tool", "search", "--query", " 订单 &+% ", "--limit", "2", "--yes"]);
+    const result = await run(["tool", "search", "--query", " 订单 &+% ", "--limit", "2"]);
     expect(result.exitCode, result.stderr).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual([
       {
@@ -226,7 +275,7 @@ describe("MCP tool discovery", () => {
       },
       { mcpCode: "orders", toolName: "lookup" },
     ]);
-    const result = await run(["tool", "search", "--query", "lookup", "--yes"]);
+    const result = await run(["tool", "search", "--query", "lookup"]);
     expect(result.exitCode, result.stderr).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual([
       {
@@ -264,10 +313,9 @@ describe("MCP tool discovery", () => {
     expectRequests();
   });
 
-  test("tool list checks policy, then returns only the public tool definitions", async () => {
+  test("tool list directly retrieves the public tool definitions", async () => {
     const server = "name/with space";
     const path = `${collection}/name%2Fwith%20space`;
-    reply({ mcp_code: server, type: "OFFICIAL", meta_info: { is_onekey: false } });
     reply([
       { name: "lookup", description: "Find order", input_schema: publicSchema, internal: true },
     ]);
@@ -276,22 +324,18 @@ describe("MCP tool discovery", () => {
     expect(JSON.parse(result.stdout)).toEqual([
       { name: "lookup", description: "Find order", input_schema: publicSchema },
     ]);
-    expectRequests(["GET", path], ["GET", `${path}/tools`]);
+    expectRequests(["GET", `${path}/tools`]);
   });
 
-  test("tool list previews offline, gates unknown policy and preserves upstream failures after confirmation", async () => {
+  test("tool list previews offline and preserves upstream failures", async () => {
     const args = ["tool", "list", ...target];
     const preview = await run([...args, "--dry-run"]);
     expect(preview.exitCode, preview.stderr).toBe(0);
     expect(JSON.parse(preview.stdout)).toMatchObject({
       plan: { server: code },
-      risk: { reason: "billing" },
+      risk: null,
     });
     expectRequests();
-    detail("INACTIVE", "OFFICIAL");
-    const refused = await run(args);
-    expect(refused.exitCode, refused.stderr).toBe(7);
-    expectRequests(["GET", item]);
     replies.push({
       status: 200,
       body: {
@@ -301,7 +345,7 @@ describe("MCP tool discovery", () => {
         request_id: "req-tools",
       },
     });
-    const failed = await run([...args, "--yes"]);
+    const failed = await run(args);
     expect(failed.exitCode).toBe(1);
     expect(failed.stdout).toBe("");
     expect(JSON.parse(failed.stderr).error).toMatchObject({
@@ -309,7 +353,7 @@ describe("MCP tool discovery", () => {
       message: "原始服务错误",
       request_id: "req-tools",
     });
-    expectRequests(["GET", item], ["GET", `${item}/tools`]);
+    expectRequests(["GET", `${item}/tools`]);
   });
 
   test.each([
@@ -320,7 +364,7 @@ describe("MCP tool discovery", () => {
     },
   ])("rejects malformed discovery data for $args", async ({ args, data }) => {
     reply(data);
-    const result = await run([...args, "--yes"]);
+    const result = await run(args);
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe("");
     expect(JSON.parse(result.stderr).error.request_id).toBe("req-write");
@@ -405,10 +449,10 @@ describe("MCP tool discovery", () => {
 
 describe("MCP tool invocation", () => {
   const args = ["tool", "call", ...target, "--tool", "get.order"];
-  const path = `${item}/tools/get.order/call`;
+  const path = `${item}/tools/call`;
 
-  test("OpenAPI previews the merged arguments without requests and gates OneKey calls", async () => {
-    const preview = await run([...args, "--query", "业务查询", "--dry-run", "--yes"]);
+  test("OpenAPI previews merged arguments locally and sends the tool request directly", async () => {
+    const preview = await run([...args, "--query", "业务查询", "--dry-run"]);
     expect(preview.exitCode, preview.stderr).toBe(0);
     expect(JSON.parse(preview.stdout)).toMatchObject({
       plan: {
@@ -417,20 +461,21 @@ describe("MCP tool invocation", () => {
         tool: "get.order",
         tool_params: { query: "业务查询" },
       },
-      risk: { reason: "billing" },
+      risk: null,
     });
     expectRequests();
-    for (const isOnekey of [true, undefined]) {
-      reply({ mcp_code: code, type: "OFFICIAL", meta_info: { is_onekey: isOnekey } });
-      const refused = await run([...args, "--arg", "value=fixture-sensitive"]);
-      expect(refused.exitCode, refused.stderr).toBe(7);
-      expect(refused.stderr).toContain("requires_confirmation");
-      expect(refused.stderr).not.toContain("fixture-sensitive");
-    }
-    expectRequests(["GET", item], ["GET", item]);
+    reply({ is_error: false, content: [] });
+    const called = await run([...args, "--arg", "value=fixture-sensitive"]);
+    expect(called.exitCode, called.stderr).toBe(0);
+    expect(called.stdout + called.stderr).not.toContain("fixture-sensitive");
+    expectRequests([
+      "POST",
+      path,
+      { tool_name: "get.order", tool_params: { value: "fixture-sensitive" } },
+    ]);
   });
 
-  test("OpenAPI encodes both path segments and sends only merged tool_params", async () => {
+  test("OpenAPI encodes the server in the path and sends the literal tool name and merged parameters in the body", async () => {
     const server = "srv /one";
     const tool = "查/订单?#";
     const options = [
@@ -453,22 +498,14 @@ describe("MCP tool invocation", () => {
     ];
     const content = [{ type: "text", text: '{"OrderId":3}' }, { type: "image" }];
     reply({ isError: false, content });
-    const called = await run([
-      "tool",
-      "call",
-      "--server",
-      server,
-      "--tool",
-      tool,
-      ...options,
-      "--yes",
-    ]);
+    const called = await run(["tool", "call", "--server", server, "--tool", tool, ...options]);
     expect(called.exitCode, called.stderr).toBe(0);
     expect(JSON.parse(called.stdout)).toEqual({ is_error: false, content });
     expectRequests([
       "POST",
-      `${collection}/srv%20%2Fone/tools/${encodeURIComponent(tool)}/call`,
+      `${collection}/srv%20%2Fone/tools/call`,
       {
+        tool_name: tool,
         tool_params: {
           orderId: "new=value",
           nested: { keepCase: null },
@@ -483,13 +520,12 @@ describe("MCP tool invocation", () => {
     expect(Object.hasOwn(JSON.parse(requests[0]!.body).tool_params, "__proto__")).toBe(true);
   });
 
-  test("ordinary service call sends a body even for zero arguments and retains nullable results", async () => {
-    reply({ mcp_code: code, type: "OFFICIAL", meta_info: { is_onekey: false } });
+  test("a parameterless tool with a dot-segment name is sent in the body and retains nullable results", async () => {
     reply({ is_error: null, content: null });
-    const called = await run(args);
+    const called = await run(["tool", "call", ...target, "--tool", ".."]);
     expect(called.exitCode, called.stderr).toBe(0);
     expect(JSON.parse(called.stdout)).toEqual({ is_error: null, content: null });
-    expectRequests(["GET", item], ["POST", path, { tool_params: {} }]);
+    expectRequests(["POST", path, { tool_name: "..", tool_params: {} }]);
   });
 
   test.each(["is_error", "isError"])(
@@ -501,14 +537,14 @@ describe("MCP tool invocation", () => {
         { type: "text", text: "more detail" },
       ];
       reply({ [key]: true, content });
-      const called = await run([...args, "--yes"]);
+      const called = await run(args);
       expect(called.exitCode).toBe(1);
       expect(JSON.parse(called.stdout)).toEqual({ is_error: true, content });
       expect(JSON.parse(called.stderr).error).toMatchObject({
         message: "原始服务错误\nmore detail",
         request_id: "req-write",
       });
-      expectRequests(["POST", path, { tool_params: {} }]);
+      expectRequests(["POST", path, { tool_name: "get.order", tool_params: {} }]);
     },
   );
 
@@ -523,7 +559,7 @@ describe("MCP tool invocation", () => {
         request_id: "request-call",
       },
     });
-    const called = await run([...args, "--yes"]);
+    const called = await run(args);
     expect(called.exitCode).toBe(1);
     expect(called.stdout).toBe("");
     expect(JSON.parse(called.stderr).error).toMatchObject({
@@ -531,14 +567,14 @@ describe("MCP tool invocation", () => {
       message: "Call failed upstream",
       request_id: "request-call",
     });
-    expectRequests(["POST", path, { tool_params: {} }]);
+    expectRequests(["POST", path, { tool_name: "get.order", tool_params: {} }]);
   });
 
   test.each([{ is_error: "false" }, { content: [42] }, { unrelated: true }])(
     "rejects malformed tool result %j",
     async (data) => {
       reply(data);
-      const called = await run([...args, "--yes"]);
+      const called = await run(args);
       expect(called.exitCode).toBe(1);
       expect(called.stdout).toBe("");
       expect(JSON.parse(called.stderr).error.request_id).toBe("req-write");
@@ -546,7 +582,7 @@ describe("MCP tool invocation", () => {
   );
 
   test.each([
-    ["tool", "call", ...target, "--tool", ".."],
+    ["tool", "call", "--server", "..", "--tool", "get.order"],
     ["tool", "call", ...target, "--tool", " "],
     [...args, "--json", "null"],
     [...args, "--arg", " =123"],
@@ -665,7 +701,7 @@ describe("MCP detail and activated inventory", () => {
   });
 
   test.each([true, undefined])(
-    "OneKey or unknown policy (%s) reads only details before confirmation",
+    "get previews details and retrieves tools directly for OneKey or unknown policy (%s)",
     async (onekey) => {
       const server = {
         mcp_code: code,
@@ -678,18 +714,15 @@ describe("MCP detail and activated inventory", () => {
       expect(preview.exitCode, preview.stderr).toBe(0);
       expect(JSON.parse(preview.stdout)).toMatchObject({
         plan: { activated: false, billing: null, server_code: code },
-        risk: { reason: "billing" },
+        risk: null,
       });
-      reply(server);
-      const refused = await run(["get", ...target]);
-      expect(refused.exitCode, refused.stderr).toBe(7);
-      expect(refused.stderr).toContain("requires_confirmation");
+      expectRequests(["GET", item]);
       reply(server);
       reply([{ name: "ready", input_schema: null, description: null }]);
-      const confirmed = await run(["get", ...target, "--yes"]);
-      expect(confirmed.exitCode, confirmed.stderr).toBe(0);
-      expect(JSON.parse(confirmed.stdout).tools[0].name).toBe("ready");
-      expectRequests(["GET", item], ["GET", item], ["GET", item], ["GET", `${item}/tools`]);
+      const result = await run(["get", ...target]);
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout).tools[0].name).toBe("ready");
+      expectRequests(["GET", item], ["GET", item], ["GET", `${item}/tools`]);
     },
   );
 
@@ -915,20 +948,19 @@ describe("native Agent registration", () => {
     expectRequests(["GET", item], ["GET", item]);
   });
 
-  test("automatic activation previews once, requires confirmation, and registers the endpoint returned after enable", async () => {
+  test("connect previews activation and registers the endpoint returned after enable", async () => {
     const local = env();
     const file = join(directory, ".cursor/mcp.json");
-    for (const extra of [["--dry-run"], [], ["--and-activate=false"]]) {
+    for (const extra of [["--dry-run"], ["--and-activate=false"]]) {
       detail("INACTIVE", "CUSTOMER");
       const result = await run([...connect, ...project, ...extra], local);
       if (extra[0] === "--dry-run") {
         expect(result.exitCode, result.stderr).toBe(0);
         expect(JSON.parse(result.stdout)).toMatchObject({
           plan: { activation: "enable", endpoint: null },
-          risk: { reason: "billing" },
+          risk: null,
         });
-      } else if (!extra.length) expect(result.exitCode).toBe(7);
-      else {
+      } else {
         expect(result.exitCode).toBe(1);
         expect(JSON.parse(result.stdout).results[0].error_code).toBe("NOT_ACTIVATED");
       }
@@ -938,7 +970,7 @@ describe("native Agent registration", () => {
     detail("INACTIVE", "CUSTOMER");
     reply({ mcp_code: code, server_status: "ACTIVATED" });
     ready();
-    const applied = await run([...connect, ...project, "--and-activate", "--yes"], local);
+    const applied = await run([...connect, ...project], local);
     expect(applied.exitCode, applied.stderr).toBe(0);
     expect(JSON.parse(applied.stdout)).toMatchObject({
       results: [{ status: "succeeded" }],
@@ -949,7 +981,6 @@ describe("native Agent registration", () => {
       ["GET", item],
       ["GET", item],
       ["GET", item],
-      ["GET", item],
       ["POST", item + "/enable"],
       ["GET", item],
     );
@@ -957,7 +988,7 @@ describe("native Agent registration", () => {
 
   test("pending deployments, incomplete endpoints and manual activation do not create a local connection", async () => {
     const local = env();
-    const args = [...connect, ...project, "--yes"];
+    const args = [...connect, ...project];
     detail("INACTIVE", "OFFICIAL");
     reply({ mcp_code: code, server_status: "ACTIVATING" });
     const pending = await run(args, local);
@@ -1007,7 +1038,7 @@ describe("native Agent registration", () => {
     const lock = join(local.BAILIAN_CONFIG_DIR, "mcp-registrations.json.lock");
     writeFileSync(lock, "other owner");
     detail("INACTIVE", "OFFICIAL");
-    const result = await run([...connect, ...project, "--yes"], local);
+    const result = await run([...connect, ...project], local);
     expect(result.exitCode).toBe(1);
     expect(JSON.parse(result.stdout).summary).toEqual({ succeeded: 0, failed: 1, noop: 0 });
     expect(readFileSync(lock, "utf8")).toBe("other owner");
@@ -1040,10 +1071,7 @@ describe("native Agent registration", () => {
     );
     expect(JSON.parse(stopped.stdout).summary).toEqual({ succeeded: 1, noop: 1, failed: 1 });
     expect(readFileSync(join(directory, ".mcp.json"), "utf8")).toBe(unrelated);
-    const conflict = await run(
-      [...connect, "--scope", "project", "--agent", "claude-code", "--yes"],
-      local,
-    );
+    const conflict = await run([...connect, "--scope", "project", "--agent", "claude-code"], local);
     expect(JSON.parse(conflict.stdout).results[0].error_code).toBe("UNMANAGED_CONFLICT");
     expectRequests(["GET", item]);
   });
@@ -1101,7 +1129,7 @@ describe("batch MCP activation and deactivation", () => {
         "a, ..",
         Array.from({ length: 31 }, (_, index) => `s${index}`).join(","),
       ]) {
-        expect((await run([command, "--server", value, "--yes"])).exitCode).toBe(2);
+        expect((await run([command, "--server", value])).exitCode).toBe(2);
       }
       expect((await run([command, "--dry-run"])).exitCode).toBe(2);
       expectRequests();
@@ -1109,36 +1137,31 @@ describe("batch MCP activation and deactivation", () => {
   );
 
   test.each([
-    ["activate", "INACTIVE", "activate", "enable", "billing"],
-    ["deactivate", "ACTIVATED", "deactivate", "disable", "destructive"],
+    ["activate", "INACTIVE", "activate", "enable"],
+    ["deactivate", "ACTIVATED", "deactivate", "disable"],
   ])(
-    "%s previews every distinct target and gates the entire batch",
-    async (command, status, officialAction, customAction, risk) => {
+    "%s previews every distinct target without writing",
+    async (command, status, officialAction, customAction) => {
       const args = [
         command,
         "--server",
         ["custom", ...Array<string>(30).fill(" official "), "custom"].join(","),
       ];
-      for (const flags of [["--dry-run", "--yes"], []]) {
-        server("custom", "CUSTOMER", status);
-        server("official", "OFFICIAL", status, { meta_info: { is_onekey: true } });
-        const result = await run([...args, ...flags]);
-        const isPreview = flags.length > 0;
-        expect(result.exitCode, result.stderr).toBe(isPreview ? 0 : 7);
-        const output = isPreview ? JSON.parse(result.stdout) : JSON.parse(result.stderr).error;
-        expect(output.plan.targets).toMatchObject([
-          { code: "custom", action: customAction },
-          { code: "official", action: officialAction, is_onekey: true },
-        ]);
-        if (isPreview) expect(output.risk.reason).toBe(risk);
-        expect(result.stdout + result.stderr).not.toContain("private-fixture");
-      }
-      expectRequests(
-        ["GET", collection + "/custom"],
-        ["GET", collection + "/official"],
-        ["GET", collection + "/custom"],
-        ["GET", collection + "/official"],
-      );
+      server("custom", "CUSTOMER", status);
+      server("official", "OFFICIAL", status, { meta_info: { is_onekey: true } });
+      const result = await run([...args, "--dry-run"]);
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        plan: {
+          targets: [
+            { code: "custom", action: customAction },
+            { code: "official", action: officialAction, is_onekey: true },
+          ],
+        },
+        risk: null,
+      });
+      expect(result.stdout + result.stderr).not.toContain("private-fixture");
+      expectRequests(["GET", collection + "/custom"], ["GET", collection + "/official"]);
     },
   );
 
@@ -1149,12 +1172,7 @@ describe("batch MCP activation and deactivation", () => {
     server("pending", "CUSTOMER", "ACTIVATING");
     reply({ mcpCode: "official/one", serverStatus: "ACTIVATING", serverStatusText: "开通中" });
     reply({ mcp_code: "custom", server_status: "ACTIVATED", mcp_config: remoteConfig });
-    const result = await run([
-      "activate",
-      "--server",
-      "official/one,custom,ready,pending,custom",
-      "--yes",
-    ]);
+    const result = await run(["activate", "--server", "official/one,custom,ready,pending,custom"]);
     expect(result.exitCode, result.stderr).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
       summary: { succeeded: 2, failed: 0, noop: 2 },
@@ -1200,12 +1218,7 @@ describe("batch MCP activation and deactivation", () => {
     });
     reply({ mcpCode: "custom", serverStatus: "INACTIVE" });
     reply({ mcpCode: "official", serverStatus: "INACTIVE" });
-    const result = await run([
-      "deactivate",
-      "--server",
-      "onekey,missing,custom,official,stopped",
-      "--yes",
-    ]);
+    const result = await run(["deactivate", "--server", "onekey,missing,custom,official,stopped"]);
     expect(result.exitCode).toBe(1);
     expect(JSON.parse(result.stdout)).toMatchObject({
       summary: { succeeded: 2, failed: 2, noop: 1 },
@@ -1276,7 +1289,7 @@ describe("batch MCP activation and deactivation", () => {
         request_id: "busy-request",
       },
     });
-    const result = await run(["activate", "--server", "role,manual,busy", "--yes", "--no-browser"]);
+    const result = await run(["activate", "--server", "role,manual,busy", "--no-browser"]);
     expect(result.exitCode).toBe(1);
     const batch = JSON.parse(result.stdout);
     expect(batch).toMatchObject({
@@ -1328,7 +1341,7 @@ describe("batch MCP activation and deactivation", () => {
         request_id: "market",
       },
     });
-    const result = await run(["activate", ...target, "--yes", "--no-browser"]);
+    const result = await run(["activate", ...target, "--no-browser"]);
     expect(result.exitCode).toBe(1);
     expect(JSON.parse(result.stdout).results[0]).toMatchObject({
       status: "failed",
@@ -1342,7 +1355,7 @@ describe("batch MCP activation and deactivation", () => {
   test("a lost response leaves the write outcome unknown and sends only one POST", async () => {
     detail("ACTIVATED", "CUSTOMER");
     replies.push("disconnect");
-    const result = await run(["deactivate", ...target, "--yes"]);
+    const result = await run(["deactivate", ...target]);
     expect(result.exitCode, result.stderr).toBe(6);
     expect(JSON.parse(result.stdout)).toMatchObject({
       summary: { succeeded: 0, failed: 1, noop: 0 },
@@ -1362,7 +1375,7 @@ describe("batch MCP activation and deactivation", () => {
     });
     reply({ mcp_code: "missing-status" });
     reply({ mcp_code: "different", server_status: "ACTIVATED" });
-    const result = await run(["activate", "--server", "failed,missing-status,wrong-code", "--yes"]);
+    const result = await run(["activate", "--server", "failed,missing-status,wrong-code"]);
     expect(result.exitCode).toBe(1);
     expect(JSON.parse(result.stdout)).toMatchObject({
       summary: { succeeded: 0, failed: 3, noop: 0 },
@@ -1389,14 +1402,17 @@ describe("batch MCP activation and deactivation", () => {
 });
 
 describe("custom MCP management", () => {
-  test.each(["create", "update", "delete", "activate", "deactivate"])(
-    "%s exposes API-key authentication and runtime confirmation",
-    async (command) => {
-      const help = await runCommandHelp(MCP_ROUTES, ["mcp", command, "--help"]);
-      expect(help.exitCode).toBe(0);
-      expect(help.stderr).toContain("--api-key");
-      expect(help.stderr).toContain("--yes");
-      expect(help.stderr).not.toContain("--console-region");
+  test.each([...Object.keys(MCP_ROUTES), ...Object.keys(SKILL_ROUTES)])(
+    "%s exposes confirmation only for MCP deletion",
+    async (path) => {
+      const routes = path.startsWith("mcp ") ? MCP_ROUTES : SKILL_ROUTES;
+      const help = await runCommandHelp(routes, [...path.split(" "), "--help"]);
+      expect(help.exitCode, help.stderr).toBe(0);
+      expect(help.stderr.includes("--yes")).toBe(path === "mcp delete");
+      if (path.startsWith("mcp ") && path !== "mcp disconnect") {
+        expect(help.stderr).toContain("--api-key");
+        expect(help.stderr).not.toContain("--console-region");
+      }
     },
   );
 
@@ -1429,17 +1445,14 @@ describe("custom MCP management", () => {
     expectRequests();
   });
 
-  test("a create preview or missing confirmation sends no requests and reveals no configuration values", async () => {
+  test("a create preview sends no requests and reveals no configuration values", async () => {
     const preview = await run([...createArgs, "--dry-run"]);
     expect(preview.exitCode, preview.stderr).toBe(0);
     expect(JSON.parse(preview.stdout)).toMatchObject({
       plan: { action: "create", deploy: true, mcp_type: "HTTP" },
-      risk: { reason: "billing" },
+      risk: null,
     });
-    const refused = await run(createArgs);
-    expect(refused.exitCode).toBe(7);
-    expect(refused.stderr).toContain("requires_confirmation");
-    expect(preview.stdout + refused.stderr).not.toContain("private-fixture");
+    expect(preview.stdout + preview.stderr).not.toContain("private-fixture");
     expectRequests();
   });
 
@@ -1453,15 +1466,7 @@ describe("custom MCP management", () => {
   });
 
   test("missing and malformed config files produce distinct errors before the detail lookup", async () => {
-    const args = [
-      "update",
-      ...target,
-      "--mcp-type",
-      "http",
-      "--mcp-config",
-      "./config.json",
-      "--yes",
-    ];
+    const args = ["update", ...target, "--mcp-type", "http", "--mcp-config", "./config.json"];
     const missing = await run(args);
     expect(missing.exitCode, missing.stderr).toBe(1);
     writeFileSync(join(directory, "config.json"), '{"token":"private-fixture",');
@@ -1520,7 +1525,6 @@ describe("custom MCP management", () => {
         type,
         "--mcp-config",
         JSON.stringify(config),
-        "--yes",
       ]);
       expect(result.exitCode, result.stderr).toBe(0);
       expect(JSON.parse(result.stdout)).toMatchObject({
@@ -1553,12 +1557,12 @@ describe("custom MCP management", () => {
     "rejects configuration replacement while %s",
     async (status) => {
       detail(status);
-      expect((await run(["update", ...target, ...configArgs, "--yes"])).exitCode).toBe(1);
+      expect((await run(["update", ...target, ...configArgs])).exitCode).toBe(1);
       expectRequests(["GET", item]);
     },
   );
 
-  test("update reads a relative or absolute JSON file and posts a complete replacement only after confirmation", async () => {
+  test("update reads a relative or absolute JSON file and posts the complete replacement directly", async () => {
     const path = join(directory, "weather.json");
     writeFileSync(path, JSON.stringify(remoteConfig));
     const updateArgs = ["update", ...target, "--mcp-type", "http", "--mcp-config"];
@@ -1566,17 +1570,13 @@ describe("custom MCP management", () => {
     const preview = await run([...updateArgs, path, "--dry-run"]);
     expect(preview.exitCode, preview.stderr).toBe(0);
     expect(JSON.parse(preview.stdout).plan).toMatchObject({ replace_config: true, deploy: true });
-    detail();
-    const refused = await run([...updateArgs, "./weather.json"]);
-    expect(refused.exitCode).toBe(7);
-    expect(refused.stderr).toContain("requires_confirmation");
-    expect(preview.stdout + refused.stderr).not.toContain("private-fixture");
+    expectRequests(["GET", item]);
+    expect(preview.stdout + preview.stderr).not.toContain("private-fixture");
     detail();
     reply({ mcp_code: code, server_status: "ACTIVATED" });
-    const updated = await run([...updateArgs, "./weather.json", "--yes"]);
+    const updated = await run([...updateArgs, "./weather.json"]);
     expect(updated.exitCode, updated.stderr).toBe(0);
     expectRequests(
-      ["GET", item],
       ["GET", item],
       ["GET", item],
       ["POST", item, { mcp_type: "HTTP", mcp_config: remoteConfig }],
@@ -1585,8 +1585,8 @@ describe("custom MCP management", () => {
 
   test.each(["update", "delete"])("%s checks ownership before writing", async (command) => {
     detail("ACTIVATED", "OFFICIAL");
-    const args = command === "update" ? ["--name", "new"] : [];
-    expect((await run([command, ...target, ...args, "--yes"])).exitCode).toBe(1);
+    const args = command === "update" ? ["--name", "new"] : ["--yes"];
+    expect((await run([command, ...target, ...args])).exitCode).toBe(1);
     expectRequests(["GET", item]);
   });
 
@@ -1627,7 +1627,7 @@ describe("custom MCP management", () => {
       },
       201,
     );
-    const failed = await run([...createArgs, "--yes"]);
+    const failed = await run(createArgs);
     expect(failed.exitCode).toBe(1);
     expect(JSON.parse(failed.stdout)).toMatchObject({
       server_code: code,

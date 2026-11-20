@@ -1,3 +1,4 @@
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
 import { defineCommand, getConfigDir, type CommandRisk } from "bailian-cli-core";
 import { registeredMcpAgents } from "./agent-config.ts";
 import {
@@ -8,7 +9,10 @@ import {
   type ServerWrite,
 } from "./server-management.ts";
 
-const flags = { server: serverFlag };
+const flags = {
+  ...WORKSPACE_FLAG,
+  server: serverFlag,
+};
 const risk = {
   level: "high",
   reason: "destructive",

@@ -1,7 +1,8 @@
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
 import { BailianError, defineCommand, ExitCode } from "bailian-cli-core";
 import {
   buildServerBody,
-  deploymentRisk,
+  deploymentNote,
   editableFlags,
   executeServerWrite,
   getCustomServer,
@@ -11,14 +12,17 @@ import {
   type ServerWrite,
 } from "./server-management.ts";
 
-const flags = { server: serverFlag, ...editableFlags };
+const flags = {
+  ...WORKSPACE_FLAG,
+  server: serverFlag,
+  ...editableFlags,
+};
 export default defineCommand<typeof flags, ServerWrite>({
   description: {
     "en-US": "Update a custom MCP server's metadata or replace its configuration",
     "zh-CN": "更新自定义 MCP 服务的基本信息或替换完整配置",
   },
   auth: "apiKey",
-  risk: deploymentRisk,
   flags,
   usageArgs:
     "--server <code> [--name <text>] [--description <text>] [--mcp-type <type> --mcp-config <json|path>] [flags]",
@@ -27,10 +31,11 @@ export default defineCommand<typeof flags, ServerWrite>({
     "--server mcp-example --mcp-type sse --mcp-config ./weather.json --dry-run",
   ],
   notes: [
+    deploymentNote,
     {
       "en-US":
-        "Name and description changes take effect without redeployment. Stop the instance before replacing its entire configuration and confirming redeployment with --yes.",
-      "zh-CN": "单改名称或描述可直接生效。替换完整配置前须先停用实例，再用 --yes 确认重新部署。",
+        "Name and description changes take effect without redeployment. Stop the instance before replacing its configuration and redeploying.",
+      "zh-CN": "单改名称或描述可直接生效。替换完整配置前须先停用实例，再重新部署。",
     },
   ],
   validate(values) {
@@ -71,7 +76,7 @@ export default defineCommand<typeof flags, ServerWrite>({
         replace_config: redeploy,
         deploy: redeploy,
       },
-      risk: redeploy ? deploymentRisk : null,
+      risk: null,
       notices: [],
     };
   },

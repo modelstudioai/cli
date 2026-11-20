@@ -3,7 +3,6 @@ import { defineSkillCommand } from "./update-check.ts";
 import { BailianError, type CommandContext } from "bailian-cli-core";
 import { runSkillLifecycle, useTargetRecords, withSkillMutation } from "./lifecycle.ts";
 import { runRegistryLifecycle } from "./registry-lifecycle.ts";
-import { lifecycleRisks } from "../mcp/server-lifecycle.ts";
 import { SkillAddPackages } from "./mcp-dependencies.ts";
 import { needsCloud, sourceFlag, targetFlags, validateSelection } from "./targets.ts";
 
@@ -22,9 +21,9 @@ const flags = {
     valueHint: "<bool>",
     description: {
       "en-US":
-        "Read serverCode entries from mcp-config.json beside SKILL.md and check activation (default true).",
+        "Read serverCode entries from mcp-config.json beside SKILL.md and activate inactive dependencies (default true).",
       "zh-CN":
-        "读取 SKILL.md 同目录下 mcp-config.json 声明的 serverCode 并检查开通状态（默认 true）。",
+        "读取 SKILL.md 同目录下 mcp-config.json 声明的 serverCode 并开通未启用的依赖（默认 true）。",
     },
   },
   all: {
@@ -73,7 +72,6 @@ function outputReport(
   ctx: AddContext,
   report: AddReport,
   deps: Awaited<ReturnType<typeof dependencyReport>>,
-  previewRisk?: typeof lifecycleRisks.activate | null,
 ) {
   const text =
     "text" in report && !deps.fields.mcp_dep_results.length ? { text: report.text } : undefined;
@@ -82,7 +80,6 @@ function outputReport(
       ...report.data,
       dry_run: ctx.settings.dryRun,
       ...deps.fields,
-      ...(previewRisk && { risk: previewRisk }),
     },
     text,
   );
@@ -98,15 +95,14 @@ export default defineSkillCommand<typeof flags, SkillAddPackages | undefined>({
   requiresApiKey: (values) => needsCloud(values) || (values.withMcp !== false && "optional"),
   defaultOutput: "json",
   usageArgs:
-    "(--all | --name <code,...>) [--source oss|cloud] [--agent <agent|all>] [--scope user|project] [--skill-version <version>] [--with-mcp <bool>] [--yes]",
+    "(--all | --name <code,...>) [--source oss|cloud] [--agent <agent|all>] [--scope user|project] [--skill-version <version>] [--with-mcp <bool>]",
   flags,
-  risk: lifecycleRisks.activate,
   notes: [
     {
       "en-US":
-        "Use --dry-run to inspect the selected package versions and preview MCP activation. --yes confirms activation of inactive dependencies, which may incur charges. Public OSS packages install without a key. Checking their declared MCP services requires a Bailian API key. Use --with-mcp false to install only.",
+        "Use --dry-run to inspect the selected package versions and preview MCP activation. Installation activates inactive dependencies and may incur charges. Public OSS packages install without a key. Checking their declared MCP services requires a Bailian API key. Use --with-mcp false to install only.",
       "zh-CN":
-        "用 --dry-run 查看所选版本声明的依赖及开通计划。--yes 确认开通未启用的依赖，可能产生费用。公开 OSS 包可免鉴权安装，检查其 MCP 服务需要百炼 API Key。只安装 Skill 可用 --with-mcp false。",
+        "用 --dry-run 查看所选版本声明的依赖及开通计划。安装时会开通未启用的依赖，可能产生费用。公开 OSS 包可免鉴权安装，检查其 MCP 服务需要百炼 API Key。只安装 Skill 可用 --with-mcp false。",
     },
   ],
   validate(flags) {
@@ -125,16 +121,15 @@ export default defineSkillCommand<typeof flags, SkillAddPackages | undefined>({
         return { data: undefined, preview: {}, risk: null, notices: [] };
       const report = await install({ ...ctx, settings: { ...ctx.settings, dryRun: true } }, staged);
       const skills = successfulSkills(report);
-      const activation = staged && (await staged.plan(ctx, skills));
+      await staged?.plan(ctx, skills);
       const deps = await dependencyReport(ctx, report, staged, true);
-      const risk = activation ? lifecycleRisks.activate : null;
       if (!ctx.settings.dryRun && !skills.size && report.firstError)
         outputReport(ctx, report, deps);
       return {
         data: staged,
         preview: { ...report.data, ...deps.fields },
-        renderDryRun: () => outputReport(ctx, report, deps, risk),
-        risk,
+        renderDryRun: () => outputReport(ctx, report, deps),
+        risk: null,
         notices: [],
         dispose: () => staged?.dispose(),
       };

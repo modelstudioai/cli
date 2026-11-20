@@ -1,3 +1,4 @@
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
 import { homedir } from "node:os";
 import {
   BailianError,
@@ -28,6 +29,7 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "[--name <text>] [--type <official|private>] [--page <n>] [--page-size <n>]",
   flags: {
+    ...WORKSPACE_FLAG,
     name: {
       type: "string",
       valueHint: "<text>",

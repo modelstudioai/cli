@@ -1,3 +1,4 @@
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
 import { BailianError, defineCommand, formatCommand, type CommandContext } from "bailian-cli-core";
 import { withStateLock } from "../shared/state-lock.ts";
 import {
@@ -17,11 +18,12 @@ import {
   type RegistrationOutcome,
   type RegistrationResult,
 } from "./registration.ts";
-import { lifecycleRisks, planServerLifecycle, writeServer } from "./server-lifecycle.ts";
+import { planServerLifecycle, writeServer } from "./server-lifecycle.ts";
 import { validateServer } from "./server-management.ts";
 import { requestMcpServer } from "./server-response.ts";
 
 const flags = {
+  ...WORKSPACE_FLAG,
   ...registrationFlags,
   transport: {
     type: "string",
@@ -39,13 +41,16 @@ const flags = {
     valueHint: "[true|false]",
     description: {
       "en-US":
-        "Activate an inactive service before connecting (default true, requires --yes). Use --and-activate=false to connect only to active services.",
+        "Activate an inactive service before connecting (default true, activation may incur charges). Use --and-activate=false to connect only to active services.",
       "zh-CN":
-        "接入前开通未启用的服务（默认 true，开通须加 --yes）。仅接入已启用的服务可用 --and-activate=false。",
+        "接入前开通未启用的服务（默认 true，开通可能产生费用）。仅接入已启用的服务可用 --and-activate=false。",
     },
   },
 } as const;
-type Context = Pick<CommandContext<typeof flags>, "client" | "identity" | "localize" | "flags">;
+type Context = Pick<
+  CommandContext<typeof flags>,
+  "client" | "identity" | "localize" | "flags" | "settings"
+>;
 type Location = ReturnType<typeof registrationLocation>;
 type Activation = Extract<ReturnType<typeof planServerLifecycle>, { action: string }>;
 interface Dependency {
@@ -177,9 +182,8 @@ export default defineCommand<typeof flags, Prepared>({
   },
   auth: "apiKey",
   flags,
-  risk: lifecycleRisks.activate,
   usageArgs:
-    "--server <code> --transport <streamable-http|sse> --agent <agent|all> [--scope <user|project>] [--and-activate[=true|false]] [--yes] [--dry-run]",
+    "--server <code> --transport <streamable-http|sse> --agent <agent|all> [--scope <user|project>] [--and-activate[=true|false]] [--dry-run]",
   exampleArgs: [
     "--server TextGenerateImage --transport streamable-http --agent cursor --dry-run",
     "--server mcp-example --transport sse --agent claude-code --scope project --and-activate=false",
@@ -235,7 +239,7 @@ export default defineCommand<typeof flags, Prepared>({
         targets: previewTargets,
         header_names: Object.keys(ctx.client.bailianMcpRegistrationHeaders()),
       },
-      risk: dependency.activation ? lifecycleRisks.activate : null,
+      risk: null,
       notices: [],
     };
   },

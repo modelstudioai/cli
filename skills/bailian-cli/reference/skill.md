@@ -21,36 +21,31 @@ Index: [index.md](index.md)
 
 ### `bl skill add`
 
-| Field              | Value                                                                                                                                                                    |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Name**           | `skill add`                                                                                                                                                              |
-| **Description**    | Install skills from the Bailian skill registry into local agents                                                                                                         |
-| **Authentication** | API Key when required by source                                                                                                                                          |
-| **Usage**          | `bl skill add (--all \| --name <code,...>) [--source oss\|cloud] [--agent <agent\|all>] [--scope user\|project] [--skill-version <version>] [--with-mcp <bool>] [--yes]` |
-| **Risk**           | `high`                                                                                                                                                                   |
-| **Risk message**   | Activation may incur deployment or usage charges. A OneKey service may place an order on your account.                                                                   |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                                                                                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `skill add`                                                                                                                                                      |
+| **Description**    | Install skills from the Bailian skill registry into local agents                                                                                                 |
+| **Authentication** | API Key when required by source                                                                                                                                  |
+| **Usage**          | `bl skill add (--all \| --name <code,...>) [--source oss\|cloud] [--agent <agent\|all>] [--scope user\|project] [--skill-version <version>] [--with-mcp <bool>]` |
 
 #### Flags
 
-| Flag                        | Type    | Required | Description                                                                                       |
-| --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------- |
-| `--workspace-id <id>`       | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                   |
-| `--source <oss\|cloud>`     | string  | no       | Skill source (default cloud). Use oss for the public registry.                                    |
-| `--agent <agent\|all>`      | string  | no       | Target agent ID, or all detected agents                                                           |
-| `--scope <user\|project>`   | string  | no       | Installation scope (default user)                                                                 |
-| `--skill-version <version>` | string  | no       | Install and pin this exact version                                                                |
-| `--with-mcp <bool>`         | boolean | no       | Read serverCode entries from mcp-config.json beside SKILL.md and check activation (default true). |
-| `--all`                     | switch  | no       | Install all skills from the registry                                                              |
-| `--name <name,...>`         | string  | no       | Comma-separated skill names to install                                                            |
-| `--yes`                     | switch  | no       | Confirm this high-risk operation                                                                  |
-| `--api-key <key>`           | string  | no       | API key                                                                                           |
-| `--base-url <url>`          | string  | no       | API base URL                                                                                      |
+| Flag                        | Type    | Required | Description                                                                                                     |
+| --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------------------------------- |
+| `--workspace-id <id>`       | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                 |
+| `--source <oss\|cloud>`     | string  | no       | Skill source (default cloud). Use oss for the public registry.                                                  |
+| `--agent <agent\|all>`      | string  | no       | Target agent ID, or all detected agents                                                                         |
+| `--scope <user\|project>`   | string  | no       | Installation scope (default user)                                                                               |
+| `--skill-version <version>` | string  | no       | Install and pin this exact version                                                                              |
+| `--with-mcp <bool>`         | boolean | no       | Read serverCode entries from mcp-config.json beside SKILL.md and activate inactive dependencies (default true). |
+| `--all`                     | switch  | no       | Install all skills from the registry                                                                            |
+| `--name <name,...>`         | string  | no       | Comma-separated skill names to install                                                                          |
+| `--api-key <key>`           | string  | no       | API key                                                                                                         |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                                    |
 
 #### Notes
 
-- Use --dry-run to inspect the selected package versions and preview MCP activation. --yes confirms activation of inactive dependencies, which may incur charges. Public OSS packages install without a key. Checking their declared MCP services requires a Bailian API key. Use --with-mcp false to install only.
+- Use --dry-run to inspect the selected package versions and preview MCP activation. Installation activates inactive dependencies and may incur charges. Public OSS packages install without a key. Checking their declared MCP services requires a Bailian API key. Use --with-mcp false to install only.
 
 #### Examples
 

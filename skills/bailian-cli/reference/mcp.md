@@ -28,30 +28,26 @@ Index: [index.md](index.md)
 
 ### `bl mcp activate`
 
-| Field              | Value                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| **Name**           | `mcp activate`                                                                                         |
-| **Description**    | Activate official MCP servers or enable custom servers using their saved configuration                 |
-| **Authentication** | API Key                                                                                                |
-| **Usage**          | `bl mcp activate --server <code,...> [--yes] [--no-browser] [--dry-run]`                               |
-| **Risk**           | `high`                                                                                                 |
-| **Risk message**   | Activation may incur deployment or usage charges. A OneKey service may place an order on your account. |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| **Name**           | `mcp activate`                                                                         |
+| **Description**    | Activate official MCP servers or enable custom servers using their saved configuration |
+| **Authentication** | API Key                                                                                |
+| **Usage**          | `bl mcp activate --server <code,...> [--no-browser] [--dry-run]`                       |
 
 #### Flags
 
 | Flag                  | Type   | Required | Description                                                             |
 | --------------------- | ------ | -------- | ----------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)         |
 | `--server <code,...>` | string | yes      | Comma-separated server codes (up to 30 distinct servers)                |
 | `--no-browser`        | switch | no       | Print the console link without opening it when manual setup is required |
-| `--yes`               | switch | no       | Confirm this high-risk operation                                        |
 | `--api-key <key>`     | string | no       | API key                                                                 |
 | `--base-url <url>`    | string | no       | API base URL                                                            |
 
 #### Notes
 
-- ACTIVATING means the deployment is still in progress. Use mcp list to see servers once they are active.
+- OneKey activation may place an order. ACTIVATING means the deployment is still in progress. Use mcp list to see servers once they are active.
 
 #### Examples
 
@@ -60,8 +56,7 @@ bl mcp activate --server mcp-example,mcp-weather --dry-run
 ```
 
 ```bash
-# Only after explicit user confirmation:
-bl mcp activate --server mcp-example --yes
+bl mcp activate --server mcp-example
 ```
 
 ### `bl mcp call`
@@ -101,27 +96,23 @@ bl mcp call --target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 
 
 ### `bl mcp connect`
 
-| Field              | Value                                                                                                                                                                 |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `mcp connect`                                                                                                                                                         |
-| **Description**    | Connect a Bailian MCP service to native Agent configurations                                                                                                          |
-| **Authentication** | API Key                                                                                                                                                               |
-| **Usage**          | `bl mcp connect --server <code> --transport <streamable-http\|sse> --agent <agent\|all> [--scope <user\|project>] [--and-activate[=true\|false]] [--yes] [--dry-run]` |
-| **Risk**           | `high`                                                                                                                                                                |
-| **Risk message**   | Activation may incur deployment or usage charges. A OneKey service may place an order on your account.                                                                |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `mcp connect`                                                                                                                                                 |
+| **Description**    | Connect a Bailian MCP service to native Agent configurations                                                                                                  |
+| **Authentication** | API Key                                                                                                                                                       |
+| **Usage**          | `bl mcp connect --server <code> --transport <streamable-http\|sse> --agent <agent\|all> [--scope <user\|project>] [--and-activate[=true\|false]] [--dry-run]` |
 
 #### Flags
 
 | Flag                                                                                                                                                   | Type    | Required | Description                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--workspace-id <id>`                                                                                                                                  | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                                                                     |
 | `--server <code>`                                                                                                                                      | string  | yes      | Bailian MCP server code                                                                                                                                             |
 | `--agent <codex\|claude-code\|cursor\|qoder\|qoderwork\|qwenwork\|qwen-code\|gemini\|opencode\|openclaw\|deepseek-harness\|zcode\|workbuddy\|pi\|all>` | string  | yes      | Target Agent: codex, claude-code, cursor, qoder, qoderwork, qwenwork, qwen-code, gemini, opencode, openclaw, deepseek-harness, zcode, workbuddy, pi, all            |
 | `--scope <user\|project>`                                                                                                                              | string  | no       | Registration scope (default user). Run project scope in the project root. Supported: codex, claude-code, cursor, qoder, qwen-code, gemini, opencode, workbuddy, pi. |
 | `--transport <streamable-http\|sse>`                                                                                                                   | string  | yes      | Transport exposed by the service endpoint                                                                                                                           |
-| `--and-activate [true\|false]`                                                                                                                         | boolean | no       | Activate an inactive service before connecting (default true, requires --yes). Use --and-activate=false to connect only to active services.                         |
-| `--yes`                                                                                                                                                | switch  | no       | Confirm this high-risk operation                                                                                                                                    |
+| `--and-activate [true\|false]`                                                                                                                         | boolean | no       | Activate an inactive service before connecting (default true, activation may incur charges). Use --and-activate=false to connect only to active services.           |
 | `--api-key <key>`                                                                                                                                      | string  | no       | API key                                                                                                                                                             |
 | `--base-url <url>`                                                                                                                                     | string  | no       | API base URL                                                                                                                                                        |
 
@@ -148,22 +139,22 @@ bl mcp connect --server mcp-example --transport sse --agent claude-code --scope 
 | **Description**    | Create and deploy a custom MCP server                                                                  |
 | **Authentication** | API Key                                                                                                |
 | **Usage**          | `bl mcp create --name <text> --description <text> --mcp-type <type> --mcp-config <json\|path> [flags]` |
-| **Risk**           | `high`                                                                                                 |
-| **Risk message**   | Deploying a custom MCP server may incur charges, including Function Compute usage for STDIO.           |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag                                     | Type   | Required | Description                                                   |
-| ---------------------------------------- | ------ | -------- | ------------------------------------------------------------- |
-| `--name <text>`                          | string | yes      | Server name                                                   |
-| `--description <text>`                   | string | yes      | Server description                                            |
-| `--mcp-type <stdio\|http\|sse\|openapi>` | string | yes      | MCP type (case-insensitive)                                   |
-| `--mcp-config <json\|path>`              | string | yes      | Complete MCP configuration as a JSON object or JSON file path |
-| `--yes`                                  | switch | no       | Confirm this high-risk operation                              |
-| `--api-key <key>`                        | string | no       | API key                                                       |
-| `--base-url <url>`                       | string | no       | API base URL                                                  |
+| Flag                                     | Type   | Required | Description                                                     |
+| ---------------------------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>`                    | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--name <text>`                          | string | yes      | Server name                                                     |
+| `--description <text>`                   | string | yes      | Server description                                              |
+| `--mcp-type <stdio\|http\|sse\|openapi>` | string | yes      | MCP type (case-insensitive)                                     |
+| `--mcp-config <json\|path>`              | string | yes      | Complete MCP configuration as a JSON object or JSON file path   |
+| `--api-key <key>`                        | string | no       | API key                                                         |
+| `--base-url <url>`                       | string | no       | API base URL                                                    |
+
+#### Notes
+
+- Deploying a custom MCP server may incur charges, including Function Compute usage for STDIO.
 
 #### Examples
 
@@ -172,35 +163,30 @@ bl mcp create --name weather --description "Weather lookup" --mcp-type http --mc
 ```
 
 ```bash
-# Only after explicit user confirmation:
-bl mcp create --name weather --description "Weather lookup" --mcp-type http --mcp-config ./weather.json --yes
+bl mcp create --name weather --description "Weather lookup" --mcp-type http --mcp-config ./weather.json
 ```
 
 ### `bl mcp deactivate`
 
-| Field              | Value                                                                                                                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `mcp deactivate`                                                                                                                                                                    |
-| **Description**    | Deactivate official MCP servers or stop custom server deployments                                                                                                                   |
-| **Authentication** | API Key                                                                                                                                                                             |
-| **Usage**          | `bl mcp deactivate --server <code,...> [--yes] [--dry-run]`                                                                                                                         |
-| **Risk**           | `high`                                                                                                                                                                              |
-| **Risk message**   | Stopping these instances can interrupt callers in the affected account or workspace and remove dedicated deployment resources. Console credentials may need to be configured again. |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                                             |
+| ------------------ | ----------------------------------------------------------------- |
+| **Name**           | `mcp deactivate`                                                  |
+| **Description**    | Deactivate official MCP servers or stop custom server deployments |
+| **Authentication** | API Key                                                           |
+| **Usage**          | `bl mcp deactivate --server <code,...> [--dry-run]`               |
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                              |
-| --------------------- | ------ | -------- | -------------------------------------------------------- |
-| `--server <code,...>` | string | yes      | Comma-separated server codes (up to 30 distinct servers) |
-| `--yes`               | switch | no       | Confirm this high-risk operation                         |
-| `--api-key <key>`     | string | no       | API key                                                  |
-| `--base-url <url>`    | string | no       | API base URL                                             |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--server <code,...>` | string | yes      | Comma-separated server codes (up to 30 distinct servers)        |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
-- Stopping a custom server keeps its definition and saved configuration. The service may reject deactivation for OneKey servers.
+- Stopping a server can interrupt callers. Stopping a custom server keeps its definition and saved configuration. The service may reject deactivation for OneKey servers.
 
 #### Examples
 
@@ -209,8 +195,7 @@ bl mcp deactivate --server mcp-example,mcp-weather --dry-run
 ```
 
 ```bash
-# Only after explicit user confirmation:
-bl mcp deactivate --server mcp-example --yes
+bl mcp deactivate --server mcp-example
 ```
 
 ### `bl mcp delete`
@@ -228,12 +213,13 @@ bl mcp deactivate --server mcp-example --yes
 
 #### Flags
 
-| Flag               | Type   | Required | Description                      |
-| ------------------ | ------ | -------- | -------------------------------- |
-| `--server <code>`  | string | yes      | Custom MCP server code           |
-| `--yes`            | switch | no       | Confirm this high-risk operation |
-| `--api-key <key>`  | string | no       | API key                          |
-| `--base-url <url>` | string | no       | API base URL                     |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--server <code>`     | string | yes      | Custom MCP server code                                          |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -283,29 +269,25 @@ bl mcp disconnect --server mcp-example --agent all
 
 ### `bl mcp get`
 
-| Field              | Value                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| **Name**           | `mcp get`                                                                           |
-| **Description**    | Get an MCP server's details and tool definitions                                    |
-| **Authentication** | API Key                                                                             |
-| **Usage**          | `bl mcp get --server <code> [flags]`                                                |
-| **Risk**           | `high`                                                                              |
-| **Risk message**   | Fetching tools may activate a OneKey MCP service or place an order on your account. |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                            |
+| ------------------ | ------------------------------------------------ |
+| **Name**           | `mcp get`                                        |
+| **Description**    | Get an MCP server's details and tool definitions |
+| **Authentication** | API Key                                          |
+| **Usage**          | `bl mcp get --server <code> [flags]`             |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                        |
-| ------------------ | ------ | -------- | ---------------------------------- |
-| `--server <code>`  | string | yes      | Official or custom MCP server code |
-| `--yes`            | switch | no       | Confirm this high-risk operation   |
-| `--api-key <key>`  | string | no       | API key                            |
-| `--base-url <url>` | string | no       | API base URL                       |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--server <code>`     | string | yes      | Official or custom MCP server code                              |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
-- Billing shows the reported mode, unit price and free quota, or null when unavailable. Dry-run retrieves only server details. Tool discovery requires confirmation for OneKey or unknown activation policies. If tool discovery fails, the detail result contains tools=null and the command exits with the error.
+- Billing shows the reported mode, unit price and free quota, or null when unavailable. Dry-run retrieves only server details. Tool discovery may activate a OneKey service. If tool discovery fails, the detail result contains tools=null and the command exits with the error.
 
 #### Examples
 
@@ -328,14 +310,15 @@ bl mcp get --server mcp-example --dry-run
 
 #### Flags
 
-| Flag                         | Type   | Required | Description                                         |
-| ---------------------------- | ------ | -------- | --------------------------------------------------- |
-| `--name <text>`              | string | no       | Filter by server name (substring match)             |
-| `--type <official\|private>` | string | no       | Ownership type (default official, case-insensitive) |
-| `--page <n>`                 | number | no       | Page of matching servers (default 1)                |
-| `--page-size <n>`            | number | no       | Matching servers per page (1–100, default 30)       |
-| `--api-key <key>`            | string | no       | API key                                             |
-| `--base-url <url>`           | string | no       | API base URL                                        |
+| Flag                         | Type   | Required | Description                                                     |
+| ---------------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>`        | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--name <text>`              | string | no       | Filter by server name (substring match)                         |
+| `--type <official\|private>` | string | no       | Ownership type (default official, case-insensitive)             |
+| `--page <n>`                 | number | no       | Page of matching servers (default 1)                            |
+| `--page-size <n>`            | number | no       | Matching servers per page (1–100, default 30)                   |
+| `--api-key <key>`            | string | no       | API key                                                         |
+| `--base-url <url>`           | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -357,33 +340,29 @@ bl mcp list --type private --page 2 --page-size 10
 
 ### `bl mcp tool call`
 
-| Field              | Value                                                                                                                  |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `mcp tool call`                                                                                                        |
-| **Description**    | Call a Bailian MCP tool via OpenAPI                                                                                    |
-| **Authentication** | API Key                                                                                                                |
-| **Usage**          | `bl mcp tool call --server <code> --tool <name> [--json '{...}'] [--arg k=v ...] [--query <text>] [--yes] [--dry-run]` |
-| **Risk**           | `high`                                                                                                                 |
-| **Risk message**   | Calling this tool may activate a OneKey MCP service or place an order on your account.                                 |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                                                                                          |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `mcp tool call`                                                                                                |
+| **Description**    | Call a Bailian MCP tool via OpenAPI                                                                            |
+| **Authentication** | API Key                                                                                                        |
+| **Usage**          | `bl mcp tool call --server <code> --tool <name> [--json '{...}'] [--arg k=v ...] [--query <text>] [--dry-run]` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                                                                    |
-| ------------------ | ------ | -------- | ---------------------------------------------------------------------------------------------- |
-| `--server <code>`  | string | yes      | Official or custom MCP server code                                                             |
-| `--tool <name>`    | string | yes      | Tool name returned by tool list or tool search                                                 |
-| `--json <obj>`     | string | no       | Base tool arguments as a JSON object                                                           |
-| `--arg <k=v>`      | array  | no       | Set a tool argument (repeatable). Values are parsed as JSON when possible and override --json. |
-| `--query <text>`   | string | no       | Set the query argument to this text after applying --json and --arg                            |
-| `--yes`            | switch | no       | Confirm this high-risk operation                                                               |
-| `--api-key <key>`  | string | no       | API key                                                                                        |
-| `--base-url <url>` | string | no       | API base URL                                                                                   |
+| Flag                  | Type   | Required | Description                                                                                    |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                |
+| `--server <code>`     | string | yes      | Official or custom MCP server code                                                             |
+| `--tool <name>`       | string | yes      | Tool name returned by tool list or tool search                                                 |
+| `--json <obj>`        | string | no       | Base tool arguments as a JSON object                                                           |
+| `--arg <k=v>`         | array  | no       | Set a tool argument (repeatable). Values are parsed as JSON when possible and override --json. |
+| `--query <text>`      | string | no       | Set the query argument to this text after applying --json and --arg                            |
+| `--api-key <key>`     | string | no       | API key                                                                                        |
+| `--base-url <url>`    | string | no       | API base URL                                                                                   |
 
 #### Notes
 
-- Dry-run previews the arguments locally. OneKey services and unknown activation policies require --yes. A tool-reported error returns its content and exits with code 1.
+- Dry-run previews the arguments locally. Calling a tool may activate a OneKey service. A tool-reported error returns its content and exits with code 1.
 
 #### Examples
 
@@ -392,35 +371,30 @@ bl mcp tool call --server mcp-example --tool getOrder --arg orderId=A123 --dry-r
 ```
 
 ```bash
-# Only after explicit user confirmation:
-bl mcp tool call --server mcp-example --tool getOrder --arg orderId=A123 --yes
+bl mcp tool call --workspace-id ws-example --server mcp-example --tool getOrder --arg orderId=A123
 ```
 
 ### `bl mcp tool list`
 
-| Field              | Value                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| **Name**           | `mcp tool list`                                                                     |
-| **Description**    | List a Bailian MCP server's tools and input schemas via OpenAPI                     |
-| **Authentication** | API Key                                                                             |
-| **Usage**          | `bl mcp tool list --server <code> [--yes] [--dry-run]`                              |
-| **Risk**           | `high`                                                                              |
-| **Risk message**   | Fetching tools may activate a OneKey MCP service or place an order on your account. |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                                           |
+| ------------------ | --------------------------------------------------------------- |
+| **Name**           | `mcp tool list`                                                 |
+| **Description**    | List a Bailian MCP server's tools and input schemas via OpenAPI |
+| **Authentication** | API Key                                                         |
+| **Usage**          | `bl mcp tool list --server <code> [--dry-run]`                  |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                        |
-| ------------------ | ------ | -------- | ---------------------------------- |
-| `--server <code>`  | string | yes      | Official or custom MCP server code |
-| `--yes`            | switch | no       | Confirm this high-risk operation   |
-| `--api-key <key>`  | string | no       | API key                            |
-| `--base-url <url>` | string | no       | API base URL                       |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--server <code>`     | string | yes      | Official or custom MCP server code                              |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
-- Without --yes, server details are checked first. OneKey services and services with an unknown activation policy require confirmation. Dry-run previews the request locally.
+- Fetching tools may activate a OneKey service. Dry-run previews the request locally.
 
 #### Examples
 
@@ -434,26 +408,26 @@ bl mcp tool list --server mcp-example --dry-run
 
 ### `bl mcp tool search`
 
-| Field              | Value                                                                                        |
-| ------------------ | -------------------------------------------------------------------------------------------- |
-| **Name**           | `mcp tool search`                                                                            |
-| **Description**    | Find recommended MCP tools for a natural-language query                                      |
-| **Authentication** | API Key                                                                                      |
-| **Usage**          | `bl mcp tool search --query <text> [--limit <n>] [--yes] [--dry-run]`                        |
-| **Risk**           | `high`                                                                                       |
-| **Risk message**   | Requesting recommendations may trigger OneKey activation and place an order on your account. |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                                         |
+| ------------------ | ------------------------------------------------------------- |
+| **Name**           | `mcp tool search`                                             |
+| **Description**    | Find recommended MCP tools for a natural-language query       |
+| **Authentication** | API Key                                                       |
+| **Usage**          | `bl mcp tool search --query <text> [--limit <n>] [--dry-run]` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                           |
-| ------------------ | ------ | -------- | ------------------------------------- |
-| `--query <text>`   | string | yes      | Describe what you want the tool to do |
-| `--limit <n>`      | number | no       | Maximum results to show (default 10)  |
-| `--yes`            | switch | no       | Confirm this high-risk operation      |
-| `--api-key <key>`  | string | no       | API key                               |
-| `--base-url <url>` | string | no       | API base URL                          |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--query <text>`      | string | yes      | Describe what you want the tool to do                           |
+| `--limit <n>`         | number | no       | Maximum results to show (default 10)                            |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
+
+#### Notes
+
+- Requesting recommendations may activate a OneKey service and place an order.
 
 #### Examples
 
@@ -462,8 +436,7 @@ bl mcp tool search --query "look up an order" --dry-run
 ```
 
 ```bash
-# Only after explicit user confirmation:
-bl mcp tool search --query "look up an order" --limit 5 --yes
+bl mcp tool search --query "look up an order" --limit 5
 ```
 
 ### `bl mcp tools`
@@ -506,27 +479,24 @@ bl mcp tools --server my-server --url https://example.com/mcp
 | **Description**    | Update a custom MCP server's metadata or replace its configuration                                                           |
 | **Authentication** | API Key                                                                                                                      |
 | **Usage**          | `bl mcp update --server <code> [--name <text>] [--description <text>] [--mcp-type <type> --mcp-config <json\|path>] [flags]` |
-| **Risk**           | `high`                                                                                                                       |
-| **Risk message**   | Deploying a custom MCP server may incur charges, including Function Compute usage for STDIO.                                 |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag                                     | Type   | Required | Description                                                   |
-| ---------------------------------------- | ------ | -------- | ------------------------------------------------------------- |
-| `--server <code>`                        | string | yes      | Custom MCP server code                                        |
-| `--name <text>`                          | string | no       | Server name                                                   |
-| `--description <text>`                   | string | no       | Server description                                            |
-| `--mcp-type <stdio\|http\|sse\|openapi>` | string | no       | MCP type (case-insensitive)                                   |
-| `--mcp-config <json\|path>`              | string | no       | Complete MCP configuration as a JSON object or JSON file path |
-| `--yes`                                  | switch | no       | Confirm this high-risk operation                              |
-| `--api-key <key>`                        | string | no       | API key                                                       |
-| `--base-url <url>`                       | string | no       | API base URL                                                  |
+| Flag                                     | Type   | Required | Description                                                     |
+| ---------------------------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>`                    | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--server <code>`                        | string | yes      | Custom MCP server code                                          |
+| `--name <text>`                          | string | no       | Server name                                                     |
+| `--description <text>`                   | string | no       | Server description                                              |
+| `--mcp-type <stdio\|http\|sse\|openapi>` | string | no       | MCP type (case-insensitive)                                     |
+| `--mcp-config <json\|path>`              | string | no       | Complete MCP configuration as a JSON object or JSON file path   |
+| `--api-key <key>`                        | string | no       | API key                                                         |
+| `--base-url <url>`                       | string | no       | API base URL                                                    |
 
 #### Notes
 
-- Name and description changes take effect without redeployment. Stop the instance before replacing its entire configuration and confirming redeployment with --yes.
+- Deploying a custom MCP server may incur charges, including Function Compute usage for STDIO.
+- Name and description changes take effect without redeployment. Stop the instance before replacing its configuration and redeploying.
 
 #### Examples
 

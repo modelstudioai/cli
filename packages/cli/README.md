@@ -218,7 +218,7 @@ Input must be one raw token (up to 64 KiB), not JSON or `Bearer ...`; interactiv
 
 ### API Key
 
-Cloud Skill commands use the configured workspace ID to build the Beijing workspace endpoint. Set it once with `bl config set workspace_id <id>`, or use `BAILIAN_WORKSPACE_ID` or `--workspace-id`. An explicit model base URL (flag, environment or profile) takes precedence.
+MCP management and cloud Skill commands use the configured workspace ID to build the Beijing workspace endpoint. Set it once with `bl config set workspace_id <id>`, or use `BAILIAN_WORKSPACE_ID` or `--workspace-id`. An explicit model base URL (flag, environment or profile) takes precedence.
 
 Search the cloud Skill catalog with a Bailian API key, for example `bl skill search --keyword pdf --type official`. Pass a returned `skill_code` to `bl skill get --name <skill_code>` to see the latest version and local installation paths. Omit `--type` to include private skills in your workspace. `skill get` also reads MCP server codes from the latest package’s `mcp-config.json` by default. Use `--with-mcp false` to skip the package download.
 
@@ -226,17 +226,17 @@ Install a search result with `bl skill add --name <skill_code> --agent cursor --
 
 Skill commands check unpinned installations from the selected source and report available updates on stderr. The check reuses catalog reads and caches revisions for 24 hours. Removal uses the cache offline. Run `bl skill update` to apply an update, or add `--source oss` for the public registry.
 
-Installation checks declared MCP dependencies by default. Use `--dry-run` to see which services need activation and `--yes` to confirm potential charges. To install only the Skill, pass `--with-mcp false`.
+Installation activates inactive MCP dependencies by default, which may incur charges. Use `--dry-run` to preview the activation plan. To install only the Skill, pass `--with-mcp false`.
 
-Use an ordinary Bailian API key to list activated MCP servers (`bl mcp list`), inspect server details and tools (`bl mcp get --server <code>`), and manage custom servers (`bl mcp create`, `update`, `delete`). Use `--dry-run` to preview changes. Creating a server, replacing its configuration, and deleting it require `--yes`.
+Use an ordinary Bailian API key to list activated MCP servers (`bl mcp list`), inspect server details and tools (`bl mcp get --server <code>`), and manage custom servers (`bl mcp create`, `update`, `delete`). Use `--dry-run` to preview changes. Deleting a custom server requires `bl mcp delete --server <code> --yes`.
 
-Search for tools with a natural-language query, for example `bl mcp tool search --query "look up an order" --limit 5 --yes`. Search requires confirmation because recommendations can trigger OneKey activation. For a known server, use `bl mcp tool list --server <code>` to read its tools and input schemas through OpenAPI. Add `--yes` for OneKey or unknown activation policies. Both commands support a local `--dry-run` preview. To inspect tools through an MCP session, use `bl mcp tools --server <code>` with an optional `--url <endpoint>`.
+Search for tools with a natural-language query, for example `bl mcp tool search --query "look up an order" --limit 5`. Recommendations can trigger OneKey activation. For a known server, use `bl mcp tool list --server <code>` to read its tools and input schemas through OpenAPI. Listing tools can also trigger OneKey activation. Both commands support a local `--dry-run` preview. To inspect tools through an MCP session, use `bl mcp tools --server <code>` with an optional `--url <endpoint>`.
 
-To call a tool through OpenAPI, run `bl mcp tool call --server <code> --tool getOrder --arg orderId=A123`. Use `--dry-run` to preview the arguments and `--yes` to confirm possible OneKey activation. To call through an MCP session, use `bl mcp call --target <code>.getOrder --arg orderId=A123`. Both commands apply `--json` first, then repeated `--arg` values, and finally `--query` as text.
+To call a tool through OpenAPI, run `bl mcp tool call --server <code> --tool getOrder --arg orderId=A123`. Use `--dry-run` to preview the arguments. Calling a tool may activate a OneKey service. To call through an MCP session, use `bl mcp call --target <code>.getOrder --arg orderId=A123`. Both commands apply `--json` first, then repeated `--arg` values, and finally `--query` as text.
 
-Use `bl mcp activate --server <code,...>` or `bl mcp deactivate --server <code,...>` for up to 30 distinct official or custom servers. Preview with `--dry-run` and confirm changes with `--yes`. OneKey activation may place an order. Stopping a custom server keeps its saved configuration.
+Use `bl mcp activate --server <code,...>` or `bl mcp deactivate --server <code,...>` for up to 30 distinct official or custom servers. Preview changes with `--dry-run`. OneKey activation may place an order. Stopping a custom server keeps its saved configuration.
 
-Use `bl mcp connect --server <code> --transport streamable-http --agent cursor` to register the workspace endpoint. For an inactive service, `--yes` confirms activation and `--and-activate=false` skips activation. Add `--scope project` from the project root for project-level registration. Agent config files and backups can contain your API key. `bl mcp disconnect --server <code> --agent cursor` removes the matching local registration offline. Use the same scope for both commands.
+Use `bl mcp connect --server <code> --transport streamable-http --agent cursor` to register the workspace endpoint. Connecting activates an inactive service by default. Use `--and-activate=false` to connect only to active services. Add `--scope project` from the project root for project-level registration. Agent config files and backups can contain your API key. `bl mcp disconnect --server <code> --agent cursor` removes the matching local registration offline. Use the same scope for both commands.
 
 To use an existing ordinary API key or a Token Plan subscription key, run the same command:
 

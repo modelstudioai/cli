@@ -241,12 +241,12 @@ describe("e2e: mcp", () => {
     });
   });
 
-  test("mcp get exposes the required server code and confirmation for tool lookup", async () => {
+  test("mcp get exposes the required server code and API key for tool lookup", async () => {
     const help = await runCommandHelp(MCP_ROUTES, ["mcp", "get", "--help"]);
     expect(help.exitCode).toBe(0);
     expect(help.stderr).toContain("--server");
     expect(help.stderr).toContain("--api-key");
-    expect(help.stderr).toContain("--yes");
+    expect(help.stderr).not.toContain("--yes");
   });
 
   test("mcp tools --server <code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {

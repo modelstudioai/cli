@@ -1,16 +1,8 @@
-import { defineCommand, type CommandRisk } from "bailian-cli-core";
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
+import { defineCommand } from "bailian-cli-core";
 import { searchTools } from "./tool-response.ts";
 
 const defaultLimit = 10;
-const searchRisk = {
-  level: "high",
-  reason: "billing",
-  message: {
-    "en-US":
-      "Requesting recommendations may trigger OneKey activation and place an order on your account.",
-    "zh-CN": "请求工具推荐可能为当前账号触发 OneKey 开通或下单。",
-  },
-} satisfies CommandRisk;
 
 export default defineCommand({
   auth: "apiKey",
@@ -19,6 +11,7 @@ export default defineCommand({
     "zh-CN": "根据自然语言需求查找推荐的 MCP 工具",
   },
   flags: {
+    ...WORKSPACE_FLAG,
     query: {
       type: "string",
       required: true,
@@ -37,15 +30,20 @@ export default defineCommand({
       },
     },
   },
-  usageArgs: "--query <text> [--limit <n>] [--yes] [--dry-run]",
+  usageArgs: "--query <text> [--limit <n>] [--dry-run]",
   exampleArgs: [
     { "en-US": '--query "look up an order" --dry-run', "zh-CN": '--query "查询订单" --dry-run' },
     {
-      "en-US": '--query "look up an order" --limit 5 --yes',
-      "zh-CN": '--query "查询订单" --limit 5 --yes',
+      "en-US": '--query "look up an order" --limit 5',
+      "zh-CN": '--query "查询订单" --limit 5',
     },
   ],
-  risk: searchRisk,
+  notes: [
+    {
+      "en-US": "Requesting recommendations may activate a OneKey service and place an order.",
+      "zh-CN": "请求工具推荐可能触发 OneKey 服务开通并下单。",
+    },
+  ],
   validate({ query, limit = defaultLimit }) {
     if (!query.trim()) {
       return { "en-US": "--query must contain text.", "zh-CN": "--query 须包含非空白文本。" };
@@ -63,7 +61,7 @@ export default defineCommand({
     return {
       data: undefined,
       preview: { action: "recommend_tools", query, limit },
-      risk: searchRisk,
+      risk: null,
       notices: [],
     };
   },

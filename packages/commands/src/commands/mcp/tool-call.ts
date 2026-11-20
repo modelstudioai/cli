@@ -1,10 +1,5 @@
-import {
-  BailianError,
-  defineCommand,
-  ExitCode,
-  mcpServersPath,
-  type CommandRisk,
-} from "bailian-cli-core";
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
+import { BailianError, defineCommand, ExitCode, mcpServersPath } from "bailian-cli-core";
 import {
   argumentFlags,
   toolArguments,
@@ -13,9 +8,10 @@ import {
 } from "./call-arguments.ts";
 import { validateServer } from "./server-management.ts";
 import { requestMcpData } from "./server-response.ts";
-import { resolveToolRisk, toolServerFlag } from "./tool-response.ts";
+import { toolServerFlag } from "./tool-response.ts";
 
 const flags = {
+  ...WORKSPACE_FLAG,
   server: toolServerFlag,
   tool: {
     type: "string",
@@ -28,15 +24,6 @@ const flags = {
   },
   ...argumentFlags,
 } as const;
-const callRisk = {
-  level: "high",
-  reason: "billing",
-  message: {
-    "en-US":
-      "Calling this tool may activate a OneKey MCP service or place an order on your account.",
-    "zh-CN": "调用此工具可能为当前账号开通 OneKey MCP 服务或下单。",
-  },
-} satisfies CommandRisk;
 interface CallPlan {
   server: string;
   tool: string;
@@ -75,25 +62,24 @@ export default defineCommand<typeof flags, CallPlan>({
   },
   flags,
   usageArgs:
-    "--server <code> --tool <name> [--json '{...}'] [--arg k=v ...] [--query <text>] [--yes] [--dry-run]",
+    "--server <code> --tool <name> [--json '{...}'] [--arg k=v ...] [--query <text>] [--dry-run]",
   exampleArgs: [
     "--server mcp-example --tool getOrder --arg orderId=A123 --dry-run",
-    "--server mcp-example --tool getOrder --arg orderId=A123 --yes",
+    "--workspace-id ws-example --server mcp-example --tool getOrder --arg orderId=A123",
   ],
   notes: [
     {
       "en-US":
-        "Dry-run previews the arguments locally. OneKey services and unknown activation policies require --yes. A tool-reported error returns its content and exits with code 1.",
+        "Dry-run previews the arguments locally. Calling a tool may activate a OneKey service. A tool-reported error returns its content and exits with code 1.",
       "zh-CN":
-        "--dry-run 在本地预览调用参数。OneKey 服务或开通方式未知时须加 --yes。工具自身报错时输出返回内容，并以退出码 1 结束。",
+        "--dry-run 在本地预览调用参数。调用工具可能触发 OneKey 服务开通。工具自身报错时输出返回内容，并以退出码 1 结束。",
     },
   ],
-  risk: callRisk,
   validate(flags) {
-    if (!flags.tool.trim() || flags.tool === "." || flags.tool === "..") {
+    if (!flags.tool.trim()) {
       return {
-        "en-US": "--tool requires a valid tool name.",
-        "zh-CN": "--tool 需要有效的工具名。",
+        "en-US": "--tool requires a nonblank tool name.",
+        "zh-CN": "--tool 需要非空白的工具名。",
       };
     }
     return validateServer(flags.server) ?? validateArguments(flags);
@@ -109,7 +95,7 @@ export default defineCommand<typeof flags, CallPlan>({
         tool,
         ...(ctx.settings.dryRun ? { tool_params: params } : {}),
       },
-      risk: await resolveToolRisk(ctx, server, callRisk),
+      risk: null,
       notices: [],
     };
   },
@@ -124,8 +110,8 @@ export default defineCommand<typeof flags, CallPlan>({
       );
     const { data, requestId } = await requestMcpData<unknown>(ctx, {
       method: "POST",
-      path: `${mcpServersPath(plan.server)}/tools/${encodeURIComponent(plan.tool)}/call`,
-      body: { tool_params: plan.tool_params },
+      path: `${mcpServersPath(plan.server)}/tools/call`,
+      body: { tool_name: plan.tool, tool_params: plan.tool_params },
     });
     const result = readResult(data);
     if (!result)

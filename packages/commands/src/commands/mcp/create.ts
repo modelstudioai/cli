@@ -1,7 +1,8 @@
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
 import { defineCommand } from "bailian-cli-core";
 import {
   buildServerBody,
-  deploymentRisk,
+  deploymentNote,
   editableFlags,
   executeServerWrite,
   validateEdits,
@@ -9,6 +10,7 @@ import {
 } from "./server-management.ts";
 
 const flags = {
+  ...WORKSPACE_FLAG,
   name: { ...editableFlags.name, required: true },
   description: { ...editableFlags.description, required: true },
   mcpType: { ...editableFlags.mcpType, required: true },
@@ -21,7 +23,7 @@ export default defineCommand<typeof flags, ServerWrite>({
     "zh-CN": "创建并部署自定义 MCP 服务",
   },
   auth: "apiKey",
-  risk: deploymentRisk,
+  notes: [deploymentNote],
   flags,
   usageArgs:
     "--name <text> --description <text> --mcp-type <type> --mcp-config <json|path> [flags]",
@@ -31,8 +33,8 @@ export default defineCommand<typeof flags, ServerWrite>({
       "zh-CN": `--name weather --description "天气查询" --mcp-type http --mcp-config '{"url":"https://mcp.example.com/mcp"}' --dry-run`,
     },
     {
-      "en-US": `--name weather --description "Weather lookup" --mcp-type http --mcp-config ./weather.json --yes`,
-      "zh-CN": `--name weather --description "天气查询" --mcp-type http --mcp-config ./weather.json --yes`,
+      "en-US": `--name weather --description "Weather lookup" --mcp-type http --mcp-config ./weather.json`,
+      "zh-CN": `--name weather --description "天气查询" --mcp-type http --mcp-config ./weather.json`,
     },
   ],
   validate: validateEdits,
@@ -46,7 +48,7 @@ export default defineCommand<typeof flags, ServerWrite>({
         server_name: body.server_name,
         mcp_type: body.mcp_type,
       },
-      risk: deploymentRisk,
+      risk: null,
       notices: [],
     };
   },

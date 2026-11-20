@@ -4,7 +4,6 @@ import {
   formatCommand,
   mcpServersPath,
   type CommandContext,
-  type CommandRisk,
   type LocalizedText,
 } from "bailian-cli-core";
 import { mcpMarketplaceDetailPage, normalizeError } from "bailian-cli-runtime";
@@ -14,6 +13,7 @@ import {
   publicServer,
   requestMcpData,
   requestMcpServer,
+  type McpRequestContext,
   type ServerDto,
   type ServerBilling,
 } from "./server-response.ts";
@@ -27,31 +27,9 @@ export const batchServerFlag = {
   },
 } as const;
 
-export const lifecycleRisks = {
-  activate: {
-    level: "high",
-    reason: "billing",
-    message: {
-      "en-US":
-        "Activation may incur deployment or usage charges. A OneKey service may place an order on your account.",
-      "zh-CN": "开通可能产生部署或使用费用。OneKey 服务可能在当前账号下单。",
-    },
-  },
-  deactivate: {
-    level: "high",
-    reason: "destructive",
-    message: {
-      "en-US":
-        "Stopping these instances can interrupt callers in the affected account or workspace and remove dedicated deployment resources. Console credentials may need to be configured again.",
-      "zh-CN":
-        "停用实例可能中断受影响账号或工作空间内的调用，并释放专用部署资源。再次开通时可能需要重新配置控制台凭据。",
-    },
-  },
-} satisfies Record<string, CommandRisk>;
-
-type Operation = keyof typeof lifecycleRisks;
+type Operation = "activate" | "deactivate";
 type Action = Operation | "enable" | "disable";
-type Context = Pick<CommandContext, "client" | "localize" | "identity">;
+type Context = McpRequestContext & Pick<CommandContext, "identity">;
 
 function serverCodes(value: string) {
   return [...new Set(value.split(",").map((code) => code.trim()))];
@@ -262,7 +240,7 @@ export async function prepareLifecycle(ctx: Context, servers: string, operation:
   return {
     data,
     preview: { operation, targets: data.map((step) => ("result" in step ? step.result : step)) },
-    risk: data.some((step) => "action" in step) ? lifecycleRisks[operation] : null,
+    risk: null,
     notices: [],
   };
 }
@@ -331,7 +309,7 @@ export async function writeServer(ctx: Context, step: WriteStep): Promise<Comple
 }
 
 export async function runLifecycle(
-  ctx: Context & Pick<CommandContext, "output" | "settings"> & { prepared?: LifecyclePlan },
+  ctx: Context & Pick<CommandContext, "output"> & { prepared?: LifecyclePlan },
   allowBrowser: boolean,
 ) {
   if (!ctx.prepared)

@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BailianError, fetchSkillsIndex, type CommandContext } from "bailian-cli-core";
 import { prepareLifecycle, writeServer, type LifecyclePlan } from "../mcp/server-lifecycle.ts";
+import type { McpRequestContext } from "../mcp/server-response.ts";
 import { cloudCatalog, type Revision, type unpackRevision } from "./packages.ts";
 
 /** Package values may include credentials. Only explicit serverCode fields leave this reader. */
@@ -69,7 +70,7 @@ export function readMcpDependencies(
 }
 
 type Artifact = Awaited<ReturnType<typeof unpackRevision>>;
-type Context = Pick<CommandContext, "client" | "localize" | "identity">;
+type Context = McpRequestContext & Pick<CommandContext, "identity">;
 
 /** One invocation uses the same catalog revisions and verified packages for preview and installation. */
 export class SkillAddPackages {
@@ -127,7 +128,6 @@ export class SkillAddPackages {
     this.steps = codes.length
       ? (await prepareLifecycle(ctx, codes.join(","), "activate")).data
       : [];
-    return this.steps.some((step) => "action" in step);
   }
   async report(ctx: Context, skills: Set<string>, preview: boolean) {
     const owners = this.owners(skills);

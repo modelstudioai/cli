@@ -258,6 +258,10 @@ export function mcpWebSearchPath(): string {
   return "/api/v1/mcps/WebSearch/mcp";
 }
 
+export function mcpBaseUrl(workspaceId: string): string {
+  return workspaceEndpoint(workspaceId, "");
+}
+
 export function mcpServersPath(serverCode?: string): string {
   const collection = "/api/v1/mcp/servers";
   return serverCode === undefined ? collection : `${collection}/${encodeURIComponent(serverCode)}`;

@@ -2,13 +2,12 @@ import {
   BailianError,
   ExitCode,
   type CommandContext,
-  type CommandRisk,
   type FlagsDef,
   type LocalizedText,
   type ParsedFlags,
 } from "bailian-cli-core";
 import { MCP_TYPES, readMcpConfig } from "./server-config.ts";
-import { requestMcpServer } from "./server-response.ts";
+import { requestMcpServer, type McpRequestContext } from "./server-response.ts";
 
 export const serverFlag = {
   type: "string",
@@ -43,18 +42,14 @@ export const editableFlags = {
   },
 } satisfies FlagsDef;
 
-export const deploymentRisk = {
-  level: "high",
-  reason: "billing",
-  message: {
-    "en-US":
-      "Deploying a custom MCP server may incur charges, including Function Compute usage for STDIO.",
-    "zh-CN": "部署自定义 MCP 服务可能产生费用，STDIO 部署可能产生函数计算用量费用。",
-  },
-} satisfies CommandRisk;
+export const deploymentNote = {
+  "en-US":
+    "Deploying a custom MCP server may incur charges, including Function Compute usage for STDIO.",
+  "zh-CN": "部署自定义 MCP 服务可能产生费用，STDIO 部署可能产生函数计算用量费用。",
+} satisfies LocalizedText;
 
 type EditFlags = ParsedFlags<typeof editableFlags>;
-type OperationContext = Pick<CommandContext, "client" | "localize" | "output">;
+type OperationContext = McpRequestContext & Pick<CommandContext, "output">;
 
 export function validateServer(server: string): LocalizedText | undefined {
   if (!server.trim() || server === "." || server === "..") {

@@ -1,9 +1,13 @@
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
 import { BailianError, defineCommand } from "bailian-cli-core";
 import { validateServer } from "./server-management.ts";
 import { requestMcpServer } from "./server-response.ts";
-import { listServerTools, serverToolsRisk, toolServerFlag, toolsRisk } from "./tool-response.ts";
+import { listServerTools, toolServerFlag } from "./tool-response.ts";
 
-const flags = { server: toolServerFlag };
+const flags = {
+  ...WORKSPACE_FLAG,
+  server: toolServerFlag,
+};
 
 type ServerDetail = Awaited<ReturnType<typeof requestMcpServer>>["detail"];
 export default defineCommand<typeof flags, ServerDetail>({
@@ -13,15 +17,14 @@ export default defineCommand<typeof flags, ServerDetail>({
   },
   auth: "apiKey",
   flags,
-  risk: toolsRisk,
   usageArgs: "--server <code> [flags]",
   exampleArgs: ["--server mcp-example", "--server mcp-example --dry-run"],
   notes: [
     {
       "en-US":
-        "Billing shows the reported mode, unit price and free quota, or null when unavailable. Dry-run retrieves only server details. Tool discovery requires confirmation for OneKey or unknown activation policies. If tool discovery fails, the detail result contains tools=null and the command exits with the error.",
+        "Billing shows the reported mode, unit price and free quota, or null when unavailable. Dry-run retrieves only server details. Tool discovery may activate a OneKey service. If tool discovery fails, the detail result contains tools=null and the command exits with the error.",
       "zh-CN":
-        "billing 展示服务端提供的计费模式、单价和免费额度，未提供时为 null。预览只读取服务详情。OneKey 服务或开通方式未知时，查询工具须确认。工具查询失败时仍输出详情，tools 为 null，并返回错误退出码。",
+        "billing 展示服务端提供的计费模式、单价和免费额度，未提供时为 null。预览只读取服务详情。查询工具可能触发 OneKey 服务开通。工具查询失败时仍输出详情，tools 为 null，并返回错误退出码。",
     },
   ],
   validate: (values) => validateServer(values.server),
@@ -30,7 +33,7 @@ export default defineCommand<typeof flags, ServerDetail>({
     return {
       data: detail,
       preview: { ...detail, action: "list_tools" },
-      risk: serverToolsRisk(detail),
+      risk: null,
       notices: [],
     };
   },

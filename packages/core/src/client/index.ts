@@ -17,6 +17,7 @@ export {
   memorySearchPath,
   memorySkillExportPath,
   mcpWebSearchPath,
+  mcpBaseUrl,
   mcpServersPath,
   skillBaseUrl,
   skillsPath,
