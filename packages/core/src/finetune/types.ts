@@ -20,13 +20,33 @@ export interface FineTuneHyperParameters {
   [k: string]: unknown;
 }
 
+/**
+ * Dataset descriptor used by OPD (pg_opd) jobs. The server also accepts the
+ * flat `training_file_ids` form, but OPD submissions and readbacks use these
+ * descriptors, so the CLI sends the same shape.
+ */
+export interface FineTuneDatasetDescriptor {
+  type: "training" | "validation";
+  data_source_type: "file_id";
+  file_id: string;
+}
+
+/** MTU resource configuration for OPD jobs (kept separate from hyper_parameters). */
+export interface FineTuneResourceConfig {
+  charge_type?: string;
+  mtu_spec_code?: string;
+  mtu_capacity?: number;
+  [k: string]: unknown;
+}
+
 /** POST /api/v1/fine-tunes request body. */
 export interface CreateFineTuneRequest {
   /** Base model ID, or a previously fine-tuned model ID for continued training. */
   model: string;
-  training_file_ids: string[];
+  /** Flat file-id form (sft/dpo/cpt). OPD uses training_datasets instead. */
+  training_file_ids?: string[];
   /**
-   * Server-supported values: `cpt | sft | efficient_sft | dpo_full | dpo_lora`.
+   * Server-supported values: `cpt | sft | efficient_sft | dpo_full | dpo_lora | pg_opd`.
    *
    * NOTE — current bailian-cli scope: `sft` (default) and `efficient_sft`.
    * Other values are rejected by the CLI at parse time so users get an
@@ -45,6 +65,14 @@ export interface CreateFineTuneRequest {
   model_name?: string;
   /** Suffix appended by the platform; field is `finetuned_output_suffix` (NOT `suffix`). */
   finetuned_output_suffix?: string;
+  /** OPD (pg_opd): platform-registered teacher model ID. */
+  teacher_model?: string;
+  /** OPD (pg_opd): training dataset descriptors. */
+  training_datasets?: FineTuneDatasetDescriptor[];
+  /** OPD (pg_opd): validation dataset descriptors. */
+  validation_datasets?: FineTuneDatasetDescriptor[];
+  /** OPD (pg_opd): MTU charge type / spec / capacity. */
+  resource_config?: FineTuneResourceConfig;
 }
 
 /** GET /api/v1/fine-tunes/{id}/logs response. */
@@ -158,6 +186,12 @@ export interface FineTuneJob {
   training_file_ids?: string[];
   validation_file_ids?: string[];
   hyper_parameters?: FineTuneHyperParameters;
+  /** OPD (pg_opd) readback fields. */
+  teacher_model?: string;
+  training_datasets?: FineTuneDatasetDescriptor[];
+  validation_datasets?: FineTuneDatasetDescriptor[];
+  mtu_spec_code?: string;
+  mtu_capacity?: number;
   /** Server-side timestamps (DashScope uses snake_case `create_time` / `end_time`). */
   create_time?: string;
   end_time?: string;

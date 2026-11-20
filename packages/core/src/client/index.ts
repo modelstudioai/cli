@@ -151,3 +151,9 @@ export {
 export type { ServerSentEvent } from "./stream.ts";
 export { parseSSE } from "./stream.ts";
 export { httpTransport } from "./transport.ts";
+export {
+  networkCauseCode,
+  isSandboxNetworkDenialCode,
+  probeTcpHost,
+  SANDBOX_NETWORK_HINT,
+} from "./network-diagnostics.ts";

@@ -206,6 +206,25 @@ export { default as finetuneCompressWatch } from "./commands/finetune/compress-w
 export { default as finetuneCompressLogs } from "./commands/finetune/compress-logs.ts";
 export { default as finetuneCompressCancel } from "./commands/finetune/compress-cancel.ts";
 export { default as finetuneCompressDelete } from "./commands/finetune/compress-delete.ts";
+export { default as finetuneRlAuthorize } from "./commands/finetune/rl-authorize.ts";
+export { default as finetuneRlRun } from "./commands/finetune/rl-run.ts";
+export { default as finetuneRlGet } from "./commands/finetune/rl-get.ts";
+export { default as finetuneRlList } from "./commands/finetune/rl-list.ts";
+export { default as finetuneRlWatch } from "./commands/finetune/rl-watch.ts";
+export { default as finetuneRlLogs } from "./commands/finetune/rl-logs.ts";
+export { default as finetuneRlCancel } from "./commands/finetune/rl-cancel.ts";
+export { default as finetuneRlDelete } from "./commands/finetune/rl-delete.ts";
+export { default as finetuneOpdAuthorize } from "./commands/finetune/opd-authorize.ts";
+export { default as finetuneOpdRun } from "./commands/finetune/opd-run.ts";
+export { default as finetuneOpdParams } from "./commands/finetune/opd-params.ts";
+export { default as finetuneOpdGet } from "./commands/finetune/opd-get.ts";
+export { default as finetuneOpdWatch } from "./commands/finetune/opd-watch.ts";
+export { default as finetuneOpdLogs } from "./commands/finetune/opd-logs.ts";
+export { default as finetuneOpdCancel } from "./commands/finetune/opd-cancel.ts";
+export { default as finetuneOpdDelete } from "./commands/finetune/opd-delete.ts";
+export { default as finetuneRuntimePrepare } from "./commands/finetune/runtime-prepare.ts";
+export { default as finetuneRuntimeDoctor } from "./commands/finetune/runtime-doctor.ts";
+export { default as finetuneRuntimeClean } from "./commands/finetune/runtime-clean.ts";
 export {
   deployTextCreate,
   deployAudioCreate,

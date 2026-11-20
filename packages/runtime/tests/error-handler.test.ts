@@ -1,6 +1,6 @@
 import { BailianError, ExitCode, mapApiError, resolveRecoveryConfigName } from "bailian-cli-core";
 import { expect, test, vi } from "vite-plus/test";
-import { errorHint, handleError } from "../src/error-handler.ts";
+import { errorHint, handleError, normalizeError } from "../src/error-handler.ts";
 import { createOutputReporter } from "../src/output/reporter.ts";
 import { ConfirmationRequiredError } from "../src/confirm.ts";
 
@@ -64,6 +64,25 @@ test("handleError: fetch without nested cause still maps to NETWORK", () => {
   expect(payload.code).toBe(ExitCode.NETWORK);
   expect(payload.message).toContain("unknown cause");
   expect(payload.cause).toEqual({ message: "fetch failed" });
+});
+
+test("handleError: 沙箱拒绝 errno（EPERM）hint 引导放行网络而非换镜像", () => {
+  const cause = Object.assign(new Error("connect EPERM 1.2.3.4:443"), { code: "EPERM" });
+  const payload = JSON.parse(render(new TypeError("fetch failed", { cause }))).error;
+  expect(payload.code).toBe(ExitCode.NETWORK);
+  expect(payload.message).toContain("EPERM");
+  expect(payload.hint).toContain("agent sandbox");
+  expect(payload.hint).toContain("HTTPS_PROXY");
+});
+
+test("normalizeError: 沙箱拒绝 hint 中文本地化", () => {
+  const cause = Object.assign(new Error("connect ENETUNREACH"), { code: "ENETUNREACH" });
+  const normalized = normalizeError(new TypeError("fetch failed", { cause }), "bl", (text) =>
+    typeof text === "string" ? text : text["zh-CN"],
+  );
+  expect(normalized.exitCode).toBe(ExitCode.NETWORK);
+  expect(normalized.hint).toContain("沙箱");
+  expect(normalized.hint).toContain("HTTPS_PROXY");
 });
 
 test("handleError: confirmation preserves its structured subtype and guidance", () => {

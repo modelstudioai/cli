@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "dashscopeVersion": "1.25.23",
+  "dashscopeUrl": "https://files.pythonhosted.org/packages/9e/47/556e3a5d9e9e0f2d7c45f8598c7b9a9569ec7e5340e8e2a21288b58e4cfc/dashscope-1.25.23-py3-none-any.whl",
+  "dashscopeSha256": "7cb2cc48fd82536202e3100e93730e92c952435bb8cbe16d45de9700e1546bcc",
+  "entries": [
+    {
+      "os": "darwin",
+      "arch": "arm64",
+      "triple": "aarch64-apple-darwin",
+      "pythonVersion": "3.11.9",
+      "pythonUrl": "https://github.com/astral-sh/python-build-standalone/releases/download/20240415/cpython-3.11.9+20240415-aarch64-apple-darwin-install_only.tar.gz",
+      "pythonSha256": "7af7058f7c268b4d87ed7e08c2c7844ef8460863b3e679db3afdce8bb1eedfae"
+    },
+    {
+      "os": "darwin",
+      "arch": "x64",
+      "triple": "x86_64-apple-darwin",
+      "pythonVersion": "3.11.9",
+      "pythonUrl": "https://github.com/astral-sh/python-build-standalone/releases/download/20240415/cpython-3.11.9+20240415-x86_64-apple-darwin-install_only.tar.gz",
+      "pythonSha256": "9afd734f63a23783cf0257bef25c9231ffc80e7747486dc54cf72f325213fd15"
+    },
+    {
+      "os": "linux",
+      "arch": "x64",
+      "triple": "x86_64-unknown-linux-gnu",
+      "pythonVersion": "3.11.9",
+      "pythonUrl": "https://github.com/astral-sh/python-build-standalone/releases/download/20240415/cpython-3.11.9+20240415-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "pythonSha256": "78b1c16a9fd032997ba92a60f46a64f795cd18ff335659dfdf6096df277b24d5"
+    },
+    {
+      "os": "linux",
+      "arch": "arm64",
+      "triple": "aarch64-unknown-linux-gnu",
+      "pythonVersion": "3.11.9",
+      "pythonUrl": "https://github.com/astral-sh/python-build-standalone/releases/download/20240415/cpython-3.11.9+20240415-aarch64-unknown-linux-gnu-install_only.tar.gz",
+      "pythonSha256": "b3a7199ac2615d75fb906e5ba556432efcf24baf8651fc70370d9f052d4069ee"
+    }
+  ]
+}
