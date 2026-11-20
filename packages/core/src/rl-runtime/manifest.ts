@@ -1,11 +1,11 @@
 /**
- * 运行时清单 schema 与完整性校验（schema v2，真实多源）。
+ * Runtime manifest schema and integrity verification (schema v2, real multi-source).
  *
- * 清单描述固定版本运行时的真实下载源：每平台一份 CPython（python-build-standalone
- * install_only tar.gz）+ 全平台共用一个 dashscope wheel（PyPI，py3-none-any）。黑盒
- * 首次初始化按清单下载并校验 CPython，再按随包锁文件 pip --require-hashes 装
- * dashscope 及传递依赖。清单是审查产物，以 TS 常量随包携带（manifest-data.ts，由
- * 仓库根 runtime-manifest.json 生成）；SHA256 取自官方 SHA256SUMS / PyPI，非臆造。
+ * The manifest describes real download sources for a pinned runtime: one CPython per platform (python-build-standalone
+ * install_only tar.gz) + a single dashscope wheel shared across platforms (PyPI, py3-none-any). On first init the black box
+ * downloads and verifies CPython per manifest, then pip --require-hashes installs dashscope and transitive deps from the bundled lockfile.
+ * The manifest is a reviewed artifact shipped as a TS constant (manifest-data.ts, generated from the repo-root
+ * runtime-manifest.json); SHA256 values come from official SHA256SUMS / PyPI, never invented.
  */
 
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -13,43 +13,43 @@ import { BailianError, UsageError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { BUNDLED_RUNTIME_MANIFEST_JSON } from "./manifest-data.ts";
 
-/** 受审查的固定 dashscope 版本（升级须重新审查 + 重生成锁文件）。 */
+/** Reviewed pinned dashscope version (upgrades require re-review + lockfile regeneration). */
 export const RL_DASHSCOPE_VERSION = "1.25.23";
 
-/** dashscope==1.25.23 wheel 的 SHA256（PyPI 官方，已核验）。 */
+/** SHA256 of the dashscope==1.25.23 wheel (official PyPI value, verified). */
 export const RL_DASHSCOPE_WHEEL_SHA256 =
   "7cb2cc48fd82536202e3100e93730e92c952435bb8cbe16d45de9700e1546bcc";
 
-/** 受审查的固定 CPython 版本。 */
+/** Reviewed pinned CPython version. */
 export const RL_PYTHON_VERSION = "3.11.9";
 
-/** 自定义 CPython 镜像环境变量：替换 GitHub release 下载前缀（路径 1:1 映射，SHA 不变）。 */
+/** Custom CPython mirror env var: replaces the GitHub release download prefix (1:1 path mapping, SHA unchanged). */
 export const RL_PYTHON_MIRROR_ENV = "BAILIAN_RL_PYTHON_MIRROR";
 
-/** 自定义 pip 索引环境变量：受限地区可指向稳定 PyPI 镜像（清华 tuna / 阿里 aliyun）；镜像滞后 PyPI 时缺钉版会 fail-closed。 */
+/** Custom pip index env var: restricted regions can point at a stable PyPI mirror (Tsinghua tuna / Aliyun); a mirror lagging PyPI fails closed on missing pinned versions. */
 export const RL_PIP_INDEX_ENV = "BAILIAN_RL_PIP_INDEX_URL";
 
-/** python-build-standalone GitHub release 下载前缀（canonical 受审查源）。 */
+/** python-build-standalone GitHub release download prefix (canonical reviewed source). */
 const GITHUB_RELEASE_BASE =
   "https://github.com/astral-sh/python-build-standalone/releases/download/";
 
-/** 内置回退镜像：阿里 CNPM npmmirror，与 GitHub release 路径 1:1，已核验字节级一致。 */
+/** Built-in fallback mirror: Aliyun CNPM npmmirror, 1:1 with GitHub release paths, verified byte-identical. */
 export const DEFAULT_PYTHON_MIRRORS = [
   "https://registry.npmmirror.com/-/binary/python-build-standalone/",
 ];
 
-/** 单平台 CPython 下载条目。 */
+/** Per-platform CPython download entry. */
 export interface IRuntimeManifestEntry {
   os: "darwin" | "linux";
   arch: string;
-  /** python-build-standalone 目标 triple（与 os/arch 对应）。 */
+  /** python-build-standalone target triple (matches os/arch). */
   triple: string;
   pythonVersion: string;
   pythonUrl: string;
   pythonSha256: string;
 }
 
-/** 运行时清单（schema v2）。dashscope wheel 全平台共用，置于顶层。 */
+/** Runtime manifest (schema v2). The dashscope wheel is shared across platforms and lives at the top level. */
 export interface IRuntimeManifest {
   schemaVersion: 2;
   dashscopeVersion: string;
@@ -76,7 +76,7 @@ function requireSha256(record: Record<string, unknown>, key: string, where: stri
   return value;
 }
 
-/** 解析并校验清单文本；任何形状/哈希非法都拒绝（fail-closed）。 */
+/** Parse and validate manifest text; any malformed shape/hash is rejected (fail-closed). */
 export function parseRuntimeManifest(text: string): IRuntimeManifest {
   let raw: unknown;
   try {
@@ -119,12 +119,12 @@ export function parseRuntimeManifest(text: string): IRuntimeManifest {
   return { schemaVersion: 2, dashscopeVersion, dashscopeUrl, dashscopeSha256, entries };
 }
 
-/** 随包携带的受审查清单（解析自 manifest-data.ts）。 */
+/** Bundled reviewed manifest (parsed from manifest-data.ts). */
 export function bundledRuntimeManifest(): IRuntimeManifest {
   return parseRuntimeManifest(BUNDLED_RUNTIME_MANIFEST_JSON);
 }
 
-/** 按 os/arch 选择平台条目；无匹配返回 undefined（调用方 fail-closed）。 */
+/** Select the platform entry by os/arch; undefined when nothing matches (caller fails closed). */
 export function selectManifestEntry(
   manifest: IRuntimeManifest,
   platform: NodeJS.Platform,
@@ -135,12 +135,12 @@ export function selectManifestEntry(
   return manifest.entries.find((entry) => entry.os === os && entry.arch === arch);
 }
 
-/** 计算字节 SHA256（hex）。 */
+/** Compute the byte SHA256 (hex). */
 export function sha256Hex(data: Buffer | string): string {
   return createHash("sha256").update(data).digest("hex");
 }
 
-/** 把 GitHub release 下载 URL 重写为镜像前缀（仅换前缀，<tag>/<file> 后缀不变）。 */
+/** Rewrite a GitHub release download URL to a mirror prefix (prefix only; the <tag>/<file> suffix is unchanged). */
 function rewriteToMirror(pythonUrl: string, mirrorBase: string): string | undefined {
   if (!pythonUrl.startsWith(GITHUB_RELEASE_BASE)) return undefined;
   const suffix = pythonUrl.slice(GITHUB_RELEASE_BASE.length);
@@ -149,9 +149,9 @@ function rewriteToMirror(pythonUrl: string, mirrorBase: string): string | undefi
 }
 
 /**
- * 构造 CPython 下载候选源（有序去重）：自定义镜像（若设置）→ canonical → 内置回退镜像。
- * 换源只换来源、SHA256 不变；调用方逐源校验完整性，任一源失败转下一源。非 GitHub
- * canonical 的自定义清单 URL 不做镜像重写，仅原样下载。
+ * Build CPython download candidates (ordered, deduplicated): custom mirror (if set) → canonical → built-in fallback mirror.
+ * Switching sources changes only the origin, never the SHA256; the caller verifies integrity per source and moves on after any failure. Custom manifest URLs
+ * that are not GitHub canonical are never mirror-rewritten; they download as-is.
  */
 export function pythonDownloadCandidates(
   pythonUrl: string,
@@ -171,7 +171,7 @@ export function pythonDownloadCandidates(
   return [...new Set(candidates)];
 }
 
-/** 校验下载产物完整性；不匹配立即拒绝（timing-safe 比较）。 */
+/** Verify downloaded artifact integrity; reject immediately on mismatch (timing-safe comparison). */
 export function assertArtifactIntegrity(data: Buffer, expectedSha256: string): void {
   const actual = sha256Hex(data);
   const expectedBuffer = Buffer.from(expectedSha256, "utf8");

@@ -1,6 +1,11 @@
 import { CredentialError } from "bailian-cli-core";
 import { formatCommand } from "bailian-cli-core";
-import { BailianError, ExitCode, type LocalizedText } from "bailian-cli-core";
+import {
+  BailianError,
+  ExitCode,
+  isSandboxNetworkDenialCode,
+  type LocalizedText,
+} from "bailian-cli-core";
 import type { OutputReporter } from "./output/reporter.ts";
 import { sanitizeDiagnosticDetails } from "./output/diagnostics.ts";
 import { API_KEY_PAGE } from "./urls.ts";
@@ -237,6 +242,14 @@ function networkHint(
   baseUrlHint: string,
   localize: Localize,
 ): string {
+  // Sandbox network denial (connect fails immediately with EPERM/EACCES/ENETUNREACH/EHOSTUNREACH):
+  // mirrors and retries cannot help; guide toward enabling network in the agent settings or running in a regular terminal.
+  if (isSandboxNetworkDenialCode(code)) {
+    return localize({
+      "en-US": `Outbound network appears to be blocked by the execution environment (e.g. an AI agent sandbox). Enable network access for this process in the agent settings, or run ${commandPrefix} in a regular terminal. If an egress proxy is required, set HTTPS_PROXY.`,
+      "zh-CN": `出站网络似乎被执行环境（如 AI agent 沙箱）阻断。请在 agent 设置中为本进程放行网络，或在普通终端中运行 ${commandPrefix}。如需经代理出站，请设置 HTTPS_PROXY。`,
+    });
+  }
   switch (code) {
     case "ENOTFOUND":
     case "EAI_AGAIN":

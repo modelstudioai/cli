@@ -33,6 +33,12 @@ export default defineCommand({
         "Enhanced hardening (kernel network enforcement, process tree, memory) degrades with a notice when unavailable and does not fail the overall check.",
       "zh-CN": "增强项（内核网络强制、进程树、内存）不可用时降级提示，不判定整体失败。",
     },
+    {
+      "en-US":
+        "Host network reachability (API / runtime download / PyPI hosts) is probed as an advisory check: blocked hosts degrade with guidance (agent sandboxes often block outbound network) and do not fail the overall check.",
+      "zh-CN":
+        "宿主网络可达性（API / 运行时下载 / PyPI 主机）为增强项：被阻断时降级并给出指引（agent 沙箱常默认阻断出站网络），不判定整体失败。",
+    },
   ],
   async run(ctx) {
     if (ctx.settings.dryRun) {
@@ -51,6 +57,7 @@ export default defineCommand({
     const report = await runRuntimeDoctor({
       runtime,
       credentialDenyPaths: [join(homedir(), ".dashscope")],
+      checkHostNetwork: true,
     });
     emitRlResult(ctx, report);
     assertDoctorPassed(report);

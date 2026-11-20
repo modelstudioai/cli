@@ -1,9 +1,9 @@
 /**
- * 随包携带的受审查运行时清单（schema v2，真实下载源 + 官方 SHA256）。
+ * Bundled reviewed runtime manifest (schema v2, real download sources + official SHA256).
  *
- * 由仓库根 runtime-manifest.json 生成，勿手改；改清单请改 json 后重新生成。
- * CPython 哈希取自 python-build-standalone 20240415 官方 SHA256SUMS，
- * dashscope wheel 哈希取自 PyPI 官方 JSON（等于代码基线 RL_DASHSCOPE_WHEEL_SHA256）。
+ * Generated from the repo-root runtime-manifest.json; do not edit by hand — change the json and regenerate.
+ * CPython hashes come from the python-build-standalone 20240415 official SHA256SUMS;
+ * the dashscope wheel hash comes from the official PyPI JSON (equals the code baseline RL_DASHSCOPE_WHEEL_SHA256).
  */
 
 export const BUNDLED_RUNTIME_MANIFEST_JSON =

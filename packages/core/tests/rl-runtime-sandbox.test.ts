@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { IIsolationResult } from "../src/isolation/types.ts";
 
-// 黑盒编排测试 mock 掉隔离执行，避免真实 spawn；保留 app-layer 其余导出。
+// Black-box orchestration tests mock isolated execution to avoid real spawns; keep the rest of app-layer's exports.
 const mocks = vi.hoisted(() => ({
   isolatedRun: vi.fn(),
 }));
@@ -94,7 +94,7 @@ describe("executeInSandbox (black-box orchestration)", () => {
     mocks.isolatedRun.mockResolvedValue(okResult('{"job_id":"j1"}'));
   });
 
-  /** override 版本探测 deps：返回受审查基线版本（不真实 spawn）。 */
+  /** Override version-probe deps: returns the reviewed baseline version (no real spawn). */
   function probeDeps(version: string = RL_DASHSCOPE_VERSION): IRuntimeDeps {
     return {
       async download() {
@@ -132,7 +132,7 @@ describe("executeInSandbox (black-box orchestration)", () => {
       expect(input.apiKey).toBe("sk-test");
       expect(input.baseUrl).toBe("https://example.com");
       expect(input.credentialDenyPaths).toEqual([join(homedir(), ".dashscope")]);
-      // 1.25.23 无顶层 --output；JSON 输出由命令层叶子级 --output-format 携带。
+      // 1.25.23 has no top-level --output; JSON output is carried by the command layer's leaf-level --output-format.
       expect(input.command).toEqual([
         join(overrideDir, "bin", "python"),
         "-I",
@@ -146,9 +146,9 @@ describe("executeInSandbox (black-box orchestration)", () => {
         "--config",
         input.layout.configPath,
       ]);
-      // FC_PYPI_LIB 与提交端运行时版本锁步，用户零感知。
+      // FC_PYPI_LIB stays locked to the submit-side runtime version; zero user involvement.
       expect(input.sdkEnv).toEqual({ FC_PYPI_LIB: `dashscope==${RL_DASHSCOPE_VERSION}` });
-      // SDK 相对 cwd 写 start.sh：cwd 必须是可写的 deploy-copy（与 zipdir 一致）。
+      // The SDK writes start.sh relative to cwd: cwd must be the writable deploy-copy (same as zipdir).
       expect(input.cwd).toBe(input.layout.deployCopyDir);
       expect(readFileSync(input.layout.configPath, "utf8")).toBe("name: test\n");
     });
@@ -194,7 +194,7 @@ describe("executeInSandbox (black-box orchestration)", () => {
   });
 });
 
-/** mock deps：记录调用并模拟 tar 解压出解释器；可选注入 pip/import 失败。 */
+/** Mock deps: records calls and simulates tar extracting an interpreter; optionally injects pip/import failures. */
 function makeDeps(
   root: string,
   opts: { bytes?: Buffer; failPip?: boolean; failImport?: boolean } = {},
@@ -295,7 +295,7 @@ describe("installRuntime (manifest-driven first download + cache)", () => {
   });
 });
 
-/** GitHub canonical 清单（触发镜像回退候选）。 */
+/** GitHub canonical manifest (triggers mirror fallback candidates). */
 function githubManifestFixture(): IRuntimeManifest {
   return {
     schemaVersion: 2,
@@ -316,7 +316,7 @@ function githubManifestFixture(): IRuntimeManifest {
   };
 }
 
-/** url 感知下载 mock：GitHub 源可注入网络失败/篡改，镜像源默认返回合法字节。 */
+/** URL-aware download mock: the GitHub source can inject network failure/tampering; mirror sources return valid bytes by default. */
 function makeFallbackDeps(
   root: string,
   opts: { github?: "ok" | "network" | "tamper"; mirror?: "ok" | "network" } = {},

@@ -1271,7 +1271,7 @@ describe("e2e: finetune rl/opd offline contracts", () => {
 });
 
 describe("e2e: finetune runtime clean (offline)", () => {
-  /** 独占临时 config 目录（显式 BAILIAN_CONFIG_DIR 被隔离基建复用），finally 清理。 */
+  /** Exclusive temp config dir (the explicit BAILIAN_CONFIG_DIR is reused by the isolation infra); cleaned up in finally. */
   function seedCleanFixture() {
     const root = mkdtempSync(join(tmpdir(), "bl-clean-e2e-"));
     const configDir = join(root, "config");

@@ -80,8 +80,8 @@ export async function executeRl<F extends FlagsDef>(
   }
   return executeInSandbox({
     sdkArgs,
-    // RL SDK 自带管理面网关路由：显式注入 base_url（推理 workspace 网关、甚至 dashscope 本身）
-    // 都会破坏 RL 路由致 404；仅传 token，让 SDK 走默认 RL 网关（与 demo cli.sh 仅设 API Key 一致）。
+    // The RL SDK carries its own management-plane gateway routing: explicitly injecting base_url (the inference workspace gateway, even
+    // dashscope itself) breaks RL routing with 404; pass only the token and let the SDK use its default RL gateway (matches the demo cli.sh setting only the API Key).
     credential: { token: credential.token },
     prepare: options.prepare,
     timeoutMs: options.timeoutMs ?? RL_TIMEOUT_MS.query,
@@ -392,9 +392,9 @@ export async function runRlJob<F extends FlagsDef>(
     return;
   }
 
-  // 受审查运行时基线（dashscope 1.25.23）不含 pg_opd 训练类型：OPD 真实提交
-  // 快速失败（dry-run 仍可预览 spec），不引入双运行时。get/list/logs/watch/
-  // cancel/delete 共用 fine-tunes 后端，不受影响。
+  // The reviewed runtime baseline (dashscope 1.25.23) does not include the pg_opd training type: real OPD submissions
+  // fail fast (dry-run can still preview the spec) without introducing a second runtime. get/list/logs/watch/
+  // cancel/delete share the fine-tunes backend and are unaffected.
   if (resolved.isOpd) {
     throw new BailianError(
       `OPD (pg_opd) submission is not supported by the reviewed dashscope runtime ${RL_DASHSCOPE_VERSION}. / 受审查的 dashscope 运行时 ${RL_DASHSCOPE_VERSION} 不支持 OPD（pg_opd）提交。`,

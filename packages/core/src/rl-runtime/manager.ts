@@ -1,14 +1,14 @@
 /**
- * 托管运行时管理器（黑盒内部初始化）。
+ * Managed runtime manager (black-box internal initialization).
  *
- * 安装生命周期：独占锁 → 按清单多源下载 CPython（python-build-standalone install_only，
- * canonical → 镜像回退，单次带超时）→ 逐源校验 SHA256 → 系统 tar 解压到版本目录 → ensurepip → 按随包 universal 锁文件
- * pip install --require-hashes 装 dashscope 及传递依赖 → 受控环境版本/import 自检
- * → 原子写 READY+指针。首次下载、缓存 READY 后长期复用；后续 run 用解释器绝对路径
- * （不 source activate、不改全局 PATH）。开发态 override：BAILIAN_RL_RUNTIME 指向
- * 本机已装 dashscope 的 Python 目录时跳过发行校验直接复用。
+ * Install lifecycle: exclusive lock → multi-source CPython download per manifest (python-build-standalone install_only,
+ * canonical → mirror fallback, each attempt timed) → per-source SHA256 verification → system tar extract into the version dir → ensurepip →
+ * pip install --require-hashes of dashscope and transitive deps from the bundled universal lockfile → version/import self-check in a controlled env
+ * → atomic READY marker + pointer write. First download is cached and reused long-term via READY; later runs use the interpreter absolute path
+ * (no source activate, no global PATH changes). Dev override: BAILIAN_RL_RUNTIME pointing at a local Python dir with dashscope installed
+ * reuses it directly, skipping release verification.
  *
- * 清单默认取随包受审查产物（bundledRuntimeManifest），固定版本求稳、不耦合发版。
+ * The manifest defaults to the bundled reviewed artifact (bundledRuntimeManifest): pinned versions for stability, decoupled from CLI releases.
  */
 
 import { spawn } from "node:child_process";
@@ -25,6 +25,11 @@ import { join } from "node:path";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { httpTransport } from "../client/transport.ts";
+import {
+  isSandboxNetworkDenialCode,
+  networkCauseCode,
+  SANDBOX_NETWORK_HINT,
+} from "../client/network-diagnostics.ts";
 import { runtimeCacheRoot, runtimeRoot as runtimeRootDir } from "../isolation/paths.ts";
 import { RL_DEPENDENCY_LOCK } from "./locks.ts";
 import {
@@ -40,13 +45,13 @@ import {
   type IRuntimeManifestEntry,
 } from "./manifest.ts";
 
-/** 开发态 override 环境变量：指向本机已装 dashscope（受审查基线版本）的 Python 目录。 */
+/** Dev override env var: points at a local Python dir with dashscope (the reviewed baseline version) installed. */
 export const RUNTIME_OVERRIDE_ENV = "BAILIAN_RL_RUNTIME";
 
-/** 单次下载超时（毫秒）：停滞快速失败转镜像回退，避免无限挂起。 */
+/** Per-download timeout (ms): fail fast on stalls and fall back to mirrors instead of hanging forever. */
 const RL_DOWNLOAD_TIMEOUT_MS = 120_000;
 
-/** 解析好的运行时（run 用解释器绝对路径）。 */
+/** Resolved runtime (runs use the interpreter absolute path). */
 export interface IResolvedRuntime {
   runtimeRoot: string;
   pythonPath: string;
@@ -54,30 +59,42 @@ export interface IResolvedRuntime {
   source: "override" | "managed";
 }
 
-/** 受控命令执行结果（tar / python / pip 自检）。 */
+/** Controlled command execution result (tar / python / pip self-checks). */
 export interface IRuntimeCommandResult {
   exitCode: number | null;
   stdout: string;
   stderr: string;
 }
 
-/** 安装生命周期依赖注入 seam（默认走真实 fetch/spawn，便于单测 mock）。 */
+/** Dependency-injection seam for the install lifecycle (defaults to real fetch/spawn; mockable in unit tests). */
 export interface IRuntimeDeps {
   download(url: string): Promise<Buffer>;
   run(command: string, args: string[], options?: { cwd?: string }): Promise<IRuntimeCommandResult>;
 }
 
 export interface IResolveRuntimeOptions {
-  /** 直接传入清单（优先于 manifestPath 与随包清单）。 */
+  /** Manifest passed directly (takes precedence over manifestPath and the bundled manifest). */
   manifest?: IRuntimeManifest;
-  /** 清单文件路径（覆盖随包清单，供审查/联调）。 */
+  /** Manifest file path (overrides the bundled manifest; for review / integration debugging). */
   manifestPath?: string;
-  /** 是否允许首次准备运行时（非交互缺省 false）。 */
+  /** Whether first-time runtime preparation is allowed (defaults to false for non-interactive use). */
   allowInstall?: boolean;
   env?: Record<string, string | undefined>;
   platform?: NodeJS.Platform;
   arch?: string;
   deps?: IRuntimeDeps;
+}
+
+/** Download failure wrapper: message carries the errno; sandbox-denial codes append network-enable/proxy guidance (mirrors cannot help). */
+export function runtimeDownloadFailure(url: string, error: unknown): BailianError {
+  const code = networkCauseCode(error);
+  const sandboxHint = isSandboxNetworkDenialCode(code) ? ` ${SANDBOX_NETWORK_HINT}` : "";
+  return new BailianError(
+    `Failed to download runtime artifact from ${url}${code ? ` (${code})` : ""}.`,
+    ExitCode.NETWORK,
+    `Check network connectivity, or set BAILIAN_RL_PYTHON_MIRROR to a reachable mirror, then retry runtime prepare.${sandboxHint}`,
+    { cause: error },
+  );
 }
 
 const defaultDeps: IRuntimeDeps = {
@@ -95,11 +112,7 @@ const defaultDeps: IRuntimeDeps = {
       return Buffer.from(await response.arrayBuffer());
     } catch (error) {
       if (error instanceof BailianError) throw error;
-      throw new BailianError(
-        `Failed to download runtime artifact from ${url}.`,
-        ExitCode.NETWORK,
-        "Check network connectivity, or set BAILIAN_RL_PYTHON_MIRROR to a reachable mirror, then retry runtime prepare.",
-      );
+      throw runtimeDownloadFailure(url, error);
     } finally {
       clearTimeout(timer);
     }
@@ -117,19 +130,19 @@ const defaultDeps: IRuntimeDeps = {
   },
 };
 
-/** 解压后 CPython 解释器绝对路径（install_only tarball 顶层为 python/）。 */
+/** Absolute path of the extracted CPython interpreter (install_only tarball top level is python/). */
 export function managedPythonPath(root: string, platform: NodeJS.Platform): string {
   if (platform === "win32") return join(root, "python", "python.exe");
   const minor = RL_PYTHON_VERSION.split(".").slice(0, 2).join(".");
   return join(root, "python", "bin", `python${minor}`);
 }
 
-/** 运行时版本目录名：平台-架构-Python 版本-基线 SDK 版本（不可变寻址键）。 */
+/** Runtime version directory name: platform-arch-Python version-baseline SDK version (immutable addressing key). */
 function runtimeIdFor(entry: IRuntimeManifestEntry, manifest: IRuntimeManifest): string {
   return `${entry.os}-${entry.arch}-${entry.pythonVersion}-${manifest.dashscopeVersion}`;
 }
 
-/** 当前基线的托管 runtime-id（随包受审查清单）；本平台无条目时返回 undefined。 */
+/** Managed runtime-id for the current baseline (bundled reviewed manifest); undefined when this platform has no entry. */
 export function currentManagedRuntimeId(
   platform: NodeJS.Platform = process.platform,
   arch: string = process.arch,
@@ -140,7 +153,7 @@ export function currentManagedRuntimeId(
   return runtimeIdFor(entry, manifest);
 }
 
-/** override 目录下的解释器候选（取首个存在者）。 */
+/** Interpreter candidates under the override dir (first existing one wins). */
 function overridePythonPath(dir: string, platform: NodeJS.Platform): string | undefined {
   const candidates =
     platform === "win32"
@@ -162,7 +175,7 @@ function loadManifest(manifestPath?: string): IRuntimeManifest | undefined {
   return parseRuntimeManifest(readFileSync(manifestPath, "utf8"));
 }
 
-/** 解析运行时：dev override 优先，其次托管 READY，必要时首次下载安装。 */
+/** Resolve the runtime: dev override first, then managed READY, then first-time download + install if allowed. */
 export async function resolveRuntime(
   options: IResolveRuntimeOptions = {},
 ): Promise<IResolvedRuntime> {
@@ -180,8 +193,8 @@ export async function resolveRuntime(
         `Point BAILIAN_RL_RUNTIME at a directory containing a dashscope ${RL_DASHSCOPE_VERSION} Python interpreter.`,
       );
     }
-    // 实测 override 环境的 dashscope 版本（不谎报基线常量）：FC_PYPI_LIB 由该版本
-    // 派生，提交端与 FC 安装版本锁步；未安装/不可 import 则 fail-closed。
+    // Measure the override env's dashscope version for real (never report the baseline constant blindly): FC_PYPI_LIB is
+    // derived from it, keeping the submit side and the FC install in lockstep; fail closed if missing or not importable.
     const deps = options.deps ?? defaultDeps;
     let measured = "";
     try {
@@ -192,7 +205,7 @@ export async function resolveRuntime(
       ]);
       if (probe.exitCode === 0) measured = probe.stdout.trim();
     } catch {
-      // 解释器不可执行等情形统一走下方 fail-closed
+      // Non-executable interpreter and similar cases all fall through to the fail-closed path below
     }
     if (!measured) {
       throw new BailianError(
@@ -239,7 +252,7 @@ export async function resolveRuntime(
   };
 }
 
-/** 取得运行时目录独占锁（O_EXCL 原子创建）；返回释放函数。 */
+/** Acquire the exclusive runtime-dir lock (atomic O_EXCL creation); returns the release function. */
 function acquireRuntimeLock(root: string): () => void {
   mkdirSync(root, { recursive: true });
   const lockPath = join(root, ".lock");
@@ -259,12 +272,12 @@ function acquireRuntimeLock(root: string): () => void {
     try {
       unlinkSync(lockPath);
     } catch {
-      // 清理失败不影响结果
+      // Cleanup failure does not affect the result
     }
   };
 }
 
-/** 逐源下载并校验 SHA256；任一源网络失败或哈希不符转下一源，全部失败抛最后一个错误。 */
+/** Download and verify SHA256 per source; network failure or hash mismatch moves to the next source; if all fail, throw the last error. */
 async function downloadVerifiedArtifact(
   candidates: string[],
   expectedSha256: string,
@@ -287,7 +300,7 @@ async function downloadVerifiedArtifact(
   );
 }
 
-/** 完整安装生命周期；中断不生成 READY，下次在新目录重建。 */
+/** Full install lifecycle; an interruption never writes READY, so the next attempt rebuilds in a fresh directory. */
 export async function installRuntime(
   entry: IRuntimeManifestEntry,
   manifest: IRuntimeManifest,
@@ -298,7 +311,7 @@ export async function installRuntime(
 ): Promise<void> {
   const releaseLock = acquireRuntimeLock(root);
   try {
-    // 1. 多源下载 CPython 并校验完整性（canonical → 镜像回退；换源不换 SHA）。
+    // 1. Multi-source CPython download with integrity verification (canonical → mirror fallback; switching sources never changes the SHA).
     const cacheDir = runtimeCacheRoot();
     mkdirSync(cacheDir, { recursive: true });
     const candidates = pythonDownloadCandidates(entry.pythonUrl, env);
@@ -306,7 +319,7 @@ export async function installRuntime(
     const tarPath = join(cacheDir, `${entry.pythonSha256}.tar.gz`);
     writeFileSync(tarPath, tarball);
 
-    // 2. 系统 tar 解压到版本目录（install_only 顶层 python/，含解释器与 stdlib）。
+    // 2. System tar extract into the version dir (install_only top level python/, containing the interpreter and stdlib).
     mkdirSync(root, { recursive: true });
     const extracted = await deps.run("tar", ["-xzf", tarPath, "-C", root]);
     if (extracted.exitCode !== 0) {
@@ -324,15 +337,15 @@ export async function installRuntime(
       );
     }
 
-    // 3. 确保 pip 可用（install_only 通常自带；ensurepip 兜底，失败交由下一步暴露）。
+    // 3. Ensure pip is available (install_only usually ships it; ensurepip as fallback, failures surface in the next step).
     await deps.run(pythonPath, ["-m", "ensurepip", "--upgrade"]);
 
-    // 4. 按随包 universal 锁文件安装锁定 wheel 依赖（绝不安装用户业务 requirements）。
-    //    --require-hashes 强制每个包含哈希，dashscope wheel 命中受审查基线 SHA256。
+    // 4. Install locked wheel deps from the bundled universal lockfile (never install user business requirements).
+    //    --require-hashes forces a hash per package; the dashscope wheel must match the reviewed baseline SHA256.
     const lockfilePath = join(root, "requirements.lock");
     writeFileSync(lockfilePath, RL_DEPENDENCY_LOCK, "utf8");
     const pipArgs = ["-m", "pip", "install", "--require-hashes", "--no-warn-script-location"];
-    // 受限地区可经 BAILIAN_RL_PIP_INDEX_URL 指向稳定 PyPI 镜像；--require-hashes 仍逐包校验哈希。
+    // Restricted regions can point BAILIAN_RL_PIP_INDEX_URL at a stable PyPI mirror; --require-hashes still verifies every package.
     const pipIndex = env[RL_PIP_INDEX_ENV];
     if (pipIndex) pipArgs.push("--index-url", pipIndex);
     pipArgs.push("-r", lockfilePath);
@@ -344,7 +357,7 @@ export async function installRuntime(
       );
     }
 
-    // 5. 受控环境版本/import 自检。
+    // 5. Version/import self-check in a controlled environment.
     const version = await deps.run(pythonPath, ["-I", "--version"]);
     const importCheck = await deps.run(pythonPath, ["-I", "-c", "import dashscope"]);
     if (version.exitCode !== 0 || importCheck.exitCode !== 0) {
@@ -355,7 +368,7 @@ export async function installRuntime(
       );
     }
 
-    // 6. 原子写 READY 标记 + 运行时指针（此后 run 才可见）。
+    // 6. Atomically write the READY marker + runtime pointer (only then visible to runs).
     writeFileSync(
       join(root, "READY"),
       `${JSON.stringify({ dashscopeVersion: manifest.dashscopeVersion, pythonVersion: entry.pythonVersion }, null, 2)}\n`,

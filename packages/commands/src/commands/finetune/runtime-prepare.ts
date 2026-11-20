@@ -70,12 +70,12 @@ export default defineCommand({
       });
       return;
     }
-    // 顺手回收崩溃孤儿 runs（TTL 兜底）；best-effort，绝不阻断 prepare 主流程。
+    // Opportunistically reclaim crash-orphaned runs (TTL safety net); best-effort, never blocks the main prepare flow.
     let prunedRuns = 0;
     try {
       prunedRuns = cleanupSandboxArtifacts({ pruneRuntimes: false }).removedCount;
     } catch {
-      // 清理失败留给 runtime clean
+      // Leave cleanup failures to runtime clean
     }
     const runtime = await resolveRuntime({
       allowInstall: true,

@@ -1,10 +1,10 @@
 /**
- * RL/OPD 沙箱黑盒入口（清单驱动 · 首次下载+缓存 · 最薄外围）。
+ * RL/OPD sandbox black-box entry (manifest-driven · first-time download + cache · thinnest possible shell).
  *
- * 命令层只传「要执行的 SDK 参数 + 凭证 + 可选 prepare」，黑盒内部按受审查清单
- * 首次下载/缓存运行时（resolveRuntime），建任务目录、组装 python -I -m dashscope.cli
- * 命令，经两层隔离 confinement 执行（executeIsolatedRun），归一化结果或透传错误。
- * 外围不再分别编排运行时解析与隔离执行——初始化是黑盒内部的事。
+ * The command layer passes only "SDK args to execute + credential + optional prepare"; inside the black box the reviewed manifest
+ * drives first-time download/caching of the runtime (resolveRuntime), task-dir creation, assembly of the python -I -m dashscope.cli
+ * command, execution through the two-layer isolation confinement (executeIsolatedRun), and result normalization or error pass-through.
+ * The shell no longer orchestrates runtime resolution and isolated execution separately — initialization is the black box's business.
  */
 
 import { homedir } from "node:os";
@@ -21,31 +21,31 @@ import { resolveRuntime, type IResolveRuntimeOptions } from "./manager.ts";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 16 * 1024 * 1024;
 
-/** 注入沙箱的 API 凭证（结构化兼容 client.exportApiCredential()）。 */
+/** API credential injected into the sandbox (structurally compatible with client.exportApiCredential()). */
 export interface ISandboxCredential {
   token: string;
   baseUrl?: string;
 }
 
 export interface ISandboxRunInput {
-  /** dashscope SDK 参数（不含解释器与 -I -m dashscope 前缀，由黑盒注入）。 */
+  /** dashscope SDK args (without the interpreter and -I -m dashscope prefix, injected by the black box). */
   sdkArgs: string[] | ((layout: ITaskDirLayout) => string[]);
   credential: ISandboxCredential;
-  /** 任务目录就绪后、spawn 前 staging 输入；返回 YAML 字符串则写 --config。 */
+  /** Staging input after the task dir is ready and before spawn; returning a YAML string writes --config. */
   prepare?: (layout: ITaskDirLayout) => string | void;
   timeoutMs?: number;
   maxOutputBytes?: number;
   signal?: AbortSignal;
-  /** 允许首次下载/准备运行时（交互式 run）。 */
+  /** Allow first-time runtime download/preparation (interactive run). */
   allowInstall?: boolean;
-  /** OS 禁读的真实凭据路径；缺省禁读真实 ~/.dashscope。 */
+  /** Real credential paths the OS must deny reads for; defaults to denying the real ~/.dashscope. */
   credentialDenyPaths?: string[];
-  /** 运行时解析覆盖（清单/deps/平台），供测试与管理命令。 */
+  /** Runtime resolution overrides (manifest/deps/platform) for tests and management commands. */
   runtimeOptions?: IResolveRuntimeOptions;
   adapter?: IIsolationAdapter;
 }
 
-/** 归一化沙箱内 SDK 结果：超时/非零退出透传为错误，成功返回解析 JSON。 */
+/** Normalize the in-sandbox SDK result: timeout/non-zero exit passes through as an error; success returns parsed JSON. */
 export function normalizeSandboxResult(result: IIsolationResult): unknown {
   if (result.timedOut) {
     throw new BailianError(
@@ -64,7 +64,7 @@ export function normalizeSandboxResult(result: IIsolationResult): unknown {
     }
   }
   if (result.exitCode !== 0) {
-    // 服务端错误原样透传，绝不二次分类。
+    // Server errors pass through verbatim; never re-classify.
     const fromJson =
       parsed && typeof parsed === "object"
         ? ((parsed as Record<string, unknown>).message ?? (parsed as Record<string, unknown>).error)
@@ -79,7 +79,7 @@ export function normalizeSandboxResult(result: IIsolationResult): unknown {
   return parsed ?? { raw: stdout };
 }
 
-/** 黑盒唯一执行入口：清单进 → 内部初始化+confinement 执行 → 归一化结果出。 */
+/** The black box's sole execution entry: manifest in → internal init + confinement execution → normalized result out. */
 export async function executeInSandbox(input: ISandboxRunInput): Promise<unknown> {
   const runtime = await resolveRuntime({
     allowInstall: input.allowInstall,
@@ -101,11 +101,11 @@ export async function executeInSandbox(input: ISandboxRunInput): Promise<unknown
     runtime.pythonPath,
     "-I",
     "-m",
-    // CLI 入口是 dashscope.cli（含 __main__.py，console_script 同源）；
-    // 包根 dashscope 无 __main__.py，-m dashscope 会报 “cannot be directly executed”。
+    // The CLI entry is dashscope.cli (has __main__.py, same origin as the console_script);
+    // the package root dashscope has no __main__.py, so -m dashscope reports "cannot be directly executed".
     "dashscope.cli",
-    // 1.25.23 无顶层 --output 选项；JSON 输出是叶子级 --output-format/-o json，
-    // 由命令层在 sdkArgs 里携带（cancel 等无该选项的命令除外）。
+    // 1.25.23 has no top-level --output option; JSON output is the leaf-level --output-format/-o json,
+    // carried by the command layer in sdkArgs (except commands like cancel that lack the option).
     ...resolvedArgs,
     ...(hasConfig ? ["--config", layout.configPath] : []),
   ];
@@ -120,13 +120,13 @@ export async function executeInSandbox(input: ISandboxRunInput): Promise<unknown
       credentialDenyPaths: input.credentialDenyPaths ?? [join(homedir(), ".dashscope")],
       timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       maxOutputBytes: input.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES,
-      // FC 内安装的 dashscope 版本与提交端运行时锁步（start.sh 模块路径由提交端
-      // SDK 版本决定，FC_PYPI_LIB 只管 FC 装什么；两者错配会启动即崩）。
-      // 用户零感知：无需手动注册任何环境变量。
+      // The dashscope version installed inside FC stays locked to the submit-side runtime (start.sh module paths are determined
+      // by the submit-side SDK version; FC_PYPI_LIB only controls what FC installs; a mismatch crashes at startup).
+      // Zero user involvement: no environment variable needs manual registration.
       sdkEnv: { FC_PYPI_LIB: `dashscope==${runtime.dashscopeVersion}` },
-      // SDK 相对进程 cwd 写 start.sh 再按 zipdir 打包（原 demo 流程 cwd==zipdir）。
-      // cwd 必须是可写的 deploy-copy：taskDir 不在写允许集会 EPERM，且落在包外
-      // 会导致上传 zip 缺启动脚本。
+      // The SDK writes start.sh relative to the process cwd, then packages via zipdir (the original demo flow had cwd==zipdir).
+      // cwd must be the writable deploy-copy: taskDir is outside the write allowlist (EPERM), and landing outside the package
+      // would leave the uploaded zip without the startup script.
       cwd: layout.deployCopyDir,
       signal: input.signal,
     },

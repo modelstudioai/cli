@@ -394,9 +394,9 @@ export function defineJobCancelCommand(domain: RlJobDomain) {
         emitRlResult(ctx, await cancelFineTune(ctx.client, jobId, undefined, workspaceId));
         return;
       }
-      // 1.25.23 的 rl cancel 无 --yes/-o：确认闸门由 CLI risk 机制承担；成功消息
-      // 走 stderr、stdout 为空，exit 0 即取消成功，TS 侧合成结构化结果。
-      // 失败时 executeRl 透传服务端错误（非零退出）。
+      // 1.25.23's rl cancel has no --yes/-o: the confirmation gate is handled by the CLI risk mechanism; the success message
+      // goes to stderr with empty stdout, exit 0 means cancellation succeeded, and the TS side synthesizes a structured result.
+      // On failure executeRl passes the server error through (non-zero exit).
       await executeRl(ctx, ["rl", "cancel", jobId], { timeoutMs: RL_TIMEOUT_MS.query });
       emitRlResult(ctx, { job_id: jobId, canceled: true });
     },
@@ -445,8 +445,8 @@ export function defineJobDeleteCommand(domain: RlJobDomain) {
         });
         return;
       }
-      // RL/OPD 任务共用 fine-tunes 后端，删除走宿主 deleteFineTune（与 watch/probe
-      // 同路），不经沙箱。
+      // RL/OPD jobs share the fine-tunes backend; deletion goes through the host-side deleteFineTune (same path as watch/probe),
+      // not through the sandbox.
       emitRlResult(ctx, await deleteFineTune(ctx.client, jobId, undefined, workspaceId));
     },
   });

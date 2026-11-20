@@ -47,23 +47,65 @@ describe("runRuntimeDoctor (win32 fail-closed)", () => {
     );
     expect(mechanism?.status).toBe("fail");
     expect(mechanism?.detail).toBe("Not supported on Windows yet.");
-    // 代理拒无关域名是回环真实断言，离线仍可验证。
+    // Proxy denying unrelated domains is a real loopback assertion, verifiable offline.
     const proxyDeny = result.checks.find((check) => check.name === "proxy-denies-unrelated-domain");
     expect(proxyDeny?.status).toBe("pass");
-    // 无运行时：运行时相关必过项 skip（不当通过）。
+    // No runtime: runtime-related required checks are skipped (not treated as passed).
     const python = result.checks.find((check) => check.name === "python-version");
     expect(python?.status).toBe("skip");
     const fcPypiLib = result.checks.find((check) => check.name === "fc-pypi-lib-injected");
     expect(fcPypiLib?.required).toBe(true);
     expect(fcPypiLib?.status).toBe("skip");
+    // Host network preflight is off by default (doctor stays usable offline).
+    expect(
+      result.checks.find((check) => check.name === "host-network-reachability"),
+    ).toBeUndefined();
   });
 });
 
-// 回归：taskDir 随 executeIsolatedRun 单次调用消费（finally 无条件销毁），
-// doctor 多探针必须各自创建 layout。旧实现共享一个 layout，第二个探针的
-// prepare 向已销毁目录写 profile.sb 而 ENOENT。这里用 prepare 写 marker 的
-// fake adapter 模拟 darwin 写 profile.sb；pythonPath 用 node stand-in（探针
-// 语义由真实运行时 doctor 覆盖，本用例只断言多探针生命周期编排）。
+describe("runRuntimeDoctor host-network-reachability（注入探针，不真实出站）", () => {
+  test("全部可达：增强项 pass，不阻断整体", async () => {
+    const result = await runRuntimeDoctor({
+      platform: "win32",
+      adapter: createWindowsAdapter(),
+      checkHostNetwork: true,
+      hostNetworkTargets: [{ host: "api.example.test", port: 443 }],
+      hostNetworkProbe: async () => undefined,
+    });
+    const check = result.checks.find((item) => item.name === "host-network-reachability");
+    expect(check?.required).toBe(false);
+    expect(check?.status).toBe("pass");
+    expect(check?.detail).toBeUndefined();
+  });
+
+  test("部分被阻断：degraded 并列出主机与 errno 及沙箱指引，不计入必过项", async () => {
+    const result = await runRuntimeDoctor({
+      platform: "win32",
+      adapter: createWindowsAdapter(),
+      checkHostNetwork: true,
+      hostNetworkTargets: [
+        { host: "api.example.test", port: 443 },
+        { host: "download.example.test", port: 443 },
+      ],
+      hostNetworkProbe: async (host) => (host === "download.example.test" ? "EPERM" : undefined),
+    });
+    const check = result.checks.find((item) => item.name === "host-network-reachability");
+    expect(check?.required).toBe(false);
+    expect(check?.status).toBe("degraded");
+    expect(check?.detail).toContain("download.example.test:443 (EPERM)");
+    expect(check?.detail).not.toContain("api.example.test");
+    expect(check?.detail).toContain("sandbox");
+    expect(check?.detail).toContain("HTTPS_PROXY");
+    // Enhanced degradation does not change the required-check verdict.
+    expect(() => assertDoctorPassed({ checks: [check!], ok: true })).not.toThrow();
+  });
+});
+
+// Regression: taskDir is consumed by a single executeIsolatedRun call (destroyed unconditionally in finally),
+// so doctor's multiple probes must each create their own layout. The old implementation shared one layout, and the second probe's
+// prepare wrote profile.sb into the destroyed directory, hitting ENOENT. Here a fake adapter whose prepare writes a marker
+// simulates darwin writing profile.sb; pythonPath uses a node stand-in (probe semantics are covered by the real-runtime doctor,
+// this case only asserts multi-probe lifecycle orchestration).
 describe("runRuntimeDoctor multi-probe task-dir consumption", () => {
   test("each probe prepares into a fresh task dir and all dirs are disposed", async () => {
     await withIsolatedHome(async (home) => {
@@ -90,8 +132,8 @@ describe("runRuntimeDoctor multi-probe task-dir consumption", () => {
         },
         credentialDenyPaths: [join(home, "real-credential")],
       });
-      // 5 个探针各 prepare 一次且目录互不相同；共享 layout 时第二次 prepare
-      // 即 ENOENT，落入 sandbox-self-check fail 并丢失后续探针。
+      // Each of the 5 probes prepares once into distinct directories; with a shared layout the second prepare
+      // hits ENOENT, falls into sandbox-self-check fail, and loses the remaining probes.
       expect(preparedTaskDirs.length).toBe(5);
       expect(new Set(preparedTaskDirs).size).toBe(5);
       expect(result.checks.find((check) => check.name === "sandbox-self-check")).toBeUndefined();

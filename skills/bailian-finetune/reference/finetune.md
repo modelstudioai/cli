@@ -1591,6 +1591,7 @@ _No command-specific flags._
 
 - Read-only self-check; it creates no cloud resources. Required checks must pass; when the runtime is missing they are skipped (not treated as passed) and the command exits non-zero.
 - Enhanced hardening (kernel network enforcement, process tree, memory) degrades with a notice when unavailable and does not fail the overall check.
+- Host network reachability (API / runtime download / PyPI hosts) is probed as an advisory check: blocked hosts degrade with guidance (agent sandboxes often block outbound network) and do not fail the overall check.
 
 #### Examples
 

@@ -157,7 +157,7 @@ describe("pythonDownloadCandidates (multi-source fallback)", () => {
 });
 
 describe("resolveRuntime", () => {
-  /** override 版本探测 deps：模拟 importlib.metadata 实测结果。 */
+  /** Override version-probe deps: simulates the measured importlib.metadata result. */
   function probeDeps(stdout: string, exitCode = 0) {
     return {
       async download() {

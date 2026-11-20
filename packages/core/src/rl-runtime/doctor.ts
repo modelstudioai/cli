@@ -1,13 +1,14 @@
 /**
- * 运行时与沙箱自检。
+ * Runtime and sandbox self-check.
  *
- * 必过项（安全底线）：凭据隔离机制探测、托管 Python 可启动、SDK 可导入、home
- * 重定向生效、环境闭环负向测试（沙箱内读真实凭据失败）、代理拒无关域名。增强项
- * （网络内核强制/进程树/内存）不可用时降级提示，不判定整体失败。运行时缺失时
- * 相关项标 skip（不当通过），整体 ok=false。
+ * Required checks (security baseline): credential-isolation mechanism probe, managed Python boot, SDK import, home
+ * redirect in effect, closed-loop negative test (reading real credentials inside the sandbox must fail), proxy denies unrelated domains. Enhanced checks
+ * (kernel network enforcement / process tree / memory / host network reachability) degrade with a notice when unavailable and never fail the report. When the runtime is missing,
+ * related checks are marked skip (not treated as passed) and overall ok=false.
  */
 
 import { connect as netConnect } from "node:net";
+import { probeTcpHost } from "../client/network-diagnostics.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { executeIsolatedRun } from "../isolation/app-layer.ts";
@@ -17,10 +18,10 @@ import { createIsolationAdapter } from "../isolation/os-isolation/detect.ts";
 import type { IIsolationAdapter } from "../isolation/types.ts";
 import type { IResolvedRuntime } from "./manager.ts";
 
-/** 单项检查结果。 */
+/** Single check result. */
 export interface IDoctorCheck {
   name: string;
-  /** 必过项失败/skip 则整体不通过；增强项降级不阻断。 */
+  /** Required fail/skip fails the report; enhanced degradation does not block. */
   required: boolean;
   status: "pass" | "fail" | "degraded" | "skip";
   detail?: string;
@@ -28,25 +29,39 @@ export interface IDoctorCheck {
 
 export interface IDoctorReport {
   checks: IDoctorCheck[];
-  /** 所有必过项均 pass 才为 true。 */
+  /** True only when every required check passes. */
   ok: boolean;
 }
 
 export interface IDoctorOptions {
-  /** 已解析运行时；缺失则运行时相关项 skip。 */
+  /** Resolved runtime; when missing, runtime-related checks are skipped. */
   runtime?: IResolvedRuntime;
-  /** 真实凭据路径（环境闭环负向测试目标），如真实 ~/.dashscope。 */
+  /** Real credential paths (targets of the closed-loop negative test), e.g. the real ~/.dashscope. */
   credentialDenyPaths?: string[];
   adapter?: IIsolationAdapter;
   platform?: NodeJS.Platform;
-  /** 单次自检超时（毫秒）。 */
+  /** Per-self-check timeout (ms). */
   timeoutMs?: number;
+  /** Whether to probe host outbound network reachability (enhanced; off by default so doctor stays usable offline). */
+  checkHostNetwork?: boolean;
+  /** Host network probe targets (defaults to the API / CPython download / PyPI host trio). */
+  hostNetworkTargets?: { host: string; port: number }[];
+  /** Probe injection seam (unit tests inject results, no real outbound); returns an errno, or undefined for success. */
+  hostNetworkProbe?: (host: string, port: number) => Promise<string | undefined>;
 }
 
 const SELF_CHECK_TIMEOUT_MS = 30_000;
 const SELF_CHECK_MAX_OUTPUT = 1024 * 1024;
 
-/** 通过代理 CONNECT 目标，返回是否被 403 拒绝（回环真实断言）。 */
+/** Default host network preflight targets: the submit / download / pip outbound dependencies. */
+const HOST_NETWORK_TARGETS = [
+  { host: "dashscope.aliyuncs.com", port: 443 },
+  { host: "github.com", port: 443 },
+  { host: "pypi.org", port: 443 },
+];
+const HOST_NETWORK_TIMEOUT_MS = 5_000;
+
+/** CONNECT to the target through the proxy; returns whether it was denied with 403 (real loopback assertion). */
 async function proxyDenies(port: number, target: string): Promise<boolean> {
   return new Promise<boolean>((resolve, reject) => {
     const socket = netConnect({ host: "127.0.0.1", port }, () => {
@@ -68,15 +83,15 @@ async function proxyDenies(port: number, target: string): Promise<boolean> {
   });
 }
 
-/** 运行 doctor，返回逐项报告。 */
+/** Run doctor and return the per-check report. */
 export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<IDoctorReport> {
   const platform = options.platform ?? process.platform;
   const adapter = options.adapter ?? createIsolationAdapter(platform);
   const timeoutMs = options.timeoutMs ?? SELF_CHECK_TIMEOUT_MS;
   const checks: IDoctorCheck[] = [];
 
-  // 1. 凭据隔离机制探测（硬性）。用实际执行所用的 adapter 探测，
-  // 保证机制判定与后续沙箱执行一致（含注入自定义 adapter 的场景）。
+  // 1. Credential-isolation mechanism probe (hard requirement). Probe with the adapter actually used for execution,
+  // so the mechanism verdict matches later sandbox runs (including injected custom adapters).
   const capability = await adapter.detect();
   const mechanismAvailable = capability.credentialDenyRead.available;
   checks.push({
@@ -88,7 +103,7 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
       : capability.credentialDenyRead.reason,
   });
 
-  // 增强项：不可用降级提示，不阻断。
+  // Enhanced checks: degrade with a notice when unavailable; never block.
   checks.push({
     name: "network-kernel-enforce",
     required: false,
@@ -109,7 +124,7 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
     detail: capability.hardening.memoryLimit ? undefined : "Not enforced in this release.",
   });
 
-  // 2. 代理拒无关域名（硬性，回环真实断言，不依赖外网）。
+  // 2. Proxy denies unrelated domains (hard requirement, real loopback assertion, no external network).
   const proxy = await startWhitelistProxy();
   try {
     const denied = await proxyDenies(proxy.port, "example.com:443");
@@ -123,7 +138,34 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
     await proxy.close();
   }
 
-  // 3. 运行时相关项：缺失运行时或机制不可用则 skip（不当通过）。
+  // 2.5 Host outbound network reachability (enhanced): when an agent host sandbox (e.g. Codex's default
+  // workspace-write) disables network, prepare/submission fail mid-flight; surface a degraded signal
+  // with guidance here without failing the report (doctor stays usable offline).
+  if (options.checkHostNetwork) {
+    const targets = options.hostNetworkTargets ?? HOST_NETWORK_TARGETS;
+    const probe =
+      options.hostNetworkProbe ??
+      ((host: string, port: number) => probeTcpHost(host, port, HOST_NETWORK_TIMEOUT_MS));
+    const results = await Promise.all(
+      targets.map(async (target) => ({ target, code: await probe(target.host, target.port) })),
+    );
+    const blocked = results.filter((result) => result.code !== undefined);
+    checks.push({
+      name: "host-network-reachability",
+      required: false,
+      status: blocked.length === 0 ? "pass" : "degraded",
+      detail:
+        blocked.length === 0
+          ? undefined
+          : `${blocked
+              .map((result) => `${result.target.host}:${result.target.port} (${result.code})`)
+              .join(
+                ", ",
+              )}. Agent host sandboxes (e.g. Codex workspace-write) block outbound network by default: enable network access for the agent, or run runtime prepare / job submission in a regular terminal. HTTPS_PROXY is honored when set.`,
+    });
+  }
+
+  // 3. Runtime-related checks: skip when the runtime is missing or the mechanism is unavailable (not treated as passed).
   const runtime = options.runtime;
   const canRunSandbox = mechanismAvailable && runtime !== undefined;
   const denyPaths = options.credentialDenyPaths ?? [];
@@ -143,9 +185,9 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
     return finalize(checks);
   }
 
-  // taskDir 随 executeIsolatedRun 单次调用消费（finally 无条件销毁），
-  // 每个探针必须各自创建 layout；共享会让下一个探针的 prepare 向已销毁
-  // 目录写文件（如 darwin profile.sb）而 ENOENT。
+  // taskDir is consumed by a single executeIsolatedRun call (destroyed unconditionally in finally),
+  // so every probe must create its own layout; sharing would make the next probe's prepare write
+  // into an already-destroyed directory (e.g. darwin profile.sb) and hit ENOENT.
   const runPython = async (
     code: string,
     extraArgs: string[] = [],
@@ -178,8 +220,8 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
         version.result.exitCode === 0 ? version.result.stdout.trim() : version.result.stderr.trim(),
     });
 
-    // 1.25.23 包根无 __version__ 属性；版本经 importlib.metadata 读取，
-    // import dashscope 本身仍验证可导入性。
+    // The 1.25.23 package root has no __version__ attribute; read the version via importlib.metadata,
+    // while import dashscope itself still verifies importability.
     const sdkImport = await runPython(
       'import dashscope, importlib.metadata; print(importlib.metadata.version("dashscope"))',
     );
@@ -193,8 +235,8 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
           : sdkImport.result.stderr.trim(),
     });
 
-    // FC_PYPI_LIB 注入链真实断言：沙箱内必须读到与提交端运行时锁步的版本
-    // （用户零感知，无需手动注册环境变量）。
+    // Real assertion of the FC_PYPI_LIB injection chain: inside the sandbox it must read the version locked
+    // to the submit-side runtime (zero user involvement; no manual env registration).
     const expectedFcPypiLib = `dashscope==${runtime.dashscopeVersion}`;
     const fcEnv = await runPython("import os; print(os.environ.get('FC_PYPI_LIB', ''))", [], {
       FC_PYPI_LIB: expectedFcPypiLib,
@@ -220,7 +262,7 @@ export async function runRuntimeDoctor(options: IDoctorOptions = {}): Promise<ID
         : `expected ${home.layout.homeDir}, got ${home.result.stdout.trim()}`,
     });
 
-    // 环境闭环负向测试：沙箱内读真实凭据路径必须失败（exit!=0 才算通过）。
+    // Closed-loop negative test: reading the real credential path inside the sandbox must fail (exit!=0 counts as pass).
     if (denyPaths.length === 0) {
       checks.push({
         name: "credential-deny-negative",
@@ -261,7 +303,7 @@ function finalize(checks: IDoctorCheck[]): IDoctorReport {
   return { checks, ok };
 }
 
-/** doctor 整体失败时抛错（供命令层归一化退出码）。 */
+/** Throw when doctor fails overall (for the command layer to normalize the exit code). */
 export function assertDoctorPassed(report: IDoctorReport): void {
   if (!report.ok) {
     const failed = report.checks
