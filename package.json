@@ -17,6 +17,7 @@
     "prepare": "vp config",
     "check": "vp check",
     "sync:skill-assets": "pnpm --filter bailian-cli run generate:reference && pnpm --filter bailian-cli run sync:skill-version",
+    "check:skill-contribution": "node tools/check-skill-contribution.mjs",
     "dev": "pnpm -F bailian-cli-core dev",
     "bl": "pnpm -F bailian-cli dev",
     "kscli": "pnpm -F knowledge-studio-cli dev",
