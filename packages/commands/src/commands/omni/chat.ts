@@ -228,6 +228,13 @@ export default defineCommand({
       },
     },
   },
+  notes: [
+    {
+      "en-US":
+        "For file translation (documents / images / audio), use `omni translate` instead of this multimodal chat entry.",
+      "zh-CN": "如需翻译文档/图片/音频文件，请使用 `omni translate`，而不是本多模态对话入口。",
+    },
+  ],
   exampleArgs: [
     "--list-voices",
     {

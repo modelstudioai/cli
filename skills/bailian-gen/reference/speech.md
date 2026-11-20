@@ -9,6 +9,7 @@ Index: [index.md](index.md)
 
 | Command                       | Authentication | Description                                                       |
 | ----------------------------- | -------------- | ----------------------------------------------------------------- |
+| `bl speech generate`          | API Key        | Generate podcast/dialogue audio content from a text prompt        |
 | `bl speech recognize`         | API Key        | Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash) |
 | `bl speech synthesize`        | API Key        | Synthesize speech from text                                       |
 | `bl speech vocabulary create` | API Key        | Create a precompiled hot-word vocabulary for ASR                  |
@@ -16,8 +17,62 @@ Index: [index.md](index.md)
 | `bl speech vocabulary get`    | API Key        | Get details of a precompiled hot-word vocabulary                  |
 | `bl speech vocabulary list`   | API Key        | List precompiled hot-word vocabularies                            |
 | `bl speech vocabulary update` | API Key        | Replace the contents of a precompiled hot-word vocabulary         |
+| `bl speech voice clone`       | API Key        | Clone a custom voice from reference audio                         |
+| `bl speech voice delete`      | API Key        | Delete a custom voice                                             |
+| `bl speech voice design`      | API Key        | Design a custom voice from a text description                     |
+| `bl speech voice get`         | API Key        | Get details of a custom voice                                     |
+| `bl speech voice list`        | API Key        | List custom voices                                                |
+| `bl speech voice preview`     | API Key        | Fetch the reference audio URL for a cloned voice                  |
+| `bl speech voice update`      | API Key        | Update the reference audio of a cloned voice                      |
 
 ## Command details
+
+### `bl speech generate`
+
+| Field              | Value                                                                     |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Name**           | `speech generate`                                                         |
+| **Description**    | Generate podcast/dialogue audio content from a text prompt                |
+| **Authentication** | API Key                                                                   |
+| **Usage**          | `bl speech generate --text-prompt <text> [--audio <url-or-path>] [flags]` |
+
+#### Flags
+
+| Flag                    | Type    | Required | Description                                                                                                                               |
+| ----------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `--text-prompt <text>`  | string  | yes      | Audio generation prompt (up to 3000 characters)                                                                                           |
+| `--audio <url-or-path>` | array   | no       | Reference audio URL, local file, or Data URI (repeatable, up to 3; WAV/MP3/OGG Opus only). Referenced in order as @voice1/@voice2/@voice3 |
+| `--model <model>`       | string  | no       | Model id (default: qwen-audio-3.1-tts-next)                                                                                               |
+| `--workspace-id <id>`   | string  | no       | Workspace ID for the default MaaS endpoint (or set BAILIAN_WORKSPACE_ID)                                                                  |
+| `--format <fmt>`        | string  | no       | Output format: wav / mp3 / pcm (default: wav)                                                                                             |
+| `--sample-rate <hz>`    | number  | no       | Sample rate: 8000 / 16000 / 24000 / 44100 / 48000                                                                                         |
+| `--channels <n>`        | number  | no       | Channels: 1 or 2                                                                                                                          |
+| `--volume <n>`          | number  | no       | Volume 0-100 (integer)                                                                                                                    |
+| `--rate <n>`            | number  | no       | Speech rate 0.5-2                                                                                                                         |
+| `--seed <n>`            | number  | no       | Random seed (integer)                                                                                                                     |
+| `--aigc-tag <bool>`     | boolean | no       | Enable AIGC tag (enable_aigc_tag)                                                                                                         |
+| `--enable-cbr <bool>`   | boolean | no       | Enable MP3 CBR encoding (MP3 only)                                                                                                        |
+| `--bit-rate <bps>`      | number  | no       | MP3 bit rate when CBR is enabled                                                                                                          |
+| `--quality <0-9>`       | number  | no       | MP3 VBR quality 0-9 (when CBR is off)                                                                                                     |
+| `--out-dir <path>`      | string  | no       | Output directory for the generated audio                                                                                                  |
+| `--out-prefix <text>`   | string  | no       | Filename prefix (basename only; cannot escape the output directory)                                                                       |
+| `--api-key <key>`       | string  | no       | API key                                                                                                                                   |
+| `--base-url <url>`      | string  | no       | API base URL                                                                                                                              |
+
+#### Notes
+
+- Unlike `speech synthesize`, this command uses text_prompt/references and does not accept system or cloned voice IDs.
+- Default endpoint needs a workspace ID (Beijing/Singapore). Explicit --base-url / DASHSCOPE_BASE_URL / Profile base_url overrides without requiring workspace.
+
+#### Examples
+
+```bash
+bl speech generate --workspace-id <id> --text-prompt "Generate a short podcast about city nightscapes." --dry-run --output json
+```
+
+```bash
+bl speech generate --workspace-id <id> --text-prompt "Introduce today's weather with @voice1." --audio ./reference.wav --out-dir ./audio
+```
 
 ### `bl speech recognize`
 
@@ -369,4 +424,256 @@ bl speech vocabulary update --id vocab-demo-xxx --words '{"Fendouzhe":4}' --dry-
 ```bash
 # Only after explicit user confirmation:
 bl speech vocabulary update --id vocab-demo-xxx --words '{"Fendouzhe":4,"Jingluo":4}' --yes
+```
+
+### `bl speech voice clone`
+
+| Field              | Value                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| **Name**           | `speech voice clone`                                                                         |
+| **Description**    | Clone a custom voice from reference audio                                                    |
+| **Authentication** | API Key                                                                                      |
+| **Usage**          | `bl speech voice clone --audio <url-or-path> --prefix <text> --target-model <model> [flags]` |
+
+#### Flags
+
+| Flag                                  | Type    | Required | Description                                                                              |
+| ------------------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------- |
+| `--audio <url-or-path>`               | string  | yes      | Reference audio URL or local file                                                        |
+| `--prefix <text>`                     | string  | yes      | Custom voice prefix. Digits and letters only, 1-10 characters                            |
+| `--target-model <model>`              | string  | yes      | Target TTS model for this voice (required). Must match later `speech synthesize --model` |
+| `--language-hint <code>`              | array   | no       | Language hint for the reference audio (at most one; mapped to language_hints)            |
+| `--volume-normalize <bool>`           | boolean | no       | Enable volume normalization (sent as string "true"/"false")                              |
+| `--max-prompt-audio-length <seconds>` | number  | no       | Max prompt audio length in seconds (3-30)                                                |
+| `--preprocess <bool>`                 | boolean | no       | Enable audio preprocess (enable_preprocess)                                              |
+| `--api-key <key>`                     | string  | no       | API key                                                                                  |
+| `--base-url <url>`                    | string  | no       | API base URL                                                                             |
+
+#### Notes
+
+- You must have the right to use the reference audio or described voice. Do not clone or imitate a real person without authorization.
+- A voice ID is bound to its target model. Later `speech synthesize` calls must use the same --model.
+- Creation returns voice_id immediately. Review status is DEPLOYING/OK/UNDEPLOYED — use `speech voice get` to check; preview reference audio with `speech voice preview`.
+
+#### Examples
+
+```bash
+bl speech voice clone --audio ./reference.wav --prefix demo --target-model cosyvoice-v3-flash --dry-run --output json
+```
+
+```bash
+bl speech voice clone --audio https://example.com/ref.wav --prefix Demo01 --target-model cosyvoice-v3-flash --language-hint zh
+```
+
+### `bl speech voice delete`
+
+| Field              | Value                                                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `speech voice delete`                                                                                                |
+| **Description**    | Delete a custom voice                                                                                                |
+| **Authentication** | API Key                                                                                                              |
+| **Usage**          | `bl speech voice delete --id <voice-id>`                                                                             |
+| **Risk**           | `high`                                                                                                               |
+| **Risk message**   | This permanently deletes the voice ID. Synthesis that still references it will fail and the action cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--id <voice-id>`  | string | yes      | Voice ID (required)              |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
+
+#### Notes
+
+- Deletion is irreversible. Prefer --dry-run first to confirm the request body.
+
+#### Examples
+
+```bash
+bl speech voice delete --id <voice-id> --dry-run --output json
+```
+
+```bash
+# Only after explicit user confirmation:
+bl speech voice delete --id <voice-id> --yes
+```
+
+### `bl speech voice design`
+
+| Field              | Value                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `speech voice design`                                                                                         |
+| **Description**    | Design a custom voice from a text description                                                                 |
+| **Authentication** | API Key                                                                                                       |
+| **Usage**          | `bl speech voice design --prompt <text> --preview-text <text> --prefix <text> --target-model <model> [flags]` |
+
+#### Flags
+
+| Flag                     | Type   | Required | Description                                                                              |
+| ------------------------ | ------ | -------- | ---------------------------------------------------------------------------------------- |
+| `--prompt <text>`        | string | yes      | Voice description (up to 500 characters)                                                 |
+| `--preview-text <text>`  | string | yes      | Preview text spoken in the design sample (15-200 characters)                             |
+| `--prefix <text>`        | string | yes      | Custom voice prefix. Digits and letters only, 1-10 characters                            |
+| `--target-model <model>` | string | yes      | Target TTS model for this voice (required). Must match later `speech synthesize --model` |
+| `--language-hint <code>` | array  | no       | Language hint (zh/en; at most one; server default: zh)                                   |
+| `--sample-rate <hz>`     | number | no       | Preview sample rate: 16000 / 24000 / 48000 (server default: 24000)                       |
+| `--format <fmt>`         | string | no       | Preview format: pcm / wav / mp3 (server default: wav)                                    |
+| `--out <path>`           | string | no       | Local path for the preview audio (optional; defaults under the audio output dir)         |
+| `--api-key <key>`        | string | no       | API key                                                                                  |
+| `--base-url <url>`       | string | no       | API base URL                                                                             |
+
+#### Notes
+
+- You must have the right to use the reference audio or described voice. Do not clone or imitate a real person without authorization.
+- A voice ID is bound to its target model. Later `speech synthesize` calls must use the same --model.
+- The response includes a one-shot preview_audio (Base64). Querying the voice later may not return preview_audio again. Formal listen tests use `speech synthesize`.
+
+#### Examples
+
+```bash
+bl speech voice design --prompt "Calm warm Chinese announcer" --preview-text "Welcome to today's program." --prefix demo --target-model cosyvoice-v3.5-plus --dry-run --output json
+```
+
+### `bl speech voice get`
+
+| Field              | Value                                 |
+| ------------------ | ------------------------------------- |
+| **Name**           | `speech voice get`                    |
+| **Description**    | Get details of a custom voice         |
+| **Authentication** | API Key                               |
+| **Usage**          | `bl speech voice get --id <voice-id>` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description         |
+| ------------------ | ------ | -------- | ------------------- |
+| `--id <voice-id>`  | string | yes      | Voice ID (required) |
+| `--api-key <key>`  | string | no       | API key             |
+| `--base-url <url>` | string | no       | API base URL        |
+
+#### Notes
+
+- Status DEPLOYING/OK/UNDEPLOYED is returned as data, not as a CLI failure. Use `speech voice preview` for the reference audio URL when present.
+
+#### Examples
+
+```bash
+bl speech voice get --id <voice-id> --output json
+```
+
+```bash
+bl speech voice get --id <voice-id> --quiet
+```
+
+### `bl speech voice list`
+
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `speech voice list`                                                     |
+| **Description**    | List custom voices                                                      |
+| **Authentication** | API Key                                                                 |
+| **Usage**          | `bl speech voice list [--prefix <text>] [--page <n>] [--page-size <n>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                                                             |
+| ------------------ | ------ | -------- | ----------------------------------------------------------------------- |
+| `--prefix <text>`  | string | no       | Custom voice prefix. Digits and letters only, 1-10 characters           |
+| `--page <n>`       | number | no       | Page number, 1-based (default: 1). Mapped to API page_index as page - 1 |
+| `--page-size <n>`  | number | no       | Results per page (default: 10)                                          |
+| `--api-key <key>`  | string | no       | API key                                                                 |
+| `--base-url <url>` | string | no       | API base URL                                                            |
+
+#### Notes
+
+- Lists one page only (CLI defaults: page=1, page-size=10). Status values: DEPLOYING / OK / UNDEPLOYED.
+
+#### Examples
+
+```bash
+bl speech voice list
+```
+
+```bash
+bl speech voice list --prefix demo
+```
+
+```bash
+bl speech voice list --page 2 --page-size 20
+```
+
+### `bl speech voice preview`
+
+| Field              | Value                                                    |
+| ------------------ | -------------------------------------------------------- |
+| **Name**           | `speech voice preview`                                   |
+| **Description**    | Fetch the reference audio URL for a cloned voice         |
+| **Authentication** | API Key                                                  |
+| **Usage**          | `bl speech voice preview --id <voice-id> [--out <path>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                               |
+| ------------------ | ------ | -------- | ----------------------------------------- |
+| `--id <voice-id>`  | string | yes      | Voice ID (required)                       |
+| `--out <path>`     | string | no       | Download the reference audio to this path |
+| `--api-key <key>`  | string | no       | API key                                   |
+| `--base-url <url>` | string | no       | API base URL                              |
+
+#### Notes
+
+- Returns resource_link from query_voice. This is the enrollment reference audio, not a synthesized preview. Use `speech synthesize` to hear the voice. Design voices may not include resource_link.
+
+#### Examples
+
+```bash
+bl speech voice preview --id <voice-id> --output json
+```
+
+```bash
+bl speech voice preview --id <voice-id> --out reference.wav
+```
+
+### `bl speech voice update`
+
+| Field              | Value                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Name**           | `speech voice update`                                                                                   |
+| **Description**    | Update the reference audio of a cloned voice                                                            |
+| **Authentication** | API Key                                                                                                 |
+| **Usage**          | `bl speech voice update --id <voice-id> --audio <url-or-path>`                                          |
+| **Risk**           | `high`                                                                                                  |
+| **Risk message**   | This updates the reference audio for the voice ID. All synthesis that uses this voice will be affected. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                           |
+| ----------------------- | ------ | -------- | ------------------------------------- |
+| `--id <voice-id>`       | string | yes      | Voice ID (required)                   |
+| `--audio <url-or-path>` | string | yes      | New reference audio URL or local file |
+| `--yes`                 | switch | no       | Confirm this high-risk operation      |
+| `--api-key <key>`       | string | no       | API key                               |
+| `--base-url <url>`      | string | no       | API base URL                          |
+
+#### Notes
+
+- You must have the right to use the reference audio or described voice. Do not clone or imitate a real person without authorization.
+- A voice ID is bound to its target model. Later `speech synthesize` calls must use the same --model.
+- Only reference audio can be updated. Design voices do not support voice_prompt updates via this command.
+
+#### Examples
+
+```bash
+bl speech voice update --id <voice-id> --audio ./new-reference.wav --dry-run --output json
+```
+
+```bash
+# Only after explicit user confirmation:
+bl speech voice update --id <voice-id> --audio ./new-reference.wav --yes
 ```

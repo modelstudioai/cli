@@ -18,6 +18,13 @@ export interface ChatStreamResult {
   finish_reason: string | null;
 }
 
+export type ChatStreamContentMode = "delta" | "snapshot";
+
+export interface ChatCompletionStreamOptions {
+  /** How content fragments accumulate. Default: delta (append). Snapshot is for qwen-mt-plus. */
+  contentMode?: ChatStreamContentMode;
+}
+
 interface PendingToolCall {
   id: string;
   name: string;
@@ -31,11 +38,15 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 }
 
 /** Aggregate Chat Completions SSE deltas with completion and tool-call checks. */
-export function createChatCompletionStreamAccumulator(localize: (text: LocalizedText) => string): {
+export function createChatCompletionStreamAccumulator(
+  localize: (text: LocalizedText) => string,
+  options?: ChatCompletionStreamOptions,
+): {
   readonly completed: boolean;
   accept(event: { event?: string; data: string }): ChatStreamUpdate;
   finish(): ChatStreamResult;
 } {
+  const contentMode = options?.contentMode ?? "delta";
   let completed = false;
   let content = "";
   let finishReason: string | null = null;
@@ -55,6 +66,16 @@ export function createChatCompletionStreamAccumulator(localize: (text: Localized
       localize({
         "en-US": "Tool call index returned conflicting ids.",
         "zh-CN": "同一工具调用 index 返回了不同的 id。",
+      }),
+      ExitCode.GENERAL,
+    );
+
+  const snapshotProtocolError = () =>
+    new BailianError(
+      localize({
+        "en-US":
+          "Stream protocol error: snapshot content is not an extension of previously emitted text.",
+        "zh-CN": "流协议错误：累计内容不是此前已输出文本的扩展。",
       }),
       ExitCode.GENERAL,
     );
@@ -79,6 +100,21 @@ export function createChatCompletionStreamAccumulator(localize: (text: Localized
     if (typeof functionDelta?.arguments === "string") entry.arguments += functionDelta.arguments;
 
     toolCalls.set(index, entry);
+  };
+
+  const applyContentFragment = (fragment: string): string => {
+    if (!fragment) return "";
+    if (contentMode === "delta") {
+      content += fragment;
+      return fragment;
+    }
+
+    // Snapshot: each fragment is the full text so far; emit only the new suffix.
+    if (fragment === content) return "";
+    if (!fragment.startsWith(content)) throw snapshotProtocolError();
+    const suffix = fragment.slice(content.length);
+    content = fragment;
+    return suffix;
   };
 
   return {
@@ -109,8 +145,7 @@ export function createChatCompletionStreamAccumulator(localize: (text: Localized
             reasoningDelta += delta.reasoning_content;
           }
           if (typeof delta.content === "string" && delta.content) {
-            contentDelta += delta.content;
-            content += delta.content;
+            contentDelta += applyContentFragment(delta.content);
           }
           if (Array.isArray(delta.tool_calls)) {
             for (const fragment of delta.tool_calls) acceptToolCallDelta(fragment);
