@@ -12,3 +12,23 @@ export {
   type VocabularyRequest,
 } from "./vocabulary.ts";
 export { parseInstantVocabulary, parseVocabularyEntries } from "./vocabulary-input.ts";
+export {
+  VOICE_ENROLLMENT_MODEL,
+  buildVoiceRequest,
+  createCloneVoice,
+  createDesignVoice,
+  listVoices,
+  queryVoice,
+  updateVoice,
+  deleteVoice,
+  type VoiceAction,
+  type VoicePreviewAudio,
+  type VoiceListItem,
+  type VoiceQueryOutput,
+  type VoiceCreateOutput,
+  type VoiceEnvelope,
+  type VoiceRequest,
+  type CreateCloneVoiceInput,
+  type CreateDesignVoiceInput,
+  type CreateVoiceParameters,
+} from "./voice.ts";

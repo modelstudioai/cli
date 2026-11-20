@@ -136,11 +136,34 @@ export const VISION_ROUTES: E2eRouteExports = {
 export const SPEECH_ROUTES: E2eRouteExports = {
   "speech synthesize": "speechSynthesize",
   "speech recognize": "speechRecognize",
+  "speech generate": "speechGenerate",
   "speech vocabulary create": "speechVocabularyCreate",
   "speech vocabulary list": "speechVocabularyList",
   "speech vocabulary get": "speechVocabularyGet",
   "speech vocabulary update": "speechVocabularyUpdate",
   "speech vocabulary delete": "speechVocabularyDelete",
+  "speech voice clone": "speechVoiceClone",
+  "speech voice design": "speechVoiceDesign",
+  "speech voice list": "speechVoiceList",
+  "speech voice get": "speechVoiceGet",
+  "speech voice update": "speechVoiceUpdate",
+  "speech voice delete": "speechVoiceDelete",
+  "speech voice preview": "speechVoicePreview",
+};
+
+export const SPEECH_VOICE_ROUTES: E2eRouteExports = {
+  "speech voice clone": "speechVoiceClone",
+  "speech voice design": "speechVoiceDesign",
+  "speech voice list": "speechVoiceList",
+  "speech voice get": "speechVoiceGet",
+  "speech voice update": "speechVoiceUpdate",
+  "speech voice delete": "speechVoiceDelete",
+  "speech voice preview": "speechVoicePreview",
+  "speech synthesize": "speechSynthesize",
+};
+
+export const SPEECH_GENERATE_ROUTES: E2eRouteExports = {
+  "speech generate": "speechGenerate",
 };
 
 export const MCP_ROUTES: E2eRouteExports = {

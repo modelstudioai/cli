@@ -35,21 +35,30 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-g
 
 ## When to use which command
 
-| User intent                              | Command                                   | Default model                                                                                                          |
-| ---------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Text-to-image                            | `bl image generate`                       | `qwen-image-3.0`                                                                                                       |
-| Image edit / multi-image merge           | `bl image edit` (repeat `--image`)        | `qwen-image-3.0`                                                                                                       |
-| Text-to-video / image-to-video           | `bl video generate`                       | `wan3.0-video`                                                                                                         |
-| Video edit / style transfer              | `bl video edit`                           | `happyhorse-1.0-video-edit`                                                                                            |
-| Reference-to-video + voice               | `bl video ref`                            | `wan3.0-video`                                                                                                         |
-| Speech synthesis (TTS / voiceover)       | `bl speech synthesize`                    | `cosyvoice-v3-flash`                                                                                                   |
-| Speech recognition (ASR / transcription) | `bl speech recognize`                     | `fun-asr`                                                                                                              |
-| Image describe                           | `bl vision describe`                      | `qwen3-vl-plus`；宿主能做且未点名 → host-first                                                                         |
-| Video / A-V understand                   | `bl vision describe --video` 或 `bl omni` | 视频理解默认走百炼；`omni` 默认 `qwen3.8-omni-flash`，省略 `--model` 且无 `--text-only` 时自动切换 `qwen3.5-omni-plus` |
+| User intent                                 | Command                                                | Default model                                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Text-to-image                               | `bl image generate`                                    | `qwen-image-3.0`                                                                                                       |
+| Image edit / multi-image merge              | `bl image edit` (repeat `--image`)                     | `qwen-image-3.0`                                                                                                       |
+| Text-to-video / image-to-video              | `bl video generate`                                    | `wan3.0-video`                                                                                                         |
+| Video edit / style transfer                 | `bl video edit`                                        | `happyhorse-1.0-video-edit`                                                                                            |
+| Reference-to-video + voice                  | `bl video ref`                                         | `wan3.0-video`                                                                                                         |
+| Speech synthesis (TTS / voiceover)          | `bl speech synthesize`                                 | `cosyvoice-v3-flash`                                                                                                   |
+| Voice clone / manage                        | `bl speech voice clone/list/get/update/delete/preview` | `voice-enrollment` → then synthesize with the same `--target-model`                                                    |
+| Voice design from text                      | `bl speech voice design`                               | `voice-enrollment` → preview saved locally; formal listen via `speech synthesize`                                      |
+| Audio content generation (podcast/dialogue) | `bl speech generate`                                   | `qwen-audio-3.1-tts-next` (text_prompt/references; not voice IDs)                                                      |
+| Speech recognition (ASR / transcription)    | `bl speech recognize`                                  | `fun-asr`                                                                                                              |
+| Image describe                              | `bl vision describe`                                   | `qwen3-vl-plus`；宿主能做且未点名 → host-first                                                                         |
+| Video / A-V understand                      | `bl vision describe --video` 或 `bl omni`              | 视频理解默认走百炼；`omni` 默认 `qwen3.8-omni-flash`，省略 `--model` 且无 `--text-only` 时自动切换 `qwen3.5-omni-plus` |
 
 Unless the user explicitly specifies a model, omit `--model` and let the CLI use the active Profile’s default.
 
 For ASR model selection, keep `fun-asr` (or other `*-filetrans`) for long recordings, repeated files, speaker diarization, or asynchronous task IDs. For one local or remote audio file up to about five minutes when the user asks for low-latency Flash models, use `--model fun-asr-flash-2026-06-15`, `--model qwen-audio-3.0-asr-flash`, or `--model qwen3-asr-flash`. Flash recognition is synchronous and accepts exactly one file per call.
+
+Voice clone vs design vs generate:
+
+- Clone (`bl speech voice clone`) needs reference audio; manage with list/get/update/delete; `preview` returns enrollment `resource_link` (not a synthesized sample).
+- Design (`bl speech voice design`) creates a voice from a text description and saves the one-shot `preview_audio` locally; formal listen still uses `bl speech synthesize --voice <id> --model <same-target-model>`.
+- Generate (`bl speech generate`) creates podcast/dialogue content from `text_prompt` + optional `@voice1..3` references; it does **not** take system/cloned voice IDs.
 
 To improve ASR accuracy with domain terms:
 

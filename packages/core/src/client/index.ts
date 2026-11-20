@@ -40,6 +40,7 @@ export {
   speechRecognizePath,
   speechSynthesizePath,
   speechVocabularyPath,
+  speechVoiceCustomizationPath,
   taskPath,
   userProfilePath,
   userProfileValuesPath,

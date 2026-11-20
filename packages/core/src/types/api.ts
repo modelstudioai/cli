@@ -800,6 +800,47 @@ export interface DashScopeTTSStreamChunk {
   request_id?: string;
 }
 
+// ---- Audio content generation (qwen-audio-*-tts-next) ----
+
+export interface AudioGenerationReference {
+  audio_url?: string;
+  audio_data?: string;
+}
+
+export interface AudioGenerationRequest {
+  model: string;
+  input: {
+    text_prompt: string;
+    references?: AudioGenerationReference[];
+    format?: "wav" | "mp3" | "pcm";
+    sample_rate?: number;
+    channels?: number;
+    volume?: number;
+    rate?: number;
+    seed?: number;
+    enable_aigc_tag?: boolean;
+    enable_cbr?: boolean;
+    bit_rate?: number;
+    quality?: number;
+  };
+}
+
+export interface AudioGenerationResponse {
+  output: {
+    audio: {
+      url?: string;
+      data?: string;
+      id?: string;
+      expires_at?: string;
+      duration?: number;
+    };
+  };
+  usage?: Record<string, unknown>;
+  request_id?: string;
+  code?: string;
+  message?: string;
+}
+
 // ---- Speech Recognition / ASR (DashScope) ----
 
 /** Context-enhancement message for async ASR `input.context` / sync Flash `input.messages`. */

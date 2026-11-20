@@ -190,6 +190,11 @@ export function speechVocabularyPath(): string {
   return "/api/v1/services/audio/asr/customization";
 }
 
+// ---- Voice enrollment (TTS customization: clone / design) ----
+export function speechVoiceCustomizationPath(): string {
+  return "/api/v1/services/audio/tts/customization";
+}
+
 // ---- Memory Profile (long-term memory v2, workspace-based host) ----
 export function profileSchemaPath(): string {
   return "/api/v2/apps/memory/profile_schemas";
