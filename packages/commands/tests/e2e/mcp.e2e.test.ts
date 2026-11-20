@@ -11,6 +11,7 @@ import {
   runCommandInProcess,
 } from "./helpers.ts";
 import { MCP_ROUTES } from "./topic-routes.ts";
+import { activeMcpFixture } from "./fixtures/mcp-detail.ts";
 
 /**
  * `bl mcp` E2E.
@@ -27,6 +28,7 @@ import { MCP_ROUTES } from "./topic-routes.ts";
  */
 
 describe("e2e: mcp", () => {
+  const activeServer = activeMcpFixture("ImageGenerate");
   test("mcp list --help 正常退出", async () => {
     const { stderr, exitCode } = await runCommandHelp(MCP_ROUTES, ["mcp", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
@@ -90,7 +92,9 @@ describe("e2e: mcp", () => {
           "--agent",
           "codex",
           "--base-url",
-          "https://custom-model-gateway.example.com",
+          activeServer.baseUrl,
+          "--api-key",
+          "offline-connect",
           "--dry-run",
           "--output",
           "json",
@@ -102,15 +106,17 @@ describe("e2e: mcp", () => {
         },
       );
       expect(exitCode, stderr).toBe(0);
-      const data = parseStdoutJson<{
-        server?: string;
-        transport?: string;
-        endpoint?: string;
-        header_names?: string[];
+      const { plan: data } = parseStdoutJson<{
+        plan: {
+          server?: string;
+          transport?: string;
+          endpoint?: string;
+          header_names?: string[];
+        };
       }>(stdout);
       expect(data.server).toBe("ImageGenerate");
       expect(data.transport).toBe("streamable-http");
-      expect(data.endpoint).toBe("https://dashscope.aliyuncs.com/api/v1/mcps/ImageGenerate/mcp");
+      expect(data.endpoint).toBe(activeServer.endpoint);
       expect(data.header_names).toEqual(
         expect.arrayContaining([
           "Authorization",
@@ -149,7 +155,7 @@ describe("e2e: mcp", () => {
           "--api-key",
           "sk-test-secret",
           "--base-url",
-          "https://dashscope.aliyuncs.com",
+          activeServer.baseUrl,
           "--output",
           "json",
         ],
@@ -161,6 +167,7 @@ describe("e2e: mcp", () => {
       const registered = (config.mcp_servers as Record<string, Record<string, unknown>>)
         .ImageGenerate;
       expect(registered).toBeDefined();
+      expect(registered.url).toBe(activeServer.endpoint);
       const httpHeaders = registered.http_headers as Record<string, string>;
       expect(httpHeaders["X-Dashscope-Service"]).toBe("bailian-cli");
       expect(httpHeaders["x-dashscope-openapisource"]).toBe("BailianCLI");
@@ -208,8 +215,8 @@ describe("e2e: mcp", () => {
     expect(stderr).not.toMatch(/--all/);
   });
 
-  test("mcp list --dry-run 仅打印计划且固定 activated=1", async () => {
-    const { stdout, stderr, exitCode } = await runCommandInProcess(MCP_ROUTES, [
+  test("mcp list previews the activated-name filter and requested page", async () => {
+    const result = await runCommandInProcess(MCP_ROUTES, [
       "mcp",
       "list",
       "--dry-run",
@@ -222,43 +229,24 @@ describe("e2e: mcp", () => {
       "--page-size",
       "5",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{
-      api?: string;
-      consoleRegion?: string;
-      data?: {
-        reqDTO?: {
-          type?: string;
-          activated?: number;
-          serverName?: string;
-          pageNo?: number;
-          pageSize?: number;
-          displayTools?: boolean;
-        };
-      };
-    }>(stdout);
-    expect(data.api).toBe("zeldaEasy.broadscope-bailian.mcp-server.PageList");
-    expect(data.data?.reqDTO?.activated).toBe(1);
-    expect(data.data?.reqDTO?.displayTools).toBe(false);
-    expect(data.data?.reqDTO?.type).toBe("OFFICIAL");
-    expect(data.data?.reqDTO?.serverName).toBe("金融");
-    expect(data.data?.reqDTO?.pageNo).toBe(2);
-    expect(data.data?.reqDTO?.pageSize).toBe(5);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      method: "GET",
+      path: "/api/v1/mcp/servers/list",
+      type: "OFFICIAL",
+      activated: true,
+      name: "金融",
+      page: 2,
+      page_size: 5,
+    });
   });
 
-  test("mcp list --dry-run 自定义 --console-region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandInProcess(MCP_ROUTES, [
-      "mcp",
-      "list",
-      "--dry-run",
-      "--output",
-      "json",
-      "--console-region",
-      "cn-hangzhou",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ consoleRegion?: string }>(stdout);
-    expect(data.consoleRegion).toBe("cn-hangzhou");
+  test("mcp get exposes the required server code and confirmation for tool lookup", async () => {
+    const help = await runCommandHelp(MCP_ROUTES, ["mcp", "get", "--help"]);
+    expect(help.exitCode).toBe(0);
+    expect(help.stderr).toContain("--server");
+    expect(help.stderr).toContain("--api-key");
+    expect(help.stderr).toContain("--yes");
   });
 
   test("mcp tools --server <code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {
@@ -391,7 +379,7 @@ describe("e2e: mcp", () => {
       "json",
     ]);
     expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/--arg must be in K=V/);
+    expect(stderr).toMatch(/--arg.*K=V/);
   });
 
   test("mcp call --json 无效 JSON 报错且非零退出", async () => {
@@ -406,7 +394,7 @@ describe("e2e: mcp", () => {
       "json",
     ]);
     expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/--json is not valid JSON|--json must decode/);
+    expect(stderr).toMatch(/--json.*JSON/);
   });
 
   test("mcp call 缺少 --target 时报用法错误并退出 (2)", async () => {

@@ -122,7 +122,8 @@ async function performRequest(
     } catch {
       body = { message: raw };
     }
-    body.request_id ??= res.headers.get("x-request-id") ?? undefined;
+    body.request_id ??=
+      body.requestID ?? body.requestId ?? res.headers.get("x-request-id") ?? undefined;
     const mapped = mapApiError(res.status, body, opts.url);
     throw new BailianError(mapped.message, mapped.exitCode, mapped.hint, {
       api: mapped.api,
@@ -278,14 +279,23 @@ export async function requestJson<T>(deps: HttpDeps, opts: RequestOpts): Promise
       data !== null &&
       typeof data === "object" &&
       ((data.code && data.code !== "200" && data.code !== 200 && data.code !== "Success") ||
-        data.error)
+        data.error ||
+        (data.success === false &&
+          ("error_code" in data ||
+            "errorCode" in data ||
+            "error_msg" in data ||
+            "errorMsg" in data)))
     ) {
       const mapped = mapApiError(
         res.status,
         {
           ...data,
           request_id:
-            data.request_id ?? data.requestID ?? res.headers.get("x-request-id") ?? undefined,
+            data.request_id ??
+            data.requestID ??
+            data.requestId ??
+            res.headers.get("x-request-id") ??
+            undefined,
         },
         opts.url,
       );

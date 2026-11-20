@@ -72,9 +72,11 @@ test("hosted update instructions use the prefix while skill execution uses the b
   ).toBe(true);
   expect(JSON.stringify(output.info.mock.calls)).toContain("Run aliyun bl --version");
   expect(JSON.stringify(output.warning.mock.calls)).toContain(
-    "Run aliyun bl skill update manually.",
+    "Run aliyun bl skill update --source oss manually.",
   );
-  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "pipe" });
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update --source oss", {
+    stdio: "pipe",
+  });
 });
 
 test("parseVersion strips pre-release and build metadata", () => {
@@ -195,7 +197,9 @@ test("shouldAutoUpdate only targets stable releases with a significant gap", () 
 });
 
 function expectSkillUpdateNotInit(): void {
-  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "pipe" });
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update --source oss", {
+    stdio: "pipe",
+  });
   expect(
     childProcessMocks.execSync.mock.calls.some((call) => String(call[0]).includes("skill init")),
   ).toBe(false);
@@ -250,7 +254,9 @@ test("auto-update uses the injected output and captures subprocess streams", asy
     ).toBe(true);
     expect(stderr).toBe("");
     expect(direct).not.toHaveBeenCalled();
-    expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "pipe" });
+    expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update --source oss", {
+      stdio: "pipe",
+    });
   } finally {
     direct.mockRestore();
   }
@@ -262,7 +268,10 @@ test.each([false, true])(
     const output = { info: vi.fn(), warning: vi.fn() };
     if (fails) {
       childProcessMocks.execSync.mockImplementation((command) => {
-        if (command === "bl skill update" || command === "kscli skill update") {
+        if (
+          command === "bl skill update --source oss" ||
+          command === "kscli skill update --source oss"
+        ) {
           throw new Error("mock skill sync failure");
         }
         return "";
@@ -274,9 +283,11 @@ test.each([false, true])(
         binName: "kscli",
       }),
     ).toBe(true);
-    expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "pipe" });
+    expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update --source oss", {
+      stdio: "pipe",
+    });
     expect(childProcessMocks.execSync).not.toHaveBeenCalledWith(
-      "kscli skill update",
+      "kscli skill update --source oss",
       expect.anything(),
     );
     if (fails) {
@@ -284,8 +295,8 @@ test.each([false, true])(
         expect.objectContaining({
           code: "SKILL_SYNC_FAILED",
           message: {
-            "en-US": expect.stringContaining("Run bl skill update manually."),
-            "zh-CN": expect.stringContaining("请手动运行 bl skill update。"),
+            "en-US": expect.stringContaining("Run bl skill update --source oss manually."),
+            "zh-CN": expect.stringContaining("请手动运行 bl skill update --source oss。"),
           },
         }),
       );

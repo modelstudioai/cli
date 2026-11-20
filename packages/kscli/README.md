@@ -69,7 +69,7 @@ Deletion requires confirmation; add `--yes` only after confirming that scope. Su
 
 ### Use with an AI assistant
 
-Install the knowledge workflow through `bl skill init`, or select `bl skill add --name bailian-protocol,bailian-knowledge`. Use `bl skill update` to update installed skills. This uses the full Bailian CLI installer; `kscli` has no `skill` subcommand.
+Install the knowledge workflow through `bl skill init`, or select `bl skill add --source oss --name bailian-protocol,bailian-knowledge`. Use `bl skill update --source oss` to update installed skills. This uses the full Bailian CLI installer; `kscli` has no `skill` subcommand.
 
 The assistant first reads `kscli --introspect` to check the installed capabilities. It previews changes and explains billing before creating resources. Capabilities absent from that schema are not available in the installed version.
 

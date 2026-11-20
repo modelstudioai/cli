@@ -7,31 +7,50 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command           | Authentication | Description                                                            |
-| ----------------- | -------------- | ---------------------------------------------------------------------- |
-| `bl skill add`    | No Auth        | Install skills from the Bailian skill registry into local agents       |
-| `bl skill init`   | No Auth        | Install all bailian-* skills (one-shot bootstrap for new environments) |
-| `bl skill list`   | No Auth        | List registry skills and diff against local installs                   |
-| `bl skill remove` | No Auth        | Remove locally installed skills (registry is untouched)                |
-| `bl skill update` | No Auth        | Update installed skills to the latest registry versions                |
+| Command           | Authentication                  | Description                                                             |
+| ----------------- | ------------------------------- | ----------------------------------------------------------------------- |
+| `bl skill add`    | API Key when required by source | Install skills from the Bailian skill registry into local agents        |
+| `bl skill get`    | API Key                         | Get cloud skill details, installed versions and paths                   |
+| `bl skill init`   | No Auth                         | Install all bailian-* skills (one-shot bootstrap for new environments)  |
+| `bl skill list`   | API Key when required by source | List registry skills and local installations by agent, scope and status |
+| `bl skill remove` | No Auth                         | Remove locally installed skills (registry is untouched)                 |
+| `bl skill search` | API Key                         | Search cloud skills and show their local installations                  |
+| `bl skill update` | API Key when required by source | Update installed skills to the latest registry versions                 |
 
 ## Command details
 
 ### `bl skill add`
 
-| Field              | Value                                                            |
-| ------------------ | ---------------------------------------------------------------- |
-| **Name**           | `skill add`                                                      |
-| **Description**    | Install skills from the Bailian skill registry into local agents |
-| **Authentication** | No Auth                                                          |
-| **Usage**          | `bl skill add --all \| --name <name,...>`                        |
+| Field              | Value                                                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**           | `skill add`                                                                                                                                                              |
+| **Description**    | Install skills from the Bailian skill registry into local agents                                                                                                         |
+| **Authentication** | API Key when required by source                                                                                                                                          |
+| **Usage**          | `bl skill add (--all \| --name <code,...>) [--source oss\|cloud] [--agent <agent\|all>] [--scope user\|project] [--skill-version <version>] [--with-mcp <bool>] [--yes]` |
+| **Risk**           | `high`                                                                                                                                                                   |
+| **Risk message**   | Activation may incur deployment or usage charges. A OneKey service may place an order on your account.                                                                   |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag                | Type   | Required | Description                            |
-| ------------------- | ------ | -------- | -------------------------------------- |
-| `--all`             | switch | no       | Install all skills from the registry   |
-| `--name <name,...>` | string | no       | Comma-separated skill names to install |
+| Flag                        | Type    | Required | Description                                                                                       |
+| --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `--workspace-id <id>`       | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                   |
+| `--source <oss\|cloud>`     | string  | no       | Skill source (default cloud). Use oss for the public registry.                                    |
+| `--agent <agent\|all>`      | string  | no       | Target agent ID, or all detected agents                                                           |
+| `--scope <user\|project>`   | string  | no       | Installation scope (default user)                                                                 |
+| `--skill-version <version>` | string  | no       | Install and pin this exact version                                                                |
+| `--with-mcp <bool>`         | boolean | no       | Read serverCode entries from mcp-config.json beside SKILL.md and check activation (default true). |
+| `--all`                     | switch  | no       | Install all skills from the registry                                                              |
+| `--name <name,...>`         | string  | no       | Comma-separated skill names to install                                                            |
+| `--yes`                     | switch  | no       | Confirm this high-risk operation                                                                  |
+| `--api-key <key>`           | string  | no       | API key                                                                                           |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                      |
+
+#### Notes
+
+- Use --dry-run to inspect the selected package versions and preview MCP activation. --yes confirms activation of inactive dependencies, which may incur charges. Public OSS packages install without a key. Checking their declared MCP services requires a Bailian API key. Use --with-mcp false to install only.
 
 #### Examples
 
@@ -40,7 +59,44 @@ bl skill add --all
 ```
 
 ```bash
-bl skill add --name spark-video,bailian-model-recommend
+bl skill add --source oss --name spark-video,bailian-model-recommend
+```
+
+```bash
+bl skill add --name pdf --agent cursor --scope project --skill-version 1.0 --dry-run
+```
+
+### `bl skill get`
+
+| Field              | Value                                                 |
+| ------------------ | ----------------------------------------------------- |
+| **Name**           | `skill get`                                           |
+| **Description**    | Get cloud skill details, installed versions and paths |
+| **Authentication** | API Key                                               |
+| **Usage**          | `bl skill get --name <code> [--with-mcp <bool>]`      |
+
+#### Flags
+
+| Flag                  | Type    | Required | Description                                                                                                   |
+| --------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                               |
+| `--with-mcp <bool>`   | boolean | no       | Read declared MCP server codes from the latest version package (default true, null if the manifest is absent) |
+| `--name <code>`       | string  | yes      | Remote skill ID or canonical installation name                                                                |
+| `--api-key <key>`     | string  | no       | API key                                                                                                       |
+| `--base-url <url>`    | string  | no       | API base URL                                                                                                  |
+
+#### Notes
+
+- Installation names resolve through the local lock. Use skill_code from search for other skills. Older installations can have locked_version=null.
+
+#### Examples
+
+```bash
+bl skill get --name pdf
+```
+
+```bash
+bl skill get --name skill_example --with-mcp false
 ```
 
 ### `bl skill init`
@@ -59,7 +115,7 @@ _No command-specific flags._
 #### Notes
 
 - Fetches the registry index and installs every skill whose name starts with `bailian-`.
-- Equivalent to: `bl skill add --all` (filtered to `bailian-*` skills).
+- Equivalent to: `bl skill add --source oss --all` (filtered to `bailian-*` skills).
 
 #### Examples
 
@@ -69,20 +125,28 @@ bl skill init
 
 ### `bl skill list`
 
-| Field              | Value                                                |
-| ------------------ | ---------------------------------------------------- |
-| **Name**           | `skill list`                                         |
-| **Description**    | List registry skills and diff against local installs |
-| **Authentication** | No Auth                                              |
-| **Usage**          | `bl skill list`                                      |
+| Field              | Value                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Name**           | `skill list`                                                                                            |
+| **Description**    | List registry skills and local installations by agent, scope and status                                 |
+| **Authentication** | API Key when required by source                                                                         |
+| **Usage**          | `bl skill list [--source oss\|cloud] [--agent <agent\|all>] [--scope user\|project] [--status <s,...>]` |
 
 #### Flags
 
-_No command-specific flags._
+| Flag                      | Type   | Required | Description                                                     |
+| ------------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>`     | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--source <oss\|cloud>`   | string | no       | Skill source (default cloud). Use oss for the public registry.  |
+| `--agent <agent\|all>`    | string | no       | Target agent ID, or all detected agents                         |
+| `--scope <user\|project>` | string | no       | Installation scope (default user)                               |
+| `--status <s,...>`        | string | no       | Comma-separated installation states                             |
+| `--api-key <key>`         | string | no       | API key                                                         |
+| `--base-url <url>`        | string | no       | API base URL                                                    |
 
 #### Notes
 
-- STATUS: installed | outdated | not-installed | missing (lock has it, dir deleted) | untracked (dir exists, not managed)
+- States: installed, outdated, not-installed, missing (tracked path absent), untracked (local files without a lock record).
 
 #### Examples
 
@@ -91,49 +155,107 @@ bl skill list
 ```
 
 ```bash
-bl skill list --output json
+bl skill list --source oss --status not-installed
+```
+
+```bash
+bl skill list --agent cursor --scope project --status installed,outdated
 ```
 
 ### `bl skill remove`
 
-| Field              | Value                                                   |
-| ------------------ | ------------------------------------------------------- |
-| **Name**           | `skill remove`                                          |
-| **Description**    | Remove locally installed skills (registry is untouched) |
-| **Authentication** | No Auth                                                 |
-| **Usage**          | `bl skill remove --name <all\|name,...>`                |
+| Field              | Value                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `skill remove`                                                                                                |
+| **Description**    | Remove locally installed skills (registry is untouched)                                                       |
+| **Authentication** | No Auth                                                                                                       |
+| **Usage**          | `bl skill remove --name <all\|code,...> [--source oss\|cloud] [--agent <agent\|all>] [--scope user\|project]` |
 
 #### Flags
 
-| Flag                     | Type   | Required | Description                                          |
-| ------------------------ | ------ | -------- | ---------------------------------------------------- |
-| `--name <all\|name,...>` | string | yes      | Skills to remove: all or comma-separated skill names |
+| Flag                      | Type   | Required | Description                                                    |
+| ------------------------- | ------ | -------- | -------------------------------------------------------------- |
+| `--source <oss\|cloud>`   | string | no       | Skill source (default cloud). Use oss for the public registry. |
+| `--agent <agent\|all>`    | string | no       | Target agent ID, or all detected agents                        |
+| `--scope <user\|project>` | string | no       | Installation scope (default user)                              |
+| `--name <all\|name,...>`  | string | yes      | Skills to remove: all or comma-separated skill names           |
 
 #### Examples
 
 ```bash
-bl skill remove --name spark-video
+bl skill remove --source oss --name spark-video
 ```
 
 ```bash
 bl skill remove --name all
 ```
 
-### `bl skill update`
+```bash
+bl skill remove --name pdf --agent cursor --scope project --dry-run
+```
 
-| Field              | Value                                                   |
-| ------------------ | ------------------------------------------------------- |
-| **Name**           | `skill update`                                          |
-| **Description**    | Update installed skills to the latest registry versions |
-| **Authentication** | No Auth                                                 |
-| **Usage**          | `bl skill update [--all] [--name <name,...>]`           |
+### `bl skill search`
+
+| Field              | Value                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| **Name**           | `skill search`                                                                                               |
+| **Description**    | Search cloud skills and show their local installations                                                       |
+| **Authentication** | API Key                                                                                                      |
+| **Usage**          | `bl skill search [--keyword <text>] [--type official\|private] [--page <n>] [--page-size <n>] [--limit <n>]` |
 
 #### Flags
 
-| Flag                | Type   | Required | Description                                                                  |
-| ------------------- | ------ | -------- | ---------------------------------------------------------------------------- |
-| `--all`             | switch | no       | Update all installed skills (default when neither --all nor --name is given) |
-| `--name <name,...>` | string | no       | Comma-separated skill names to update (must be already installed)            |
+| Flag                         | Type   | Required | Description                                                     |
+| ---------------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--workspace-id <id>`        | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--keyword <text>`           | string | no       | Search skill names and descriptions                             |
+| `--type <official\|private>` | string | no       | Filter by source (default: both, case-insensitive)              |
+| `--page <n>`                 | number | no       | Starting page (default 1)                                       |
+| `--page-size <n>`            | number | no       | Results per request (1–100, default 30)                         |
+| `--limit <n>`                | number | no       | Maximum results across pages (default one page)                 |
+| `--api-key <key>`            | string | no       | API key                                                         |
+| `--base-url <url>`           | string | no       | API base URL                                                    |
+
+#### Notes
+
+- Search uses the cloud catalog and a Bailian API key. page_start and page_end identify the requested pages within the API's 10000-record window. installations lists managed, missing and untracked locations.
+
+#### Examples
+
+```bash
+bl skill search --keyword pdf --type official
+```
+
+```bash
+bl skill search --page 2 --page-size 10 --limit 25
+```
+
+### `bl skill update`
+
+| Field              | Value                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `skill update`                                                                                                               |
+| **Description**    | Update installed skills to the latest registry versions                                                                      |
+| **Authentication** | API Key when required by source                                                                                              |
+| **Usage**          | `bl skill update [--all \| --name <code,...>] [--source oss\|cloud] [--agent <agent\|all>] [--scope user\|project] [--diff]` |
+
+#### Flags
+
+| Flag                      | Type   | Required | Description                                                                  |
+| ------------------------- | ------ | -------- | ---------------------------------------------------------------------------- |
+| `--workspace-id <id>`     | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)              |
+| `--source <oss\|cloud>`   | string | no       | Skill source (default cloud). Use oss for the public registry.               |
+| `--agent <agent\|all>`    | string | no       | Target agent ID, or all detected agents                                      |
+| `--scope <user\|project>` | string | no       | Installation scope (default user)                                            |
+| `--diff`                  | switch | no       | Show changed files, or the required download in a preview                    |
+| `--all`                   | switch | no       | Update all installed skills (default when neither --all nor --name is given) |
+| `--name <name,...>`       | string | no       | Comma-separated skill names to update (must be already installed)            |
+| `--api-key <key>`         | string | no       | API key                                                                      |
+| `--base-url <url>`        | string | no       | API base URL                                                                 |
+
+#### Notes
+
+- Other Skill commands check for updates to unpinned installations from the selected source. Available updates appear on stderr. Removal uses the cached check offline.
 
 #### Examples
 
@@ -146,5 +268,9 @@ bl skill update --all
 ```
 
 ```bash
-bl skill update --name spark-video
+bl skill update --source oss --name spark-video
+```
+
+```bash
+bl skill update --name pdf --agent cursor --scope project --diff --dry-run
 ```

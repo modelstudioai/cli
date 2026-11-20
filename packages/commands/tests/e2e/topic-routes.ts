@@ -144,11 +144,20 @@ export const SPEECH_ROUTES: E2eRouteExports = {
 };
 
 export const MCP_ROUTES: E2eRouteExports = {
+  "mcp activate": "mcpActivate",
   "mcp call": "mcpCall",
   "mcp connect": "mcpConnect",
+  "mcp create": "mcpCreate",
+  "mcp deactivate": "mcpDeactivate",
+  "mcp delete": "mcpDelete",
   "mcp disconnect": "mcpDisconnect",
+  "mcp get": "mcpGet",
   "mcp list": "mcpList",
   "mcp tools": "mcpTools",
+  "mcp tool call": "mcpToolCall",
+  "mcp tool list": "mcpToolList",
+  "mcp tool search": "mcpToolSearch",
+  "mcp update": "mcpUpdate",
 };
 
 export const SEARCH_WEB_ROUTES: E2eRouteExports = { "search web": "searchWeb" };
@@ -358,6 +367,8 @@ export const TOKEN_PLAN_ROUTES: E2eRouteExports = {
 
 export const SKILL_ROUTES: E2eRouteExports = {
   "skill add": "skillAdd",
+  "skill search": "skillSearch",
+  "skill get": "skillGet",
   "skill update": "skillUpdate",
   "skill remove": "skillRemove",
   "skill list": "skillList",

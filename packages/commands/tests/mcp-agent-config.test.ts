@@ -1,9 +1,18 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { enterIsolatedHome, type IsolatedHomeHandle } from "e2e/isolation";
 import { parse as parseToml } from "smol-toml";
-import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import * as writers from "../src/commands/config/agent/writers/utils.ts";
 import {
   connectMcpAgents,
   disconnectMcpAgents,
@@ -53,6 +62,120 @@ function readJson(path: string): Record<string, unknown> {
 }
 
 describe("MCP Agent registration", () => {
+  test("project registrations keep their native paths and independent ownership across projects", () => {
+    const firstProject = join(home, "first");
+    const secondProject = join(home, "second");
+    for (const projectRoot of [firstProject, secondProject]) {
+      mkdirSync(projectRoot);
+      const paths = connectMcpAgents({
+        agents: [
+          "codex",
+          "claude-code",
+          "cursor",
+          "qoder",
+          "qwen-code",
+          "gemini",
+          "opencode",
+          "pi",
+          "workbuddy",
+        ],
+        spec: spec(),
+        cliVersion: "test",
+        home,
+        configDir,
+        scope: "project",
+        projectRoot,
+      }).map((result) => result.path);
+      expect(paths).toEqual(
+        [
+          ".codex/config.toml",
+          ".mcp.json",
+          ".cursor/mcp.json",
+          ".qoder/settings.json",
+          ".qwen/settings.json",
+          ".gemini/settings.json",
+          "opencode.json",
+          ".pi/mcp.json",
+          ".workbuddy/mcp.json",
+        ].map((file) => join(projectRoot, file)),
+      );
+    }
+    disconnectMcpAgents({
+      agents: ["claude-code"],
+      name: "ImageGenerate",
+      home,
+      configDir,
+      scope: "project",
+      projectRoot: firstProject,
+    });
+    expect(readJson(join(firstProject, ".mcp.json")).mcpServers).toEqual({});
+    expect(readJson(join(secondProject, ".mcp.json")).mcpServers).toHaveProperty("ImageGenerate");
+  });
+
+  test("a manifest write failure restores the target file and permits retry", () => {
+    const path = join(home, ".claude.json");
+    const original = '{"mcpServers":{"other":{"url":"https://example.org"}}}';
+    writeFileSync(path, original);
+    const options = {
+      agents: ["claude-code" as const],
+      spec: spec(),
+      home,
+      configDir,
+      cliVersion: "test",
+    };
+    const writer = vi.spyOn(writers, "writeJsonAtomic").mockImplementationOnce(() => {
+      throw new Error("manifest write failed");
+    });
+    try {
+      expect(() => connectMcpAgents(options)).toThrow("manifest write failed");
+      expect(readFileSync(path, "utf8")).toBe(original);
+      expect(existsSync(join(configDir, "mcp-registrations.json"))).toBe(false);
+      expect(connectMcpAgents(options)[0].status).toBe("added");
+    } finally {
+      writer.mockRestore();
+    }
+  });
+
+  test("WorkBuddy and CodeBuddy use their own project files and disconnect follows recorded paths", () => {
+    const projectRoot = join(home, "project");
+    mkdirSync(projectRoot);
+    mkdirSync(join(home, ".workbuddy"));
+    mkdirSync(join(home, ".codebuddy"));
+    const options = {
+      agents: ["workbuddy" as const],
+      home,
+      configDir,
+      projectRoot,
+      scope: "project" as const,
+    };
+    connectMcpAgents({ ...options, spec: spec(), cliVersion: "test" });
+    const files = [join(projectRoot, ".workbuddy", "mcp.json"), join(projectRoot, ".mcp.json")];
+    for (const path of files) expect(readJson(path).mcpServers).toHaveProperty("ImageGenerate");
+    rmSync(join(home, ".codebuddy"), { recursive: true });
+    disconnectMcpAgents({ ...options, name: "ImageGenerate" });
+    for (const path of files) expect(readJson(path).mcpServers).toEqual({});
+  });
+
+  test("project credentials cannot be written through a directory link outside the project", () => {
+    const projectRoot = join(home, "project");
+    const external = join(home, "elsewhere");
+    mkdirSync(projectRoot);
+    mkdirSync(external);
+    symlinkSync(external, join(projectRoot, ".cursor"), "junction");
+    expect(() =>
+      connectMcpAgents({
+        agents: ["cursor"],
+        spec: spec(),
+        home,
+        configDir,
+        cliVersion: "test",
+        scope: "project",
+        projectRoot,
+      }),
+    ).toThrow(/outside the project/);
+    expect(existsSync(join(external, "mcp.json"))).toBe(false);
+  });
+
   test("Codex writes a Streamable HTTP server without a type field", () => {
     const codexDir = join(home, ".codex");
     mkdirSync(codexDir, { recursive: true });

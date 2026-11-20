@@ -219,14 +219,14 @@ async function syncAgentSkillsAfterUpdate(output: UpdateOutput, invocation: stri
   try {
     output.info({ "en-US": "Syncing agent skills...", "zh-CN": "正在同步 Agent 技能……" });
     const { execSync } = await import("child_process");
-    execSync("bl skill update", { stdio: "pipe" });
+    execSync("bl skill update --source oss", { stdio: "pipe" });
     output.info({ "en-US": "Agent skills updated.", "zh-CN": "Agent 技能已更新。" });
   } catch (error) {
     output.warning({
       code: "SKILL_SYNC_FAILED",
       message: {
-        "en-US": `Agent skill sync failed: ${errorMessage(error)}. Run ${formatCommand(invocation, "skill update")} manually.`,
-        "zh-CN": `Agent 技能同步失败：${errorMessage(error)}。请手动运行 ${formatCommand(invocation, "skill update")}。`,
+        "en-US": `Agent skill sync failed: ${errorMessage(error)}. Run ${formatCommand(invocation, "skill update --source oss")} manually.`,
+        "zh-CN": `Agent 技能同步失败：${errorMessage(error)}。请手动运行 ${formatCommand(invocation, "skill update --source oss")}。`,
       },
     });
   }

@@ -40,10 +40,15 @@ interface CommandNode {
 
 const AUTH_LABELS = {
   apiKey: { "en-US": "API Key", "zh-CN": "API Key" },
+  conditionalApiKey: { "en-US": "API Key when required by source", "zh-CN": "按来源使用 API Key" },
   console: { "en-US": "Console", "zh-CN": "Console" },
   openapi: { "en-US": "AK/SK", "zh-CN": "AK/SK" },
   none: { "en-US": "No Auth", "zh-CN": "无需鉴权" },
-} satisfies Record<AuthRequirement, LocalizedText>;
+} satisfies Record<AuthRequirement | "conditionalApiKey", LocalizedText>;
+
+function helpAuth(command: AnyCommand): keyof typeof AUTH_LABELS {
+  return command.requiresApiKey ? "conditionalApiKey" : command.auth;
+}
 
 const RISK_LEVEL_LABELS = {
   high: { "en-US": "high", "zh-CN": "高风险" },
@@ -254,7 +259,7 @@ export class CommandRegistry {
   }
 
   private buildCommandLines(
-    entries: Array<{ path: string; auth: AuthRequirement; desc: string }>,
+    entries: Array<{ path: string; auth: keyof typeof AUTH_LABELS; desc: string }>,
     accent: (text: string) => string,
     dim: (text: string) => string,
   ): string {
@@ -273,7 +278,7 @@ export class CommandRegistry {
     accent: (text: string) => string,
     dim: (text: string) => string,
   ): string {
-    const entries: Array<{ path: string; auth: AuthRequirement; desc: string }> = [];
+    const entries: Array<{ path: string; auth: keyof typeof AUTH_LABELS; desc: string }> = [];
 
     const collect = (node: CommandNode, prefix: string) => {
       for (const [name, child] of node.children) {
@@ -281,7 +286,7 @@ export class CommandRegistry {
         if (child.command) {
           entries.push({
             path: fullPath,
-            auth: child.command.auth,
+            auth: helpAuth(child.command),
             desc: this.localize(child.command.description),
           });
         }
@@ -472,7 +477,7 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
       `${b(this.localize(HELP_TEXT.usage))} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`,
     );
     out.write(
-      `${b(this.localize(HELP_TEXT.authentication))} ${a(this.localize(AUTH_LABELS[cmd.auth]))}\n`,
+      `${b(this.localize(HELP_TEXT.authentication))} ${a(this.localize(AUTH_LABELS[helpAuth(cmd)]))}\n`,
     );
     if (cmd.risk !== undefined) {
       out.write(
@@ -522,13 +527,13 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
   }
 
   private printChildren(node: CommandNode, prefix: string, out: NodeJS.WriteStream): void {
-    const entries: Array<{ path: string; auth: AuthRequirement; desc: string }> = [];
+    const entries: Array<{ path: string; auth: keyof typeof AUTH_LABELS; desc: string }> = [];
     const collect = (currentNode: CommandNode, currentPath: string) => {
       for (const [name, child] of currentNode.children) {
         if (child.command)
           entries.push({
             path: `${currentPath} ${name}`,
-            auth: child.command.auth,
+            auth: helpAuth(child.command),
             desc: this.localize(child.command.description),
           });
         if (child.children.size > 0) collect(child, `${currentPath} ${name}`);

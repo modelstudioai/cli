@@ -258,6 +258,21 @@ export function mcpWebSearchPath(): string {
   return "/api/v1/mcps/WebSearch/mcp";
 }
 
+export function mcpServersPath(serverCode?: string): string {
+  const collection = "/api/v1/mcp/servers";
+  return serverCode === undefined ? collection : `${collection}/${encodeURIComponent(serverCode)}`;
+}
+
+export function skillBaseUrl(workspaceId: string): string {
+  return workspaceEndpoint(workspaceId, "");
+}
+
+export function skillsPath(skillId?: string): string {
+  if (skillId !== undefined && (!skillId.trim() || skillId === "." || skillId === ".."))
+    throw new UsageError("Invalid skill ID. / Skill ID 无效。");
+  return skillId === undefined ? "/api/v1/skills" : `/api/v1/skills/${encodeURIComponent(skillId)}`;
+}
+
 // ---- Datasets / Fine-tune Files ----
 
 /**

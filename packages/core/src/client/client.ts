@@ -141,6 +141,19 @@ export class Client {
     return baseUrl + path;
   }
 
+  /** Bind a service default for the whole command, including delegated requests. */
+  withDefaultBaseUrl(resolveDefault: () => string | undefined): Client {
+    if (!this.deps.baseUrlIsDefault) return this;
+    const baseUrl = resolveDefault();
+    if (!baseUrl || baseUrl === this.baseUrl) return this;
+    return new Client({
+      ...this.deps,
+      baseUrl,
+      baseUrlIsDefault: false,
+      apiCred: this.deps.apiCred && { ...this.deps.apiCred, baseUrl },
+    });
+  }
+
   private toOpts({ path, ...rest }: ClientRequestOpts): RequestOpts {
     const cred = this.requireApi();
     return {
@@ -234,7 +247,7 @@ export class Client {
     serverCode: string,
     urlOverride?: string,
     serviceSource?: string,
-  ): Promise<{ client: McpConnectedClient; url: string }> {
+  ): ReturnType<typeof connectBailianMcpWithFallback> {
     this.requireApi();
     return connectBailianMcpWithFallback({
       deps: this.http,

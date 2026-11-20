@@ -1,10 +1,12 @@
-import { defineCommand, bailianMcpPath } from "bailian-cli-core";
+import { BailianError, defineCommand, bailianMcpPath, type McpTool } from "bailian-cli-core";
 import { rethrowWithMcpActivateHint } from "./activate-hint.ts";
+import { validateServer } from "./server-management.ts";
+import { endpointFlag, validateEndpoint } from "./protocol-endpoint.ts";
 
 export default defineCommand({
   description: {
-    "en-US": "List tools exposed by an MCP server (tools/list)",
-    "zh-CN": "列出 MCP 服务器提供的工具（tools/list）",
+    "en-US": "Open an MCP session and list the server's tools (tools/list)",
+    "zh-CN": "建立 MCP 会话并列出服务提供的工具（tools/list）",
   },
   auth: "apiKey",
   usageArgs: "--server <code> [--url <url>]",
@@ -18,22 +20,16 @@ export default defineCommand({
       },
       required: true,
     },
-    url: {
-      type: "string",
-      valueHint: "<url>",
-      description: {
-        "en-US":
-          "Override the MCP endpoint URL (non-Bailian). Tries Streamable HTTP first, then classic SSE on the same URL.",
-        "zh-CN":
-          "覆盖 MCP Endpoint URL（非百炼）。先尝试 Streamable HTTP，再在同一 URL 上回退到传统 SSE。",
-      },
-    },
+    url: endpointFlag,
   },
   exampleArgs: [
     "--server market-cmapi00073529",
     "--server market-cmapi00073529 --output json",
     "--server my-server --url https://example.com/mcp",
   ],
+  validate({ server, url }) {
+    return validateServer(server) ?? validateEndpoint(url);
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const code = flags.server;
@@ -49,7 +45,24 @@ export default defineCommand({
     try {
       const connected = await ctx.client.connectBailianMcp(code, flags.url);
       client = connected.client;
-      const tools = await connected.client.listTools();
+      const tools: McpTool[] = [];
+      const seenCursors = new Set<string>();
+      let cursor: string | undefined;
+      for (;;) {
+        const page = await connected.client.listToolsPage(cursor);
+        for (const tool of page.tools) tools.push(tool);
+        cursor = page.nextCursor;
+        if (cursor === undefined) break;
+        if (seenCursors.has(cursor)) {
+          throw new BailianError(
+            ctx.localize({
+              "en-US": "The MCP server returned a repeated tools/list cursor.",
+              "zh-CN": "MCP 服务返回了重复的 tools/list 分页游标。",
+            }),
+          );
+        }
+        seenCursors.add(cursor);
+      }
       ctx.output.result({ server: code, url: connected.url, tools });
     } catch (error) {
       if (!flags.url) {

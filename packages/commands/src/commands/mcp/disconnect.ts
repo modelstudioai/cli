@@ -1,80 +1,75 @@
-import { homedir } from "node:os";
+import { existsSync } from "node:fs";
+import { defineCommand } from "bailian-cli-core";
+import { withStateLock } from "../shared/state-lock.ts";
+import { disconnectMcpAgents, manifestPath } from "./agent-config.ts";
 import {
-  BailianError,
-  ExitCode,
-  defineCommand,
-  getConfigDir,
-  type FlagsDef,
-} from "bailian-cli-core";
-import {
-  MCP_AGENT_IDS,
-  disconnectMcpAgents,
-  resolveMcpAgentTargets,
-  type NativeMcpAgent,
-} from "./agent-config.ts";
-
-const AGENT_CHOICES = [...MCP_AGENT_IDS, "all"] as const;
-
-const FLAGS = {
-  server: {
-    type: "string",
-    valueHint: "<code>",
-    description: {
-      "en-US": "Bailian MCP Server Code used during connect",
-      "zh-CN": "connect 时使用的百炼 MCP Server Code",
-    },
-    required: true,
-  },
-  agent: {
-    type: "string",
-    valueHint: "<agent>",
-    choices: AGENT_CHOICES,
-    description: {
-      "en-US": `Target Agent: ${AGENT_CHOICES.join(", ")}`,
-      "zh-CN": `目标 Agent：${AGENT_CHOICES.join(", ")}`,
-    },
-    required: true,
-  },
-} satisfies FlagsDef;
+  registrationAttempt,
+  registrationFailure,
+  registrationFlags,
+  registrationLocation,
+  reportRegistrations,
+} from "./registration.ts";
+import { validateServer } from "./server-management.ts";
 
 export default defineCommand({
   description: {
-    "en-US": "Remove an unchanged MCP registration previously managed by bailian-cli",
-    "zh-CN": "移除此前由 bailian-cli 管理且未被修改的 MCP 注册",
+    "en-US": "Remove a managed MCP registration from local Agent configurations",
+    "zh-CN": "从本地 Agent 配置中移除托管的 MCP 注册",
   },
   auth: "none",
-  usageArgs: "--server <code> --agent <agent|all>",
-  flags: FLAGS,
+  flags: registrationFlags,
+  usageArgs: "--server <code> --agent <agent|all> [--scope <user|project>] [--dry-run]",
   notes: [
     {
-      "en-US": "A registration changed after connect is left untouched and reported as a conflict.",
-      "zh-CN": "如果注册项在 connect 后被修改，CLI 会保留该配置并报告冲突。",
+      "en-US":
+        "Disconnect runs offline. Entries edited since registration are preserved and reported as conflicts.",
+      "zh-CN": "断开连接可离线执行。注册后被修改的条目会保留并报告冲突。",
     },
   ],
   exampleArgs: [
-    "--server TextGenerateImage --agent cursor",
-    "--server TextGenerateImage --agent all",
+    "--server mcp-example --agent cursor --scope project --dry-run",
+    "--server mcp-example --agent all",
   ],
+  validate: (values) => validateServer(values.server),
   async run(ctx) {
-    const { flags, settings } = ctx;
-    const target = flags.agent as NativeMcpAgent | "all";
-    const agents = resolveMcpAgentTargets(target, homedir());
-    if (agents.length === 0) {
-      throw new BailianError(
-        "No supported installed Agent was found for --agent all.",
-        ExitCode.USAGE,
+    const location = registrationLocation(ctx.flags, ctx.localize);
+    const metadata = {
+      server: ctx.flags.server,
+      scope: location.scope,
+      project_root: location.projectRoot,
+    };
+    const inspect = (dryRun: boolean) =>
+      location.agents.map((agent) =>
+        registrationAttempt(
+          ctx,
+          agent,
+          () =>
+            disconnectMcpAgents({
+              ...location,
+              agents: [agent],
+              name: ctx.flags.server,
+              dryRun,
+            })[0],
+        ),
       );
-    }
-    if (settings.dryRun) {
-      ctx.output.result({ server: flags.server, agents, action: "disconnect" });
+    if (ctx.settings.dryRun) {
+      ctx.output.result({
+        ...metadata,
+        action: "disconnect",
+        agents: location.agents,
+        targets: inspect(true).map(({ result }) => result),
+      });
       return;
     }
-    const results = disconnectMcpAgents({
-      agents,
-      name: flags.server,
-      home: homedir(),
-      configDir: getConfigDir(),
-    });
-    ctx.output.result({ server: flags.server, results });
+    const path = manifestPath(location.configDir);
+    let results;
+    try {
+      results = existsSync(path)
+        ? await withStateLock(path, ctx.localize, () => inspect(false))
+        : inspect(true);
+    } catch (error) {
+      results = location.agents.map((agent) => registrationFailure(ctx, agent, error));
+    }
+    reportRegistrations(ctx, metadata, results);
   },
 });

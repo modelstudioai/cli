@@ -30,6 +30,7 @@ import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import type { FetchLike, Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
 import { BailianError } from "../errors/base.ts";
+import { apiErrorContext } from "../errors/api.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { trackingHeaders } from "./headers.ts";
 import type { HttpDeps } from "./http.ts";
@@ -120,7 +121,11 @@ export function mapSdkError(
     if (error.code === ErrorCode.ConnectionClosed && options?.localCloseFired) {
       return new BailianError(raw || "MCP connection closed.", ExitCode.NETWORK);
     }
-    return new BailianError(`MCP error (${error.code}): ${raw}`, ExitCode.GENERAL);
+    const context =
+      error.data && typeof error.data === "object" ? apiErrorContext(error.data) : undefined;
+    return new BailianError(`MCP error (${error.code}): ${raw}`, ExitCode.GENERAL, undefined, {
+      api: { apiCode: context?.apiCode ?? String(error.code), requestId: context?.requestId },
+    });
   }
 
   if (error instanceof StreamableHTTPError) {
@@ -132,12 +137,7 @@ export function mapSdkError(
   }
 
   if (error instanceof SseError && sseGetFailure && sseGetFailure.status === error.code) {
-    let message = `MCP request failed: ${sseGetFailure.status} ${sseGetFailure.statusText}`;
-    if (sseGetFailure.body) message += ` - ${sseGetFailure.body.slice(0, 500)}`;
-    return new BailianError(message, ExitCode.GENERAL, undefined, {
-      api: { httpStatus: sseGetFailure.status },
-      cause: error,
-    });
+    return mcpHttpError(sseGetFailure, error);
   }
 
   return error;
@@ -166,6 +166,21 @@ export interface SseGetFailure {
   status: number;
   statusText: string;
   body: string;
+}
+
+function mcpHttpError({ status, statusText, body }: SseGetFailure, cause?: unknown) {
+  let context;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (parsed && typeof parsed === "object") context = apiErrorContext(parsed);
+  } catch {
+    // Plain-text and HTML errors retain the same transport message.
+  }
+  const message = `MCP request failed: ${status} ${statusText}${body ? ` - ${body.slice(0, 500)}` : ""}`;
+  return new BailianError(message, ExitCode.GENERAL, undefined, {
+    api: { httpStatus: status, ...context },
+    cause,
+  });
 }
 
 /**
@@ -206,14 +221,8 @@ function createMcpFetch(
     debugResponse(deps, response);
 
     if (!response.ok && method === "POST" && !isRedirectStatus(response.status)) {
-      let message = `MCP request failed: ${response.status} ${response.statusText}`;
-      try {
-        const errorBody = await response.text();
-        if (errorBody) message += ` - ${errorBody.slice(0, 500)}`;
-      } catch {
-        /* body already consumed or unreadable */
-      }
-      throw new BailianError(message, ExitCode.GENERAL);
+      const body = await response.text().catch(() => "");
+      throw mcpHttpError({ status: response.status, statusText: response.statusText, body });
     }
 
     if (
@@ -294,16 +303,20 @@ export class SdkMcpAdapter implements McpConnectedClient {
   }
 
   async listTools(): Promise<McpTool[]> {
+    return (await this.listToolsPage()).tools;
+  }
+
+  async listToolsPage(cursor?: string): Promise<{ tools: McpTool[]; nextCursor?: string }> {
     const client = await this.requireClient();
     try {
       const result = await this.withLocalTimeout(
-        client.listTools(undefined, this.requestOptions()),
+        client.listTools(cursor === undefined ? undefined : { cursor }, this.requestOptions()),
       );
       // Returned verbatim (the SDK-validated Tool objects): callers such as
       // `bl mcp tools --output json` keep every standard field the server
       // declares (outputSchema / annotations / title / `_meta`, …), matching
       // the old hand-rolled client's passthrough.
-      return result.tools as McpTool[];
+      return { tools: result.tools, nextCursor: result.nextCursor };
     } catch (error) {
       throw this.mapTransportError(error);
     }

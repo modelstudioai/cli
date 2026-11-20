@@ -69,7 +69,7 @@ kscli kb delete --index-id <index-id> --workspace-id <workspace-id>
 
 ### 通过 AI 助手使用
 
-通过 `bl skill init` 安装知识库工作流，或用 `bl skill add --name bailian-protocol,bailian-knowledge` 选择安装。更新已安装 Skill 使用 `bl skill update`。安装渠道属于完整百炼 CLI，`kscli` 没有 `skill` 子命令。
+通过 `bl skill init` 安装知识库工作流，或用 `bl skill add --source oss --name bailian-protocol,bailian-knowledge` 选择安装。更新已安装 Skill 使用 `bl skill update --source oss`。安装渠道属于完整百炼 CLI，`kscli` 没有 `skill` 子命令。
 
 助手先读取 `kscli --introspect` 确认当前能力，创建资源前预览变更并解释计费。当前 schema 未列出的能力不能视为已安装版本支持。
 

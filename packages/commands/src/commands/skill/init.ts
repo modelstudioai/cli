@@ -1,9 +1,9 @@
+import { defineSkillCommand, observeRegistry } from "./update-check.ts";
 import {
   commandRef,
   formatCommand,
   BailianError,
   ExitCode,
-  defineCommand,
   detectInstalledAgents,
   fetchSkillsIndex,
   installSkillWithFanout,
@@ -11,7 +11,9 @@ import {
   runWithConcurrency,
   writeSkillLock,
 } from "bailian-cli-core";
-import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
+import { join } from "node:path";
+import { canonicalSkillPath, planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
+import { withSkillMutation } from "./lifecycle.ts";
 
 /** Prefix used to identify first-party Bailian skills in the registry. */
 const BAILIAN_PREFIX = "bailian-";
@@ -32,7 +34,8 @@ interface InitOutcome {
   reason?: string;
 }
 
-export default defineCommand({
+export default defineSkillCommand({
+  updateCheck: "oss",
   description: {
     "en-US": "Install all bailian-* skills (one-shot bootstrap for new environments)",
     "zh-CN": "安装全部 bailian-* Skill（用于新环境的一次性初始化）",
@@ -48,108 +51,117 @@ export default defineCommand({
       "zh-CN": "获取 Registry 索引并安装名称以 `bailian-` 开头的所有 Skill。",
     },
     {
-      "en-US": `Equivalent to: \`${commandRef("skill add --all")}\` (filtered to \`bailian-*\` skills).`,
-      "zh-CN": `等价于：\`${commandRef("skill add --all")}\`（筛选为 \`bailian-*\` Skill）。`,
+      "en-US": `Equivalent to: \`${commandRef("skill add --source oss --all")}\` (filtered to \`bailian-*\` skills).`,
+      "zh-CN": `等价于：\`${commandRef("skill add --source oss --all")}\`（筛选为 \`bailian-*\` Skill）。`,
     },
   ],
   async run(ctx) {
-    const index = await fetchSkillsIndex();
+    return withSkillMutation(ctx, async () => {
+      const index = observeRegistry(ctx, await fetchSkillsIndex());
 
-    // Discover all bailian-* skills from the live registry index
-    const names = Object.keys(index.skills).filter((name) => name.startsWith(BAILIAN_PREFIX));
-    const agents = detectInstalledAgents();
+      // Discover all bailian-* skills from the live registry index
+      const names = Object.keys(index.skills).filter((name) => name.startsWith(BAILIAN_PREFIX));
+      const agents = detectInstalledAgents();
 
-    if (ctx.settings.dryRun) {
-      ctx.output.result({
-        action: "skill.init",
-        skills: names.map((name) => ({
-          name,
-          links: planFanoutLinks(name, agents),
-        })),
-        agents: summarizeAgents(agents),
+      if (ctx.settings.dryRun) {
+        ctx.output.result({
+          action: "skill.init",
+          skills: names.map((name) => ({
+            name,
+            links: planFanoutLinks(name, agents),
+          })),
+          agents: summarizeAgents(agents),
+        });
+        return;
+      }
+
+      const lock = readSkillLock();
+      const scopedPaths = new Set(Object.values(lock.skills).map((entry) => entry.installedPath));
+
+      const tasks = names.map((name) => async (): Promise<InitOutcome> => {
+        const entry = index.skills[name];
+        try {
+          const paths = [
+            canonicalSkillPath(name),
+            ...agents.map((agent) => join(agent.skillsDir, name)),
+          ];
+          const conflict = paths.find((path) => scopedPaths.has(path));
+          if (conflict) throw new BailianError(`SOURCE_CONFLICT: ${conflict}`);
+          const record = await installSkillWithFanout(
+            name,
+            entry,
+            agents,
+            lock.skills[name]?.links ?? [],
+          );
+          lock.skills[name] = record.lockEntry;
+          return { name, status: STATUS.success };
+        } catch (err) {
+          return {
+            name,
+            status: STATUS.failed,
+            reason: err instanceof Error ? err.message : String(err),
+          };
+        }
       });
-      return;
-    }
+      const results = await runWithConcurrency(tasks, INIT_CONCURRENCY);
+      writeSkillLock(lock);
 
-    const lock = readSkillLock();
+      const installed = results.filter((result) => result.status === STATUS.success);
+      const failed = results.filter((result) => result.status === STATUS.failed);
 
-    const tasks = names.map((name) => async (): Promise<InitOutcome> => {
-      const entry = index.skills[name];
-      try {
-        const record = await installSkillWithFanout(
-          name,
-          entry,
-          agents,
-          lock.skills[name]?.links ?? [],
+      const status =
+        failed.length === 0
+          ? STATUS.success
+          : installed.length === 0
+            ? STATUS.failed
+            : STATUS.partial;
+
+      const agentIds = agents.map((agent) => agent.id);
+      const payload: Record<string, unknown> = {
+        status,
+        skills: installed.map((result) => result.name),
+      };
+      if (failed.length > 0)
+        payload.failed = failed.map((result) => ({
+          name: result.name,
+          reason: result.reason,
+          agents: agentIds,
+        }));
+      const lines =
+        results.length === 0
+          ? [
+              ctx.localize({
+                "en-US": "No bailian-* skills found in the registry.",
+                "zh-CN": "Registry 中未找到 bailian-* Skill。",
+              }),
+            ]
+          : [
+              ctx.localize(
+                status === STATUS.success
+                  ? {
+                      "en-US": `Installed ${installed.length} bailian-* skills.`,
+                      "zh-CN": `已安装 ${installed.length} 个 bailian-* Skill。`,
+                    }
+                  : {
+                      "en-US": `Installed ${installed.length}/${results.length} bailian-* skills.`,
+                      "zh-CN": `已安装 ${installed.length}/${results.length} 个 bailian-* Skill。`,
+                    },
+              ),
+            ];
+      if (failed.length > 0)
+        lines.push(
+          ctx.localize({ "en-US": "Failed:", "zh-CN": "失败：" }),
+          ...failed.map((item) => `  ${item.name}: ${item.reason}`),
         );
-        lock.skills[name] = record.lockEntry;
-        return { name, status: STATUS.success };
-      } catch (err) {
-        return {
-          name,
-          status: STATUS.failed,
-          reason: err instanceof Error ? err.message : String(err),
-        };
+      ctx.output.result(payload, { text: lines.join("\n") });
+
+      if (failed.length > 0) {
+        throw new BailianError(
+          `${failed.length}/${results.length} skill(s) failed to install`,
+          ExitCode.GENERAL,
+          `Check the reason for failed skills in the output; network failures can be retried with ${formatCommand(ctx.identity, "skill init")}`,
+        );
       }
     });
-    const results = await runWithConcurrency(tasks, INIT_CONCURRENCY);
-    writeSkillLock(lock);
-
-    const installed = results.filter((result) => result.status === STATUS.success);
-    const failed = results.filter((result) => result.status === STATUS.failed);
-
-    const status =
-      failed.length === 0
-        ? STATUS.success
-        : installed.length === 0
-          ? STATUS.failed
-          : STATUS.partial;
-
-    const agentIds = agents.map((agent) => agent.id);
-    const payload: Record<string, unknown> = {
-      status,
-      skills: installed.map((result) => result.name),
-    };
-    if (failed.length > 0)
-      payload.failed = failed.map((result) => ({
-        name: result.name,
-        reason: result.reason,
-        agents: agentIds,
-      }));
-    const lines =
-      results.length === 0
-        ? [
-            ctx.localize({
-              "en-US": "No bailian-* skills found in the registry.",
-              "zh-CN": "Registry 中未找到 bailian-* Skill。",
-            }),
-          ]
-        : [
-            ctx.localize(
-              status === STATUS.success
-                ? {
-                    "en-US": `Installed ${installed.length} bailian-* skills.`,
-                    "zh-CN": `已安装 ${installed.length} 个 bailian-* Skill。`,
-                  }
-                : {
-                    "en-US": `Installed ${installed.length}/${results.length} bailian-* skills.`,
-                    "zh-CN": `已安装 ${installed.length}/${results.length} 个 bailian-* Skill。`,
-                  },
-            ),
-          ];
-    if (failed.length > 0)
-      lines.push(
-        ctx.localize({ "en-US": "Failed:", "zh-CN": "失败：" }),
-        ...failed.map((item) => `  ${item.name}: ${item.reason}`),
-      );
-    ctx.output.result(payload, { text: lines.join("\n") });
-
-    if (failed.length > 0) {
-      throw new BailianError(
-        `${failed.length}/${results.length} skill(s) failed to install`,
-        ExitCode.GENERAL,
-        `Check the reason for failed skills in the output; network failures can be retried with ${formatCommand(ctx.identity, "skill init")}`,
-      );
-    }
   },
 });

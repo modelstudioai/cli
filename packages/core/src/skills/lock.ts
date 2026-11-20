@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { getConfigDir } from "../config/paths.ts";
 import type { SkillLockEntry, SkillLockFile } from "./types.ts";
@@ -43,7 +44,14 @@ export function readSkillLock(): SkillLockFile {
 
 export function writeSkillLock(lock: SkillLockFile): void {
   mkdirSync(getSkillsDir(), { recursive: true });
-  writeFileSync(getSkillLockPath(), JSON.stringify(lock, null, 2) + "\n");
+  const path = getSkillLockPath();
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, JSON.stringify(lock, null, 2) + "\n", { mode: 0o600, flag: "wx" });
+    renameSync(temporary, path);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
 }
 
 /**
