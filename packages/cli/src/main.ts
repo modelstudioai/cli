@@ -1,4 +1,4 @@
-import { createCli } from "bailian-cli-runtime";
+import { createCli, runToExit } from "bailian-cli-runtime";
 import { commandAliases, commands } from "./commands.ts";
 import { commandPackPolicy } from "./command-pack-policy.ts";
 import pkg from "../package.json" with { type: "json" };
@@ -12,7 +12,7 @@ const quickStartTasks = [
   "介绍一下 Bailian CLI 能帮我完成哪些任务，并根据我的需求推荐使用方式。\n   Explain what Bailian CLI can help me accomplish, and recommend how to use it based on my needs.",
 ] as const;
 
-void createCli(
+const cli = createCli(
   { ...commands, ...commandAliases },
   {
     binName: "bl",
@@ -23,4 +23,6 @@ void createCli(
     quickStartTasks,
     commandPacks: commandPackPolicy,
   },
-).run();
+);
+
+void runToExit(cli);
