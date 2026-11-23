@@ -100,9 +100,6 @@ const ptuStrategy: PlanStrategy = {
     ) {
       return "--capacity, --deploy-spec and --billing-method are not supported for plan=ptu; use reservation capacity and --charge-type.\nplan=ptu 不支持 --capacity、--deploy-spec 和 --billing-method；请使用预留容量参数和 --charge-type。";
     }
-    if (flags.thinkingOutputTpm !== undefined) {
-      return "--thinking-output-tpm is not supported by current reservation models.\n当前吞吐预留模型不支持 --thinking-output-tpm。";
-    }
     if (flags.chargeType !== CHARGE_TYPE.PRE_PAID && flags.chargeType !== CHARGE_TYPE.POST_PAID) {
       return "--charge-type is required for plan=ptu and must be pre_paid or post_paid.\nplan=ptu 必须提供 --charge-type，且只能为 pre_paid 或 post_paid。";
     }
@@ -115,6 +112,9 @@ const ptuStrategy: PlanStrategy = {
     }
     if (flags.serviceTier === "ptu_default" && flags.chargeType === CHARGE_TYPE.POST_PAID) {
       return "ptu_default only supports pre_paid.\nptu_default 仅支持 pre_paid。";
+    }
+    if (flags.pricingCycle === "Hour" && flags.serviceTier !== "ptu_default") {
+      return "--pricing-cycle Hour requires --service-tier ptu_default; without it the service assumes the fast tier and rejects the request.\n--pricing-cycle Hour 必须显式指定 --service-tier ptu_default；否则服务按默认高速档处理并拒绝请求。";
     }
     if (flags.chargeType === CHARGE_TYPE.POST_PAID && hasPrepaidFlags(flags)) {
       return "Prepaid flags are not allowed with --charge-type post_paid.\n--charge-type post_paid 不允许提供预付费参数。";

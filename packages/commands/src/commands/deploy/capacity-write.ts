@@ -6,6 +6,7 @@ import {
   createCapacityInstance,
   scaleCapacityInstance,
   renewCapacityInstance,
+  updateCapacityInstanceAutoRenew,
   deleteCapacityInstance,
   buildReservationCapacity,
   buildPrepaidInfo,
@@ -61,10 +62,11 @@ export const deployCapacityCreate = defineCommand({
   },
   flags: CREATE_FLAGS,
   usageArgs:
-    "--deployed-model <code> --billing-method <PRE_PAY|POST_PAY> --input-tpm <kTPM> --output-tpm <kTPM> [--duration <days>] [--auto-renewal <true|false>] [--wait]",
+    "--deployed-model <code> --billing-method <PRE_PAY|POST_PAY> --input-tpm <kTPM> --output-tpm <kTPM> [--pricing-cycle <Day|Hour>] [--duration <n>] [--auto-renewal <true|false>] [--wait]",
   exampleArgs: [
     "--deployed-model example-code --billing-method POST_PAY --input-tpm 10000 --output-tpm 1000 --dry-run",
     "--deployed-model example-code --billing-method PRE_PAY --input-tpm 10000 --output-tpm 1000 --duration 30 --auto-renewal false --dry-run",
+    "--deployed-model example-code --billing-method PRE_PAY --pricing-cycle Hour --duration 8 --auto-renewal false --input-tpm 10000 --output-tpm 1000 --dry-run",
   ],
   notes: [
     ...MUTATION_NOTES,
@@ -73,6 +75,12 @@ export const deployCapacityCreate = defineCommand({
         "Keeps the ModelCode, model and performance tier. Only one unreleased postpaid instance is allowed per ModelCode; the server validates purchase eligibility and slot limits.",
       "zh-CN":
         "沿用原 ModelCode、模型和性能档位。同一 ModelCode 只允许一个未释放的后付费实例；购买资格和实例数量限制由服务端校验。",
+    },
+    {
+      "en-US":
+        "The 8-hour off-peak window is an additional prepaid purchase: --pricing-cycle Hour with --duration 8, --auto-renewal false and no automatic-renewal duration. The selling window (22:00–24:00 Beijing time) and model support are validated by the server; created instances cannot be scaled, renewed, auto-renewed, released or unsubscribed and expire automatically.",
+      "zh-CN":
+        "8 小时闲时窗口按预付费叠加购买：--pricing-cycle Hour 配 --duration 8、--auto-renewal false，不传自动续费时长。售卖时段（北京时间 22:00–24:00）与模型支持由服务端校验；所建实例不可变配、续订、自动续费、释放或退订，到期自动失效。",
     },
   ],
   validate(flags) {
@@ -242,7 +250,7 @@ export const deployCapacityRenew = defineCommand({
   },
   flags: RENEW_FLAGS,
   usageArgs:
-    "--deployed-model <code> --instance-id <id> --duration <days> --auto-renewal <true|false> [--is-change <true|false>] [--input-tpm <kTPM>] [--output-tpm <kTPM>] [--wait]",
+    "--deployed-model <code> --instance-id <id> --duration <n> --auto-renewal <true|false> [--is-change <true|false>] [--input-tpm <kTPM>] [--output-tpm <kTPM>] [--wait]",
   exampleArgs: [
     "--deployed-model example-code --instance-id example-instance --duration 30 --auto-renewal false --dry-run",
     "--deployed-model example-code --instance-id example-instance --duration 30 --auto-renewal true --auto-renewal-duration 30 --dry-run",
@@ -410,3 +418,133 @@ export const deployCapacityDelete = defineCommand({
     );
   },
 });
+
+const AUTO_RENEW_FLAGS = {
+  ...DEPLOYED_MODEL_FLAG,
+  ...CAPACITY_INSTANCE_FLAG,
+  ...WRITE_OPTIONS,
+  cycle: {
+    type: "string",
+    valueHint: "<Day>",
+    required: true,
+    choices: ["Day"] as const,
+    description: {
+      "en-US": "Automatic renewal cycle; the service currently accepts only Day (case-sensitive)",
+      "zh-CN": "自动续费周期单位；当前服务仅接受 Day（区分大小写）",
+    },
+  },
+  autoRenewalDuration: {
+    type: "number",
+    valueHint: "<days>",
+    required: true,
+    description: {
+      "en-US": "Days renewed at each automatic renewal, positive integer",
+      "zh-CN": "每次自动续费的天数，正整数",
+    },
+  },
+} satisfies FlagsDef;
+
+function defineCapacityAutoRenewCommand(autoRenewal: boolean) {
+  return defineCommand({
+    defaultOutput: "json",
+    description: autoRenewal
+      ? {
+          "en-US": "Enable automatic renewal for one prepaid capacity instance",
+          "zh-CN": "开启单个预付费容量实例的自动续费",
+        }
+      : {
+          "en-US": "Disable automatic renewal for one prepaid capacity instance",
+          "zh-CN": "关闭单个预付费容量实例的自动续费",
+        },
+    auth: "apiKey",
+    risk: {
+      level: "high",
+      ...(autoRenewal ? { reason: "billing" as const } : {}),
+      message: autoRenewal
+        ? {
+            "en-US":
+              "Enabling automatic renewal starts recurring charges until it is disabled again.",
+            "zh-CN": "开启自动续费后将按周期持续扣费，直到再次关闭。",
+          }
+        : {
+            "en-US": "Disabling automatic renewal stops recurring charges at expiry.",
+            "zh-CN": "关闭自动续费后，到期不再自动续费扣款。",
+          },
+    },
+    flags: AUTO_RENEW_FLAGS,
+    usageArgs:
+      "--deployed-model <code> --instance-id <id> --cycle <Day> --auto-renewal-duration <days> [--wait]",
+    exampleArgs: [
+      "--deployed-model example-code --instance-id example-instance --cycle Day --auto-renewal-duration 30 --dry-run",
+    ],
+    notes: [
+      ...MUTATION_NOTES,
+      {
+        "en-US":
+          "Prepaid instances only; refreshes can_enable_auto_renew / can_disable_auto_renew before writing. 8-hour off-peak instances do not support automatic renewal. The operation usually completes synchronously and returns SUCCEEDED.",
+        "zh-CN":
+          "仅预付费实例；写入前刷新 can_enable_auto_renew / can_disable_auto_renew。8 小时闲时实例不支持自动续费。该操作通常同步完成并返回 SUCCEEDED。",
+      },
+    ],
+    validate: (flags) => {
+      const optionError = validateQueryIds(flags) ?? validateWriteOptions(flags);
+      if (optionError) return optionError;
+      if (
+        flags.autoRenewalDuration === undefined ||
+        !Number.isSafeInteger(flags.autoRenewalDuration) ||
+        flags.autoRenewalDuration <= 0
+      )
+        return "--auto-renewal-duration must be a positive safe integer in days.\n--auto-renewal-duration 必须是正安全整数（天）。";
+      return undefined;
+    },
+    async run(ctx) {
+      const { flags, settings } = ctx;
+      const body = {
+        auto_renewal: autoRenewal,
+        auto_renewal_cycle: flags.cycle,
+        auto_renewal_duration: flags.autoRenewalDuration,
+      };
+      if (settings.dryRun) {
+        const resultData5 = {
+          action: autoRenewal
+            ? "deploy.capacity.auto-renew.enable"
+            : "deploy.capacity.auto-renew.disable",
+          deployed_model: flags.deployedModel,
+          instance_id: flags.instanceId,
+          body,
+          client_request_id: flags.requestId ?? "<generated UUID>",
+          precheck: autoRenewal ? "can_enable_auto_renew" : "can_disable_auto_renew",
+          wait: flags.wait,
+        };
+        ctx.output.result(
+          resultData5,
+          ctx.settings.output === "text"
+            ? { text: JSON.stringify(resultData5, null, 2) }
+            : undefined,
+        );
+        return;
+      }
+      const instance = await requireCapacityInstance(
+        ctx.client,
+        flags.deployedModel,
+        flags.instanceId,
+        autoRenewal ? "enable_auto_renew" : "disable_auto_renew",
+      );
+      if (instance.charge_type !== "pre_paid")
+        throw new BailianError(
+          "Only prepaid instances support automatic renewal. / 仅预付费实例支持自动续费。",
+          ExitCode.USAGE,
+        );
+      const requestId = flags.requestId ?? randomUUID();
+      const response = await submitCapacityWrite(requestId, () =>
+        updateCapacityInstanceAutoRenew(ctx.client, flags.deployedModel, flags.instanceId, body, {
+          requestId,
+        }),
+      );
+      await finishMutation(ctx, flags.deployedModel, response, flags, requestId, true);
+    },
+  });
+}
+
+export const deployCapacityAutoRenewEnable = defineCapacityAutoRenewCommand(true);
+export const deployCapacityAutoRenewDisable = defineCapacityAutoRenewCommand(false);

@@ -77,8 +77,9 @@ const CREATE_FLAGS = {
     type: "number",
     valueHint: "<n>",
     description: {
-      "en-US": "Legacy thinking-output capacity flag; not supported for PTU",
-      "zh-CN": "旧版思考输出容量参数；PTU 不支持此参数",
+      "en-US":
+        "Thinking-output capacity in kTPM (plan=ptu); only some models support it, validated server-side",
+      "zh-CN": "思考输出容量，单位 kTPM（plan=ptu）；仅部分模型支持，由服务端校验",
     },
   },
   chargeType: {
@@ -112,7 +113,7 @@ const CREATE_FLAGS = {
 } satisfies FlagsDef;
 
 const CREATE_USAGE =
-  "--model-name <model_name> [--display-name <display_name>] [--plan <plan>] [--charge-type <type>] [--service-tier <tier>] [--suffix <suffix>] [--input-tpm <n> --output-tpm <n>] [flags]";
+  "--model-name <model_name> [--display-name <display_name>] [--plan <plan>] [--charge-type <type>] [--service-tier <tier>] [--suffix <suffix>] [--pricing-cycle <Day|Hour>] [--input-tpm <n> --output-tpm <n>] [flags]";
 
 const CREATE_RISK: CommandRisk = {
   level: "high",
@@ -131,9 +132,15 @@ const CREATE_NOTES = [
   },
   {
     "en-US":
-      "For plan=ptu, --charge-type, --input-tpm and --output-tpm are required. Capacity is in kTPM (1 kTPM = 1000 tokens/minute). Separate thinking-output capacity is unsupported. Prepaid requires --duration and explicit --auto-renewal true|false.",
+      "For plan=ptu, --charge-type, --input-tpm and --output-tpm are required. Capacity is in kTPM (1 kTPM = 1000 tokens/minute). Separate thinking-output capacity (--thinking-output-tpm) is only supported by some models and is validated server-side. Prepaid requires --duration and explicit --auto-renewal true|false.",
     "zh-CN":
-      "plan=ptu 时，--charge-type、--input-tpm 和 --output-tpm 必填。容量单位为 kTPM（1 kTPM = 1000 Token/分钟），不支持单独的思考输出容量。预付费须提供 --duration 和显式 --auto-renewal true|false。",
+      "plan=ptu 时，--charge-type、--input-tpm 和 --output-tpm 必填。容量单位为 kTPM（1 kTPM = 1000 Token/分钟）；单独的思考输出容量（--thinking-output-tpm）仅部分模型支持，由服务端校验。预付费须提供 --duration 和显式 --auto-renewal true|false。",
+  },
+  {
+    "en-US":
+      "The 8-hour off-peak window is prepaid ptu_default only: --pricing-cycle Hour with --duration 8, --auto-renewal false and an explicit --service-tier ptu_default. Service hours must fall within 22:00–08:00, so orders are accepted only between 22:00 and 24:00 Beijing time; model support is validated by the server.",
+    "zh-CN":
+      "8 小时闲时窗口仅限预付费 ptu_default：--pricing-cycle Hour 配 --duration 8、--auto-renewal false，且必须显式指定 --service-tier ptu_default。服务时段须完整落在 22:00–08:00，因此仅在北京时间 22:00–24:00 之间下单；模型支持由服务端校验。",
   },
   {
     "en-US":
@@ -194,8 +201,6 @@ function validateCreate(
     if (!flags.displayName?.trim()) {
       return "--display-name is required for non-PTU plans. / 非 PTU 方案必须提供 --display-name。";
     }
-  } else if (flags.thinkingOutputTpm !== undefined) {
-    return "--thinking-output-tpm is not supported for PTU. / PTU 不支持 --thinking-output-tpm。";
   }
   return validateWriteOptions(flags) ?? strategy.validateFlags(flags);
 }
@@ -259,6 +264,7 @@ export const deployTextCreate = defineCommand({
     "--model-name my-qwen-sft --display-name my-sft-test",
     "--model-name qwen3.6-flash-2026-04-16 --plan ptu --charge-type post_paid --input-tpm 10000 --output-tpm 1000 --dry-run",
     "--model-name qwen3.6-flash-2026-04-16 --plan ptu --charge-type pre_paid --service-tier ptu_default --input-tpm 10000 --output-tpm 1000 --duration 30 --auto-renewal false --dry-run",
+    "--model-name qwen3.6-flash-2026-04-16 --plan ptu --charge-type pre_paid --service-tier ptu_default --pricing-cycle Hour --duration 8 --auto-renewal false --input-tpm 10000 --output-tpm 1000 --dry-run",
     "--model-name qwen3-8b --display-name my-qwen3-mu --plan mu",
     "--model-name qwen3-8b --display-name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2",
   ],

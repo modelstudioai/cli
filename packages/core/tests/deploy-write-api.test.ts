@@ -8,6 +8,7 @@ import {
   createDeployment,
   deleteCapacityInstance,
   deleteDeployment,
+  deploymentCapacityInstanceAutoRenewPath,
   deploymentCapacityInstanceRenewPath,
   deploymentCapacityInstanceScalePath,
   deploymentOverflowPath,
@@ -16,6 +17,7 @@ import {
   renewCapacityInstance,
   scaleCapacityInstance,
   scaleDeployment,
+  updateCapacityInstanceAutoRenew,
   updateDeploymentOverflow,
   validatePrepaidFlags,
   validateReservationCapacity,
@@ -33,6 +35,7 @@ import {
   type ReservationFlags,
   type ScaleCapacityInstanceRequest,
   type ScaleDeploymentRequest,
+  type UpdateCapacityAutoRenewRequest,
 } from "../src/deploy/index.ts";
 
 beforeEach(() => {
@@ -96,6 +99,11 @@ const renewBody: RenewCapacityInstanceRequest = {
   pre_paid_info: prepaid,
   is_change: false,
 };
+const autoRenewBody: UpdateCapacityAutoRenewRequest = {
+  auto_renewal: true,
+  auto_renewal_cycle: "Day",
+  auto_renewal_duration: 30,
+};
 const writes = [
   {
     name: "createCapacityInstance",
@@ -122,6 +130,14 @@ const writes = [
       renewCapacityInstance(client, code, instanceId, renewBody, options),
   },
   {
+    name: "updateCapacityInstanceAutoRenew",
+    path: `${encodedInstance}/auto-renew`,
+    method: "PUT",
+    body: autoRenewBody,
+    run: (client: Client, options?: CapacityWriteOptions) =>
+      updateCapacityInstanceAutoRenew(client, code, instanceId, autoRenewBody, options),
+  },
+  {
     name: "deleteCapacityInstance",
     path: encodedInstance,
     method: "DELETE",
@@ -145,6 +161,9 @@ describe("reservation write paths", () => {
   test("encodes opaque path segments and appends exact action suffixes", () => {
     expect(deploymentCapacityInstanceScalePath(code, instanceId)).toBe(`${encodedInstance}/scale`);
     expect(deploymentCapacityInstanceRenewPath(code, instanceId)).toBe(`${encodedInstance}/renew`);
+    expect(deploymentCapacityInstanceAutoRenewPath(code, instanceId)).toBe(
+      `${encodedInstance}/auto-renew`,
+    );
     expect(deploymentOverflowPath(code)).toBe(`${encodedDeployment}/update-overflowstrategy`);
   });
 });
@@ -429,6 +448,16 @@ describe("shared reservation capacity", () => {
       });
     },
   );
+
+  test("forwards thinking-output capacity unchanged for server-side validation", () => {
+    const flags = { inputTpm: 0, outputTpm: 7, thinkingOutputTpm: 5 };
+    expect(validateReservationCapacity(flags, true)).toBeUndefined();
+    expect(buildReservationCapacity(flags)).toStrictEqual({
+      input_tpm: 0,
+      output_tpm: 7,
+      thinking_output_tpm: 5,
+    });
+  });
 });
 
 describe("shared prepaid information", () => {
@@ -498,6 +527,29 @@ describe("shared prepaid information", () => {
       "--auto-renewal-duration",
     );
   });
+
+  test("the 8-hour off-peak block is exact and other cycles are rejected", () => {
+    const hour: ReservationFlags = { pricingCycle: "Hour", duration: 8, autoRenewal: false };
+    expect(hasPrepaidFlags({ pricingCycle: "Day" })).toBe(true);
+    expect(validatePrepaidFlags(hour, true)).toBeUndefined();
+    expect(buildPrepaidInfo(hour)).toStrictEqual({
+      pricing_cycle: "Hour",
+      duration: 8,
+      auto_renewal: false,
+    });
+    for (const overrides of [
+      { duration: 30 },
+      { autoRenewal: true },
+      { autoRenewalDuration: 30 },
+      { autoRenewalCycle: "Day" },
+    ] satisfies ReservationFlags[]) {
+      expectBilingual(validatePrepaidFlags({ ...hour, ...overrides }, true));
+    }
+    expectBilingual(
+      validatePrepaidFlags({ pricingCycle: "WEEK", duration: 1, autoRenewal: false }, true),
+      "--pricing-cycle",
+    );
+  });
 });
 
 function planContext(client: Client, flags: CreatePlanFlags = {}, dryRun = false): PlanContext {
@@ -522,7 +574,6 @@ describe("PTU creation strategy", () => {
     { serviceTier: "ptu_v2" },
     { serviceTier: "" },
     { serviceTier: "ptu_default" },
-    { thinkingOutputTpm: 0 },
     { capacity: 0 },
     { deploySpec: "MU1" },
     { billingMethod: "POST_PAY" },
@@ -535,6 +586,32 @@ describe("PTU creation strategy", () => {
     { chargeType: "pre_paid" },
     { chargeType: "pre_paid", duration: 30 },
     { chargeType: "pre_paid", duration: 30, autoRenewal: true },
+    { pricingCycle: "Hour" },
+    { chargeType: "pre_paid", pricingCycle: "Hour", duration: 8, autoRenewal: false },
+    { chargeType: "pre_paid", serviceTier: "ptu_default", pricingCycle: "Hour", duration: 30 },
+    {
+      chargeType: "pre_paid",
+      serviceTier: "ptu_default",
+      pricingCycle: "Hour",
+      duration: 8,
+      autoRenewal: true,
+    },
+    {
+      chargeType: "pre_paid",
+      serviceTier: "ptu_default",
+      pricingCycle: "Hour",
+      duration: 8,
+      autoRenewal: false,
+      autoRenewalDuration: 30,
+    },
+    {
+      chargeType: "pre_paid",
+      serviceTier: "ptu_default",
+      pricingCycle: "Hour",
+      duration: 8,
+      autoRenewal: false,
+      autoRenewalCycle: "Day",
+    },
   ] satisfies CreatePlanFlags[])(
     "rejects invalid combinations with bilingual errors: %j",
     (overrides) => {
@@ -584,6 +661,29 @@ describe("PTU creation strategy", () => {
       expect(requestJson).not.toHaveBeenCalled();
     },
   );
+
+  test("builds the exact 8-hour off-peak purchase and forwards thinking capacity", async () => {
+    const flags: CreatePlanFlags = {
+      ...validFlags,
+      chargeType: "pre_paid",
+      serviceTier: "ptu_default",
+      pricingCycle: "Hour",
+      duration: 8,
+      autoRenewal: false,
+      thinkingOutputTpm: 5,
+    };
+    const { client, requestJson } = mockClient();
+    expect(strategy.validateFlags(flags)).toBeUndefined();
+    expect(await strategy.resolve(planContext(client, flags))).toStrictEqual({
+      body: {
+        charge_type: "pre_paid",
+        service_tier: "ptu_default",
+        ptu_capacity: { input_tpm: 0, output_tpm: 7, thinking_output_tpm: 5 },
+        pre_paid_info: { pricing_cycle: "Hour", duration: 8, auto_renewal: false },
+      },
+    });
+    expect(requestJson).not.toHaveBeenCalled();
+  });
 });
 
 describe("MU and LoRA regressions", () => {

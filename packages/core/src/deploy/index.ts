@@ -11,5 +11,7 @@ export {
   deploymentCapacityOperationPath,
   deploymentCapacityInstanceScalePath,
   deploymentCapacityInstanceRenewPath,
+  deploymentCapacityInstanceAutoRenewPath,
   deploymentOverflowPath,
+  modelRoutingVersionsPath,
 } from "../client/endpoints.ts";

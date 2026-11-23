@@ -250,6 +250,8 @@ export {
   deployCapacityCreate,
   deployCapacityScale,
   deployCapacityRenew,
+  deployCapacityAutoRenewEnable,
+  deployCapacityAutoRenewDisable,
   deployCapacityDelete,
 } from "./commands/deploy/capacity-write.ts";
 export { default as deployCapacityUnsubscribe } from "./commands/deploy/capacity-unsubscribe.ts";
@@ -262,6 +264,12 @@ export { default as deployUpdate } from "./commands/deploy/update.ts";
 export { default as deployDelete } from "./commands/deploy/delete.ts";
 export { default as deployPause } from "./commands/deploy/pause.ts";
 export { default as deployResume } from "./commands/deploy/resume.ts";
+export { default as deployRouterVersions } from "./commands/deploy/router-versions.ts";
+export { default as deployRouterCreate } from "./commands/deploy/router-create.ts";
+export { default as deployRouterList } from "./commands/deploy/router-list.ts";
+export { default as deployRouterGet } from "./commands/deploy/router-get.ts";
+export { default as deployRouterUpdate } from "./commands/deploy/router-update.ts";
+export { default as deployRouterDelete } from "./commands/deploy/router-delete.ts";
 export { default as tokenPlanListSeats } from "./commands/token-plan/list-seats.ts";
 export { default as tokenPlanCreateKey } from "./commands/token-plan/create-key.ts";
 export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-seats.ts";
