@@ -1,6 +1,13 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vite-plus/test";
@@ -274,9 +281,47 @@ describe("e2e: speech generate dry-run / mock HTTP", () => {
     expect(pcmDataUri.exitCode).toBe(2);
     expect(pcmDataUri.stderr).toMatch(/pcm|WAV.*MP3|OGG Opus|Unsupported reference/i);
 
-    const tempDir = mkdtempSync(join(tmpdir(), "bl-speech-gen-bad-"));
+    const oversizePayload = "A".repeat(10 * 1024 * 1024 + 1);
+    const oversizeDataUri = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
+      "speech",
+      "generate",
+      "--workspace-id",
+      "ws_test",
+      "--text-prompt",
+      "用 @voice1 介绍",
+      "--audio",
+      `data:audio/wav;base64,${oversizePayload}`,
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(oversizeDataUri.exitCode).toBe(2);
+    expect(oversizeDataUri.stderr).toMatch(/Base64|10 MB|exceeds/i);
+
+    const tempDir = mkdtempSync(join(tmpdir(), "bl-speech-gen-b64-"));
     tempDirs.push(tempDir);
-    const flacPath = join(tempDir, "ref.flac");
+    const oversizeWav = join(tempDir, "huge.wav");
+    writeFileSync(oversizeWav, Buffer.alloc(44, 0));
+    truncateSync(oversizeWav, 8 * 1024 * 1024);
+    const oversizeFile = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
+      "speech",
+      "generate",
+      "--workspace-id",
+      "ws_test",
+      "--text-prompt",
+      "用 @voice1 介绍",
+      "--audio",
+      oversizeWav,
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(oversizeFile.exitCode).toBe(2);
+    expect(oversizeFile.stderr).toMatch(/Base64|10 MB|exceeds/i);
+    expect(oversizeFile.stderr).toMatch(/Compress|URL/i);
+    expect(oversizeFile.stderr).toMatch(/Base64 payload|estimates/i);
+
+    const badDir = mkdtempSync(join(tmpdir(), "bl-speech-gen-bad-"));
+    tempDirs.push(badDir);
+    const flacPath = join(badDir, "ref.flac");
     writeFileSync(flacPath, "fake-flac");
     const flac = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
       "speech",
@@ -293,7 +338,7 @@ describe("e2e: speech generate dry-run / mock HTTP", () => {
     expect(flac.exitCode).toBe(2);
     expect(flac.stderr).toMatch(/\.flac|WAV.*MP3|OGG Opus|Unsupported reference/i);
 
-    const pcmPath = join(tempDir, "ref.pcm");
+    const pcmPath = join(badDir, "ref.pcm");
     writeFileSync(pcmPath, Buffer.alloc(16));
     const pcmFile = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
       "speech",

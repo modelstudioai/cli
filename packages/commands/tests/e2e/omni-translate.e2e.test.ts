@@ -523,6 +523,50 @@ describe("e2e: omni translate loopback", () => {
     expect(stderr).toMatch(/timed out|超时/i);
   });
 
+  test("hung task GET timeout still includes submitted task_id", async () => {
+    const { origin } = await startServer((request, response) => {
+      const url = new URL(request.url ?? "/", "http://127.0.0.1");
+      if (request.method === "POST") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            output: { task_id: "task-hang-1", task_status: "PENDING" },
+            request_id: "req-hang",
+          }),
+        );
+        return;
+      }
+      if (url.pathname === "/api/v1/tasks/task-hang-1") {
+        // Never end the response — per-request abort must still surface task_id.
+        return;
+      }
+      response.writeHead(404);
+      response.end();
+    });
+
+    const { stderr, exitCode } = await runCommandInProcess(OMNI_TRANSLATE_ROUTES, [
+      "omni",
+      "translate",
+      "--base-url",
+      origin,
+      "--api-key",
+      "sk-test",
+      "--file",
+      "https://example.com/a.pdf",
+      "--target-lang",
+      "en",
+      "--poll-interval",
+      "0.05",
+      "--timeout",
+      "0.3",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(5);
+    expect(stderr).toMatch(/task-hang-1/);
+    expect(stderr).toMatch(/timed out|超时/i);
+  });
+
   test.each([
     {
       name: "pdf",

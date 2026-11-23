@@ -13,6 +13,12 @@ export {
 } from "./vocabulary.ts";
 export { parseInstantVocabulary, parseVocabularyEntries } from "./vocabulary-input.ts";
 export {
+  assertReferenceAudioBase64WithinLimit,
+  estimatedBase64ByteLength,
+  MAX_REFERENCE_AUDIO_BASE64_BYTES,
+  REFERENCE_AUDIO_BASE64_LIMIT_HINT,
+} from "./reference-audio.ts";
+export {
   VOICE_ENROLLMENT_MODEL,
   buildVoiceRequest,
   postVoiceRequest,

@@ -53,9 +53,9 @@ const CLONE_FLAGS = {
     valueHint: "<model>",
     description: {
       "en-US":
-        "Target model for this voice (required). CosyVoice/Qwen-Audio → later `speech synthesize --model`; Omni CLI clone → qwen3.5-omni-flash/plus then `omni --voice` (Realtime targets rejected)",
+        "Target model for this voice (required). CosyVoice/Qwen-Audio → later `speech synthesize --model`; Omni CLI clone → qwen3.5-omni-flash/plus then `omni --model <same-target-model> --voice <id>` (Realtime targets rejected)",
       "zh-CN":
-        "该音色绑定的目标模型（必填）。CosyVoice/Qwen-Audio → 后续 `speech synthesize --model`；Omni CLI 复刻 → qwen3.5-omni-flash/plus 后用 `omni --voice`（拒绝 Realtime 目标）",
+        "该音色绑定的目标模型（必填）。CosyVoice/Qwen-Audio → 后续 `speech synthesize --model`；Omni CLI 复刻 → qwen3.5-omni-flash/plus 后用 `omni --model <同一 target-model> --voice <id>`（拒绝 Realtime 目标）",
     },
     required: true,
   },
@@ -140,9 +140,9 @@ export default defineCommand({
     },
     {
       "en-US":
-        "CLI Omni clone only supports non-realtime targets qwen3.5-omni-flash/plus (dated suffixes allowed) via qwen-voice-enrollment → output.voice → `omni --voice`. Realtime (*-realtime) enrollment is rejected here (no Realtime command in this CLI). No get/update/preview/design for Omni.",
+        "CLI Omni clone only supports non-realtime targets qwen3.5-omni-flash/plus (dated suffixes allowed) via qwen-voice-enrollment → output.voice → `omni --model <same-target-model> --voice <id>` (must match create --target-model; omitting --model is rejected with exit 2 when it would auto-switch qwen3.8-omni-flash to plus). Realtime (*-realtime) enrollment is rejected here (no Realtime command in this CLI). No get/update/preview/design for Omni.",
       "zh-CN":
-        "CLI Omni 复刻仅支持非 realtime 目标 qwen3.5-omni-flash/plus（允许日期后缀），协议 qwen-voice-enrollment → output.voice → `omni --voice`。拒绝 *-realtime（本 CLI 无 Realtime 命令）。Omni 无 get/update/preview/design。",
+        "CLI Omni 复刻仅支持非 realtime 目标 qwen3.5-omni-flash/plus（允许日期后缀），协议 qwen-voice-enrollment → output.voice → `omni --model <同一 target-model> --voice <id>`（必须与创建时 --target-model 一致；若省略 --model 会从 qwen3.8-omni-flash 自动切到 plus，则以退出码 2 拒绝）。拒绝 *-realtime（本 CLI 无 Realtime 命令）。Omni 无 get/update/preview/design。",
     },
   ],
   exampleArgs: [

@@ -7,6 +7,7 @@ import {
   parseSSE,
   BailianError,
   ExitCode,
+  looksLikeOmniClonedVoiceId,
   type ChatMessage,
   type ChatMessageContent,
   type ChatRequest,
@@ -180,8 +181,10 @@ export default defineCommand({
       type: "string",
       valueHint: "<voice>",
       description: {
-        "en-US": "Output voice ID (default: Tina). Use --list-voices to see all options",
-        "zh-CN": "输出音色 ID（默认：Tina）。使用 --list-voices 查看所有选项",
+        "en-US":
+          "Output voice ID (default: Tina). Use --list-voices for system voices. Cloned ids (qwen-omni-vc-*) must resolve to the speech voice clone --target-model; the qwen3.8-omni-flash audio auto-switch is rejected",
+        "zh-CN":
+          "输出音色 ID（默认：Tina）。系统音色用 --list-voices。复刻音色（qwen-omni-vc-*）必须解析到 speech voice clone 的 --target-model；从 qwen3.8-omni-flash 自动切到音频模型会被拒绝",
       },
     },
     listVoices: {
@@ -234,6 +237,12 @@ export default defineCommand({
         "For file translation (documents / images / audio), use `omni translate` instead of this multimodal chat entry.",
       "zh-CN": "如需翻译文档/图片/音频文件，请使用 `omni translate`，而不是本多模态对话入口。",
     },
+    {
+      "en-US":
+        "Cloned voices (qwen-omni-vc-*) are bound to the enrollment model. Omitting --model is rejected only when the resolved model is still qwen3.8-omni-flash, because audio output would auto-switch to qwen3.5-omni-plus. A Profile default_omni_model other than qwen3.8-omni-flash is used as-is.",
+      "zh-CN":
+        "复刻音色（qwen-omni-vc-*）绑定创建时的目标模型。仅当解析结果仍是 qwen3.8-omni-flash 时，省略 --model 会被拒绝，因为音频输出会自动切换为 qwen3.5-omni-plus。Profile 的 default_omni_model 若不是 qwen3.8-omni-flash，则按该默认模型发送。",
+    },
   ],
   exampleArgs: [
     "--list-voices",
@@ -262,6 +271,12 @@ export default defineCommand({
       "zh-CN": '--message "请用四川话回答：今天天气怎么样？" --voice Sunny',
     },
     {
+      "en-US":
+        '--message "Read this in my voice" --model qwen3.5-omni-flash --voice qwen-omni-vc-demo-voice-1-abcd',
+      "zh-CN":
+        '--message "用我的音色读这段话" --model qwen3.5-omni-flash --voice qwen-omni-vc-demo-voice-1-abcd',
+    },
+    {
       "en-US": '--message "Hello" --text-only --output json',
       "zh-CN": '--message "你好" --text-only --output json',
     },
@@ -287,12 +302,30 @@ export default defineCommand({
     // Default to flash; switch to plus when --model is omitted and --text-only is absent (flash has no audio out).
     const textOnly = flags.textOnly === true;
     let model = flags.model || settings.defaultOmniModel || "qwen3.8-omni-flash";
-    if (!flags.model && !textOnly && model === "qwen3.8-omni-flash") {
+    const autoSwitchedToPlus = !flags.model && !textOnly && model === "qwen3.8-omni-flash";
+    if (autoSwitchedToPlus) {
       model = "qwen3.5-omni-plus";
     }
     const voice = flags.voice || "Tina";
     const audioFormat = flags.audioFormat || "wav";
     const format = settings.output;
+
+    // Only the flash→plus auto-switch is rejected. An explicit flag or Profile default is kept.
+    if (autoSwitchedToPlus && flags.voice && looksLikeOmniClonedVoiceId(flags.voice)) {
+      throw new BailianError(
+        ctx.localize({
+          "en-US": "Cloned Omni voices require --model matching the enrollment target model.",
+          "zh-CN": "Omni 复刻音色必须显式传入与创建时 --target-model 相同的 --model。",
+        }),
+        ExitCode.USAGE,
+        ctx.localize({
+          "en-US":
+            "Omitting --model auto-switches audio output to qwen3.5-omni-plus. Pass the same model used in speech voice clone.",
+          "zh-CN":
+            "省略 --model 时，音频输出会自动切换为 qwen3.5-omni-plus。请传入 speech voice clone 时使用的同一模型。",
+        }),
+      );
+    }
 
     // Explicit flash + audio path will be rejected by the server; warn locally without overriding --model.
     if (flags.model === "qwen3.8-omni-flash" && !textOnly) {

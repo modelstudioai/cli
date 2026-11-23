@@ -1,9 +1,11 @@
 import { existsSync, statSync } from "fs";
 import { extname } from "path";
 import {
+  assertReferenceAudioBase64WithinLimit,
   audioFileToDataUri,
   audioMimeForPath,
   BailianError,
+  estimatedBase64ByteLength,
   ExitCode,
   looksLikeOmniClonedVoiceId,
   redactDataUri,
@@ -44,8 +46,9 @@ export const VOICE_RIGHTS_NOTES = [
   },
   {
     "en-US":
-      "A voice ID is bound to its target model. Later `speech synthesize` calls must use the same --model.",
-    "zh-CN": "音色 ID 绑定目标模型。后续 `speech synthesize` 必须使用相同的 --model。",
+      "A voice ID is bound to its target model. Later `speech synthesize --model` or `omni --model` must match the clone --target-model.",
+    "zh-CN":
+      "音色 ID 绑定目标模型。后续 `speech synthesize --model` 或 `omni --model` 必须与复刻时的 --target-model 一致。",
   },
 ] as const;
 
@@ -54,9 +57,6 @@ const PREFIX_PATTERN = /^[A-Za-z0-9]{1,10}$/;
 const OMNI_PREFERRED_NAME_PATTERN = /^[A-Za-z0-9_]{1,16}$/;
 
 const OMNI_VOICE_CLONE_MODES = new Set(["normal", "dialect", "crosslingual"]);
-
-/** Voice clone/update reference audio limit from the enrollment API docs. */
-export const MAX_VOICE_REFERENCE_BYTES = 10 * 1024 * 1024;
 
 /** Ops not offered by the Omni enrollment API. */
 export const OMNI_VOICE_UNSUPPORTED_OP: LocalizedText = {
@@ -164,6 +164,8 @@ export function resolveVoiceAudioSource(
         ExitCode.USAGE,
       );
     }
+    const payload = trimmed.slice(trimmed.indexOf(",") + 1);
+    assertReferenceAudioBase64WithinLimit(payload.length, "Data URI");
     return { audio: trimmed };
   }
   if (/^https?:\/\//i.test(trimmed)) {
@@ -176,9 +178,8 @@ export function resolveVoiceAudioSource(
   if (!stat.isFile()) {
     throw new BailianError(`Not a file: ${trimmed}`, ExitCode.USAGE);
   }
-  if (stat.size > MAX_VOICE_REFERENCE_BYTES) {
-    throw new BailianError(`Reference audio exceeds 10 MB: ${trimmed}`, ExitCode.USAGE);
-  }
+  // Official limit is on Base64 size (~4/3 of raw); reject before encode.
+  assertReferenceAudioBase64WithinLimit(estimatedBase64ByteLength(stat.size), trimmed);
   if (!audioMimeForPath(trimmed)) {
     const extension = extname(trimmed).toLowerCase() || "unknown";
     throw new BailianError(

@@ -437,27 +437,27 @@ bl speech vocabulary update --id vocab-demo-xxx --words '{"Fendouzhe":4,"Jingluo
 
 #### Flags
 
-| Flag                                  | Type    | Required | Description                                                                                                                                                                                |
-| ------------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--audio <url-or-path>`               | string  | yes      | Reference audio URL or local file                                                                                                                                                          |
-| `--prefix <text>`                     | string  | yes      | Name prefix (CosyVoice/Qwen-Audio: 1-10 alnum → prefix) or Omni preferred_name (1-16 alnum/underscore)                                                                                     |
-| `--target-model <model>`              | string  | yes      | Target model for this voice (required). CosyVoice/Qwen-Audio → later `speech synthesize --model`; Omni CLI clone → qwen3.5-omni-flash/plus then `omni --voice` (Realtime targets rejected) |
-| `--language-hint <code>`              | array   | no       | Language hint (at most one). CosyVoice/Qwen-Audio → language_hints[]; Omni → language                                                                                                      |
-| `--volume-normalize <bool>`           | boolean | no       | Enable volume normalization (CosyVoice/Qwen-Audio; sent as string "true"/"false")                                                                                                          |
-| `--max-prompt-audio-length <seconds>` | number  | no       | Max prompt audio length in seconds (3-30; CosyVoice/Qwen-Audio only)                                                                                                                       |
-| `--preprocess <bool>`                 | boolean | no       | Enable audio preprocess (enable_preprocess; CosyVoice/Qwen-Audio only)                                                                                                                     |
-| `--text <transcript>`                 | string  | no       | Transcript matching the reference audio (Omni only; optional)                                                                                                                              |
-| `--voice-clone-mode <mode>`           | string  | no       | Omni voice_clone_mode: normal \| dialect \| crosslingual (optional for CLI-supported qwen3.5-omni-flash/plus)                                                                              |
-| `--skip-audio-process <bool>`         | boolean | no       | Skip Omni audio preprocess (parameters.skip_audio_process; default false)                                                                                                                  |
-| `--api-key <key>`                     | string  | no       | API key                                                                                                                                                                                    |
-| `--base-url <url>`                    | string  | no       | API base URL                                                                                                                                                                               |
+| Flag                                  | Type    | Required | Description                                                                                                                                                                                                                 |
+| ------------------------------------- | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--audio <url-or-path>`               | string  | yes      | Reference audio URL or local file                                                                                                                                                                                           |
+| `--prefix <text>`                     | string  | yes      | Name prefix (CosyVoice/Qwen-Audio: 1-10 alnum → prefix) or Omni preferred_name (1-16 alnum/underscore)                                                                                                                      |
+| `--target-model <model>`              | string  | yes      | Target model for this voice (required). CosyVoice/Qwen-Audio → later `speech synthesize --model`; Omni CLI clone → qwen3.5-omni-flash/plus then `omni --model <same-target-model> --voice <id>` (Realtime targets rejected) |
+| `--language-hint <code>`              | array   | no       | Language hint (at most one). CosyVoice/Qwen-Audio → language_hints[]; Omni → language                                                                                                                                       |
+| `--volume-normalize <bool>`           | boolean | no       | Enable volume normalization (CosyVoice/Qwen-Audio; sent as string "true"/"false")                                                                                                                                           |
+| `--max-prompt-audio-length <seconds>` | number  | no       | Max prompt audio length in seconds (3-30; CosyVoice/Qwen-Audio only)                                                                                                                                                        |
+| `--preprocess <bool>`                 | boolean | no       | Enable audio preprocess (enable_preprocess; CosyVoice/Qwen-Audio only)                                                                                                                                                      |
+| `--text <transcript>`                 | string  | no       | Transcript matching the reference audio (Omni only; optional)                                                                                                                                                               |
+| `--voice-clone-mode <mode>`           | string  | no       | Omni voice_clone_mode: normal \| dialect \| crosslingual (optional for CLI-supported qwen3.5-omni-flash/plus)                                                                                                               |
+| `--skip-audio-process <bool>`         | boolean | no       | Skip Omni audio preprocess (parameters.skip_audio_process; default false)                                                                                                                                                   |
+| `--api-key <key>`                     | string  | no       | API key                                                                                                                                                                                                                     |
+| `--base-url <url>`                    | string  | no       | API base URL                                                                                                                                                                                                                |
 
 #### Notes
 
 - You must have the right to use the reference audio or described voice. Do not clone or imitate a real person without authorization.
-- A voice ID is bound to its target model. Later `speech synthesize` calls must use the same --model.
+- A voice ID is bound to its target model. Later `speech synthesize --model` or `omni --model` must match the clone --target-model.
 - CosyVoice/Qwen-Audio use model voice-enrollment (create_voice → voice_id). Review status DEPLOYING/OK/UNDEPLOYED — use `speech voice get` / `preview`.
-- CLI Omni clone only supports non-realtime targets qwen3.5-omni-flash/plus (dated suffixes allowed) via qwen-voice-enrollment → output.voice → `omni --voice`. Realtime (*-realtime) enrollment is rejected here (no Realtime command in this CLI). No get/update/preview/design for Omni.
+- CLI Omni clone only supports non-realtime targets qwen3.5-omni-flash/plus (dated suffixes allowed) via qwen-voice-enrollment → output.voice → `omni --model <same-target-model> --voice <id>` (must match create --target-model; omitting --model is rejected with exit 2 when it would auto-switch qwen3.8-omni-flash to plus). Realtime (*-realtime) enrollment is rejected here (no Realtime command in this CLI). No get/update/preview/design for Omni.
 
 #### Examples
 
@@ -542,7 +542,7 @@ bl speech voice delete --id qwen-omni-vc-guanyu-voice-… --dry-run --output jso
 #### Notes
 
 - You must have the right to use the reference audio or described voice. Do not clone or imitate a real person without authorization.
-- A voice ID is bound to its target model. Later `speech synthesize` calls must use the same --model.
+- A voice ID is bound to its target model. Later `speech synthesize --model` or `omni --model` must match the clone --target-model.
 - The response includes a one-shot preview_audio (Base64). Querying the voice later may not return preview_audio again. Formal listen tests use `speech synthesize`.
 
 #### Examples
@@ -682,7 +682,7 @@ bl speech voice preview --id <voice-id> --out reference.wav
 #### Notes
 
 - You must have the right to use the reference audio or described voice. Do not clone or imitate a real person without authorization.
-- A voice ID is bound to its target model. Later `speech synthesize` calls must use the same --model.
+- A voice ID is bound to its target model. Later `speech synthesize --model` or `omni --model` must match the clone --target-model.
 - Only reference audio can be updated. Design voices do not support voice_prompt updates via this command.
 
 #### Examples

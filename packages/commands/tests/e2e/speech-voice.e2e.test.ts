@@ -133,6 +133,8 @@ describe("e2e: speech voice help / validation", () => {
     expect(stderr).toMatch(/--prefix/i);
     expect(stderr).toMatch(/--target-model/i);
     expect(stderr).toMatch(/Reference audio|参考音频/);
+    expect(stderr).toMatch(/omni --model.*--voice|omni --model <同一/);
+    expect(stderr).toMatch(/exit 2|退出码 2/);
   });
 
   test("update/delete --help show Risk and --yes", async () => {
@@ -276,12 +278,13 @@ describe("e2e: speech voice help / validation", () => {
     expect(badDataUri.stderr).toMatch(/audio\/\*|MIME/i);
   });
 
-  test("clone/update dry-run reject local audio over 10 MB", async () => {
+  test("clone/update dry-run reject local audio whose Base64 would exceed 10 MB", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "bl-voice-oversize-"));
     tempDirs.push(tempDir);
+    // ~8 MiB raw → ~10.67 MiB Base64; previously passed a raw-size check.
     const oversizePath = join(tempDir, "huge.wav");
     writeFileSync(oversizePath, Buffer.alloc(44, 0));
-    truncateSync(oversizePath, 10 * 1024 * 1024 + 1);
+    truncateSync(oversizePath, 8 * 1024 * 1024);
 
     const cloneResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
       "speech",
@@ -297,7 +300,8 @@ describe("e2e: speech voice help / validation", () => {
       "--quiet",
     ]);
     expect(cloneResult.exitCode).toBe(2);
-    expect(cloneResult.stderr).toMatch(/10 MB|exceeds/i);
+    expect(cloneResult.stderr).toMatch(/Base64|10 MB|exceeds/i);
+    expect(cloneResult.stderr).toMatch(/Compress|URL|压缩|公网/i);
 
     const updateResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
       "speech",
@@ -311,7 +315,23 @@ describe("e2e: speech voice help / validation", () => {
       "--quiet",
     ]);
     expect(updateResult.exitCode).toBe(2);
-    expect(updateResult.stderr).toMatch(/10 MB|exceeds/i);
+    expect(updateResult.stderr).toMatch(/Base64|10 MB|exceeds/i);
+
+    const omniResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "clone",
+      "--audio",
+      oversizePath,
+      "--prefix",
+      "guanyu",
+      "--target-model",
+      "qwen3.5-omni-flash",
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(omniResult.exitCode).toBe(2);
+    expect(omniResult.stderr).toMatch(/Base64|10 MB|exceeds/i);
   });
 });
 

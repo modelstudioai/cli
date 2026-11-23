@@ -2,9 +2,11 @@ import { existsSync, statSync } from "fs";
 import { basename, extname, join } from "path";
 import { randomBytes } from "crypto";
 import {
+  assertReferenceAudioBase64WithinLimit,
   audioFileToDataUri,
   BailianError,
   defineCommand,
+  estimatedBase64ByteLength,
   ExitCode,
   formatCommand,
   redactDataUri,
@@ -23,7 +25,6 @@ import { downloadFile } from "bailian-cli-runtime";
 const DEFAULT_MODEL = "qwen-audio-3.1-tts-next";
 const MAX_TEXT_PROMPT_CHARS = 3000;
 const MAX_REFERENCES = 3;
-const MAX_REFERENCE_BYTES = 10 * 1024 * 1024;
 /** Output container formats (includes raw PCM). Reference inputs are stricter. */
 const SUPPORTED_FORMATS = new Set(["wav", "mp3", "pcm"]);
 /** Reference audio extensions: WAV / MP3 / OGG Opus only (no bare PCM). */
@@ -280,6 +281,8 @@ function assertSupportedReferenceDataUri(dataUri: string): void {
       REFERENCE_AUDIO_HINT,
     );
   }
+  const payload = dataUri.slice(dataUri.indexOf(",") + 1);
+  assertReferenceAudioBase64WithinLimit(payload.length, "Data URI");
 }
 
 function assertSupportedReferenceExtension(filePath: string): void {
@@ -315,9 +318,7 @@ function buildReference(
   if (!stat.isFile()) {
     throw new BailianError(`Not a file: ${trimmed}`, ExitCode.USAGE);
   }
-  if (stat.size > MAX_REFERENCE_BYTES) {
-    throw new BailianError(`Reference audio exceeds 10 MB: ${trimmed}`, ExitCode.USAGE);
-  }
+  assertReferenceAudioBase64WithinLimit(estimatedBase64ByteLength(stat.size), trimmed);
   assertSupportedReferenceExtension(trimmed);
   if (!options.encodeLocal) {
     return { audio_data: trimmed, localPath: trimmed };

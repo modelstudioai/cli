@@ -25,27 +25,28 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                   | Type   | Required | Description                                                                                                                                    |
-| ---------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--message <text>`     | array  | no       | Message text (repeatable, prefix role: to set role)                                                                                            |
-| `--model <model>`      | string | no       | Model ID (default: qwen3.8-omni-flash; when --model is omitted and --text-only is absent, auto-switches to qwen3.5-omni-plus for audio output) |
-| `--system <text>`      | string | no       | System prompt                                                                                                                                  |
-| `--image <url>`        | array  | no       | Image URL or local file (repeatable)                                                                                                           |
-| `--audio <url>`        | array  | no       | Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.ogg/.3gp/.3gpp)                                                                             |
-| `--video <url>`        | array  | no       | Video file URL / local path, or comma-separated frame URLs                                                                                     |
-| `--voice <voice>`      | string | no       | Output voice ID (default: Tina). Use --list-voices to see all options                                                                          |
-| `--list-voices`        | switch | no       | List available output voices and exit                                                                                                          |
-| `--audio-format <fmt>` | string | no       | Audio output format (default: wav)                                                                                                             |
-| `--audio-out <path>`   | string | no       | Save audio to file (default: auto-generate)                                                                                                    |
-| `--text-only`          | switch | no       | Output text only, no audio generation                                                                                                          |
-| `--max-tokens <n>`     | number | no       | Maximum tokens to generate                                                                                                                     |
-| `--temperature <n>`    | number | no       | Sampling temperature (0.0, 2.0]                                                                                                                |
-| `--api-key <key>`      | string | no       | API key                                                                                                                                        |
-| `--base-url <url>`     | string | no       | API base URL                                                                                                                                   |
+| Flag                   | Type   | Required | Description                                                                                                                                                                                                   |
+| ---------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--message <text>`     | array  | no       | Message text (repeatable, prefix role: to set role)                                                                                                                                                           |
+| `--model <model>`      | string | no       | Model ID (default: qwen3.8-omni-flash; when --model is omitted and --text-only is absent, auto-switches to qwen3.5-omni-plus for audio output)                                                                |
+| `--system <text>`      | string | no       | System prompt                                                                                                                                                                                                 |
+| `--image <url>`        | array  | no       | Image URL or local file (repeatable)                                                                                                                                                                          |
+| `--audio <url>`        | array  | no       | Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.ogg/.3gp/.3gpp)                                                                                                                                            |
+| `--video <url>`        | array  | no       | Video file URL / local path, or comma-separated frame URLs                                                                                                                                                    |
+| `--voice <voice>`      | string | no       | Output voice ID (default: Tina). Use --list-voices for system voices. Cloned ids (qwen-omni-vc-*) must resolve to the speech voice clone --target-model; the qwen3.8-omni-flash audio auto-switch is rejected |
+| `--list-voices`        | switch | no       | List available output voices and exit                                                                                                                                                                         |
+| `--audio-format <fmt>` | string | no       | Audio output format (default: wav)                                                                                                                                                                            |
+| `--audio-out <path>`   | string | no       | Save audio to file (default: auto-generate)                                                                                                                                                                   |
+| `--text-only`          | switch | no       | Output text only, no audio generation                                                                                                                                                                         |
+| `--max-tokens <n>`     | number | no       | Maximum tokens to generate                                                                                                                                                                                    |
+| `--temperature <n>`    | number | no       | Sampling temperature (0.0, 2.0]                                                                                                                                                                               |
+| `--api-key <key>`      | string | no       | API key                                                                                                                                                                                                       |
+| `--base-url <url>`     | string | no       | API base URL                                                                                                                                                                                                  |
 
 #### Notes
 
 - For file translation (documents / images / audio), use `omni translate` instead of this multimodal chat entry.
+- Cloned voices (qwen-omni-vc-*) are bound to the enrollment model. Omitting --model is rejected only when the resolved model is still qwen3.8-omni-flash, because audio output would auto-switch to qwen3.5-omni-plus. A Profile default_omni_model other than qwen3.8-omni-flash is used as-is.
 
 #### Examples
 
@@ -75,6 +76,10 @@ bl omni --message "What is this video about?" --video ./local-video.mp4 --text-o
 
 ```bash
 bl omni --message "Answer in Sichuan dialect: How's the weather today?" --voice Sunny
+```
+
+```bash
+bl omni --message "Read this in my voice" --model qwen3.5-omni-flash --voice qwen-omni-vc-demo-voice-1-abcd
 ```
 
 ```bash

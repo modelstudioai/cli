@@ -23,6 +23,16 @@ function taskFailureMessage(output: DashScopeTaskResponse["output"]): string {
   return String(output.Message || output.message || output.code || "Task failed.");
 }
 
+/** Polling deadline, per-request abort, or idle-body timeout while waiting on a task. */
+function isTimeoutLikeError(error: unknown): boolean {
+  if (error instanceof BailianError && error.exitCode === ExitCode.TIMEOUT) return true;
+  if (error !== null && typeof error === "object" && "name" in error) {
+    const name = (error as { name?: unknown }).name;
+    return name === "AbortError" || name === "TimeoutError";
+  }
+  return false;
+}
+
 /** Poll a DashScope async task until SUCCEEDED, FAILED, CANCELED, or UNKNOWN. */
 export async function pollDashScopeTask(
   ctx: {
@@ -83,7 +93,8 @@ export async function pollDashScopeTask(
       getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
     });
   } catch (error) {
-    if (error instanceof BailianError && error.exitCode === ExitCode.TIMEOUT) {
+    // Include submitted task_id for both poll-loop TIMEOUT and hung single GETs (AbortError).
+    if (isTimeoutLikeError(error)) {
       throw new BailianError(
         ctx.localize({
           "en-US": `Polling timed out. task_id=${taskId}`,

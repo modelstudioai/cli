@@ -371,6 +371,49 @@ describe("e2e: image translate", () => {
     expect(stderr).not.toMatch(/Task failed:/);
   });
 
+  test("hung task GET timeout still includes submitted task_id", async () => {
+    const { origin } = await startServer((request, response) => {
+      const url = new URL(request.url ?? "/", "http://127.0.0.1");
+      if (request.method === "POST") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            output: { task_id: "task-hang-img", task_status: "PENDING" },
+            request_id: "req-hang-img",
+          }),
+        );
+        return;
+      }
+      if (url.pathname === "/api/v1/tasks/task-hang-img") {
+        return;
+      }
+      response.writeHead(404);
+      response.end();
+    });
+
+    const { stderr, exitCode } = await runCommandInProcess(IMAGE_TRANSLATE_ROUTES, [
+      "image",
+      "translate",
+      "--base-url",
+      origin,
+      "--api-key",
+      "sk-test",
+      "--image",
+      "https://example.com/poster.png",
+      "--target-lang",
+      "en",
+      "--poll-interval",
+      "0.05",
+      "--timeout",
+      "0.3",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(5);
+    expect(stderr).toMatch(/task-hang-img/);
+    expect(stderr).toMatch(/timed out|超时/i);
+  });
+
   test("CANCELED and UNKNOWN fail without waiting for timeout", async () => {
     for (const status of ["CANCELED", "UNKNOWN"] as const) {
       let getCount = 0;
