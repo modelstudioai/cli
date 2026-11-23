@@ -62,7 +62,7 @@ Index: [index.md](index.md)
 #### Notes
 
 - Unlike `speech synthesize`, this command uses text_prompt/references and does not accept system or cloned voice IDs.
-- Default endpoint needs a workspace ID (Beijing/Singapore). Explicit --base-url / DASHSCOPE_BASE_URL / Profile base_url overrides without requiring workspace.
+- Default endpoint is Beijing MaaS and needs a workspace ID. For Singapore or other hosts, set --base-url / DASHSCOPE_BASE_URL / Profile base_url explicitly (for example https://<ws>.ap-southeast-1.maas.aliyuncs.com); that override does not require workspace.
 
 #### Examples
 

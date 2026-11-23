@@ -109,18 +109,31 @@ export function buildVoiceRequest(
   return request;
 }
 
+/** POST a pre-built voice request (shared by dry-run builders and live calls). */
+export function postVoiceRequest<T>(
+  client: Client,
+  request: VoiceRequest,
+  signal?: AbortSignal,
+): Promise<VoiceEnvelope<T>> {
+  return client.requestJson<VoiceEnvelope<T>>({
+    path: speechVoiceCustomizationPath(),
+    method: "POST",
+    body: request,
+    signal,
+  });
+}
+
 async function callVoiceApi<T>(
   client: Client,
   action: VoiceAction,
   input: Record<string, unknown>,
   options?: { parameters?: Record<string, unknown>; signal?: AbortSignal },
 ): Promise<VoiceEnvelope<T>> {
-  return client.requestJson<VoiceEnvelope<T>>({
-    path: speechVoiceCustomizationPath(),
-    method: "POST",
-    body: buildVoiceRequest(action, input, options?.parameters),
-    signal: options?.signal,
-  });
+  return postVoiceRequest(
+    client,
+    buildVoiceRequest(action, input, options?.parameters),
+    options?.signal,
+  );
 }
 
 function omitUndefined(record: Record<string, unknown>): Record<string, unknown> {

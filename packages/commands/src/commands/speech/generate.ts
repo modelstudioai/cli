@@ -41,7 +41,6 @@ const REFERENCE_AUDIO_MIME_SUBTYPES = new Set([
 const REFERENCE_AUDIO_HINT = "Use WAV, MP3, or OGG Opus reference audio.";
 const SUPPORTED_SAMPLE_RATES = new Set([8000, 16000, 24000, 44100, 48000]);
 const SUPPORTED_CHANNELS = new Set([1, 2]);
-const SUPPORTED_CLOUD_REGIONS = new Set(["cn-beijing", "ap-southeast-1"]);
 const WORKSPACE_HOST_LABEL = /^[a-zA-Z0-9_-]+$/;
 
 const GENERATE_FLAGS = {
@@ -179,21 +178,6 @@ const GENERATE_FLAGS = {
 } satisfies FlagsDef;
 type GenerateFlags = ParsedFlags<typeof GENERATE_FLAGS>;
 
-function cloudRegionFromBaseUrl(baseUrl: string): string | undefined {
-  let hostname: string | undefined;
-  try {
-    hostname = new URL(baseUrl).hostname.toLowerCase();
-  } catch {
-    return undefined;
-  }
-  if (hostname === new URL(REGIONS.cn).hostname) return "cn-beijing";
-  if (hostname === new URL(REGIONS.intl).hostname) return "ap-southeast-1";
-  const maasMatch = /^[a-z0-9-]+\.(cn-beijing|ap-southeast-1|us-east-1)\.maas\.aliyuncs\.com$/.exec(
-    hostname,
-  );
-  return maasMatch?.[1];
-}
-
 function assertSupportedAudioEndpoint(
   endpoint: string,
   localize: (text: { "en-US": string; "zh-CN": string }) => string,
@@ -242,7 +226,7 @@ function resolveGenerateEndpoint(ctx: {
   flags: Pick<GenerateFlags, "workspaceId">;
   settings: { workspaceId?: string };
   identity: { binName: string };
-  client: { url: (path: string, defaultBaseUrl?: () => string) => string; baseUrl: string };
+  client: { url: (path: string, defaultBaseUrl?: () => string) => string };
   localize: (text: { "en-US": string; "zh-CN": string }) => string;
 }): string {
   const endpoint = ctx.client.url(speechSynthesizePath(), () => {
@@ -270,21 +254,8 @@ function resolveGenerateEndpoint(ctx: {
         ExitCode.USAGE,
       );
     }
-    const cloudRegion = cloudRegionFromBaseUrl(ctx.client.baseUrl) ?? "cn-beijing";
-    if (!SUPPORTED_CLOUD_REGIONS.has(cloudRegion)) {
-      throw new BailianError(
-        ctx.localize({
-          "en-US": `Audio generation does not support cloud region "${cloudRegion}".`,
-          "zh-CN": `音频生成不支持云地域 "${cloudRegion}"。`,
-        }),
-        ExitCode.USAGE,
-        ctx.localize({
-          "en-US": "Use cn-beijing or ap-southeast-1.",
-          "zh-CN": "请使用 cn-beijing 或 ap-southeast-1。",
-        }),
-      );
-    }
-    return workspaceMaaSBaseUrl(workspaceId, cloudRegion);
+    // Default path only runs when no base URL is configured; always use Beijing MaaS.
+    return workspaceMaaSBaseUrl(workspaceId, "cn-beijing");
   });
   assertSupportedAudioEndpoint(endpoint, ctx.localize);
   return endpoint;
@@ -410,9 +381,9 @@ export default defineCommand({
     },
     {
       "en-US":
-        "Default endpoint needs a workspace ID (Beijing/Singapore). Explicit --base-url / DASHSCOPE_BASE_URL / Profile base_url overrides without requiring workspace.",
+        "Default endpoint is Beijing MaaS and needs a workspace ID. For Singapore or other hosts, set --base-url / DASHSCOPE_BASE_URL / Profile base_url explicitly (for example https://<ws>.ap-southeast-1.maas.aliyuncs.com); that override does not require workspace.",
       "zh-CN":
-        "默认 Endpoint 需要 Workspace ID（北京/新加坡）。显式 --base-url / DASHSCOPE_BASE_URL / Profile base_url 可覆盖且不必提供 workspace。",
+        "默认 Endpoint 为北京 MaaS，需要 Workspace ID。新加坡或其他 Endpoint 请通过 --base-url / DASHSCOPE_BASE_URL / Profile base_url 显式指定（例如 https://<ws>.ap-southeast-1.maas.aliyuncs.com）；显式覆盖时不必提供 workspace。",
     },
   ],
   exampleArgs: [
@@ -521,10 +492,10 @@ export default defineCommand({
     const prefix = safeOutPrefix(flags.outPrefix);
 
     if (dryRun) {
-      const dryInput = {
-        ...input,
-        references: redactReferences(references),
-      };
+      const dryInput =
+        input.references !== undefined
+          ? { ...input, references: redactReferences(references) }
+          : input;
       ctx.output.result({
         endpoint,
         request: { model, input: dryInput },

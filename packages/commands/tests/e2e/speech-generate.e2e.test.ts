@@ -153,6 +153,31 @@ describe("e2e: speech generate help / validation", () => {
 });
 
 describe("e2e: speech generate dry-run / mock HTTP", () => {
+  test("dry-run without --audio omits references and uses Beijing MaaS", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
+      "speech",
+      "generate",
+      "--workspace-id",
+      "ws_test",
+      "--text-prompt",
+      "hi",
+      "--dry-run",
+      "--output",
+      "json",
+      "--quiet",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const body = parseStdoutJson<{
+      endpoint?: string;
+      request?: { input?: Record<string, unknown> };
+    }>(stdout);
+    expect(body.endpoint).toBe(
+      "https://ws_test.cn-beijing.maas.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer",
+    );
+    expect(body.request?.input).toBeDefined();
+    expect("references" in (body.request?.input ?? {})).toBe(false);
+  });
+
   test("dry-run with workspace builds MaaS endpoint and redacts local audio", async () => {
     const wav = makeTempWav();
     const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [

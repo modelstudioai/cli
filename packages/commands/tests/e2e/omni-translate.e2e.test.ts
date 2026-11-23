@@ -59,11 +59,13 @@ async function startServer(
 }
 
 describe("e2e: omni translate routing / validation", () => {
-  test("omni help keeps chat usage and mentions translate", async () => {
+  test("omni help keeps chat usage and lists translate subcommand", async () => {
     const { stderr, exitCode } = await runCommandHelp(OMNI_TRANSLATE_ROUTES, ["omni", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--message/);
-    expect(stderr).toMatch(/omni translate|文件翻译|file translation/i);
+    expect(stderr).toMatch(/Subcommands:|子命令：/);
+    expect(stderr).toMatch(/omni translate/);
+    expect(stderr).toMatch(/Qwen-MT-Uni|文件|translate/i);
   });
 
   test("omni translate help is bilingual", async () => {
@@ -152,6 +154,12 @@ describe("e2e: omni translate routing / validation", () => {
       "pdf",
       "--domain-hint",
       "legal",
+      "--term",
+      "应用程序接口=API",
+      "--sensitive",
+      "全场9折",
+      "--image-segment",
+      "true",
       "--dry-run",
       "--output",
       "json",
@@ -165,17 +173,58 @@ describe("e2e: omni translate routing / validation", () => {
           fileUrl?: string;
           target_lang?: string;
           source_lang?: string;
-          ext?: { format_hint?: string; domainHint?: string };
+          ext?: {
+            format_hint?: string;
+            domainHint?: string;
+            glossary?: Array<{ src: string; tgt: string }>;
+            sensitives?: string[];
+            config?: { imageSegment?: boolean };
+          };
         };
       };
     }>(stdout);
-    expect(body.endpoint).toBe("/api/v1/services/aigc/multimodal-generation/generation");
+    expect(body.endpoint).toMatch(/^https?:\/\//);
+    expect(body.endpoint).toMatch(/\/api\/v1\/services\/aigc\/multimodal-generation\/generation$/);
     expect(body.request?.model).toBe("qwen-mt-uni");
     expect(body.request?.input?.fileUrl).toBe("https://example.com/brochure.pdf");
     expect(body.request?.input?.target_lang).toBe("en");
     expect(body.request?.input?.source_lang).toBeUndefined();
     expect(body.request?.input?.ext?.format_hint).toBe("pdf");
     expect(body.request?.input?.ext?.domainHint).toBe("legal");
+    expect(body.request?.input?.ext?.glossary).toEqual([{ src: "应用程序接口", tgt: "API" }]);
+    expect(body.request?.input?.ext?.sensitives).toEqual(["全场9折"]);
+    expect(body.request?.input?.ext?.config?.imageSegment).toBe(true);
+  });
+
+  test("rejects empty sensitive and invalid term pairs", async () => {
+    const emptySensitive = await runCommandInProcess(OMNI_TRANSLATE_ROUTES, [
+      "omni",
+      "translate",
+      "--file",
+      "https://example.com/brochure.pdf",
+      "--target-lang",
+      "en",
+      "--sensitive",
+      "",
+      "--quiet",
+    ]);
+    expect(emptySensitive.exitCode).toBe(2);
+    expect(emptySensitive.stderr).toMatch(/sensitive|空/i);
+
+    const badTerm = await runCommandInProcess(OMNI_TRANSLATE_ROUTES, [
+      "omni",
+      "translate",
+      "--file",
+      "https://example.com/brochure.pdf",
+      "--target-lang",
+      "en",
+      "--term",
+      "=only-target",
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(badTerm.exitCode).toBe(2);
+    expect(badTerm.stderr).toMatch(/--term|source=target/i);
   });
 
   test("local dry-run marks pending upload", async () => {

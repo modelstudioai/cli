@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  taskPath,
   image2ImagePath,
   ASYNC_FLAG,
   BailianError,
@@ -8,15 +7,16 @@ import {
   resolveOutputDir,
   stripUndefined,
   type DashScopeAsyncResponse,
-  type DashScopeTaskResponse,
   type FlagsDef,
   type ImageTranslationRequest,
   type LocalizedText,
 } from "bailian-cli-core";
-import { downloadFile, poll } from "bailian-cli-runtime";
+import { downloadFile } from "bailian-cli-runtime";
 import { existsSync, statSync } from "fs";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import { pollDashScopeTask } from "../shared/dashscope-task.ts";
+import { hasNonAscii, isHttpUrl, parseTermPairs } from "../shared/translation.ts";
 
 const DEFAULT_MODEL = "qwen-mt-image";
 const SUPPORTED_MODELS = new Set(["qwen-mt-image", "qwen-mt-image-2.0"]);
@@ -96,17 +96,6 @@ const TRANSLATE_FLAGS = {
   },
 } satisfies FlagsDef;
 
-function isHttpUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value);
-}
-
-function hasNonAscii(value: string): boolean {
-  for (const char of value) {
-    if ((char.codePointAt(0) ?? 0) > 0x7f) return true;
-  }
-  return false;
-}
-
 function isChineseOrEnglish(lang: string): boolean {
   const normalized = lang.trim().toLowerCase();
   return (
@@ -119,31 +108,6 @@ function isChineseOrEnglish(lang: string): boolean {
     normalized === "en-gb" ||
     normalized === "english"
   );
-}
-
-function parseImageTerms(
-  terms: string[] | undefined,
-  localize: (text: LocalizedText) => string,
-): Array<{ src: string; tgt: string }> | undefined {
-  if (terms === undefined) return undefined;
-  const parsed: Array<{ src: string; tgt: string }> = [];
-  for (const termValue of terms) {
-    const equalsIndex = termValue.indexOf("=");
-    if (equalsIndex <= 0 || equalsIndex === termValue.length - 1) {
-      throw new BailianError(
-        localize({
-          "en-US": `Invalid --term "${termValue}". Use source=target with non-empty sides.`,
-          "zh-CN": `无效的 --term "${termValue}"。请使用 source=target，且两侧均非空。`,
-        }),
-        ExitCode.USAGE,
-      );
-    }
-    parsed.push({
-      src: termValue.slice(0, equalsIndex),
-      tgt: termValue.slice(equalsIndex + 1),
-    });
-  }
-  return parsed;
 }
 
 function assertImageInput(image: string, localize: (text: LocalizedText) => string): void {
@@ -309,8 +273,10 @@ export default defineCommand({
 
     const ext: NonNullable<ImageTranslationRequest["input"]["ext"]> = {};
     if (flags.domainHint !== undefined) ext.domainHint = flags.domainHint;
-    const terminologies = parseImageTerms(flags.term, localize);
-    if (terminologies !== undefined) ext.terminologies = terminologies;
+    const termPairs = parseTermPairs(flags.term, localize);
+    if (termPairs !== undefined) {
+      ext.terminologies = termPairs.map((pair) => ({ src: pair.source, tgt: pair.target }));
+    }
     if (flags.imageSegment !== undefined) {
       ext.config = { imageSegment: flags.imageSegment };
     }
@@ -325,10 +291,10 @@ export default defineCommand({
       }) as ImageTranslationRequest["input"],
     };
 
-    const endpoint = image2ImagePath();
+    const endpointPath = image2ImagePath();
 
     if (settings.dryRun) {
-      ctx.output.result({ endpoint, request });
+      ctx.output.result({ endpoint: ctx.client.url(endpointPath), request });
       return;
     }
 
@@ -339,7 +305,7 @@ export default defineCommand({
     };
 
     const submitted = await ctx.client.requestJson<DashScopeAsyncResponse>({
-      path: endpoint,
+      path: endpointPath,
       method: "POST",
       body: liveRequest,
       async: true,
@@ -351,47 +317,8 @@ export default defineCommand({
       return;
     }
 
-    const pollInterval = flags.pollInterval ?? 5;
-    const taskResponse = await poll<DashScopeTaskResponse>(ctx.client, {
-      output: ctx.output,
-      url: ctx.client.url(taskPath(taskId)),
-      intervalSec: pollInterval,
-      timeoutSec: settings.timeout,
-      load: async () => {
-        const data = await ctx.client.requestJson<DashScopeTaskResponse>({
-          path: taskPath(taskId),
-        });
-        const status = data.output.task_status;
-        if (status === "FAILED") {
-          const message = data.output.message || data.output.code || "Task failed.";
-          throw new BailianError(message, ExitCode.GENERAL, undefined, {
-            api: {
-              apiCode: data.output.code,
-              requestId: data.request_id,
-            },
-          });
-        }
-        if (status === "CANCELED" || status === "UNKNOWN") {
-          throw new BailianError(
-            localize({
-              "en-US": `Task ended with status ${status}.`,
-              "zh-CN": `任务以状态 ${status} 结束。`,
-            }),
-            ExitCode.GENERAL,
-            undefined,
-            {
-              api: {
-                apiCode: data.output.code,
-                requestId: data.request_id,
-              },
-            },
-          );
-        }
-        return data;
-      },
-      isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-      isFailed: () => false,
-      getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
+    const taskResponse = await pollDashScopeTask(ctx, taskId, {
+      pollInterval: flags.pollInterval ?? 5,
     });
 
     const imageResultUrl = taskResponse.output.image_url;

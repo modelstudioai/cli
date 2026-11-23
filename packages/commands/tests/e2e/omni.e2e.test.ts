@@ -17,6 +17,8 @@ describe("e2e: omni", () => {
     const { stderr, exitCode } = await runCommandHelp(OMNI_ROUTES, ["omni", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/omni|--message|--audio|text-only/i);
+    expect(stderr).toMatch(/Subcommands:|子命令：/);
+    expect(stderr).toMatch(/omni translate/);
   });
 
   test("omni --dry-run 无 --model/--text-only 时自动切换为 qwen3.5-omni-plus 并带 audio modalities", async () => {

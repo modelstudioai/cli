@@ -182,7 +182,8 @@ describe("e2e: image translate", () => {
         };
       };
     }>(stdout);
-    expect(body.endpoint).toBe("/api/v1/services/aigc/image2image/image-synthesis");
+    expect(body.endpoint).toMatch(/^https?:\/\//);
+    expect(body.endpoint).toMatch(/\/api\/v1\/services\/aigc\/image2image\/image-synthesis$/);
     expect(body.request?.model).toBe("qwen-mt-image");
     expect(body.request?.input?.image_url).toBe("https://example.com/poster.png");
     expect(body.request?.input?.source_lang).toBe("auto");

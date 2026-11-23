@@ -15,6 +15,7 @@ export { parseInstantVocabulary, parseVocabularyEntries } from "./vocabulary-inp
 export {
   VOICE_ENROLLMENT_MODEL,
   buildVoiceRequest,
+  postVoiceRequest,
   createCloneVoice,
   createDesignVoice,
   listVoices,

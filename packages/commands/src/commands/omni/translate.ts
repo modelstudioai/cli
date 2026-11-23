@@ -1,25 +1,27 @@
 import {
   defineCommand,
   multimodalGenerationPath,
-  taskPath,
   ASYNC_FLAG,
   BailianError,
   ExitCode,
   resolveOutputDir,
   stripUndefined,
   type DashScopeAsyncResponse,
-  type DashScopeTaskResponse,
   type FlagsDef,
   type LocalizedText,
   type QwenMtUniRequest,
 } from "bailian-cli-core";
-import { downloadFile, poll } from "bailian-cli-runtime";
+import { downloadFile } from "bailian-cli-runtime";
 import { existsSync, statSync } from "fs";
 import { extname, join } from "path";
 import { randomBytes } from "crypto";
+import { pollDashScopeTask } from "../shared/dashscope-task.ts";
+import { hasNonAscii, isHttpUrl, parseTermPairs } from "../shared/translation.ts";
 
 const DEFAULT_MODEL = "qwen-mt-uni";
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
+const MAX_GLOSSARY_ENTRIES = 100;
+const MAX_SENSITIVES = 50;
 
 const SUPPORTED_EXTENSIONS = new Set([
   "pdf",
@@ -123,6 +125,31 @@ const TRANSLATE_FLAGS = {
       "zh-CN": "英文领域提示，不超过 200 词（ext.domainHint）",
     },
   },
+  term: {
+    type: "array",
+    valueHint: "<source=target>",
+    description: {
+      "en-US": "Glossary pair source=target (repeatable; maps to ext.glossary, max 100)",
+      "zh-CN": "术语对 source=target（可重复；映射为 ext.glossary，最多 100 组）",
+    },
+  },
+  sensitive: {
+    type: "array",
+    valueHint: "<text>",
+    description: {
+      "en-US":
+        "Sensitive phrase kept untranslated on exact match (repeatable; maps to ext.sensitives, max 50)",
+      "zh-CN": "完全匹配时保留不译的敏感词（可重复；映射为 ext.sensitives，最多 50 个）",
+    },
+  },
+  imageSegment: {
+    type: "boolean",
+    valueHint: "<bool>",
+    description: {
+      "en-US": "Skip translating text on image subjects (ext.config.imageSegment; images only)",
+      "zh-CN": "跳过图片主体上的文字翻译（ext.config.imageSegment；仅图像生效）",
+    },
+  },
   outDir: {
     type: "string",
     valueHint: "<path>",
@@ -138,17 +165,6 @@ const TRANSLATE_FLAGS = {
     },
   },
 } satisfies FlagsDef;
-
-function isHttpUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value);
-}
-
-function hasNonAscii(value: string): boolean {
-  for (const char of value) {
-    if ((char.codePointAt(0) ?? 0) > 0x7f) return true;
-  }
-  return false;
-}
 
 function pathExtension(source: string): string {
   const pathPart = source.split("?")[0]?.split("#")[0] ?? source;
@@ -312,13 +328,19 @@ export default defineCommand({
       "zh-CN":
         "--file https://example.com/brochure.pdf --target-lang en --format-hint pdf --async --output json",
     },
+    {
+      "en-US":
+        '--file https://example.com/poster.png --target-lang en --term "应用程序接口=API" --sensitive "全场9折" --image-segment true --dry-run --output json',
+      "zh-CN":
+        '--file https://example.com/poster.png --target-lang en --term "应用程序接口=API" --sensitive "全场9折" --image-segment true --dry-run --output json',
+    },
   ],
   notes: [
     {
       "en-US":
-        "Always submits asynchronously. Use --async to return the task ID immediately. Task SUCCEEDED still requires output.Success=true before download. Query with `video task get --task-id`. Supported: pdf/docx/pptx/xlsx/txt/html/md/png/jpg/mp3/wav. Video and legacy doc/ppt are rejected.",
+        "Always submits asynchronously. Use --async to return the task ID immediately. Task SUCCEEDED still requires output.Success=true before download. Query with `video task get --task-id`. Supported: pdf/docx/pptx/xlsx/txt/html/md/png/jpg/mp3/wav. Video and legacy doc/ppt are rejected. --image-segment only affects image inputs.",
       "zh-CN":
-        "始终异步提交。使用 --async 立即返回任务 ID。任务 SUCCEEDED 仍需 output.Success=true 才会下载。可用 `video task get --task-id` 查询。支持：pdf/docx/pptx/xlsx/txt/html/md/png/jpg/mp3/wav。拒绝视频与旧版 doc/ppt。",
+        "始终异步提交。使用 --async 立即返回任务 ID。任务 SUCCEEDED 仍需 output.Success=true 才会下载。可用 `video task get --task-id` 查询。支持：pdf/docx/pptx/xlsx/txt/html/md/png/jpg/mp3/wav。拒绝视频与旧版 doc/ppt。--image-segment 仅对图像输入生效。",
     },
   ],
   validate: (flags) => {
@@ -330,6 +352,26 @@ export default defineCommand({
         "en-US": "--poll-interval must be a positive number.",
         "zh-CN": "--poll-interval 必须为正数。",
       };
+    }
+    if (flags.term !== undefined && flags.term.length > MAX_GLOSSARY_ENTRIES) {
+      return {
+        "en-US": `--term accepts at most ${MAX_GLOSSARY_ENTRIES} pairs.`,
+        "zh-CN": `--term 最多 ${MAX_GLOSSARY_ENTRIES} 组。`,
+      };
+    }
+    if (flags.sensitive !== undefined) {
+      if (flags.sensitive.length > MAX_SENSITIVES) {
+        return {
+          "en-US": `--sensitive accepts at most ${MAX_SENSITIVES} values.`,
+          "zh-CN": `--sensitive 最多 ${MAX_SENSITIVES} 个。`,
+        };
+      }
+      if (flags.sensitive.some((item) => item.length === 0)) {
+        return {
+          "en-US": "--sensitive values must not be empty.",
+          "zh-CN": "--sensitive 的值不能为空。",
+        };
+      }
     }
     return undefined;
   },
@@ -356,6 +398,14 @@ export default defineCommand({
     const ext: NonNullable<QwenMtUniRequest["input"]["ext"]> = {};
     if (flags.formatHint !== undefined) ext.format_hint = flags.formatHint;
     if (flags.domainHint !== undefined) ext.domainHint = flags.domainHint;
+    const glossaryPairs = parseTermPairs(flags.term, localize);
+    if (glossaryPairs !== undefined) {
+      ext.glossary = glossaryPairs.map((pair) => ({ src: pair.source, tgt: pair.target }));
+    }
+    if (flags.sensitive !== undefined) ext.sensitives = flags.sensitive;
+    if (flags.imageSegment !== undefined) {
+      ext.config = { imageSegment: flags.imageSegment };
+    }
 
     const requestInput: QwenMtUniRequest["input"] = stripUndefined({
       fileUrl: previewFileUrl,
@@ -366,10 +416,10 @@ export default defineCommand({
     }) as QwenMtUniRequest["input"];
 
     const request: QwenMtUniRequest = { model, input: requestInput };
-    const endpoint = multimodalGenerationPath();
+    const endpointPath = multimodalGenerationPath();
 
     if (settings.dryRun) {
-      ctx.output.result({ endpoint, request });
+      ctx.output.result({ endpoint: ctx.client.url(endpointPath), request });
       return;
     }
 
@@ -380,7 +430,7 @@ export default defineCommand({
     };
 
     const submitted = await ctx.client.requestJson<DashScopeAsyncResponse>({
-      path: endpoint,
+      path: endpointPath,
       method: "POST",
       body: liveRequest,
       async: true,
@@ -392,46 +442,11 @@ export default defineCommand({
       return;
     }
 
-    const pollInterval = flags.pollInterval ?? 5;
-    const taskResponse = await poll<DashScopeTaskResponse>(ctx.client, {
-      output: ctx.output,
-      url: ctx.client.url(taskPath(taskId)),
-      intervalSec: pollInterval,
-      timeoutSec: settings.timeout,
-      load: async () => {
-        const data = await ctx.client.requestJson<DashScopeTaskResponse>({
-          path: taskPath(taskId),
-        });
-        const status = data.output.task_status;
-        if (status === "FAILED") {
-          const message =
-            data.output.Message || data.output.message || data.output.code || "Task failed.";
-          throw new BailianError(String(message), ExitCode.GENERAL, undefined, {
-            api: {
-              apiCode: data.output.Code !== undefined ? String(data.output.Code) : data.output.code,
-              requestId: data.output.RequestId || data.request_id,
-            },
-          });
-        }
-        if (status === "CANCELED" || status === "UNKNOWN") {
-          throw new BailianError(
-            localize({
-              "en-US": `Task ended with status ${status}.`,
-              "zh-CN": `任务以状态 ${status} 结束。`,
-            }),
-            ExitCode.GENERAL,
-            undefined,
-            {
-              api: {
-                apiCode:
-                  data.output.Code !== undefined ? String(data.output.Code) : data.output.code,
-                requestId: data.output.RequestId || data.request_id,
-              },
-            },
-          );
-        }
-        // SUCCEEDED is terminal: missing / non-true Success is a business failure, not "still running".
-        if (status === "SUCCEEDED" && data.output.Success !== true) {
+    const taskResponse = await pollDashScopeTask(ctx, taskId, {
+      pollInterval: flags.pollInterval ?? 5,
+      extraCheck: (data) => {
+        // SUCCEEDED is terminal: missing / non-true Success is a business failure.
+        if (data.output.Success !== true) {
           const message = data.output.Message || "Translation business call failed.";
           throw new BailianError(String(message), ExitCode.GENERAL, undefined, {
             api: {
@@ -440,11 +455,7 @@ export default defineCommand({
             },
           });
         }
-        return data;
       },
-      isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-      isFailed: () => false,
-      getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
     });
 
     const translatedUrl = taskResponse.output.Data?.TranslatedFileUrl;

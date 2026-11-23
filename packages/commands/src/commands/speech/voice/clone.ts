@@ -1,10 +1,11 @@
 import {
   buildVoiceRequest,
-  createCloneVoice,
   defineCommand,
+  postVoiceRequest,
   speechVoiceCustomizationPath,
   type FlagsDef,
   type ParsedFlags,
+  type VoiceCreateOutput,
 } from "bailian-cli-core";
 import {
   redactVoiceAudioInRequest,
@@ -153,23 +154,7 @@ export default defineCommand({
       return;
     }
 
-    const response = await createCloneVoice(ctx.client, {
-      target_model: flags.targetModel,
-      prefix,
-      audio: resolved.audio,
-      language_hints:
-        flags.languageHint !== undefined && flags.languageHint.length > 0
-          ? [flags.languageHint[0]!]
-          : undefined,
-      enable_volume_normalization:
-        flags.volumeNormalize !== undefined
-          ? flags.volumeNormalize
-            ? "true"
-            : "false"
-          : undefined,
-      max_prompt_audio_length: flags.maxPromptAudioLength,
-      enable_preprocess: flags.preprocess,
-    });
+    const response = await postVoiceRequest<VoiceCreateOutput>(ctx.client, request);
 
     ctx.output.result(response, {
       text: settings.output === "text" ? (response.output?.voice_id ?? "") : undefined,

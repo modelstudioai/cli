@@ -4,13 +4,14 @@ import { randomBytes } from "crypto";
 import {
   BailianError,
   buildVoiceRequest,
-  createDesignVoice,
   defineCommand,
   ExitCode,
+  postVoiceRequest,
   resolveOutputDir,
   speechVoiceCustomizationPath,
   type FlagsDef,
   type ParsedFlags,
+  type VoiceCreateOutput,
 } from "bailian-cli-core";
 import {
   validateLanguageHints,
@@ -186,23 +187,7 @@ export default defineCommand({
       return;
     }
 
-    const response = await createDesignVoice(
-      ctx.client,
-      {
-        target_model: flags.targetModel,
-        prefix,
-        voice_prompt: voicePrompt,
-        preview_text: previewText,
-        language_hints:
-          flags.languageHint !== undefined && flags.languageHint.length > 0
-            ? [flags.languageHint[0]!.trim()]
-            : undefined,
-      },
-      {
-        sample_rate: flags.sampleRate,
-        response_format: flags.format,
-      },
-    );
+    const response = await postVoiceRequest<VoiceCreateOutput>(ctx.client, request);
 
     const voiceId = response.output?.voice_id;
     const previewAudio = response.output?.preview_audio;

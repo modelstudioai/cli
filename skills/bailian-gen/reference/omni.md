@@ -96,22 +96,25 @@ bl omni --message "Read this passage aloud" --audio-out greeting.wav
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                             |
-| --------------------------- | ------ | -------- | ------------------------------------------------------- |
-| `--file <url-or-path>`      | string | yes      | Document, image or audio URL/local file                 |
-| `--target-lang <lang>`      | string | yes      | Target language code or name                            |
-| `--source-lang <lang>`      | string | no       | Source language (omit to auto-detect; do not send auto) |
-| `--format-hint <type>`      | string | no       | Format hint when URL has no extension (e.g. pdf, image) |
-| `--domain-hint <text>`      | string | no       | English domain hint ≤200 words (ext.domainHint)         |
-| `--out-dir <path>`          | string | no       | Download directory                                      |
-| `--async`                   | switch | no       | Return async task id without waiting                    |
-| `--poll-interval <seconds>` | number | no       | Polling interval when waiting (default: 5)              |
-| `--api-key <key>`           | string | no       | API key                                                 |
-| `--base-url <url>`          | string | no       | API base URL                                            |
+| Flag                        | Type    | Required | Description                                                                                    |
+| --------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `--file <url-or-path>`      | string  | yes      | Document, image or audio URL/local file                                                        |
+| `--target-lang <lang>`      | string  | yes      | Target language code or name                                                                   |
+| `--source-lang <lang>`      | string  | no       | Source language (omit to auto-detect; do not send auto)                                        |
+| `--format-hint <type>`      | string  | no       | Format hint when URL has no extension (e.g. pdf, image)                                        |
+| `--domain-hint <text>`      | string  | no       | English domain hint ≤200 words (ext.domainHint)                                                |
+| `--term <source=target>`    | array   | no       | Glossary pair source=target (repeatable; maps to ext.glossary, max 100)                        |
+| `--sensitive <text>`        | array   | no       | Sensitive phrase kept untranslated on exact match (repeatable; maps to ext.sensitives, max 50) |
+| `--image-segment <bool>`    | boolean | no       | Skip translating text on image subjects (ext.config.imageSegment; images only)                 |
+| `--out-dir <path>`          | string  | no       | Download directory                                                                             |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                           |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                                     |
+| `--api-key <key>`           | string  | no       | API key                                                                                        |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                   |
 
 #### Notes
 
-- Always submits asynchronously. Use --async to return the task ID immediately. Task SUCCEEDED still requires output.Success=true before download. Query with `video task get --task-id`. Supported: pdf/docx/pptx/xlsx/txt/html/md/png/jpg/mp3/wav. Video and legacy doc/ppt are rejected.
+- Always submits asynchronously. Use --async to return the task ID immediately. Task SUCCEEDED still requires output.Success=true before download. Query with `video task get --task-id`. Supported: pdf/docx/pptx/xlsx/txt/html/md/png/jpg/mp3/wav. Video and legacy doc/ppt are rejected. --image-segment only affects image inputs.
 
 #### Examples
 
@@ -121,4 +124,8 @@ bl omni translate --file ./brochure.pdf --target-lang en --dry-run --output json
 
 ```bash
 bl omni translate --file https://example.com/brochure.pdf --target-lang en --format-hint pdf --async --output json
+```
+
+```bash
+bl omni translate --file https://example.com/poster.png --target-lang en --term "应用程序接口=API" --sensitive "全场9折" --image-segment true --dry-run --output json
 ```

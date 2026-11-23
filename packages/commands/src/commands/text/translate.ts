@@ -11,6 +11,7 @@ import {
   type ParsedFlags,
   type TranslationOptions,
 } from "bailian-cli-core";
+import { parseTermPairs } from "../shared/translation.ts";
 
 /** Text Qwen-MT family: plus/flash/lite, including optional dated suffixes. */
 const QWEN_MT_TEXT_MODEL = /^qwen-mt-(plus|flash|lite)(-|$)/;
@@ -115,31 +116,6 @@ const TRANSLATE_FLAGS = {
 } satisfies FlagsDef;
 type TranslateFlags = ParsedFlags<typeof TRANSLATE_FLAGS>;
 
-function parseTranslationTerms(
-  terms: string[] | undefined,
-  localize: (text: LocalizedText) => string,
-): Array<{ source: string; target: string }> | undefined {
-  if (terms === undefined) return undefined;
-  const parsed: Array<{ source: string; target: string }> = [];
-  for (const termValue of terms) {
-    const equalsIndex = termValue.indexOf("=");
-    if (equalsIndex <= 0 || equalsIndex === termValue.length - 1) {
-      throw new BailianError(
-        localize({
-          "en-US": `Invalid --term "${termValue}". Use source=target with non-empty sides.`,
-          "zh-CN": `无效的 --term "${termValue}"。请使用 source=target，且两侧均非空。`,
-        }),
-        ExitCode.USAGE,
-      );
-    }
-    parsed.push({
-      source: termValue.slice(0, equalsIndex),
-      target: termValue.slice(equalsIndex + 1),
-    });
-  }
-  return parsed;
-}
-
 function assertUserOnlyTextMessages(
   messages: ChatMessage[],
   localize: (text: LocalizedText) => string,
@@ -208,7 +184,7 @@ function buildTranslationOptions(
     target_lang: targetLang,
   };
 
-  const terms = parseTranslationTerms(flags.term, localize);
+  const terms = parseTermPairs(flags.term, localize);
   if (terms !== undefined) options.terms = terms;
   if (flags.domainHint !== undefined) options.domains = flags.domainHint;
   return options;

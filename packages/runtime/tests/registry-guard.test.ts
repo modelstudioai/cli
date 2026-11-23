@@ -85,3 +85,43 @@ test("命令 help 只为 high risk 展示风险信息和 runtime 注入的 --yes
   expect(normalHelp).not.toContain("Risk:");
   expect(normalHelp).not.toContain("Risk message:");
 });
+
+test("hybrid leaf help appends Subcommands for nested commands", () => {
+  const parent = defineCommand({
+    description: { "en-US": "Parent chat", "zh-CN": "父级对话" },
+    auth: "apiKey",
+    usageArgs: "--message <text>",
+    run: noopRun,
+  });
+  const child = defineCommand({
+    description: { "en-US": "Child translate", "zh-CN": "子级翻译" },
+    auth: "apiKey",
+    usageArgs: "--file <path>",
+    run: noopRun,
+  });
+  const registry = new CommandRegistry(
+    {
+      omni: parent,
+      "omni translate": child,
+    },
+    "bl",
+  );
+
+  let hybridHelp = "";
+  registry.printHelp(["omni"], {
+    write: (chunk: string) => (hybridHelp += chunk),
+  } as unknown as NodeJS.WriteStream);
+
+  expect(hybridHelp).toContain("Parent chat");
+  expect(hybridHelp).toContain("--message");
+  expect(hybridHelp).toContain("Subcommands:");
+  expect(hybridHelp).toMatch(/omni translate/);
+  expect(hybridHelp).toContain("Child translate");
+
+  let leafHelp = "";
+  registry.printHelp(["omni", "translate"], {
+    write: (chunk: string) => (leafHelp += chunk),
+  } as unknown as NodeJS.WriteStream);
+  expect(leafHelp).toContain("Child translate");
+  expect(leafHelp).not.toContain("Subcommands:");
+});
