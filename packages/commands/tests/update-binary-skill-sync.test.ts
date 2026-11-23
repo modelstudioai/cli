@@ -165,10 +165,13 @@ test("npm bl update refreshes installed skills and does not run skill init", asy
     }) as never,
   );
 
-  expect(childProcessMocks.spawnSync).toHaveBeenCalledWith("npm install -g bailian-cli@1.15.0", {
-    shell: true,
-    stdio: ["inherit", "pipe", "pipe"],
-  });
+  expect(childProcessMocks.spawnSync).toHaveBeenCalledWith(
+    "npm install -g bailian-cli@1.15.0 --registry=https://registry.npmjs.org",
+    {
+      shell: true,
+      stdio: ["inherit", "pipe", "pipe"],
+    },
+  );
   expectSkillUpdateNotInit();
 });
 

@@ -248,7 +248,9 @@ export async function performAutoUpdate(
     "en-US": `Auto-updating: ${currentVersion} → ${latestVersion}`,
     "zh-CN": `正在自动更新：${currentVersion} → ${latestVersion}`,
   });
-  const command = `npm install -g ${npmPackage}@latest`;
+  // Version detection reads the official registry; install from the same source
+  // so a lagging user-configured mirror cannot silently reinstall the old version.
+  const command = `npm install -g ${npmPackage}@latest --registry=${NPM_REGISTRY}`;
   try {
     let newVersion: string | null = null;
     if (method === "binary") {

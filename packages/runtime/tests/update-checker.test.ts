@@ -224,9 +224,12 @@ test("npm auto-update refreshes installed skills and does not run skill init", a
   });
 
   expect(updated).toBe(true);
-  expect(childProcessMocks.execSync).toHaveBeenCalledWith("npm install -g bailian-cli@latest", {
-    stdio: "pipe",
-  });
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith(
+    "npm install -g bailian-cli@latest --registry=https://registry.npmjs.org",
+    {
+      stdio: "pipe",
+    },
+  );
   expectSkillUpdateNotInit();
 });
 
