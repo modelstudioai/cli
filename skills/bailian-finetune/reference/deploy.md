@@ -7,77 +7,87 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                          | Authentication | Description                                                                       |
-| -------------------------------- | -------------- | --------------------------------------------------------------------------------- |
-| `bl deploy audio create`         | API Key        | Create an audio (TTS) model deployment                                            |
-| `bl deploy capacity create`      | API Key        | Purchase an additional capacity instance for a ModelCode                          |
-| `bl deploy capacity delete`      | API Key        | Release a capacity instance without deleting its ModelCode                        |
-| `bl deploy capacity get`         | API Key        | Get a throughput reservation capacity instance                                    |
-| `bl deploy capacity list`        | API Key        | List throughput reservation capacity instances                                    |
-| `bl deploy capacity renew`       | API Key        | Renew a prepaid capacity instance, optionally changing capacity                   |
-| `bl deploy capacity scale`       | API Key        | Scale the absolute capacity of one reservation instance                           |
-| `bl deploy capacity unsubscribe` | No Auth        | Build the Aliyun billing console unsubscribe link for a prepaid capacity instance |
-| `bl deploy delete`               | API Key        | Delete a model deployment (PTU must be STOPPED with all capacity released)        |
-| `bl deploy get`                  | API Key        | Get details of a single model deployment                                          |
-| `bl deploy image create`         | API Key        | Create an image generation model deployment                                       |
-| `bl deploy instances`            | Console        | List Console independent deployment services                                      |
-| `bl deploy list`                 | API Key        | List model deployments and throughput reservations                                |
-| `bl deploy models`               | API Key        | List models available for deployment                                              |
-| `bl deploy operation get`        | API Key        | Query a throughput reservation capacity operation once                            |
-| `bl deploy operation wait`       | API Key        | Wait for a capacity operation and refresh confirmed capacity                      |
-| `bl deploy overflow`             | API Key        | Set the overflow strategy for a throughput reservation ModelCode                  |
-| `bl deploy pause`                | Console        | Pause a running model deployment (stops billing for mu/ptu)                       |
-| `bl deploy resume`               | Console        | Resume a paused model deployment (brings service back online)                     |
-| `bl deploy scale`                | API Key        | Scale a deployment's capacity                                                     |
-| `bl deploy text create`          | API Key        | Create a text model deployment                                                    |
-| `bl deploy update`               | API Key        | Update a deployment's rate limits (rpm_limit / tpm_limit)                         |
+| Command                                 | Authentication | Description                                                                       |
+| --------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+| `bl deploy audio create`                | API Key        | Create an audio (TTS) model deployment                                            |
+| `bl deploy capacity auto-renew disable` | API Key        | Disable automatic renewal for one prepaid capacity instance                       |
+| `bl deploy capacity auto-renew enable`  | API Key        | Enable automatic renewal for one prepaid capacity instance                        |
+| `bl deploy capacity create`             | API Key        | Purchase an additional capacity instance for a ModelCode                          |
+| `bl deploy capacity delete`             | API Key        | Release a capacity instance without deleting its ModelCode                        |
+| `bl deploy capacity get`                | API Key        | Get a throughput reservation capacity instance                                    |
+| `bl deploy capacity list`               | API Key        | List throughput reservation capacity instances                                    |
+| `bl deploy capacity renew`              | API Key        | Renew a prepaid capacity instance, optionally changing capacity                   |
+| `bl deploy capacity scale`              | API Key        | Scale the absolute capacity of one reservation instance                           |
+| `bl deploy capacity unsubscribe`        | No Auth        | Build the Aliyun billing console unsubscribe link for a prepaid capacity instance |
+| `bl deploy delete`                      | API Key        | Delete a model deployment (PTU must be STOPPED with all capacity released)        |
+| `bl deploy get`                         | API Key        | Get details of a single model deployment                                          |
+| `bl deploy image create`                | API Key        | Create an image generation model deployment                                       |
+| `bl deploy instances`                   | Console        | List Console independent deployment services                                      |
+| `bl deploy list`                        | API Key        | List model deployments and throughput reservations                                |
+| `bl deploy models`                      | API Key        | List models available for deployment                                              |
+| `bl deploy operation get`               | API Key        | Query a throughput reservation capacity operation once                            |
+| `bl deploy operation wait`              | API Key        | Wait for a capacity operation and refresh confirmed capacity                      |
+| `bl deploy overflow`                    | API Key        | Set the overflow strategy for a throughput reservation ModelCode                  |
+| `bl deploy pause`                       | Console        | Pause a running model deployment (stops billing for mu/ptu)                       |
+| `bl deploy resume`                      | Console        | Resume a paused model deployment (brings service back online)                     |
+| `bl deploy router create`               | API Key        | Create a postpaid model router                                                    |
+| `bl deploy router delete`               | API Key        | Delete a model router                                                             |
+| `bl deploy router get`                  | API Key        | Get model router details                                                          |
+| `bl deploy router list`                 | API Key        | List model routers                                                                |
+| `bl deploy router update`               | API Key        | Update selected fields of a running model router configuration                    |
+| `bl deploy router versions`             | API Key        | List available model-routing versions and candidates                              |
+| `bl deploy scale`                       | API Key        | Scale a deployment's capacity                                                     |
+| `bl deploy text create`                 | API Key        | Create a text model deployment                                                    |
+| `bl deploy update`                      | API Key        | Update a deployment's rate limits (rpm_limit / tpm_limit)                         |
 
 ## Command details
 
 ### `bl deploy audio create`
 
-| Field              | Value                                                                                                                                                                                                            |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `deploy audio create`                                                                                                                                                                                            |
-| **Description**    | Create an audio (TTS) model deployment                                                                                                                                                                           |
-| **Authentication** | API Key                                                                                                                                                                                                          |
-| **Usage**          | `bl deploy audio create --model-name <model_name> [--display-name <display_name>] [--plan <plan>] [--charge-type <type>] [--service-tier <tier>] [--suffix <suffix>] [--input-tpm <n> --output-tpm <n>] [flags]` |
-| **Risk**           | `high`                                                                                                                                                                                                           |
-| **Risk message**   | Creating a deployment purchases or provisions resources and may incur charges.                                                                                                                                   |
+| Field              | Value                                                                                                                                                                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy audio create`                                                                                                                                                                                                                          |
+| **Description**    | Create an audio (TTS) model deployment                                                                                                                                                                                                         |
+| **Authentication** | API Key                                                                                                                                                                                                                                        |
+| **Usage**          | `bl deploy audio create --model-name <model_name> [--display-name <display_name>] [--plan <plan>] [--charge-type <type>] [--service-tier <tier>] [--suffix <suffix>] [--pricing-cycle <Day\|Hour>] [--input-tpm <n> --output-tpm <n>] [flags]` |
+| **Risk**           | `high`                                                                                                                                                                                                                                         |
+| **Risk message**   | Creating a deployment purchases or provisions resources and may incur charges.                                                                                                                                                                 |
 
 > **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag                                     | Type    | Required | Description                                                                      |
-| ---------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------- |
-| `--model-name <model_name>`              | string  | yes      | Model to deploy — fine-tuned output name or catalog model (required)             |
-| `--display-name <display_name>`          | string  | no       | Console display name (optional for PTU; required for other plans)                |
-| `--plan <plan>`                          | string  | no       | Billing plan: lora (default, Token-billed) \| ptu (throughput reservation) \| mu |
-| `--deploy-spec <id>`                     | string  | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                       |
-| `--capacity <n>`                         | number  | no       | Resource units (plan=mu only; required by API; defaults to the template's unit)  |
-| `--billing-method <m>`                   | string  | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)      |
-| `--input-tpm <kTPM>`                     | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                    |
-| `--output-tpm <kTPM>`                    | number  | no       | Absolute output capacity in kTPM                                                 |
-| `--thinking-output-tpm <n>`              | number  | no       | Legacy thinking-output capacity flag; not supported for PTU                      |
-| `--charge-type <pre_paid\|post_paid>`    | string  | no       | PTU payment type (required for plan=ptu): pre_paid or post_paid                  |
-| `--service-tier <ptu_fast\|ptu_default>` | string  | no       | PTU service tier: ptu_fast (default) or ptu_default (prepaid only)               |
-| `--suffix <suffix>`                      | string  | no       | Optional PTU ModelCode suffix; generated by the service when omitted             |
-| `--duration <days>`                      | number  | no       | Prepaid purchase/renewal duration, positive integer days                         |
-| `--auto-renewal <true\|false>`           | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases             |
-| `--auto-renewal-duration <days>`         | number  | no       | Automatic renewal duration; required when enabled                                |
-| `--auto-renewal-cycle <cycle>`           | string  | no       | Optional supported renewal cycle, e.g. Day                                       |
-| `--wait`                                 | switch  | no       | Wait for the returned capacity operation and refresh capacity                    |
-| `--interval <seconds>`                   | number  | no       | Initial wait poll interval (1–3600, default: 2 seconds)                          |
-| `--poll-timeout <seconds>`               | number  | no       | Wait budget after submission (default: 600 seconds)                              |
-| `--yes`                                  | switch  | no       | Confirm this high-risk operation                                                 |
-| `--api-key <key>`                        | string  | no       | API key                                                                          |
-| `--base-url <url>`                       | string  | no       | API base URL                                                                     |
+| Flag                                     | Type    | Required | Description                                                                                     |
+| ---------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `--model-name <model_name>`              | string  | yes      | Model to deploy — fine-tuned output name or catalog model (required)                            |
+| `--display-name <display_name>`          | string  | no       | Console display name (optional for PTU; required for other plans)                               |
+| `--plan <plan>`                          | string  | no       | Billing plan: lora (default, Token-billed) \| ptu (throughput reservation) \| mu                |
+| `--deploy-spec <id>`                     | string  | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                                      |
+| `--capacity <n>`                         | number  | no       | Resource units (plan=mu only; required by API; defaults to the template's unit)                 |
+| `--billing-method <m>`                   | string  | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)                     |
+| `--input-tpm <kTPM>`                     | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                                   |
+| `--output-tpm <kTPM>`                    | number  | no       | Absolute output capacity in kTPM                                                                |
+| `--thinking-output-tpm <n>`              | number  | no       | Thinking-output capacity in kTPM (plan=ptu); only some models support it, validated server-side |
+| `--charge-type <pre_paid\|post_paid>`    | string  | no       | PTU payment type (required for plan=ptu): pre_paid or post_paid                                 |
+| `--service-tier <ptu_fast\|ptu_default>` | string  | no       | PTU service tier: ptu_fast (default) or ptu_default (prepaid only)                              |
+| `--suffix <suffix>`                      | string  | no       | Optional PTU ModelCode suffix; generated by the service when omitted                            |
+| `--pricing-cycle <Day\|Hour>`            | string  | no       | Prepaid pricing cycle (case-sensitive): Day (default) or Hour for the 8-hour off-peak window    |
+| `--duration <n>`                         | number  | no       | Prepaid duration: positive integer days for Day, exactly 8 hours for Hour                       |
+| `--auto-renewal <true\|false>`           | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases                            |
+| `--auto-renewal-duration <days>`         | number  | no       | Automatic renewal duration; required when enabled                                               |
+| `--auto-renewal-cycle <cycle>`           | string  | no       | Optional supported renewal cycle, e.g. Day                                                      |
+| `--wait`                                 | switch  | no       | Wait for the returned capacity operation and refresh capacity                                   |
+| `--interval <seconds>`                   | number  | no       | Initial wait poll interval (1–3600, default: 2 seconds)                                         |
+| `--poll-timeout <seconds>`               | number  | no       | Wait budget after submission (default: 600 seconds)                                             |
+| `--yes`                                  | switch  | no       | Confirm this high-risk operation                                                                |
+| `--api-key <key>`                        | string  | no       | API key                                                                                         |
+| `--base-url <url>`                       | string  | no       | API base URL                                                                                    |
 
 #### Notes
 
 - Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-billed) for audio (CosyVoice TTS). Pass --plan to override.
-- For plan=ptu, --charge-type, --input-tpm and --output-tpm are required. Capacity is in kTPM (1 kTPM = 1000 tokens/minute). Separate thinking-output capacity is unsupported. Prepaid requires --duration and explicit --auto-renewal true|false.
+- For plan=ptu, --charge-type, --input-tpm and --output-tpm are required. Capacity is in kTPM (1 kTPM = 1000 tokens/minute). Separate thinking-output capacity (--thinking-output-tpm) is only supported by some models and is validated server-side. Prepaid requires --duration and explicit --auto-renewal true|false.
+- The 8-hour off-peak window is prepaid ptu_default only: --pricing-cycle Hour with --duration 8, --auto-renewal false and an explicit --service-tier ptu_default. Service hours must fall within 22:00–08:00, so orders are accepted only between 22:00 and 24:00 Beijing time; model support is validated by the server.
 - For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required. billing_method defaults to POST_PAY (only supported value); deploy_spec and capacity are auto-picked from GET /deployments/models when omitted.
 - Use `deploy models --source base` to inspect available templates.
 - PTU creation preserves the original JSON and operation_id even with --quiet. --wait only queries the returned operation; pending capacity is not effective capacity. Check the actual status before invoking the model.
@@ -99,16 +109,98 @@ bl deploy audio create --model-name my-cosyvoice-ft --display-name my-tts --depl
 bl deploy audio create --model-name my-cosyvoice-ft --display-name my-tts --dry-run
 ```
 
+### `bl deploy capacity auto-renew disable`
+
+| Field              | Value                                                                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy capacity auto-renew disable`                                                                                                     |
+| **Description**    | Disable automatic renewal for one prepaid capacity instance                                                                              |
+| **Authentication** | API Key                                                                                                                                  |
+| **Usage**          | `bl deploy capacity auto-renew disable --deployed-model <code> --instance-id <id> --cycle <Day> --auto-renewal-duration <days> [--wait]` |
+| **Risk**           | `high`                                                                                                                                   |
+| **Risk message**   | Disabling automatic renewal stops recurring charges at expiry.                                                                           |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                             | Type   | Required | Description                                                                                                    |
+| -------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `--deployed-model <code>`        | string | yes      | Deployed model identifier (ModelCode)                                                                          |
+| `--instance-id <id>`             | string | yes      | Capacity instance ID returned by the API                                                                       |
+| `--request-id <uuid>`            | string | no       | Request identifier; generated if omitted. Reuse with identical parameters only for the same capacity operation |
+| `--wait`                         | switch | no       | Wait for the returned capacity operation and refresh capacity                                                  |
+| `--interval <seconds>`           | number | no       | Initial wait poll interval (1–3600, default: 2 seconds)                                                        |
+| `--poll-timeout <seconds>`       | number | no       | Wait budget after submission (default: 600 seconds)                                                            |
+| `--cycle <Day>`                  | string | yes      | Automatic renewal cycle; the service currently accepts only Day (case-sensitive)                               |
+| `--auto-renewal-duration <days>` | number | yes      | Days renewed at each automatic renewal, positive integer                                                       |
+| `--yes`                          | switch | no       | Confirm this high-risk operation                                                                               |
+| `--api-key <key>`                | string | no       | API key                                                                                                        |
+| `--base-url <url>`               | string | no       | API base URL                                                                                                   |
+
+#### Notes
+
+- Use --dry-run before confirming with --yes. A write is submitted once, never automatically retried. HTTP 200 is not operation success: inspect operation_status or pass --wait. After interruption or timeout, query the saved ModelCode/operation ID before considering another write.
+- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal is configured at purchase/renewal and changed via `deploy capacity auto-renew enable` / `disable`.
+- Prepaid instances only; refreshes can_enable_auto_renew / can_disable_auto_renew before writing. 8-hour off-peak instances do not support automatic renewal. The operation usually completes synchronously and returns SUCCEEDED.
+
+#### Examples
+
+```bash
+bl deploy capacity auto-renew disable --deployed-model example-code --instance-id example-instance --cycle Day --auto-renewal-duration 30 --dry-run
+```
+
+### `bl deploy capacity auto-renew enable`
+
+| Field              | Value                                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy capacity auto-renew enable`                                                                                                     |
+| **Description**    | Enable automatic renewal for one prepaid capacity instance                                                                              |
+| **Authentication** | API Key                                                                                                                                 |
+| **Usage**          | `bl deploy capacity auto-renew enable --deployed-model <code> --instance-id <id> --cycle <Day> --auto-renewal-duration <days> [--wait]` |
+| **Risk**           | `high`                                                                                                                                  |
+| **Risk message**   | Enabling automatic renewal starts recurring charges until it is disabled again.                                                         |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                             | Type   | Required | Description                                                                                                    |
+| -------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `--deployed-model <code>`        | string | yes      | Deployed model identifier (ModelCode)                                                                          |
+| `--instance-id <id>`             | string | yes      | Capacity instance ID returned by the API                                                                       |
+| `--request-id <uuid>`            | string | no       | Request identifier; generated if omitted. Reuse with identical parameters only for the same capacity operation |
+| `--wait`                         | switch | no       | Wait for the returned capacity operation and refresh capacity                                                  |
+| `--interval <seconds>`           | number | no       | Initial wait poll interval (1–3600, default: 2 seconds)                                                        |
+| `--poll-timeout <seconds>`       | number | no       | Wait budget after submission (default: 600 seconds)                                                            |
+| `--cycle <Day>`                  | string | yes      | Automatic renewal cycle; the service currently accepts only Day (case-sensitive)                               |
+| `--auto-renewal-duration <days>` | number | yes      | Days renewed at each automatic renewal, positive integer                                                       |
+| `--yes`                          | switch | no       | Confirm this high-risk operation                                                                               |
+| `--api-key <key>`                | string | no       | API key                                                                                                        |
+| `--base-url <url>`               | string | no       | API base URL                                                                                                   |
+
+#### Notes
+
+- Use --dry-run before confirming with --yes. A write is submitted once, never automatically retried. HTTP 200 is not operation success: inspect operation_status or pass --wait. After interruption or timeout, query the saved ModelCode/operation ID before considering another write.
+- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal is configured at purchase/renewal and changed via `deploy capacity auto-renew enable` / `disable`.
+- Prepaid instances only; refreshes can_enable_auto_renew / can_disable_auto_renew before writing. 8-hour off-peak instances do not support automatic renewal. The operation usually completes synchronously and returns SUCCEEDED.
+
+#### Examples
+
+```bash
+bl deploy capacity auto-renew enable --deployed-model example-code --instance-id example-instance --cycle Day --auto-renewal-duration 30 --dry-run
+```
+
 ### `bl deploy capacity create`
 
-| Field              | Value                                                                                                                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `deploy capacity create`                                                                                                                                                                    |
-| **Description**    | Purchase an additional capacity instance for a ModelCode                                                                                                                                    |
-| **Authentication** | API Key                                                                                                                                                                                     |
-| **Usage**          | `bl deploy capacity create --deployed-model <code> --billing-method <PRE_PAY\|POST_PAY> --input-tpm <kTPM> --output-tpm <kTPM> [--duration <days>] [--auto-renewal <true\|false>] [--wait]` |
-| **Risk**           | `high`                                                                                                                                                                                      |
-| **Risk message**   | Purchases additional throughput capacity and may enable recurring charges.                                                                                                                  |
+| Field              | Value                                                                                                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy capacity create`                                                                                                                                                                                               |
+| **Description**    | Purchase an additional capacity instance for a ModelCode                                                                                                                                                               |
+| **Authentication** | API Key                                                                                                                                                                                                                |
+| **Usage**          | `bl deploy capacity create --deployed-model <code> --billing-method <PRE_PAY\|POST_PAY> --input-tpm <kTPM> --output-tpm <kTPM> [--pricing-cycle <Day\|Hour>] [--duration <n>] [--auto-renewal <true\|false>] [--wait]` |
+| **Risk**           | `high`                                                                                                                                                                                                                 |
+| **Risk message**   | Purchases additional throughput capacity and may enable recurring charges.                                                                                                                                             |
 
 > **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
@@ -119,7 +211,8 @@ bl deploy audio create --model-name my-cosyvoice-ft --display-name my-tts --dry-
 | `--deployed-model <code>`              | string  | yes      | Deployed model identifier (ModelCode)                                                                          |
 | `--input-tpm <kTPM>`                   | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                                                  |
 | `--output-tpm <kTPM>`                  | number  | no       | Absolute output capacity in kTPM                                                                               |
-| `--duration <days>`                    | number  | no       | Prepaid purchase/renewal duration, positive integer days                                                       |
+| `--pricing-cycle <Day\|Hour>`          | string  | no       | Prepaid pricing cycle (case-sensitive): Day (default) or Hour for the 8-hour off-peak window                   |
+| `--duration <n>`                       | number  | no       | Prepaid duration: positive integer days for Day, exactly 8 hours for Hour                                      |
 | `--auto-renewal <true\|false>`         | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases                                           |
 | `--auto-renewal-duration <days>`       | number  | no       | Automatic renewal duration; required when enabled                                                              |
 | `--auto-renewal-cycle <cycle>`         | string  | no       | Optional supported renewal cycle, e.g. Day                                                                     |
@@ -135,8 +228,9 @@ bl deploy audio create --model-name my-cosyvoice-ft --display-name my-tts --dry-
 #### Notes
 
 - Use --dry-run before confirming with --yes. A write is submitted once, never automatically retried. HTTP 200 is not operation success: inspect operation_status or pass --wait. After interruption or timeout, query the saved ModelCode/operation ID before considering another write.
-- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal configuration is part of purchase/scale/renew, not a standalone free setting change.
+- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal is configured at purchase/renewal and changed via `deploy capacity auto-renew enable` / `disable`.
 - Keeps the ModelCode, model and performance tier. Only one unreleased postpaid instance is allowed per ModelCode; the server validates purchase eligibility and slot limits.
+- The 8-hour off-peak window is an additional prepaid purchase: --pricing-cycle Hour with --duration 8, --auto-renewal false and no automatic-renewal duration. The selling window (22:00–24:00 Beijing time) and model support are validated by the server; created instances cannot be scaled, renewed, auto-renewed, released or unsubscribed and expire automatically.
 
 #### Examples
 
@@ -146,6 +240,10 @@ bl deploy capacity create --deployed-model example-code --billing-method POST_PA
 
 ```bash
 bl deploy capacity create --deployed-model example-code --billing-method PRE_PAY --input-tpm 10000 --output-tpm 1000 --duration 30 --auto-renewal false --dry-run
+```
+
+```bash
+bl deploy capacity create --deployed-model example-code --billing-method PRE_PAY --pricing-cycle Hour --duration 8 --auto-renewal false --input-tpm 10000 --output-tpm 1000 --dry-run
 ```
 
 ### `bl deploy capacity delete`
@@ -179,7 +277,7 @@ bl deploy capacity create --deployed-model example-code --billing-method PRE_PAY
 #### Notes
 
 - Use --dry-run before confirming with --yes. A write is submitted once, never automatically retried. HTTP 200 is not operation success: inspect operation_status or pass --wait. After interruption or timeout, query the saved ModelCode/operation ID before considering another write.
-- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal configuration is part of purchase/scale/renew, not a standalone free setting change.
+- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal is configured at purchase/renewal and changed via `deploy capacity auto-renew enable` / `disable`.
 - Active prepaid instances must be unsubscribed via `deploy capacity unsubscribe` (billing console link), even when can_delete=true. Failed prepaid instances may have no associated order; only the server can decide whether direct release is supported. Release is asynchronous; verify deleted=true, not merely STOPPED or zero capacity.
 
 #### Examples
@@ -254,14 +352,14 @@ bl deploy capacity list --deployed-model example-model-code --include-deleted fa
 
 ### `bl deploy capacity renew`
 
-| Field              | Value                                                                                                                                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `deploy capacity renew`                                                                                                                                                                              |
-| **Description**    | Renew a prepaid capacity instance, optionally changing capacity                                                                                                                                      |
-| **Authentication** | API Key                                                                                                                                                                                              |
-| **Usage**          | `bl deploy capacity renew --deployed-model <code> --instance-id <id> --duration <days> --auto-renewal <true\|false> [--is-change <true\|false>] [--input-tpm <kTPM>] [--output-tpm <kTPM>] [--wait]` |
-| **Risk**           | `high`                                                                                                                                                                                               |
-| **Risk message**   | Renews a paid capacity instance and may enable automatic recurring renewal.                                                                                                                          |
+| Field              | Value                                                                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy capacity renew`                                                                                                                                                                           |
+| **Description**    | Renew a prepaid capacity instance, optionally changing capacity                                                                                                                                   |
+| **Authentication** | API Key                                                                                                                                                                                           |
+| **Usage**          | `bl deploy capacity renew --deployed-model <code> --instance-id <id> --duration <n> --auto-renewal <true\|false> [--is-change <true\|false>] [--input-tpm <kTPM>] [--output-tpm <kTPM>] [--wait]` |
+| **Risk**           | `high`                                                                                                                                                                                            |
+| **Risk message**   | Renews a paid capacity instance and may enable automatic recurring renewal.                                                                                                                       |
 
 > **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
@@ -273,7 +371,8 @@ bl deploy capacity list --deployed-model example-model-code --include-deleted fa
 | `--instance-id <id>`             | string  | yes      | Capacity instance ID returned by the API                                                                       |
 | `--input-tpm <kTPM>`             | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                                                  |
 | `--output-tpm <kTPM>`            | number  | no       | Absolute output capacity in kTPM                                                                               |
-| `--duration <days>`              | number  | no       | Prepaid purchase/renewal duration, positive integer days                                                       |
+| `--pricing-cycle <Day\|Hour>`    | string  | no       | Prepaid pricing cycle (case-sensitive): Day (default) or Hour for the 8-hour off-peak window                   |
+| `--duration <n>`                 | number  | no       | Prepaid duration: positive integer days for Day, exactly 8 hours for Hour                                      |
 | `--auto-renewal <true\|false>`   | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases                                           |
 | `--auto-renewal-duration <days>` | number  | no       | Automatic renewal duration; required when enabled                                                              |
 | `--auto-renewal-cycle <cycle>`   | string  | no       | Optional supported renewal cycle, e.g. Day                                                                     |
@@ -289,7 +388,7 @@ bl deploy capacity list --deployed-model example-model-code --include-deleted fa
 #### Notes
 
 - Use --dry-run before confirming with --yes. A write is submitted once, never automatically retried. HTTP 200 is not operation success: inspect operation_status or pass --wait. After interruption or timeout, query the saved ModelCode/operation ID before considering another write.
-- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal configuration is part of purchase/scale/renew, not a standalone free setting change.
+- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal is configured at purchase/renewal and changed via `deploy capacity auto-renew enable` / `disable`.
 - Prepaid only; refreshes can_renew. Different capacity requires --is-change true; an unchanged capacity may be sent with false. No order_type is accepted by this endpoint.
 
 #### Examples
@@ -323,7 +422,8 @@ bl deploy capacity renew --deployed-model example-code --instance-id example-ins
 | `--instance-id <id>`                | string  | yes      | Capacity instance ID returned by the API                                                                       |
 | `--input-tpm <kTPM>`                | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                                                  |
 | `--output-tpm <kTPM>`               | number  | no       | Absolute output capacity in kTPM                                                                               |
-| `--duration <days>`                 | number  | no       | Prepaid purchase/renewal duration, positive integer days                                                       |
+| `--pricing-cycle <Day\|Hour>`       | string  | no       | Prepaid pricing cycle (case-sensitive): Day (default) or Hour for the 8-hour off-peak window                   |
+| `--duration <n>`                    | number  | no       | Prepaid duration: positive integer days for Day, exactly 8 hours for Hour                                      |
 | `--auto-renewal <true\|false>`      | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases                                           |
 | `--auto-renewal-duration <days>`    | number  | no       | Automatic renewal duration; required when enabled                                                              |
 | `--auto-renewal-cycle <cycle>`      | string  | no       | Optional supported renewal cycle, e.g. Day                                                                     |
@@ -339,7 +439,7 @@ bl deploy capacity renew --deployed-model example-code --instance-id example-ins
 #### Notes
 
 - Use --dry-run before confirming with --yes. A write is submitted once, never automatically retried. HTTP 200 is not operation success: inspect operation_status or pass --wait. After interruption or timeout, query the saved ModelCode/operation ID before considering another write.
-- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal configuration is part of purchase/scale/renew, not a standalone free setting change.
+- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal is configured at purchase/renewal and changed via `deploy capacity auto-renew enable` / `disable`.
 - Refreshes can_scale before writing. Omitted prepaid settings remain omitted, so the server can reuse saved information. Postpaid instances cannot receive prepaid settings.
 
 #### Examples
@@ -450,48 +550,50 @@ bl deploy get --deployed-model qwen-plus-2025-12-01-b6d61c71 --output json
 
 ### `bl deploy image create`
 
-| Field              | Value                                                                                                                                                                                                            |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `deploy image create`                                                                                                                                                                                            |
-| **Description**    | Create an image generation model deployment                                                                                                                                                                      |
-| **Authentication** | API Key                                                                                                                                                                                                          |
-| **Usage**          | `bl deploy image create --model-name <model_name> [--display-name <display_name>] [--plan <plan>] [--charge-type <type>] [--service-tier <tier>] [--suffix <suffix>] [--input-tpm <n> --output-tpm <n>] [flags]` |
-| **Risk**           | `high`                                                                                                                                                                                                           |
-| **Risk message**   | Creating a deployment purchases or provisions resources and may incur charges.                                                                                                                                   |
+| Field              | Value                                                                                                                                                                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy image create`                                                                                                                                                                                                                          |
+| **Description**    | Create an image generation model deployment                                                                                                                                                                                                    |
+| **Authentication** | API Key                                                                                                                                                                                                                                        |
+| **Usage**          | `bl deploy image create --model-name <model_name> [--display-name <display_name>] [--plan <plan>] [--charge-type <type>] [--service-tier <tier>] [--suffix <suffix>] [--pricing-cycle <Day\|Hour>] [--input-tpm <n> --output-tpm <n>] [flags]` |
+| **Risk**           | `high`                                                                                                                                                                                                                                         |
+| **Risk message**   | Creating a deployment purchases or provisions resources and may incur charges.                                                                                                                                                                 |
 
 > **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag                                     | Type    | Required | Description                                                                      |
-| ---------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------- |
-| `--model-name <model_name>`              | string  | yes      | Model to deploy — fine-tuned output name or catalog model (required)             |
-| `--display-name <display_name>`          | string  | no       | Console display name (optional for PTU; required for other plans)                |
-| `--plan <plan>`                          | string  | no       | Billing plan: lora (default, Token-billed) \| ptu (throughput reservation) \| mu |
-| `--deploy-spec <id>`                     | string  | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                       |
-| `--capacity <n>`                         | number  | no       | Resource units (plan=mu only; required by API; defaults to the template's unit)  |
-| `--billing-method <m>`                   | string  | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)      |
-| `--input-tpm <kTPM>`                     | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                    |
-| `--output-tpm <kTPM>`                    | number  | no       | Absolute output capacity in kTPM                                                 |
-| `--thinking-output-tpm <n>`              | number  | no       | Legacy thinking-output capacity flag; not supported for PTU                      |
-| `--charge-type <pre_paid\|post_paid>`    | string  | no       | PTU payment type (required for plan=ptu): pre_paid or post_paid                  |
-| `--service-tier <ptu_fast\|ptu_default>` | string  | no       | PTU service tier: ptu_fast (default) or ptu_default (prepaid only)               |
-| `--suffix <suffix>`                      | string  | no       | Optional PTU ModelCode suffix; generated by the service when omitted             |
-| `--duration <days>`                      | number  | no       | Prepaid purchase/renewal duration, positive integer days                         |
-| `--auto-renewal <true\|false>`           | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases             |
-| `--auto-renewal-duration <days>`         | number  | no       | Automatic renewal duration; required when enabled                                |
-| `--auto-renewal-cycle <cycle>`           | string  | no       | Optional supported renewal cycle, e.g. Day                                       |
-| `--wait`                                 | switch  | no       | Wait for the returned capacity operation and refresh capacity                    |
-| `--interval <seconds>`                   | number  | no       | Initial wait poll interval (1–3600, default: 2 seconds)                          |
-| `--poll-timeout <seconds>`               | number  | no       | Wait budget after submission (default: 600 seconds)                              |
-| `--yes`                                  | switch  | no       | Confirm this high-risk operation                                                 |
-| `--api-key <key>`                        | string  | no       | API key                                                                          |
-| `--base-url <url>`                       | string  | no       | API base URL                                                                     |
+| Flag                                     | Type    | Required | Description                                                                                     |
+| ---------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `--model-name <model_name>`              | string  | yes      | Model to deploy — fine-tuned output name or catalog model (required)                            |
+| `--display-name <display_name>`          | string  | no       | Console display name (optional for PTU; required for other plans)                               |
+| `--plan <plan>`                          | string  | no       | Billing plan: lora (default, Token-billed) \| ptu (throughput reservation) \| mu                |
+| `--deploy-spec <id>`                     | string  | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                                      |
+| `--capacity <n>`                         | number  | no       | Resource units (plan=mu only; required by API; defaults to the template's unit)                 |
+| `--billing-method <m>`                   | string  | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)                     |
+| `--input-tpm <kTPM>`                     | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                                   |
+| `--output-tpm <kTPM>`                    | number  | no       | Absolute output capacity in kTPM                                                                |
+| `--thinking-output-tpm <n>`              | number  | no       | Thinking-output capacity in kTPM (plan=ptu); only some models support it, validated server-side |
+| `--charge-type <pre_paid\|post_paid>`    | string  | no       | PTU payment type (required for plan=ptu): pre_paid or post_paid                                 |
+| `--service-tier <ptu_fast\|ptu_default>` | string  | no       | PTU service tier: ptu_fast (default) or ptu_default (prepaid only)                              |
+| `--suffix <suffix>`                      | string  | no       | Optional PTU ModelCode suffix; generated by the service when omitted                            |
+| `--pricing-cycle <Day\|Hour>`            | string  | no       | Prepaid pricing cycle (case-sensitive): Day (default) or Hour for the 8-hour off-peak window    |
+| `--duration <n>`                         | number  | no       | Prepaid duration: positive integer days for Day, exactly 8 hours for Hour                       |
+| `--auto-renewal <true\|false>`           | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases                            |
+| `--auto-renewal-duration <days>`         | number  | no       | Automatic renewal duration; required when enabled                                               |
+| `--auto-renewal-cycle <cycle>`           | string  | no       | Optional supported renewal cycle, e.g. Day                                                      |
+| `--wait`                                 | switch  | no       | Wait for the returned capacity operation and refresh capacity                                   |
+| `--interval <seconds>`                   | number  | no       | Initial wait poll interval (1–3600, default: 2 seconds)                                         |
+| `--poll-timeout <seconds>`               | number  | no       | Wait budget after submission (default: 600 seconds)                                             |
+| `--yes`                                  | switch  | no       | Confirm this high-risk operation                                                                |
+| `--api-key <key>`                        | string  | no       | API key                                                                                         |
+| `--base-url <url>`                       | string  | no       | API base URL                                                                                    |
 
 #### Notes
 
 - Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-billed) for audio (CosyVoice TTS). Pass --plan to override.
-- For plan=ptu, --charge-type, --input-tpm and --output-tpm are required. Capacity is in kTPM (1 kTPM = 1000 tokens/minute). Separate thinking-output capacity is unsupported. Prepaid requires --duration and explicit --auto-renewal true|false.
+- For plan=ptu, --charge-type, --input-tpm and --output-tpm are required. Capacity is in kTPM (1 kTPM = 1000 tokens/minute). Separate thinking-output capacity (--thinking-output-tpm) is only supported by some models and is validated server-side. Prepaid requires --duration and explicit --auto-renewal true|false.
+- The 8-hour off-peak window is prepaid ptu_default only: --pricing-cycle Hour with --duration 8, --auto-renewal false and an explicit --service-tier ptu_default. Service hours must fall within 22:00–08:00, so orders are accepted only between 22:00 and 24:00 Beijing time; model support is validated by the server.
 - For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required. billing_method defaults to POST_PAY (only supported value); deploy_spec and capacity are auto-picked from GET /deployments/models when omitted.
 - Use `deploy models --source base` to inspect available templates.
 - PTU creation preserves the original JSON and operation_id even with --quiet. --wait only queries the returned operation; pending capacity is not effective capacity. Check the actual status before invoking the model.
@@ -813,6 +915,208 @@ bl deploy resume --deployed-model dep-... --skip-precheck
 bl deploy resume --deployed-model dep-... --dry-run
 ```
 
+### `bl deploy router create`
+
+| Field              | Value                                                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy router create`                                                                                                              |
+| **Description**    | Create a postpaid model router                                                                                                      |
+| **Authentication** | API Key                                                                                                                             |
+| **Usage**          | `bl deploy router create --name <name> --route-version <version> --strategy <EFFECT_FIRST\|COST_FIRST> --candidates <model-id,...>` |
+| **Risk**           | `high`                                                                                                                              |
+| **Risk message**   | Creating the model router starts it in RUNNING state immediately; postpaid routing may incur charges.                               |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                                    | Type   | Required | Description                                            |
+| --------------------------------------- | ------ | -------- | ------------------------------------------------------ |
+| `--name <name>`                         | string | yes      | Router name (1–64 letters, digits or hyphens)          |
+| `--route-version <version>`             | string | yes      | Model-routing version returned by the versions command |
+| `--strategy <EFFECT_FIRST\|COST_FIRST>` | string | yes      | Routing optimization strategy                          |
+| `--candidates <model-id,...>`           | string | yes      | Candidate model IDs, comma-separated                   |
+| `--yes`                                 | switch | no       | Confirm this high-risk operation                       |
+| `--api-key <key>`                       | string | no       | API key                                                |
+| `--base-url <url>`                      | string | no       | API base URL                                           |
+
+#### Notes
+
+- Creation uses plan=mr and charge_type=post_paid. The router becomes RUNNING immediately and may incur postpaid charges; preview with --dry-run before confirming.
+
+#### Examples
+
+```bash
+bl deploy router create --name my-router --route-version v1 --strategy EFFECT_FIRST --candidates qwen-plus,qwen-turbo --dry-run
+```
+
+### `bl deploy router delete`
+
+| Field              | Value                                                                     |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Name**           | `deploy router delete`                                                    |
+| **Description**    | Delete a model router                                                     |
+| **Authentication** | API Key                                                                   |
+| **Usage**          | `bl deploy router delete --deployed-model <id>`                           |
+| **Risk**           | `high`                                                                    |
+| **Risk message**   | This permanently deletes the specified model router and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                      | Type   | Required | Description                           |
+| ------------------------- | ------ | -------- | ------------------------------------- |
+| `--deployed-model <code>` | string | yes      | Deployed model identifier (ModelCode) |
+| `--yes`                   | switch | no       | Confirm this high-risk operation      |
+| `--api-key <key>`         | string | no       | API key                               |
+| `--base-url <url>`        | string | no       | API base URL                          |
+
+#### Notes
+
+- Deletion is irreversible. The command verifies plan=mr first; a RUNNING model router does not need to be stopped before deletion.
+
+#### Examples
+
+```bash
+bl deploy router delete --deployed-model router-example --dry-run
+```
+
+```bash
+# Only after explicit user confirmation:
+bl deploy router delete --deployed-model router-example --yes  # Execute only after confirmation
+```
+
+### `bl deploy router get`
+
+| Field              | Value                                        |
+| ------------------ | -------------------------------------------- |
+| **Name**           | `deploy router get`                          |
+| **Description**    | Get model router details                     |
+| **Authentication** | API Key                                      |
+| **Usage**          | `bl deploy router get --deployed-model <id>` |
+
+#### Flags
+
+| Flag                      | Type   | Required | Description                           |
+| ------------------------- | ------ | -------- | ------------------------------------- |
+| `--deployed-model <code>` | string | yes      | Deployed model identifier (ModelCode) |
+| `--api-key <key>`         | string | no       | API key                               |
+| `--base-url <url>`        | string | no       | API base URL                          |
+
+#### Notes
+
+- The deployment is verified as plan=mr before its details are returned.
+
+#### Examples
+
+```bash
+bl deploy router get --deployed-model router-example
+```
+
+```bash
+bl deploy router get --deployed-model router-example --output json
+```
+
+### `bl deploy router list`
+
+| Field              | Value                                                  |
+| ------------------ | ------------------------------------------------------ |
+| **Name**           | `deploy router list`                                   |
+| **Description**    | List model routers                                     |
+| **Authentication** | API Key                                                |
+| **Usage**          | `bl deploy router list [--page <n>] [--page-size <n>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                           |
+| ------------------ | ------ | -------- | ------------------------------------- |
+| `--page <n>`       | number | no       | Page number (default: 1)              |
+| `--page-size <n>`  | number | no       | Results per page (1–100, default: 10) |
+| `--api-key <key>`  | string | no       | API key                               |
+| `--base-url <url>` | string | no       | API base URL                          |
+
+#### Notes
+
+- This command always requests plan=mr and does not expose a plan override.
+
+#### Examples
+
+```bash
+bl deploy router list
+```
+
+```bash
+bl deploy router list --page 2 --page-size 20
+```
+
+### `bl deploy router update`
+
+| Field              | Value                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy router update`                                                                                                                            |
+| **Description**    | Update selected fields of a running model router configuration                                                                                    |
+| **Authentication** | API Key                                                                                                                                           |
+| **Usage**          | `bl deploy router update --deployed-model <id> [--route-version <version>] [--strategy <EFFECT_FIRST\|COST_FIRST>] [--candidates <model-id,...>]` |
+
+#### Flags
+
+| Flag                                    | Type   | Required | Description                                            |
+| --------------------------------------- | ------ | -------- | ------------------------------------------------------ |
+| `--deployed-model <code>`               | string | yes      | Deployed model identifier (ModelCode)                  |
+| `--route-version <version>`             | string | no       | Model-routing version returned by the versions command |
+| `--strategy <EFFECT_FIRST\|COST_FIRST>` | string | no       | Routing optimization strategy                          |
+| `--candidates <model-id,...>`           | string | no       | Candidate model IDs, comma-separated                   |
+| `--api-key <key>`                       | string | no       | API key                                                |
+| `--base-url <url>`                      | string | no       | API base URL                                           |
+
+#### Notes
+
+- Provide at least one routing field. The CLI reads the current router and preserves fields you do not provide; --candidates replaces the entire candidate list. Only RUNNING model routers can be updated.
+- A dry-run with all three routing fields stays offline. A partial dry-run requires credentials and reads the current router, but never submits an update.
+
+#### Examples
+
+```bash
+bl deploy router update --deployed-model router-example --strategy COST_FIRST --dry-run
+```
+
+```bash
+bl deploy router update --deployed-model router-example --route-version v1 --strategy COST_FIRST --candidates qwen-plus,qwen-turbo --dry-run
+```
+
+### `bl deploy router versions`
+
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `deploy router versions`                                   |
+| **Description**    | List available model-routing versions and candidates       |
+| **Authentication** | API Key                                                    |
+| **Usage**          | `bl deploy router versions [--page <n>] [--page-size <n>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                            |
+| ------------------ | ------ | -------- | -------------------------------------- |
+| `--page <n>`       | number | no       | Page number (default: 1)               |
+| `--page-size <n>`  | number | no       | Results per page (1–1000, default: 50) |
+| `--api-key <key>`  | string | no       | API key                                |
+| `--base-url <url>` | string | no       | API base URL                           |
+
+#### Notes
+
+- Use the returned route_model_version, supported_strategies and supported_candidate_model_ids when creating or fully replacing a router configuration.
+
+#### Examples
+
+```bash
+bl deploy router versions
+```
+
+```bash
+bl deploy router versions --page 1 --page-size 100
+```
+
 ### `bl deploy scale`
 
 | Field              | Value                                                                                                                     |
@@ -835,7 +1139,8 @@ bl deploy resume --deployed-model dep-... --dry-run
 | `--input-tpm <kTPM>`                | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                                                  |
 | `--output-tpm <kTPM>`               | number  | no       | Absolute output capacity in kTPM                                                                               |
 | `--instance-id <id>`                | string  | no       | PTU capacity instance ID; required when multiple unreleased instances exist                                    |
-| `--duration <days>`                 | number  | no       | Prepaid purchase/renewal duration, positive integer days                                                       |
+| `--pricing-cycle <Day\|Hour>`       | string  | no       | Prepaid pricing cycle (case-sensitive): Day (default) or Hour for the 8-hour off-peak window                   |
+| `--duration <n>`                    | number  | no       | Prepaid duration: positive integer days for Day, exactly 8 hours for Hour                                      |
 | `--auto-renewal <true\|false>`      | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases                                           |
 | `--auto-renewal-duration <days>`    | number  | no       | Automatic renewal duration; required when enabled                                                              |
 | `--auto-renewal-cycle <cycle>`      | string  | no       | Optional supported renewal cycle, e.g. Day                                                                     |
@@ -851,7 +1156,7 @@ bl deploy resume --deployed-model dep-... --dry-run
 #### Notes
 
 - Use --dry-run before confirming with --yes. A write is submitted once, never automatically retried. HTTP 200 is not operation success: inspect operation_status or pass --wait. After interruption or timeout, query the saved ModelCode/operation ID before considering another write.
-- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal configuration is part of purchase/scale/renew, not a standalone free setting change.
+- Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal is configured at purchase/renewal and changed via `deploy capacity auto-renew enable` / `disable`.
 - PTU input/output values are the selected instance's absolute target capacity in kTPM (1 kTPM = 1000 tokens/minute), not deltas or deployment totals. Both zero is valid and does not release the instance. PTU options cannot be combined with --capacity.
 - Without --instance-id, execution must confirm exactly one unreleased instance and recheck can_scale. Dry-run does not resolve an instance or validate its billing type. Pass --yes only after confirming the costs and target.
 
@@ -867,48 +1172,50 @@ bl deploy scale --deployed-model dep-... --instance-id instance-... --input-tpm 
 
 ### `bl deploy text create`
 
-| Field              | Value                                                                                                                                                                                                           |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `deploy text create`                                                                                                                                                                                            |
-| **Description**    | Create a text model deployment                                                                                                                                                                                  |
-| **Authentication** | API Key                                                                                                                                                                                                         |
-| **Usage**          | `bl deploy text create --model-name <model_name> [--display-name <display_name>] [--plan <plan>] [--charge-type <type>] [--service-tier <tier>] [--suffix <suffix>] [--input-tpm <n> --output-tpm <n>] [flags]` |
-| **Risk**           | `high`                                                                                                                                                                                                          |
-| **Risk message**   | Creating a deployment purchases or provisions resources and may incur charges.                                                                                                                                  |
+| Field              | Value                                                                                                                                                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy text create`                                                                                                                                                                                                                          |
+| **Description**    | Create a text model deployment                                                                                                                                                                                                                |
+| **Authentication** | API Key                                                                                                                                                                                                                                       |
+| **Usage**          | `bl deploy text create --model-name <model_name> [--display-name <display_name>] [--plan <plan>] [--charge-type <type>] [--service-tier <tier>] [--suffix <suffix>] [--pricing-cycle <Day\|Hour>] [--input-tpm <n> --output-tpm <n>] [flags]` |
+| **Risk**           | `high`                                                                                                                                                                                                                                        |
+| **Risk message**   | Creating a deployment purchases or provisions resources and may incur charges.                                                                                                                                                                |
 
 > **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag                                     | Type    | Required | Description                                                                      |
-| ---------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------- |
-| `--model-name <model_name>`              | string  | yes      | Model to deploy — fine-tuned output name or catalog model (required)             |
-| `--display-name <display_name>`          | string  | no       | Console display name (optional for PTU; required for other plans)                |
-| `--plan <plan>`                          | string  | no       | Billing plan: lora (default, Token-billed) \| ptu (throughput reservation) \| mu |
-| `--deploy-spec <id>`                     | string  | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                       |
-| `--capacity <n>`                         | number  | no       | Resource units (plan=mu only; required by API; defaults to the template's unit)  |
-| `--billing-method <m>`                   | string  | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)      |
-| `--input-tpm <kTPM>`                     | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                    |
-| `--output-tpm <kTPM>`                    | number  | no       | Absolute output capacity in kTPM                                                 |
-| `--thinking-output-tpm <n>`              | number  | no       | Legacy thinking-output capacity flag; not supported for PTU                      |
-| `--charge-type <pre_paid\|post_paid>`    | string  | no       | PTU payment type (required for plan=ptu): pre_paid or post_paid                  |
-| `--service-tier <ptu_fast\|ptu_default>` | string  | no       | PTU service tier: ptu_fast (default) or ptu_default (prepaid only)               |
-| `--suffix <suffix>`                      | string  | no       | Optional PTU ModelCode suffix; generated by the service when omitted             |
-| `--duration <days>`                      | number  | no       | Prepaid purchase/renewal duration, positive integer days                         |
-| `--auto-renewal <true\|false>`           | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases             |
-| `--auto-renewal-duration <days>`         | number  | no       | Automatic renewal duration; required when enabled                                |
-| `--auto-renewal-cycle <cycle>`           | string  | no       | Optional supported renewal cycle, e.g. Day                                       |
-| `--wait`                                 | switch  | no       | Wait for the returned capacity operation and refresh capacity                    |
-| `--interval <seconds>`                   | number  | no       | Initial wait poll interval (1–3600, default: 2 seconds)                          |
-| `--poll-timeout <seconds>`               | number  | no       | Wait budget after submission (default: 600 seconds)                              |
-| `--yes`                                  | switch  | no       | Confirm this high-risk operation                                                 |
-| `--api-key <key>`                        | string  | no       | API key                                                                          |
-| `--base-url <url>`                       | string  | no       | API base URL                                                                     |
+| Flag                                     | Type    | Required | Description                                                                                     |
+| ---------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `--model-name <model_name>`              | string  | yes      | Model to deploy — fine-tuned output name or catalog model (required)                            |
+| `--display-name <display_name>`          | string  | no       | Console display name (optional for PTU; required for other plans)                               |
+| `--plan <plan>`                          | string  | no       | Billing plan: lora (default, Token-billed) \| ptu (throughput reservation) \| mu                |
+| `--deploy-spec <id>`                     | string  | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                                      |
+| `--capacity <n>`                         | number  | no       | Resource units (plan=mu only; required by API; defaults to the template's unit)                 |
+| `--billing-method <m>`                   | string  | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)                     |
+| `--input-tpm <kTPM>`                     | number  | no       | Absolute input capacity in kTPM (1 kTPM = 1000 tokens/minute)                                   |
+| `--output-tpm <kTPM>`                    | number  | no       | Absolute output capacity in kTPM                                                                |
+| `--thinking-output-tpm <n>`              | number  | no       | Thinking-output capacity in kTPM (plan=ptu); only some models support it, validated server-side |
+| `--charge-type <pre_paid\|post_paid>`    | string  | no       | PTU payment type (required for plan=ptu): pre_paid or post_paid                                 |
+| `--service-tier <ptu_fast\|ptu_default>` | string  | no       | PTU service tier: ptu_fast (default) or ptu_default (prepaid only)                              |
+| `--suffix <suffix>`                      | string  | no       | Optional PTU ModelCode suffix; generated by the service when omitted                            |
+| `--pricing-cycle <Day\|Hour>`            | string  | no       | Prepaid pricing cycle (case-sensitive): Day (default) or Hour for the 8-hour off-peak window    |
+| `--duration <n>`                         | number  | no       | Prepaid duration: positive integer days for Day, exactly 8 hours for Hour                       |
+| `--auto-renewal <true\|false>`           | boolean | no       | Explicitly enable or disable automatic renewal for prepaid purchases                            |
+| `--auto-renewal-duration <days>`         | number  | no       | Automatic renewal duration; required when enabled                                               |
+| `--auto-renewal-cycle <cycle>`           | string  | no       | Optional supported renewal cycle, e.g. Day                                                      |
+| `--wait`                                 | switch  | no       | Wait for the returned capacity operation and refresh capacity                                   |
+| `--interval <seconds>`                   | number  | no       | Initial wait poll interval (1–3600, default: 2 seconds)                                         |
+| `--poll-timeout <seconds>`               | number  | no       | Wait budget after submission (default: 600 seconds)                                             |
+| `--yes`                                  | switch  | no       | Confirm this high-risk operation                                                                |
+| `--api-key <key>`                        | string  | no       | API key                                                                                         |
+| `--base-url <url>`                       | string  | no       | API base URL                                                                                    |
 
 #### Notes
 
 - Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-billed) for audio (CosyVoice TTS). Pass --plan to override.
-- For plan=ptu, --charge-type, --input-tpm and --output-tpm are required. Capacity is in kTPM (1 kTPM = 1000 tokens/minute). Separate thinking-output capacity is unsupported. Prepaid requires --duration and explicit --auto-renewal true|false.
+- For plan=ptu, --charge-type, --input-tpm and --output-tpm are required. Capacity is in kTPM (1 kTPM = 1000 tokens/minute). Separate thinking-output capacity (--thinking-output-tpm) is only supported by some models and is validated server-side. Prepaid requires --duration and explicit --auto-renewal true|false.
+- The 8-hour off-peak window is prepaid ptu_default only: --pricing-cycle Hour with --duration 8, --auto-renewal false and an explicit --service-tier ptu_default. Service hours must fall within 22:00–08:00, so orders are accepted only between 22:00 and 24:00 Beijing time; model support is validated by the server.
 - For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required. billing_method defaults to POST_PAY (only supported value); deploy_spec and capacity are auto-picked from GET /deployments/models when omitted.
 - Use `deploy models --source base` to inspect available templates.
 - PTU creation preserves the original JSON and operation_id even with --quiet. --wait only queries the returned operation; pending capacity is not effective capacity. Check the actual status before invoking the model.
@@ -928,6 +1235,10 @@ bl deploy text create --model-name qwen3.6-flash-2026-04-16 --plan ptu --charge-
 
 ```bash
 bl deploy text create --model-name qwen3.6-flash-2026-04-16 --plan ptu --charge-type pre_paid --service-tier ptu_default --input-tpm 10000 --output-tpm 1000 --duration 30 --auto-renewal false --dry-run
+```
+
+```bash
+bl deploy text create --model-name qwen3.6-flash-2026-04-16 --plan ptu --charge-type pre_paid --service-tier ptu_default --pricing-cycle Hour --duration 8 --auto-renewal false --input-tpm 10000 --output-tpm 1000 --dry-run
 ```
 
 ```bash

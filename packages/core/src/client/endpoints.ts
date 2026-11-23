@@ -417,6 +417,11 @@ export function deploymentCapacityInstanceRenewPath(code: string, id: string): s
   return `${deploymentCapacityInstancePath(code, id)}/renew`;
 }
 
+/** PUT /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}/auto-renew */
+export function deploymentCapacityInstanceAutoRenewPath(code: string, id: string): string {
+  return `${deploymentCapacityInstancePath(code, id)}/auto-renew`;
+}
+
 /** PUT /api/v1/deployments/{deployed_model}/update-overflowstrategy */
 export function deploymentOverflowPath(code: string): string {
   return `${deploymentPath(code)}/update-overflowstrategy`;
@@ -443,6 +448,11 @@ export function deploymentUpdatePath(deployedModel: string): string {
 /** GET /api/v1/deployments/models — deployable models catalog. */
 export function deploymentsModelsPath(): string {
   return "/api/v1/deployments/models";
+}
+
+/** GET /api/v1/deployments/model-routing/versions — model-routing version catalog. */
+export function modelRoutingVersionsPath(): string {
+  return "/api/v1/deployments/model-routing/versions";
 }
 
 // ---- RAG admin plane (knowledge base / data center / service management, workspace-based host) ----

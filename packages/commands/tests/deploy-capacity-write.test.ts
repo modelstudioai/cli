@@ -12,6 +12,8 @@ import {
   deployCapacityCreate,
   deployCapacityScale,
   deployCapacityRenew,
+  deployCapacityAutoRenewEnable,
+  deployCapacityAutoRenewDisable,
   deployCapacityDelete,
 } from "../src/commands/deploy/capacity-write.ts";
 import deployOverflow from "../src/commands/deploy/overflow.ts";
@@ -46,6 +48,8 @@ const INSTANCE = {
   can_scale: true,
   can_renew: true,
   can_delete: true,
+  can_enable_auto_renew: true,
+  can_disable_auto_renew: true,
   configured_capacity: { input_tpm: 100, output_tpm: 10 },
 };
 const OPERATION = {
@@ -61,6 +65,8 @@ interface MutationCase {
   path: string;
   body?: object;
   precheck?: string;
+  /** can_* key consulted before the write; defaults to `can_${name}`. */
+  capability?: string;
   instance: typeof INSTANCE;
 }
 const MUTATIONS: MutationCase[] = [
@@ -91,6 +97,28 @@ const MUTATIONS: MutationCase[] = [
     path: `${INSTANCE_PATH}/renew`,
     body: { pre_paid_info: { duration: 31, auto_renewal: false }, is_change: false },
     precheck: "can_renew/pre_paid/configured_capacity",
+    instance: { ...INSTANCE, charge_type: "pre_paid" },
+  },
+  {
+    name: "auto-renew.enable",
+    command: deployCapacityAutoRenewEnable,
+    flags: { ...IDS, cycle: "Day", autoRenewalDuration: 30 },
+    method: "PUT",
+    path: `${INSTANCE_PATH}/auto-renew`,
+    body: { auto_renewal: true, auto_renewal_cycle: "Day", auto_renewal_duration: 30 },
+    precheck: "can_enable_auto_renew",
+    capability: "can_enable_auto_renew",
+    instance: { ...INSTANCE, charge_type: "pre_paid" },
+  },
+  {
+    name: "auto-renew.disable",
+    command: deployCapacityAutoRenewDisable,
+    flags: { ...IDS, cycle: "Day", autoRenewalDuration: 30 },
+    method: "PUT",
+    path: `${INSTANCE_PATH}/auto-renew`,
+    body: { auto_renewal: false, auto_renewal_cycle: "Day", auto_renewal_duration: 30 },
+    precheck: "can_disable_auto_renew",
+    capability: "can_disable_auto_renew",
     instance: { ...INSTANCE, charge_type: "pre_paid" },
   },
   {
@@ -285,6 +313,14 @@ describe("capacity mutation metadata and offline previews", () => {
     });
     expect(deployCapacityRenew.flags).not.toHaveProperty("orderType");
     expect(deployCapacityScale.flags?.orderType.choices).toEqual(["UPGRADE", "DOWNGRADE"]);
+    expect(deployCapacityAutoRenewEnable.flags?.cycle).toMatchObject({
+      required: true,
+      choices: ["Day"],
+    });
+    expect(deployCapacityAutoRenewEnable.risk).toMatchObject({ reason: "billing" });
+    expect(deployCapacityAutoRenewDisable.risk).not.toHaveProperty("reason");
+    expect(deployCapacityAutoRenewEnable.flags).not.toHaveProperty("autoRenewal");
+    expect(deployCapacityAutoRenewEnable.flags).not.toHaveProperty("pricingCycle");
   });
 
   test.each(MUTATIONS)(
@@ -503,7 +539,7 @@ describe.each(MUTATIONS)("$name capacity write contract", (mutation) => {
 });
 
 describe("capacity/prepaid validation and purchase mapping", () => {
-  test.each(MUTATIONS.filter(({ name }) => name !== "delete"))(
+  test.each(MUTATIONS.filter((mutation) => "inputTpm" in mutation.flags))(
     "$name rejects unpaired, negative, fractional or unsafe capacity locally",
     async (mutation) => {
       for (const capacity of [
@@ -542,6 +578,12 @@ describe("capacity/prepaid validation and purchase mapping", () => {
     { duration: 31, autoRenewal: true },
     { ...PREPAID, autoRenewalDuration: 0 },
     { ...PREPAID, autoRenewalCycle: " " },
+    { pricingCycle: "Hour" },
+    { pricingCycle: "Hour", duration: 30, autoRenewal: false },
+    { pricingCycle: "Hour", duration: 8, autoRenewal: true },
+    { pricingCycle: "Hour", duration: 8, autoRenewal: false, autoRenewalDuration: 31 },
+    { pricingCycle: "Hour", duration: 8, autoRenewal: false, autoRenewalCycle: "Day" },
+    { pricingCycle: "MONTH", duration: 31, autoRenewal: false },
   ])("PRE_PAY purchase rejects incomplete prepaid block %j", async (flags) => {
     const mock = mockClient();
     await expect(
@@ -565,6 +607,8 @@ describe("capacity/prepaid validation and purchase mapping", () => {
     PREPAID,
     { autoRenewalDuration: 31 },
     { autoRenewalCycle: "Day" },
+    { pricingCycle: "Day" },
+    { pricingCycle: "Hour" },
   ])("POST_PAY rejects prepaid fields %j", async (prepaid) => {
     const mock = mockClient();
     await expect(
@@ -615,6 +659,29 @@ describe("capacity/prepaid validation and purchase mapping", () => {
     },
   );
 
+  test("PRE_PAY Hour off-peak purchase maps the exact 8-hour block", async () => {
+    const mock = mockClient({ output: OPERATION });
+    await run(
+      deployCapacityCreate,
+      {
+        deployedModel: MODEL_CODE,
+        billingMethod: "PRE_PAY",
+        inputTpm: 0,
+        outputTpm: 7,
+        pricingCycle: "Hour",
+        duration: 8,
+        autoRenewal: false,
+      },
+      mock.client,
+    );
+    expect(writes(mock)[0].body).toEqual({
+      billing_method: "PRE_PAY",
+      ptu_capacity: { input_tpm: 0, output_tpm: 7 },
+      pre_paid_info: { pricing_cycle: "Hour", duration: 8, auto_renewal: false },
+    });
+    expect(requests(mock)).toHaveLength(1);
+  });
+
   test.each([undefined, "UPGRADE", "DOWNGRADE"])(
     "prepaid scale maps orderType=%s and never invents absent prepaid settings",
     async (orderType) => {
@@ -656,7 +723,7 @@ describe.each(MUTATIONS.filter(({ precheck }) => precheck))("$name precheck safe
   test.each(["false", "missing", "deleted", "missing payload"])(
     "%s capability/instance prevents all writes",
     async (scenario) => {
-      const capability = `can_${mutation.name}`;
+      const capability = mutation.capability ?? `can_${mutation.name}`;
       const response =
         scenario === "missing payload"
           ? {}
@@ -765,6 +832,25 @@ describe("renewal and release business constraints", () => {
       await expect(run(deployCapacityDelete, IDS, mock.client)).rejects.toMatchObject({
         exitCode: ExitCode.USAGE,
         message: expect.stringMatching(/unsubscribe|退订/),
+      });
+      expect(writes(mock)).toHaveLength(0);
+    },
+  );
+
+  test.each(["RUNNING", "FAILED"])(
+    "8-hour off-peak status=%s instance is never released or unsubscribed",
+    async (status) => {
+      const mock = mockClient({
+        output: {
+          ...INSTANCE,
+          charge_type: "pre_paid",
+          status,
+          pre_paid_info: { pricing_cycle: "Hour", duration: 8, auto_renewal: false },
+        },
+      });
+      await expect(run(deployCapacityDelete, IDS, mock.client)).rejects.toMatchObject({
+        exitCode: ExitCode.USAGE,
+        message: expect.stringMatching(/8-hour|8 小时/),
       });
       expect(writes(mock)).toHaveLength(0);
     },

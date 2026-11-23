@@ -243,10 +243,13 @@ describe.each(CREATE_COMMANDS)("$name create", ({ command }) => {
     expect(requests(mock)).toHaveLength(1);
   });
 
-  test("PTU rejects thinking-output rather than ignoring it", async () => {
-    expect(await validate(command, { ...PTU_CREATE, thinkingOutputTpm: 0 })).toMatch(
-      /thinking-output-tpm/,
-    );
+  test("PTU forwards thinking-output capacity without dropping zero", async () => {
+    const mock = mockClient({ output: { deployed_model: MODEL_CODE } });
+    await run(command, { ...PTU_CREATE, thinkingOutputTpm: 0 }, mock.client);
+    expect(requests(mock)).toHaveLength(1);
+    expect(requests(mock)[0].body).toMatchObject({
+      ptu_capacity: { input_tpm: 10, output_tpm: 1, thinking_output_tpm: 0 },
+    });
   });
 
   test.each(["lora", "mu"])("%s requires display-name", async (plan) => {
@@ -778,4 +781,41 @@ describe("delete safety", () => {
       expect(requests(mock).every(({ method }) => method === "GET")).toBe(true);
     },
   );
+
+  test.each(["output", "data"] as const)(
+    "deletes a RUNNING model router without requiring STOPPED via %s envelope",
+    async (envelope) => {
+      const response = { [envelope]: { deployed_model: MODEL_CODE, deleted: true } };
+      const mock = mockClient({ [envelope]: { plan: "mr", status: "RUNNING" } }, response);
+      await run(deployDelete, { deployedModel: MODEL_CODE }, mock.client);
+      expect(requests(mock).map(({ method }) => method)).toEqual(["GET", "DELETE"]);
+      expect(JSON.parse(stdout)).toEqual(response);
+    },
+  );
+
+  test("model router skips PTU capacity and operation prechecks", async () => {
+    const mock = mockClient(
+      { output: { plan: "mr", status: "RUNNING" } },
+      { output: { deployed_model: MODEL_CODE, deleted: true } },
+    );
+    await run(deployDelete, { deployedModel: MODEL_CODE }, mock.client);
+    // Only GET deployment + DELETE, no capacity-instances or operation GET
+    expect(requests(mock)).toHaveLength(2);
+    expect(requests(mock).map(({ method }) => method)).toEqual(["GET", "DELETE"]);
+  });
+
+  test.each(["STOPPED", "FAILED"])(
+    "model router %s status also deletes without extra checks",
+    async (status) => {
+      const mock = mockClient({ output: { plan: "mr", status } }, { output: { deleted: true } });
+      await run(deployDelete, { deployedModel: MODEL_CODE }, mock.client);
+      expect(requests(mock).map(({ method }) => method)).toEqual(["GET", "DELETE"]);
+    },
+  );
+
+  test("skip-precheck for model router skips the GET entirely", async () => {
+    const mock = mockClient({ output: { deleted: true } });
+    await run(deployDelete, { deployedModel: MODEL_CODE, skipPrecheck: true }, mock.client);
+    expect(requests(mock).map(({ method }) => method)).toEqual(["DELETE"]);
+  });
 });
