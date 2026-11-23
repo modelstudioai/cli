@@ -11,7 +11,12 @@ import {
   type ParsedFlags,
 } from "bailian-cli-core";
 import { downloadFile } from "bailian-cli-runtime";
-import { validateVoiceId, VOICE_ID_FLAG } from "./shared.ts";
+import {
+  isOmniManagedVoiceId,
+  OMNI_VOICE_UNSUPPORTED_OP,
+  validateVoiceId,
+  VOICE_ID_FLAG,
+} from "./shared.ts";
 
 const PREVIEW_FLAGS = {
   ...VOICE_ID_FLAG,
@@ -43,7 +48,12 @@ export default defineCommand({
     },
   ],
   exampleArgs: ["--id <voice-id> --output json", "--id <voice-id> --out reference.wav"],
-  validate: (flags: PreviewFlags) => validateVoiceId(flags.id),
+  validate: (flags: PreviewFlags) => {
+    const idError = validateVoiceId(flags.id);
+    if (idError) return idError;
+    if (isOmniManagedVoiceId(flags.id)) return OMNI_VOICE_UNSUPPORTED_OP;
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const voiceId = flags.id;

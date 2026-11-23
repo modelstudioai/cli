@@ -1,7 +1,15 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   VOICE_ENROLLMENT_MODEL,
+  QWEN_VOICE_ENROLLMENT_MODEL,
+  buildOmniVoiceRequest,
   buildVoiceRequest,
+  isCliOmniVoiceCloneTarget,
+  isDocumentedOmniVoiceTargetModel,
+  isOmniRealtimeTargetModel,
+  isOmniVoiceTargetModel,
+  isQwen38OmniTargetModel,
+  looksLikeOmniClonedVoiceId,
   type CreateCloneVoiceInput,
   type CreateDesignVoiceInput,
 } from "../src/index.ts";
@@ -113,5 +121,88 @@ describe("buildVoiceRequest", () => {
   test("empty parameters object is omitted", () => {
     const request = buildVoiceRequest("create_voice", { prefix: "demo" }, {});
     expect(request.parameters).toBeUndefined();
+  });
+});
+
+describe("omni voice enrollment", () => {
+  test("detects Omni-looking, documented, CLI clone, and Realtime targets", () => {
+    expect(isOmniVoiceTargetModel("qwen3.5-omni-flash")).toBe(true);
+    expect(isOmniVoiceTargetModel("qwen3.8-omni-flash")).toBe(true);
+    expect(isOmniVoiceTargetModel("qwen3.8-omni-flash-realtime")).toBe(true);
+    expect(isOmniVoiceTargetModel("cosyvoice-v3-flash")).toBe(false);
+
+    expect(isDocumentedOmniVoiceTargetModel("qwen3.5-omni-flash")).toBe(true);
+    expect(isDocumentedOmniVoiceTargetModel("qwen3.5-omni-flash-2025-06-15")).toBe(true);
+    expect(isDocumentedOmniVoiceTargetModel("qwen3.8-omni-flash-realtime")).toBe(true);
+    expect(isDocumentedOmniVoiceTargetModel("qwen3.8-omni-flash")).toBe(false);
+    expect(isDocumentedOmniVoiceTargetModel("qwen3.5-omni-flash-realtime")).toBe(true);
+
+    expect(isCliOmniVoiceCloneTarget("qwen3.5-omni-flash")).toBe(true);
+    expect(isCliOmniVoiceCloneTarget("qwen3.5-omni-plus-2025-06-15")).toBe(true);
+    expect(isCliOmniVoiceCloneTarget("qwen3.5-omni-flash-realtime")).toBe(false);
+    expect(isCliOmniVoiceCloneTarget("qwen3.8-omni-flash-realtime")).toBe(false);
+    expect(isCliOmniVoiceCloneTarget("qwen3.8-omni-flash")).toBe(false);
+
+    expect(isOmniRealtimeTargetModel("qwen3.5-omni-flash-realtime")).toBe(true);
+    expect(isOmniRealtimeTargetModel("qwen3.5-omni-flash")).toBe(false);
+
+    expect(isQwen38OmniTargetModel("qwen3.8-omni-flash-realtime")).toBe(true);
+    expect(isQwen38OmniTargetModel("qwen3.5-omni-flash")).toBe(false);
+    expect(looksLikeOmniClonedVoiceId("qwen-omni-vc-guanyu-voice-20250812105009984-838b")).toBe(
+      true,
+    );
+    expect(looksLikeOmniClonedVoiceId("cosyvoice-v3-flash-demo-xxxx")).toBe(false);
+  });
+
+  test("create body uses qwen-voice-enrollment, action create, audio.data", () => {
+    const request = buildOmniVoiceRequest(
+      "create",
+      {
+        target_model: "qwen3.5-omni-flash",
+        preferred_name: "guanyu",
+        audio: { data: "https://example.com/ref.wav" },
+        language: "zh",
+      },
+      undefined,
+    );
+    expect(request.model).toBe(QWEN_VOICE_ENROLLMENT_MODEL);
+    expect(request.input).toEqual({
+      action: "create",
+      target_model: "qwen3.5-omni-flash",
+      preferred_name: "guanyu",
+      audio: { data: "https://example.com/ref.wav" },
+      language: "zh",
+    });
+    expect(request.parameters).toBeUndefined();
+  });
+
+  test("qwen3.8 create includes voice_clone_mode parameters", () => {
+    const request = buildOmniVoiceRequest(
+      "create",
+      {
+        target_model: "qwen3.8-omni-flash-realtime",
+        preferred_name: "chinese",
+        audio: { data: "https://example.com/a.wav" },
+      },
+      { voice_clone_mode: "normal", skip_audio_process: false },
+    );
+    expect(request.model).toBe(QWEN_VOICE_ENROLLMENT_MODEL);
+    expect(request.input.action).toBe("create");
+    expect(request.parameters).toEqual({
+      voice_clone_mode: "normal",
+      skip_audio_process: false,
+    });
+  });
+
+  test("list and delete actions match official Omni shapes", () => {
+    expect(buildOmniVoiceRequest("list", { page_index: 0, page_size: 10 }).input).toEqual({
+      action: "list",
+      page_index: 0,
+      page_size: 10,
+    });
+    expect(buildOmniVoiceRequest("delete", { voice: "qwen-omni-vc-x" }).input).toEqual({
+      action: "delete",
+      voice: "qwen-omni-vc-x",
+    });
   });
 });

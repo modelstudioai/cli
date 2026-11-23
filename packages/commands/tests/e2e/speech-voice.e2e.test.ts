@@ -374,6 +374,171 @@ describe("e2e: speech voice dry-run / confirmation", () => {
     expect(body.request?.input?.page_size).toBe(10);
   });
 
+  test("Omni clone dry-run uses qwen-voice-enrollment create + audio.data", async () => {
+    const wav = makeTempWav();
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "clone",
+      "--audio",
+      wav,
+      "--prefix",
+      "guanyu",
+      "--target-model",
+      "qwen3.5-omni-flash",
+      "--language-hint",
+      " zh ",
+      "--dry-run",
+      "--output",
+      "json",
+      "--quiet",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const body = parseStdoutJson<{
+      request?: {
+        model?: string;
+        input?: {
+          action?: string;
+          preferred_name?: string;
+          language?: string;
+          audio?: { data?: string };
+        };
+        parameters?: Record<string, unknown>;
+      };
+    }>(stdout);
+    expect(body.request?.model).toBe("qwen-voice-enrollment");
+    expect(body.request?.input?.action).toBe("create");
+    expect(body.request?.input?.preferred_name).toBe("guanyu");
+    expect(body.request?.input?.language).toBe("zh");
+    expect(body.request?.input?.audio?.data).toMatch(/pending-encode|<omitted>/);
+    expect(body.request?.parameters).toBeUndefined();
+  });
+
+  test("rejects Realtime Omni clone target at create time", async () => {
+    const rejected = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "clone",
+      "--audio",
+      "https://example.com/ref.wav",
+      "--prefix",
+      "chinese",
+      "--target-model",
+      "qwen3.5-omni-flash-realtime",
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(rejected.exitCode).toBe(2);
+    expect(rejected.stderr).toMatch(/Realtime|实时|qwen3\.5-omni-flash(?!-realtime)/i);
+    expect(rejected.stderr).not.toMatch(/create_voice|qwen-voice-enrollment/);
+  });
+
+  test("rejects unsupported Omni-looking target without CosyVoice fallthrough", async () => {
+    const rejected = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "clone",
+      "--audio",
+      "https://example.com/ref.wav",
+      "--prefix",
+      "guanyu",
+      "--target-model",
+      "qwen3.8-omni-flash",
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(rejected.exitCode).toBe(2);
+    expect(rejected.stderr).toMatch(/CLI-supported|本 CLI 支持|qwen3\.5-omni-flash/i);
+    expect(rejected.stderr).not.toMatch(/create_voice|voice-enrollment(?!-)/);
+
+    const listProtocol = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "list",
+      "--target-model",
+      "qwen3.8-omni-flash",
+      "--dry-run",
+      "--output",
+      "json",
+      "--quiet",
+    ]);
+    expect(listProtocol.exitCode, listProtocol.stderr).toBe(0);
+    const listBody = parseStdoutJson<{ request?: { model?: string; input?: { action?: string } } }>(
+      listProtocol.stdout,
+    );
+    expect(listBody.request?.model).toBe("qwen-voice-enrollment");
+    expect(listBody.request?.input?.action).toBe("list");
+  });
+
+  test("Omni list/delete dry-run and reject unsupported ops", async () => {
+    const listResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "list",
+      "--target-model",
+      "qwen3.5-omni-flash",
+      "--dry-run",
+      "--output",
+      "json",
+      "--quiet",
+    ]);
+    expect(listResult.exitCode, listResult.stderr).toBe(0);
+    const listBody = parseStdoutJson<{
+      request?: { model?: string; input?: { action?: string; page_index?: number } };
+    }>(listResult.stdout);
+    expect(listBody.request?.model).toBe("qwen-voice-enrollment");
+    expect(listBody.request?.input?.action).toBe("list");
+    expect(listBody.request?.input?.page_index).toBe(0);
+
+    const omniVoice = "qwen-omni-vc-guanyu-voice-20250812105009984-838b";
+    const deleteResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "delete",
+      "--id",
+      omniVoice,
+      "--dry-run",
+      "--output",
+      "json",
+      "--quiet",
+    ]);
+    expect(deleteResult.exitCode, deleteResult.stderr).toBe(0);
+    const deleteBody = parseStdoutJson<{
+      request?: { model?: string; input?: { action?: string; voice?: string } };
+    }>(deleteResult.stdout);
+    expect(deleteBody.request?.model).toBe("qwen-voice-enrollment");
+    expect(deleteBody.request?.input?.action).toBe("delete");
+    expect(deleteBody.request?.input?.voice).toBe(omniVoice);
+
+    const getResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "get",
+      "--id",
+      omniVoice,
+      "--quiet",
+    ]);
+    expect(getResult.exitCode).toBe(2);
+    expect(getResult.stderr).toMatch(/qwen-voice-enrollment|Omni|仅支持/i);
+
+    const designResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "design",
+      "--prompt",
+      "Calm warm Chinese announcer voice for news",
+      "--preview-text",
+      "Welcome to today's program everyone.",
+      "--prefix",
+      "demo",
+      "--target-model",
+      "qwen3.5-omni-flash",
+      "--quiet",
+    ]);
+    expect(designResult.exitCode).toBe(2);
+    expect(designResult.stderr).toMatch(/Omni|qwen-voice-enrollment|clone/i);
+  });
+
   test("delete/update --dry-run without --yes previews with zero side effects", async () => {
     for (const args of [
       ["speech", "voice", "delete", "--id", "voice-x", "--dry-run", "--output", "json", "--quiet"],

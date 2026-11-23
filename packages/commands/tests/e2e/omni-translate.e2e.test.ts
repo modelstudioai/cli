@@ -227,6 +227,27 @@ describe("e2e: omni translate routing / validation", () => {
     expect(badTerm.stderr).toMatch(/--term|source=target/i);
   });
 
+  test("dry-run allows empty glossary target", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(OMNI_TRANSLATE_ROUTES, [
+      "omni",
+      "translate",
+      "--file",
+      "https://example.com/brochure.pdf",
+      "--target-lang",
+      "en",
+      "--term",
+      "Brand=",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const body = parseStdoutJson<{
+      request?: { input?: { ext?: { glossary?: Array<{ src: string; tgt: string }> } } };
+    }>(stdout);
+    expect(body.request?.input?.ext?.glossary).toEqual([{ src: "Brand", tgt: "" }]);
+  });
+
   test("local dry-run marks pending upload", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "bl-omni-mt-"));
     tempDirs.push(tempDir);
@@ -452,54 +473,34 @@ describe("e2e: omni translate loopback", () => {
     expect(getCount).toBe(1);
   });
 
-  test("Success=true downloads translated file", async () => {
-    const fileBytes = Buffer.from("%PDF-translated");
+  test("timeout includes submitted task_id", async () => {
     const { origin } = await startServer((request, response) => {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
       if (request.method === "POST") {
         response.writeHead(200, { "content-type": "application/json" });
         response.end(
           JSON.stringify({
-            output: { task_id: "task-ok", task_status: "PENDING" },
-            request_id: "req-ok",
+            output: { task_id: "task-timeout-1", task_status: "PENDING" },
+            request_id: "req-timeout",
           }),
         );
         return;
       }
-      if (url.pathname === "/api/v1/tasks/task-ok") {
+      if (url.pathname === "/api/v1/tasks/task-timeout-1") {
         response.writeHead(200, { "content-type": "application/json" });
         response.end(
           JSON.stringify({
-            output: {
-              task_id: "task-ok",
-              task_status: "SUCCEEDED",
-              Success: true,
-              Code: 200,
-              Message: "Success",
-              RequestId: "biz-ok",
-              Data: {
-                FileType: "pdf",
-                TranslatedFileUrl: `${origin}/out.pdf`,
-              },
-            },
-            request_id: "req-ok",
+            output: { task_id: "task-timeout-1", task_status: "RUNNING" },
+            request_id: "req-timeout",
           }),
         );
-        return;
-      }
-      if (url.pathname === "/out.pdf") {
-        response.writeHead(200, { "content-type": "application/pdf" });
-        response.end(fileBytes);
         return;
       }
       response.writeHead(404);
       response.end();
     });
 
-    const outDir = makeE2eOutputDir("omni-translate-wait");
-    tempDirs.push(outDir);
-
-    const { stdout, stderr, exitCode } = await runCommandInProcess(OMNI_TRANSLATE_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(OMNI_TRANSLATE_ROUTES, [
       "omni",
       "translate",
       "--base-url",
@@ -513,25 +514,115 @@ describe("e2e: omni translate loopback", () => {
       "--poll-interval",
       "0.05",
       "--timeout",
-      "10",
-      "--out-dir",
-      outDir,
+      "0.2",
       "--output",
       "json",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    const body = parseStdoutJson<{
-      task_id?: string;
-      translated_file_url?: string;
-      saved?: string;
-      output?: { Success?: boolean; Data?: { FileType?: string } };
-    }>(stdout);
-    expect(body.task_id).toBe("task-ok");
-    expect(body.output?.Success).toBe(true);
-    expect(body.output?.Data?.FileType).toBe("pdf");
-    expect(body.saved).toMatch(/\.pdf$/);
-    expect(readFileSync(body.saved!).equals(fileBytes)).toBe(true);
+    expect(exitCode).toBe(5);
+    expect(stderr).toMatch(/task-timeout-1/);
+    expect(stderr).toMatch(/timed out|超时/i);
   });
+
+  test.each([
+    {
+      name: "pdf",
+      inputUrl: "https://example.com/a.pdf",
+      outPath: "/out.pdf",
+      contentType: "application/pdf",
+      fileBytes: Buffer.from("%PDF-1.7-translated"),
+      savedSuffix: /\.pdf$/,
+    },
+    {
+      name: "xlsx",
+      inputUrl: "https://example.com/sheet.xlsx",
+      outPath: "/out.xlsx",
+      contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      fileBytes: Buffer.from("PK\x03\x04-xlsx-translated"),
+      savedSuffix: /\.xlsx$/,
+    },
+  ] as const)(
+    "Success=true keeps input suffix when FileType=document ($name)",
+    async ({ inputUrl, outPath, contentType, fileBytes, savedSuffix }) => {
+      const { origin } = await startServer((request, response) => {
+        const url = new URL(request.url ?? "/", "http://127.0.0.1");
+        if (request.method === "POST") {
+          response.writeHead(200, { "content-type": "application/json" });
+          response.end(
+            JSON.stringify({
+              output: { task_id: "task-ok", task_status: "PENDING" },
+              request_id: "req-ok",
+            }),
+          );
+          return;
+        }
+        if (url.pathname === "/api/v1/tasks/task-ok") {
+          response.writeHead(200, { "content-type": "application/json" });
+          response.end(
+            JSON.stringify({
+              output: {
+                task_id: "task-ok",
+                task_status: "SUCCEEDED",
+                Success: true,
+                Code: 200,
+                Message: "Success",
+                RequestId: "biz-ok",
+                Data: {
+                  // Official modality bucket — must not force .docx over input suffix
+                  FileType: "document",
+                  TranslatedFileUrl: `${origin}${outPath}`,
+                },
+              },
+              request_id: "req-ok",
+            }),
+          );
+          return;
+        }
+        if (url.pathname === outPath) {
+          response.writeHead(200, { "content-type": contentType });
+          response.end(fileBytes);
+          return;
+        }
+        response.writeHead(404);
+        response.end();
+      });
+
+      const outDir = makeE2eOutputDir("omni-translate-wait");
+      tempDirs.push(outDir);
+
+      const { stdout, stderr, exitCode } = await runCommandInProcess(OMNI_TRANSLATE_ROUTES, [
+        "omni",
+        "translate",
+        "--base-url",
+        origin,
+        "--api-key",
+        "sk-test",
+        "--file",
+        inputUrl,
+        "--target-lang",
+        "en",
+        "--poll-interval",
+        "0.05",
+        "--timeout",
+        "10",
+        "--out-dir",
+        outDir,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const body = parseStdoutJson<{
+        task_id?: string;
+        translated_file_url?: string;
+        saved?: string;
+        output?: { Success?: boolean; Data?: { FileType?: string } };
+      }>(stdout);
+      expect(body.task_id).toBe("task-ok");
+      expect(body.output?.Success).toBe(true);
+      expect(body.output?.Data?.FileType).toBe("document");
+      expect(body.saved).toMatch(savedSuffix);
+      expect(readFileSync(body.saved!).equals(fileBytes)).toBe(true);
+    },
+  );
 
   test("task get projects Success/Data fields", async () => {
     const { origin } = await startServer((_request, response) => {

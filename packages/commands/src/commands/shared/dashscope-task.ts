@@ -38,47 +38,65 @@ export async function pollDashScopeTask(
     extraCheck?: (data: DashScopeTaskResponse) => void;
   },
 ): Promise<DashScopeTaskResponse> {
-  return poll<DashScopeTaskResponse>(ctx.client, {
-    output: ctx.output,
-    url: ctx.client.url(taskPath(taskId)),
-    intervalSec: options.pollInterval,
-    timeoutSec: ctx.settings.timeout,
-    load: async () => {
-      const data = await ctx.client.requestJson<DashScopeTaskResponse>({
-        path: taskPath(taskId),
-      });
-      const status = data.output.task_status;
-      if (status === "FAILED") {
-        throw new BailianError(taskFailureMessage(data.output), ExitCode.GENERAL, undefined, {
-          api: {
-            apiCode: taskApiCode(data.output),
-            requestId: taskRequestId(data),
-          },
+  try {
+    return await poll<DashScopeTaskResponse>(ctx.client, {
+      output: ctx.output,
+      url: ctx.client.url(taskPath(taskId)),
+      intervalSec: options.pollInterval,
+      timeoutSec: ctx.settings.timeout,
+      load: async () => {
+        const data = await ctx.client.requestJson<DashScopeTaskResponse>({
+          path: taskPath(taskId),
         });
-      }
-      if (status === "CANCELED" || status === "UNKNOWN") {
-        throw new BailianError(
-          ctx.localize({
-            "en-US": `Task ended with status ${status}.`,
-            "zh-CN": `任务以状态 ${status} 结束。`,
-          }),
-          ExitCode.GENERAL,
-          undefined,
-          {
+        const status = data.output.task_status;
+        if (status === "FAILED") {
+          throw new BailianError(taskFailureMessage(data.output), ExitCode.GENERAL, undefined, {
             api: {
               apiCode: taskApiCode(data.output),
               requestId: taskRequestId(data),
             },
-          },
-        );
-      }
-      if (status === "SUCCEEDED") {
-        options.extraCheck?.(data);
-      }
-      return data;
-    },
-    isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-    isFailed: () => false,
-    getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
-  });
+          });
+        }
+        if (status === "CANCELED" || status === "UNKNOWN") {
+          throw new BailianError(
+            ctx.localize({
+              "en-US": `Task ended with status ${status}.`,
+              "zh-CN": `任务以状态 ${status} 结束。`,
+            }),
+            ExitCode.GENERAL,
+            undefined,
+            {
+              api: {
+                apiCode: taskApiCode(data.output),
+                requestId: taskRequestId(data),
+              },
+            },
+          );
+        }
+        if (status === "SUCCEEDED") {
+          options.extraCheck?.(data);
+        }
+        return data;
+      },
+      isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+      isFailed: () => false,
+      getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
+    });
+  } catch (error) {
+    if (error instanceof BailianError && error.exitCode === ExitCode.TIMEOUT) {
+      throw new BailianError(
+        ctx.localize({
+          "en-US": `Polling timed out. task_id=${taskId}`,
+          "zh-CN": `轮询超时。task_id=${taskId}`,
+        }),
+        ExitCode.TIMEOUT,
+        ctx.localize({
+          "en-US": `Try increasing --timeout, or query the task with id ${taskId}.`,
+          "zh-CN": `可增大 --timeout，或用 task_id ${taskId} 查询任务状态。`,
+        }),
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 }

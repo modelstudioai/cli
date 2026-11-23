@@ -36,22 +36,21 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-g
 
 ## When to use which command
 
-| User intent                                 | Command                                                | Default model                                                                                                          |
-| ------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Text-to-image                               | `bl image generate`                                    | `qwen-image-3.0`                                                                                                       |
-| Image edit / multi-image merge              | `bl image edit` (repeat `--image`)                     | `qwen-image-3.0`                                                                                                       |
-| Image text translation (layout-preserving)  | `bl image translate`                                   | Default `qwen-mt-image` (async); optional `qwen-mt-image-2.0`. Not image edit.                                         |
-| File multimodal translation                 | `bl omni translate`                                    | `qwen-mt-uni` (async file→file). Keep `bl omni --message` for multimodal chat.                                         |
-| Text-to-video / image-to-video              | `bl video generate`                                    | `wan3.0-video`                                                                                                         |
-| Video edit / style transfer                 | `bl video edit`                                        | `happyhorse-1.0-video-edit`                                                                                            |
-| Reference-to-video + voice                  | `bl video ref`                                         | `wan3.0-video`                                                                                                         |
-| Speech synthesis (TTS / voiceover)          | `bl speech synthesize`                                 | `cosyvoice-v3-flash`                                                                                                   |
-| Voice clone / manage                        | `bl speech voice clone/list/get/update/delete/preview` | `voice-enrollment` → then synthesize with the same `--target-model`                                                    |
-| Voice design from text                      | `bl speech voice design`                               | `voice-enrollment` → preview saved locally; formal listen via `speech synthesize`                                      |
-| Audio content generation (podcast/dialogue) | `bl speech generate`                                   | `qwen-audio-3.1-tts-next` (text_prompt/references; not voice IDs)                                                      |
-| Speech recognition (ASR / transcription)    | `bl speech recognize`                                  | `fun-asr`                                                                                                              |
-| Image describe                              | `bl vision describe`                                   | `qwen3-vl-plus`；宿主能做且未点名 → host-first                                                                         |
-| Video / A-V understand                      | `bl vision describe --video` 或 `bl omni`              | 视频理解默认走百炼；`omni` 默认 `qwen3.8-omni-flash`，省略 `--model` 且无 `--text-only` 时自动切换 `qwen3.5-omni-plus` |
+| User intent                                 | Command                                                | Default model                                                                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text-to-image                               | `bl image generate`                                    | `qwen-image-3.0`                                                                                                                                                 |
+| Image edit / multi-image merge              | `bl image edit` (repeat `--image`)                     | `qwen-image-3.0`                                                                                                                                                 |
+| Image text translation (layout-preserving)  | `bl image translate`                                   | Default `qwen-mt-image` (async); optional `qwen-mt-image-2.0`. Not image edit.                                                                                   |
+| File multimodal translation                 | `bl omni translate`                                    | `qwen-mt-uni` (async file→file). Keep `bl omni --message` for multimodal chat.                                                                                   |
+| Text-to-video / image-to-video              | `bl video generate`                                    | `wan3.0-video`                                                                                                                                                   |
+| Video edit / style transfer                 | `bl video edit`                                        | `happyhorse-1.0-video-edit`                                                                                                                                      |
+| Reference-to-video + voice                  | `bl video ref`                                         | `wan3.0-video`                                                                                                                                                   |
+| Speech synthesis (TTS / voiceover)          | `bl speech synthesize`                                 | `cosyvoice-v3-flash`                                                                                                                                             |
+| Voice clone / manage                        | `bl speech voice clone/list/get/update/delete/preview` | CosyVoice/Qwen-Audio: `voice-enrollment` → `speech synthesize`. Omni (non-realtime flash/plus only): `qwen-voice-enrollment` create/list/delete → `omni --voice` |     | Voice design from text | `bl speech voice design` | `voice-enrollment` → preview saved locally; formal listen via `speech synthesize` (not for Omni targets) |
+| Audio content generation (podcast/dialogue) | `bl speech generate`                                   | `qwen-audio-3.1-tts-next` (text_prompt/references; not voice IDs)                                                                                                |
+| Speech recognition (ASR / transcription)    | `bl speech recognize`                                  | `fun-asr`                                                                                                                                                        |
+| Image describe                              | `bl vision describe`                                   | `qwen3-vl-plus`；宿主能做且未点名 → host-first                                                                                                                   |
+| Video / A-V understand                      | `bl vision describe --video` 或 `bl omni`              | 视频理解默认走百炼；`omni` 默认 `qwen3.8-omni-flash`，省略 `--model` 且无 `--text-only` 时自动切换 `qwen3.5-omni-plus`                                           |
 
 Unless the user explicitly specifies a model, omit `--model` and let the CLI use the active Profile’s default.
 
@@ -59,8 +58,8 @@ For ASR model selection, keep `fun-asr` (or other `*-filetrans`) for long record
 
 Voice clone vs design vs generate:
 
-- Clone (`bl speech voice clone`) needs reference audio; manage with list/get/update/delete; `preview` returns enrollment `resource_link` (not a synthesized sample).
-- Design (`bl speech voice design`) creates a voice from a text description and saves the one-shot `preview_audio` locally; formal listen still uses `bl speech synthesize --voice <id> --model <same-target-model>`.
+- Clone (`bl speech voice clone`) needs reference audio. CosyVoice/Qwen-Audio: manage with list/get/update/delete/preview (`voice-enrollment`). Omni CLI clone targets (non-realtime only): `qwen3.5-omni-flash/plus` (dated suffixes ok). `*-realtime` and `qwen3.8-omni-flash` are rejected at create (no Omni Realtime command). Only create/list/delete via `qwen-voice-enrollment`; `output.voice` → `bl omni --voice`.
+- Design (`bl speech voice design`) creates a voice from a text description and saves the one-shot `preview_audio` locally; formal listen still uses `bl speech synthesize --voice <id> --model <same-target-model>`. Not available for Omni targets.
 - Generate (`bl speech generate`) creates podcast/dialogue content from `text_prompt` + optional `@voice1..3` references; it does **not** take system/cloned voice IDs.
 
 To improve ASR accuracy with domain terms:

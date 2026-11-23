@@ -6,6 +6,7 @@ import {
   buildVoiceRequest,
   defineCommand,
   ExitCode,
+  isOmniVoiceTargetModel,
   postVoiceRequest,
   resolveOutputDir,
   speechVoiceCustomizationPath,
@@ -123,6 +124,14 @@ export default defineCommand({
     },
   ],
   validate: (flags: DesignFlags) => {
+    if (isOmniVoiceTargetModel(flags.targetModel)) {
+      return {
+        "en-US":
+          "Omni targets use qwen-voice-enrollment clone only (no voice design). Use `speech voice clone --target-model <omni-model>`.",
+        "zh-CN":
+          "Omni 目标模型仅支持 qwen-voice-enrollment 复刻，不支持音色设计。请用 `speech voice clone --target-model <omni-model>`。",
+      };
+    }
     const prefixError = validateVoicePrefix(flags.prefix);
     if (prefixError) return prefixError;
 

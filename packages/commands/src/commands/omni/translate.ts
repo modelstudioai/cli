@@ -63,9 +63,9 @@ const OUTPUT_EXTENSION_BY_INPUT: Record<string, string> = {
   wav: "mp3",
 };
 
+/** Concrete FileType / format_hint values (defensive; API usually returns modality). */
 const OUTPUT_EXTENSION_BY_FILE_TYPE: Record<string, string> = {
   pdf: "pdf",
-  document: "docx",
   docx: "docx",
   pptx: "pptx",
   xlsx: "xlsx",
@@ -73,13 +73,18 @@ const OUTPUT_EXTENSION_BY_FILE_TYPE: Record<string, string> = {
   html: "html",
   md: "md",
   markdown: "md",
-  image: "jpg",
   jpg: "jpg",
   jpeg: "jpg",
   png: "jpg",
-  audio: "mp3",
   mp3: "mp3",
   wav: "mp3",
+};
+
+/** Official Data.FileType modality buckets — last-resort only. */
+const OUTPUT_EXTENSION_BY_MODALITY: Record<string, string> = {
+  document: "docx",
+  image: "jpg",
+  audio: "mp3",
 };
 
 const TRANSLATE_FLAGS = {
@@ -129,8 +134,10 @@ const TRANSLATE_FLAGS = {
     type: "array",
     valueHint: "<source=target>",
     description: {
-      "en-US": "Glossary pair source=target (repeatable; maps to ext.glossary, max 100)",
-      "zh-CN": "术语对 source=target（可重复；映射为 ext.glossary，最多 100 组）",
+      "en-US":
+        "Glossary pair source=target (repeatable; maps to ext.glossary, max 100; empty target keeps source)",
+      "zh-CN":
+        "术语对 source=target（可重复；映射为 ext.glossary，最多 100 组；目标为空则保持原文）",
     },
   },
   sensitive: {
@@ -292,18 +299,22 @@ function resolveOutputExtension(
   inputExtension: string | undefined,
   formatHint: string | undefined,
 ): string {
-  if (fileType) {
-    const mapped = OUTPUT_EXTENSION_BY_FILE_TYPE[fileType.toLowerCase()];
-    if (mapped) return mapped;
-  }
+  // Prefer input format: API FileType is a modality (document/image/audio), not a suffix.
   if (inputExtension) {
     const mapped = OUTPUT_EXTENSION_BY_INPUT[inputExtension];
     if (mapped) return mapped;
   }
   if (formatHint) {
+    const hint = formatHint.toLowerCase();
     const mapped =
-      OUTPUT_EXTENSION_BY_INPUT[formatHint.toLowerCase()] ||
-      OUTPUT_EXTENSION_BY_FILE_TYPE[formatHint.toLowerCase()];
+      OUTPUT_EXTENSION_BY_INPUT[hint] ||
+      OUTPUT_EXTENSION_BY_FILE_TYPE[hint] ||
+      OUTPUT_EXTENSION_BY_MODALITY[hint];
+    if (mapped) return mapped;
+  }
+  if (fileType) {
+    const key = fileType.toLowerCase();
+    const mapped = OUTPUT_EXTENSION_BY_FILE_TYPE[key] || OUTPUT_EXTENSION_BY_MODALITY[key];
     if (mapped) return mapped;
   }
   return "bin";
@@ -398,7 +409,7 @@ export default defineCommand({
     const ext: NonNullable<QwenMtUniRequest["input"]["ext"]> = {};
     if (flags.formatHint !== undefined) ext.format_hint = flags.formatHint;
     if (flags.domainHint !== undefined) ext.domainHint = flags.domainHint;
-    const glossaryPairs = parseTermPairs(flags.term, localize);
+    const glossaryPairs = parseTermPairs(flags.term, localize, { allowEmptyTarget: true });
     if (glossaryPairs !== undefined) {
       ext.glossary = glossaryPairs.map((pair) => ({ src: pair.source, tgt: pair.target }));
     }

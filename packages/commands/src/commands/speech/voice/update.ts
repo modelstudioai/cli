@@ -7,6 +7,8 @@ import {
   type ParsedFlags,
 } from "bailian-cli-core";
 import {
+  isOmniManagedVoiceId,
+  OMNI_VOICE_UNSUPPORTED_OP,
   redactVoiceAudioInRequest,
   resolveVoiceAudioSource,
   validateVoiceId,
@@ -56,7 +58,12 @@ export default defineCommand({
     "--id <voice-id> --audio ./new-reference.wav --dry-run --output json",
     "--id <voice-id> --audio ./new-reference.wav --yes",
   ],
-  validate: (flags: UpdateFlags) => validateVoiceId(flags.id),
+  validate: (flags: UpdateFlags) => {
+    const idError = validateVoiceId(flags.id);
+    if (idError) return idError;
+    if (isOmniManagedVoiceId(flags.id)) return OMNI_VOICE_UNSUPPORTED_OP;
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const voiceId = flags.id;

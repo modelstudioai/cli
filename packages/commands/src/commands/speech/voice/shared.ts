@@ -5,8 +5,10 @@ import {
   audioMimeForPath,
   BailianError,
   ExitCode,
+  looksLikeOmniClonedVoiceId,
   redactDataUri,
   type FlagsDef,
+  type LocalizedText,
 } from "bailian-cli-core";
 
 /** Shared --id flag for get / update / delete / preview. */
@@ -48,9 +50,21 @@ export const VOICE_RIGHTS_NOTES = [
 ] as const;
 
 const PREFIX_PATTERN = /^[A-Za-z0-9]{1,10}$/;
+/** Omni preferred_name: digits, letters, underscore, ≤16 (official qwen-voice-enrollment). */
+const OMNI_PREFERRED_NAME_PATTERN = /^[A-Za-z0-9_]{1,16}$/;
+
+const OMNI_VOICE_CLONE_MODES = new Set(["normal", "dialect", "crosslingual"]);
 
 /** Voice clone/update reference audio limit from the enrollment API docs. */
 export const MAX_VOICE_REFERENCE_BYTES = 10 * 1024 * 1024;
+
+/** Ops not offered by the Omni enrollment API. */
+export const OMNI_VOICE_UNSUPPORTED_OP: LocalizedText = {
+  "en-US":
+    "Qwen-Omni cloned voices only support create/list/delete via qwen-voice-enrollment. Use `speech voice list --target-model <omni-model>` or `speech voice delete --id <voice>`.",
+  "zh-CN":
+    "Qwen-Omni 复刻音色仅支持 qwen-voice-enrollment 的创建/列表/删除。请用 `speech voice list --target-model <omni-model>` 或 `speech voice delete --id <voice>`。",
+};
 
 /** Validate voice ID is non-empty after trim. */
 export function validateVoiceId(voiceId: string | undefined): string | undefined {
@@ -71,6 +85,33 @@ export function validateVoicePrefix(prefix: string | undefined): string | undefi
     return "--prefix must be 1-10 characters of digits or letters (A-Z, a-z, 0-9).";
   }
   return undefined;
+}
+
+/** Validate Omni preferred_name (mapped from --prefix): alnum/underscore, 1-16 chars. */
+export function validateOmniPreferredName(name: string | undefined): string | undefined {
+  if (name === undefined) return undefined;
+  if (name.length === 0) {
+    return "--prefix must not be empty.";
+  }
+  if (!OMNI_PREFERRED_NAME_PATTERN.test(name)) {
+    return "--prefix for Omni targets must be 1-16 characters of digits, letters, or underscore.";
+  }
+  return undefined;
+}
+
+/** Validate Omni voice_clone_mode values from the official API. */
+export function validateOmniVoiceCloneMode(mode: string | undefined): string | undefined {
+  if (mode === undefined) return undefined;
+  if (!OMNI_VOICE_CLONE_MODES.has(mode)) {
+    return '--voice-clone-mode must be "normal", "dialect", or "crosslingual".';
+  }
+  return undefined;
+}
+
+/** True when --id looks like an official Omni cloned voice name. */
+export function isOmniManagedVoiceId(voiceId: string | undefined): boolean {
+  if (voiceId === undefined) return false;
+  return looksLikeOmniClonedVoiceId(voiceId.trim());
 }
 
 /** Validate 1-based page / page-size positive integers. */
@@ -163,6 +204,29 @@ export function redactVoiceAudioInRequest(
       input.audio = `<local-file:${localPath};pending-encode>`;
     } else {
       input.audio = redactDataUri(input.audio);
+    }
+  }
+  return { ...request, input };
+}
+
+/** Redact Omni `input.audio.data` (object shape) for dry-run. */
+export function redactOmniVoiceAudioInRequest(
+  request: { input?: Record<string, unknown> },
+  localPath?: string,
+): { input?: Record<string, unknown> } & Record<string, unknown> {
+  const input = request.input ? { ...request.input } : undefined;
+  if (!input) return { ...request, input };
+
+  const audioValue = input.audio;
+  if (audioValue && typeof audioValue === "object" && !Array.isArray(audioValue)) {
+    const audioObject = { ...(audioValue as Record<string, unknown>) };
+    if (typeof audioObject.data === "string") {
+      if (localPath && audioObject.data === localPath) {
+        audioObject.data = `<local-file:${localPath};pending-encode>`;
+      } else {
+        audioObject.data = redactDataUri(audioObject.data);
+      }
+      input.audio = audioObject;
     }
   }
   return { ...request, input };

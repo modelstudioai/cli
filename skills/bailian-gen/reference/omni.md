@@ -96,21 +96,21 @@ bl omni --message "Read this passage aloud" --audio-out greeting.wav
 
 #### Flags
 
-| Flag                        | Type    | Required | Description                                                                                    |
-| --------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `--file <url-or-path>`      | string  | yes      | Document, image or audio URL/local file                                                        |
-| `--target-lang <lang>`      | string  | yes      | Target language code or name                                                                   |
-| `--source-lang <lang>`      | string  | no       | Source language (omit to auto-detect; do not send auto)                                        |
-| `--format-hint <type>`      | string  | no       | Format hint when URL has no extension (e.g. pdf, image)                                        |
-| `--domain-hint <text>`      | string  | no       | English domain hint ≤200 words (ext.domainHint)                                                |
-| `--term <source=target>`    | array   | no       | Glossary pair source=target (repeatable; maps to ext.glossary, max 100)                        |
-| `--sensitive <text>`        | array   | no       | Sensitive phrase kept untranslated on exact match (repeatable; maps to ext.sensitives, max 50) |
-| `--image-segment <bool>`    | boolean | no       | Skip translating text on image subjects (ext.config.imageSegment; images only)                 |
-| `--out-dir <path>`          | string  | no       | Download directory                                                                             |
-| `--async`                   | switch  | no       | Return async task id without waiting                                                           |
-| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                                     |
-| `--api-key <key>`           | string  | no       | API key                                                                                        |
-| `--base-url <url>`          | string  | no       | API base URL                                                                                   |
+| Flag                        | Type    | Required | Description                                                                                        |
+| --------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------- |
+| `--file <url-or-path>`      | string  | yes      | Document, image or audio URL/local file                                                            |
+| `--target-lang <lang>`      | string  | yes      | Target language code or name                                                                       |
+| `--source-lang <lang>`      | string  | no       | Source language (omit to auto-detect; do not send auto)                                            |
+| `--format-hint <type>`      | string  | no       | Format hint when URL has no extension (e.g. pdf, image)                                            |
+| `--domain-hint <text>`      | string  | no       | English domain hint ≤200 words (ext.domainHint)                                                    |
+| `--term <source=target>`    | array   | no       | Glossary pair source=target (repeatable; maps to ext.glossary, max 100; empty target keeps source) |
+| `--sensitive <text>`        | array   | no       | Sensitive phrase kept untranslated on exact match (repeatable; maps to ext.sensitives, max 50)     |
+| `--image-segment <bool>`    | boolean | no       | Skip translating text on image subjects (ext.config.imageSegment; images only)                     |
+| `--out-dir <path>`          | string  | no       | Download directory                                                                                 |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                               |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                                         |
+| `--api-key <key>`           | string  | no       | API key                                                                                            |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                       |
 
 #### Notes
 

@@ -15,17 +15,27 @@ export function hasNonAscii(value: string): boolean {
 export function parseTermPairs(
   terms: string[] | undefined,
   localize: (text: LocalizedText) => string,
+  options?: { allowEmptyTarget?: boolean },
 ): Array<{ source: string; target: string }> | undefined {
   if (terms === undefined) return undefined;
+  const allowEmptyTarget = options?.allowEmptyTarget === true;
   const parsed: Array<{ source: string; target: string }> = [];
   for (const termValue of terms) {
     const equalsIndex = termValue.indexOf("=");
-    if (equalsIndex <= 0 || equalsIndex === termValue.length - 1) {
+    const emptyTarget = equalsIndex === termValue.length - 1;
+    if (equalsIndex <= 0 || (!allowEmptyTarget && emptyTarget)) {
       throw new BailianError(
-        localize({
-          "en-US": `Invalid --term "${termValue}". Use source=target with non-empty sides.`,
-          "zh-CN": `无效的 --term "${termValue}"。请使用 source=target，且两侧均非空。`,
-        }),
+        localize(
+          allowEmptyTarget
+            ? {
+                "en-US": `Invalid --term "${termValue}". Use source=target (target may be empty).`,
+                "zh-CN": `无效的 --term "${termValue}"。请使用 source=target（目标可为空白）。`,
+              }
+            : {
+                "en-US": `Invalid --term "${termValue}". Use source=target with non-empty sides.`,
+                "zh-CN": `无效的 --term "${termValue}"。请使用 source=target，且两侧均非空。`,
+              },
+        ),
         ExitCode.USAGE,
       );
     }

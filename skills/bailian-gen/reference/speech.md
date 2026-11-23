@@ -437,23 +437,27 @@ bl speech vocabulary update --id vocab-demo-xxx --words '{"Fendouzhe":4,"Jingluo
 
 #### Flags
 
-| Flag                                  | Type    | Required | Description                                                                              |
-| ------------------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------- |
-| `--audio <url-or-path>`               | string  | yes      | Reference audio URL or local file                                                        |
-| `--prefix <text>`                     | string  | yes      | Custom voice prefix. Digits and letters only, 1-10 characters                            |
-| `--target-model <model>`              | string  | yes      | Target TTS model for this voice (required). Must match later `speech synthesize --model` |
-| `--language-hint <code>`              | array   | no       | Language hint for the reference audio (at most one; mapped to language_hints)            |
-| `--volume-normalize <bool>`           | boolean | no       | Enable volume normalization (sent as string "true"/"false")                              |
-| `--max-prompt-audio-length <seconds>` | number  | no       | Max prompt audio length in seconds (3-30)                                                |
-| `--preprocess <bool>`                 | boolean | no       | Enable audio preprocess (enable_preprocess)                                              |
-| `--api-key <key>`                     | string  | no       | API key                                                                                  |
-| `--base-url <url>`                    | string  | no       | API base URL                                                                             |
+| Flag                                  | Type    | Required | Description                                                                                                                                                                                |
+| ------------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--audio <url-or-path>`               | string  | yes      | Reference audio URL or local file                                                                                                                                                          |
+| `--prefix <text>`                     | string  | yes      | Name prefix (CosyVoice/Qwen-Audio: 1-10 alnum → prefix) or Omni preferred_name (1-16 alnum/underscore)                                                                                     |
+| `--target-model <model>`              | string  | yes      | Target model for this voice (required). CosyVoice/Qwen-Audio → later `speech synthesize --model`; Omni CLI clone → qwen3.5-omni-flash/plus then `omni --voice` (Realtime targets rejected) |
+| `--language-hint <code>`              | array   | no       | Language hint (at most one). CosyVoice/Qwen-Audio → language_hints[]; Omni → language                                                                                                      |
+| `--volume-normalize <bool>`           | boolean | no       | Enable volume normalization (CosyVoice/Qwen-Audio; sent as string "true"/"false")                                                                                                          |
+| `--max-prompt-audio-length <seconds>` | number  | no       | Max prompt audio length in seconds (3-30; CosyVoice/Qwen-Audio only)                                                                                                                       |
+| `--preprocess <bool>`                 | boolean | no       | Enable audio preprocess (enable_preprocess; CosyVoice/Qwen-Audio only)                                                                                                                     |
+| `--text <transcript>`                 | string  | no       | Transcript matching the reference audio (Omni only; optional)                                                                                                                              |
+| `--voice-clone-mode <mode>`           | string  | no       | Omni voice_clone_mode: normal \| dialect \| crosslingual (optional for CLI-supported qwen3.5-omni-flash/plus)                                                                              |
+| `--skip-audio-process <bool>`         | boolean | no       | Skip Omni audio preprocess (parameters.skip_audio_process; default false)                                                                                                                  |
+| `--api-key <key>`                     | string  | no       | API key                                                                                                                                                                                    |
+| `--base-url <url>`                    | string  | no       | API base URL                                                                                                                                                                               |
 
 #### Notes
 
 - You must have the right to use the reference audio or described voice. Do not clone or imitate a real person without authorization.
 - A voice ID is bound to its target model. Later `speech synthesize` calls must use the same --model.
-- Creation returns voice_id immediately. Review status is DEPLOYING/OK/UNDEPLOYED — use `speech voice get` to check; preview reference audio with `speech voice preview`.
+- CosyVoice/Qwen-Audio use model voice-enrollment (create_voice → voice_id). Review status DEPLOYING/OK/UNDEPLOYED — use `speech voice get` / `preview`.
+- CLI Omni clone only supports non-realtime targets qwen3.5-omni-flash/plus (dated suffixes allowed) via qwen-voice-enrollment → output.voice → `omni --voice`. Realtime (*-realtime) enrollment is rejected here (no Realtime command in this CLI). No get/update/preview/design for Omni.
 
 #### Examples
 
@@ -465,6 +469,10 @@ bl speech voice clone --audio ./reference.wav --prefix demo --target-model cosyv
 bl speech voice clone --audio https://example.com/ref.wav --prefix Demo01 --target-model cosyvoice-v3-flash --language-hint zh
 ```
 
+```bash
+bl speech voice clone --audio ./reference.wav --prefix guanyu --target-model qwen3.5-omni-flash --language-hint zh --dry-run --output json
+```
+
 ### `bl speech voice delete`
 
 | Field              | Value                                                                                                                |
@@ -472,7 +480,7 @@ bl speech voice clone --audio https://example.com/ref.wav --prefix Demo01 --targ
 | **Name**           | `speech voice delete`                                                                                                |
 | **Description**    | Delete a custom voice                                                                                                |
 | **Authentication** | API Key                                                                                                              |
-| **Usage**          | `bl speech voice delete --id <voice-id>`                                                                             |
+| **Usage**          | `bl speech voice delete --id <voice-id> [--target-model <model>]`                                                    |
 | **Risk**           | `high`                                                                                                               |
 | **Risk message**   | This permanently deletes the voice ID. Synthesis that still references it will fail and the action cannot be undone. |
 
@@ -480,16 +488,17 @@ bl speech voice clone --audio https://example.com/ref.wav --prefix Demo01 --targ
 
 #### Flags
 
-| Flag               | Type   | Required | Description                      |
-| ------------------ | ------ | -------- | -------------------------------- |
-| `--id <voice-id>`  | string | yes      | Voice ID (required)              |
-| `--yes`            | switch | no       | Confirm this high-risk operation |
-| `--api-key <key>`  | string | no       | API key                          |
-| `--base-url <url>` | string | no       | API base URL                     |
+| Flag                     | Type   | Required | Description                                                                                                                             |
+| ------------------------ | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--id <voice-id>`        | string | yes      | Voice ID (required)                                                                                                                     |
+| `--target-model <model>` | string | no       | Protocol switch only: any qwen3.x-omni* id selects qwen-voice-enrollment delete. Also auto-detected when --id starts with qwen-omni-vc- |
+| `--yes`                  | switch | no       | Confirm this high-risk operation                                                                                                        |
+| `--api-key <key>`        | string | no       | API key                                                                                                                                 |
+| `--base-url <url>`       | string | no       | API base URL                                                                                                                            |
 
 #### Notes
 
-- Deletion is irreversible. Prefer --dry-run first to confirm the request body.
+- Deletion is irreversible. Prefer --dry-run first to confirm the request body. CosyVoice/Qwen-Audio: delete_voice + voice_id. Omni: delete + voice.
 
 #### Examples
 
@@ -500,6 +509,10 @@ bl speech voice delete --id <voice-id> --dry-run --output json
 ```bash
 # Only after explicit user confirmation:
 bl speech voice delete --id <voice-id> --yes
+```
+
+```bash
+bl speech voice delete --id qwen-omni-vc-guanyu-voice-… --dry-run --output json
 ```
 
 ### `bl speech voice design`
@@ -571,26 +584,27 @@ bl speech voice get --id <voice-id> --quiet
 
 ### `bl speech voice list`
 
-| Field              | Value                                                                   |
-| ------------------ | ----------------------------------------------------------------------- |
-| **Name**           | `speech voice list`                                                     |
-| **Description**    | List custom voices                                                      |
-| **Authentication** | API Key                                                                 |
-| **Usage**          | `bl speech voice list [--prefix <text>] [--page <n>] [--page-size <n>]` |
+| Field              | Value                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Name**           | `speech voice list`                                                                              |
+| **Description**    | List custom voices                                                                               |
+| **Authentication** | API Key                                                                                          |
+| **Usage**          | `bl speech voice list [--prefix <text>] [--target-model <model>] [--page <n>] [--page-size <n>]` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                                             |
-| ------------------ | ------ | -------- | ----------------------------------------------------------------------- |
-| `--prefix <text>`  | string | no       | Custom voice prefix. Digits and letters only, 1-10 characters           |
-| `--page <n>`       | number | no       | Page number, 1-based (default: 1). Mapped to API page_index as page - 1 |
-| `--page-size <n>`  | number | no       | Results per page (default: 10)                                          |
-| `--api-key <key>`  | string | no       | API key                                                                 |
-| `--base-url <url>` | string | no       | API base URL                                                            |
+| Flag                     | Type   | Required | Description                                                                                                                                                       |
+| ------------------------ | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--prefix <text>`        | string | no       | Custom voice prefix. Digits and letters only, 1-10 characters                                                                                                     |
+| `--target-model <model>` | string | no       | Protocol switch only (not a filter): any qwen3.x-omni* id selects qwen-voice-enrollment and lists all Omni voices; omit for CosyVoice/Qwen-Audio voice-enrollment |
+| `--page <n>`             | number | no       | Page number, 1-based (default: 1). Mapped to API page_index as page - 1                                                                                           |
+| `--page-size <n>`        | number | no       | Results per page (default: 10)                                                                                                                                    |
+| `--api-key <key>`        | string | no       | API key                                                                                                                                                           |
+| `--base-url <url>`       | string | no       | API base URL                                                                                                                                                      |
 
 #### Notes
 
-- Lists one page only (CLI defaults: page=1, page-size=10). Status values: DEPLOYING / OK / UNDEPLOYED.
+- Lists one page only (CLI defaults: page=1, page-size=10). CosyVoice/Qwen-Audio status: DEPLOYING / OK / UNDEPLOYED. Omni --target-model only switches protocol (returns all Omni voices; no server-side model filter; no --prefix).
 
 #### Examples
 
@@ -604,6 +618,10 @@ bl speech voice list --prefix demo
 
 ```bash
 bl speech voice list --page 2 --page-size 20
+```
+
+```bash
+bl speech voice list --target-model qwen3.5-omni-flash --dry-run --output json
 ```
 
 ### `bl speech voice preview`
