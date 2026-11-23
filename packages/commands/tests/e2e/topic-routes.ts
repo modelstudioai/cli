@@ -296,6 +296,8 @@ export const DEPLOY_ROUTES: E2eRouteExports = {
   "deploy capacity create": "deployCapacityCreate",
   "deploy capacity scale": "deployCapacityScale",
   "deploy capacity renew": "deployCapacityRenew",
+  "deploy capacity auto-renew enable": "deployCapacityAutoRenewEnable",
+  "deploy capacity auto-renew disable": "deployCapacityAutoRenewDisable",
   "deploy capacity delete": "deployCapacityDelete",
   "deploy capacity unsubscribe": "deployCapacityUnsubscribe",
   "deploy overflow": "deployOverflow",
@@ -305,6 +307,15 @@ export const DEPLOY_ROUTES: E2eRouteExports = {
   "deploy scale": "deployScale",
   "deploy update": "deployUpdate",
   "deploy delete": "deployDelete",
+};
+
+export const DEPLOY_ROUTER_ROUTES: E2eRouteExports = {
+  "deploy router versions": "deployRouterVersions",
+  "deploy router create": "deployRouterCreate",
+  "deploy router list": "deployRouterList",
+  "deploy router get": "deployRouterGet",
+  "deploy router update": "deployRouterUpdate",
+  "deploy router delete": "deployRouterDelete",
 };
 
 export const DATASET_ROUTES: E2eRouteExports = {

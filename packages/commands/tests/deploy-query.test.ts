@@ -583,7 +583,7 @@ describe("waitForCapacityOperation read-only polling", () => {
   beforeEach(() => vi.useFakeTimers());
 
   test.each(["output", "data"] as const)(
-    "backs off PROCESSING, then preserves %s and refreshes instance followed by deployment",
+    "backs off PROCESSING, then preserves %s and refreshes instance and deployment",
     async (envelope) => {
       const mock = createMockClient();
       const response = {
@@ -667,6 +667,32 @@ describe("waitForCapacityOperation read-only polling", () => {
       ]);
     },
   );
+
+  test("starts both refreshes before either completes and preserves both responses", async () => {
+    const response = {
+      output: { operation_status: "SUCCEEDED", instance_id: INSTANCE_ID },
+    };
+    const instance = { output: { instance_id: INSTANCE_ID } };
+    const deployment = { data: { deployed_model: MODEL_CODE } };
+    const mock = createMockClient();
+    mock.requestJson.mockImplementation(async (request) => {
+      if (request.path === OPERATION_PATH) return response;
+      return new Promise((resolve) => {
+        setTimeout(
+          () => resolve(request.path === INSTANCE_PATH ? instance : deployment),
+          request.path === INSTANCE_PATH ? 100 : 200,
+        );
+      });
+    });
+    const result = wait(mock.client);
+    await vi.advanceTimersByTimeAsync(0);
+    const startedPaths = requestPaths(mock);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(await result).toEqual({ ...response, instance, deployment });
+    expect(startedPaths).toEqual([OPERATION_PATH, INSTANCE_PATH, DEPLOYMENT_PATH]);
+    const signal = mock.requestJson.mock.calls[0][0].signal;
+    for (const [request] of mock.requestJson.mock.calls) expect(request.signal).toBe(signal);
+  });
 
   test.each([undefined, ""])(
     "SUCCEEDED without instance_id=%s refreshes only the deployment",
@@ -756,9 +782,15 @@ describe("waitForCapacityOperation read-only polling", () => {
         mock.requestJson.mockResolvedValueOnce({
           output: { operation_status: "SUCCEEDED", instance_id: INSTANCE_ID },
         });
-      if (phase === "deployment")
-        mock.requestJson.mockResolvedValueOnce({ output: { instance_id: INSTANCE_ID } });
-      mock.requestJson.mockImplementation(pendingRequestUntilAbort);
+      mock.requestJson.mockImplementation((request) => {
+        if (
+          phase === "poll" ||
+          (phase === "instance" && request.path === INSTANCE_PATH) ||
+          (phase === "deployment" && request.path === DEPLOYMENT_PATH)
+        )
+          return pendingRequestUntilAbort(request);
+        return Promise.resolve({ output: {} });
+      });
       const result = wait(mock.client, { pollTimeout: 3 });
       const rejection = expect(result).rejects.toMatchObject({ exitCode: ExitCode.TIMEOUT });
       await vi.advanceTimersByTimeAsync(0);
@@ -769,11 +801,7 @@ describe("waitForCapacityOperation read-only polling", () => {
       expect(request.signal?.aborted).toBe(true);
       expect(await result.catch((error: unknown) => error)).toBe(request.signal?.reason);
       expect(requestPaths(mock)).toEqual(
-        phase === "poll"
-          ? [OPERATION_PATH]
-          : phase === "instance"
-            ? [OPERATION_PATH, INSTANCE_PATH]
-            : [OPERATION_PATH, INSTANCE_PATH, DEPLOYMENT_PATH],
+        phase === "poll" ? [OPERATION_PATH] : [OPERATION_PATH, INSTANCE_PATH, DEPLOYMENT_PATH],
       );
     },
   );
@@ -826,6 +854,28 @@ describe("waitForCapacityOperation read-only polling", () => {
     },
   );
 
+  test("parent cancellation aborts both in-flight refreshes and clears the deadline", async () => {
+    const controller = new AbortController();
+    const reason = new Error("cancel refreshes");
+    const mock = createMockClient();
+    mock.requestJson
+      .mockResolvedValueOnce({
+        output: { operation_status: "SUCCEEDED", instance_id: INSTANCE_ID },
+      })
+      .mockImplementation(pendingRequestUntilAbort);
+    const result = wait(mock.client, { signal: controller.signal });
+    const rejection = expect(result).rejects.toBe(reason);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(requestPaths(mock)).toEqual([OPERATION_PATH, INSTANCE_PATH, DEPLOYMENT_PATH]);
+    controller.abort(reason);
+    await rejection;
+    for (const [request] of mock.requestJson.mock.calls) {
+      expect(request.signal?.aborted).toBe(true);
+      expect(request.signal?.reason).toBe(reason);
+    }
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   test("successful wait detaches the parent signal and deadline without later aborting requests", async () => {
     const controller = new AbortController();
     const addListener = vi.spyOn(controller.signal, "addEventListener");
@@ -842,7 +892,7 @@ describe("waitForCapacityOperation read-only polling", () => {
   });
 
   test.each(["poll", "instance", "deployment"] as const)(
-    "passes an HTTP failure during %s through unchanged without additional requests",
+    "passes an HTTP failure during %s through unchanged without retries",
     async (phase) => {
       const failure = new BailianError(
         "Server original message",
@@ -859,16 +909,18 @@ describe("waitForCapacityOperation read-only polling", () => {
         mock.requestJson.mockResolvedValueOnce({
           data: { operation_status: "SUCCEEDED", instance_id: INSTANCE_ID },
         });
-      if (phase === "deployment")
-        mock.requestJson.mockResolvedValueOnce({ data: { instance_id: INSTANCE_ID } });
-      mock.requestJson.mockRejectedValue(failure);
+      mock.requestJson.mockImplementation((request) => {
+        if (
+          phase === "poll" ||
+          (phase === "instance" && request.path === INSTANCE_PATH) ||
+          (phase === "deployment" && request.path === DEPLOYMENT_PATH)
+        )
+          return Promise.reject(failure);
+        return Promise.resolve({ data: {} });
+      });
       await expect(wait(mock.client)).rejects.toBe(failure);
       expect(requestPaths(mock)).toEqual(
-        phase === "poll"
-          ? [OPERATION_PATH]
-          : phase === "instance"
-            ? [OPERATION_PATH, INSTANCE_PATH]
-            : [OPERATION_PATH, INSTANCE_PATH, DEPLOYMENT_PATH],
+        phase === "poll" ? [OPERATION_PATH] : [OPERATION_PATH, INSTANCE_PATH, DEPLOYMENT_PATH],
       );
     },
   );

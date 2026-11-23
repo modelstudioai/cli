@@ -4,6 +4,10 @@ import type { PrePaidInfo, ReservationCapacity } from "./types.ts";
 export interface ReservationFlags {
   inputTpm?: number;
   outputTpm?: number;
+  /** Thinking-output capacity; only some models support it, validated server-side. */
+  thinkingOutputTpm?: number;
+  /** Day (default) | Hour; Hour is the 8-hour off-peak window. */
+  pricingCycle?: string;
   duration?: number;
   autoRenewal?: boolean;
   autoRenewalDuration?: number;
@@ -33,16 +37,39 @@ export function buildReservationCapacity(flags: ReservationFlags): ReservationCa
   const capacity: ReservationCapacity = {};
   if (flags.inputTpm !== undefined) capacity.input_tpm = flags.inputTpm;
   if (flags.outputTpm !== undefined) capacity.output_tpm = flags.outputTpm;
+  if (flags.thinkingOutputTpm !== undefined) capacity.thinking_output_tpm = flags.thinkingOutputTpm;
   return capacity;
 }
 
 export function hasPrepaidFlags(flags: ReservationFlags): boolean {
   return (
+    flags.pricingCycle !== undefined ||
     flags.duration !== undefined ||
     flags.autoRenewal !== undefined ||
     flags.autoRenewalDuration !== undefined ||
     flags.autoRenewalCycle !== undefined
   );
+}
+
+/**
+ * The 8-hour off-peak window: prepaid ptu_default only, exactly 8 hours per
+ * purchase, never auto-renewed. Selling windows (22:00–24:00) stay server-side.
+ */
+function validateHourCycle(flags: ReservationFlags): string | undefined {
+  if (flags.pricingCycle !== "Hour") return undefined;
+  if (flags.duration !== 8) {
+    return "--pricing-cycle Hour requires --duration 8.\n--pricing-cycle Hour 要求 --duration 为 8。";
+  }
+  if (flags.autoRenewal !== false) {
+    return "--pricing-cycle Hour requires --auto-renewal false.\n--pricing-cycle Hour 要求 --auto-renewal 为 false。";
+  }
+  if (flags.autoRenewalDuration !== undefined) {
+    return "--pricing-cycle Hour does not accept --auto-renewal-duration.\n--pricing-cycle Hour 不接受 --auto-renewal-duration。";
+  }
+  if (flags.autoRenewalCycle !== undefined) {
+    return "--pricing-cycle Hour does not accept --auto-renewal-cycle.\n--pricing-cycle Hour 不接受 --auto-renewal-cycle。";
+  }
+  return undefined;
 }
 
 /** Validate a complete prepaid block whenever any prepaid field is supplied. */
@@ -51,6 +78,15 @@ export function validatePrepaidFlags(
   required: boolean,
 ): string | undefined {
   if (!required && !hasPrepaidFlags(flags)) return undefined;
+  if (
+    flags.pricingCycle !== undefined &&
+    flags.pricingCycle !== "Day" &&
+    flags.pricingCycle !== "Hour"
+  ) {
+    return "--pricing-cycle must be Day or Hour (case-sensitive).\n--pricing-cycle 只能为 Day 或 Hour（区分大小写）。";
+  }
+  const hourError = validateHourCycle(flags);
+  if (hourError) return hourError;
   if (
     flags.duration === undefined ||
     !Number.isSafeInteger(flags.duration) ||
@@ -82,6 +118,8 @@ export function validatePrepaidFlags(
 export function buildPrepaidInfo(flags: ReservationFlags): PrePaidInfo | undefined {
   if (!hasPrepaidFlags(flags)) return undefined;
   const prepaid: PrePaidInfo = {};
+  if (flags.pricingCycle !== undefined)
+    prepaid.pricing_cycle = flags.pricingCycle as "Day" | "Hour";
   if (flags.duration !== undefined) prepaid.duration = flags.duration;
   if (flags.autoRenewal !== undefined) prepaid.auto_renewal = flags.autoRenewal;
   if (flags.autoRenewalDuration !== undefined)

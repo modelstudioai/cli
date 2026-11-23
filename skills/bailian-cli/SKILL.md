@@ -12,6 +12,7 @@ description: >-
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
   共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
   家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/训练数据集 → bailian-finetune；
+  百炼模型智能路由（智能选模、smart routing / model routing）、吞吐预留（PTU）、ModelCode 容量购买与扩缩容 → bailian-finetune；
   agents.yaml 托管 Agent → bailian-managed-agent；Sandbox 实例与模版 → bailian-sandbox；
   个人长期记忆与应用记忆资源 → bailian-memory；个人历史资料辅助任务、资料接入与知识库管理 → bailian-knowledge；
   联网搜索路由（默认模型搜索 vs 显式 `--mode mcp` + 兜底）→ bailian-web-search。
@@ -102,6 +103,8 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Switch CLI Help / Quick Start language                | `bl config set --key language --value zh-CN`                                                                   | Use `en-US` to switch back; follows the active config profile                                                                                                |
 | Image / video / speech / omni / vision                | → skill `bailian-gen`                                                                                          | Fallback: `bl image\|video\|speech\|omni\|vision --help`                                                                                                     |
 | Training dataset / fine-tune / deploy                 | → skill `bailian-finetune`                                                                                     | Fallback: `bl dataset\|finetune\|deploy --help`                                                                                                              |
+| 百炼模型智能路由 / smart routing / model routing      | → skill `bailian-finetune`                                                                                     | 独立于精调流程；fallback: `bl deploy router --help`。                                                                                                        |
+| 吞吐预留（PTU）/ ModelCode 容量购买与扩缩容           | → skill `bailian-finetune`                                                                                     | 独立于精调流程；包括容量查询、购买、扩缩容、续费、释放、退订与溢出策略；fallback: `bl deploy --help`。                                                       |
 | Guided end-to-end OPD distillation workflow           | → skill `bailian-opd`                                                                                          | Authorize → validate → preflight → consent → submit → wait; fallback: `bl finetune opd --help`                                                               |
 | agents.yaml IaC / managed-agent sessions              | → skill `bailian-managed-agent`                                                                                | Fallback: `bl managed-agent --help`; `apply`/`destroy` need `--yes` after `plan`                                                                             |
 | Bailian Sandbox instance / template lifecycle         | → skill `bailian-sandbox`                                                                                      | Fallback: `bl sandbox --help`                                                                                                                                |

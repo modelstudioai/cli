@@ -85,6 +85,7 @@ export default defineCommand({
       const status = (deployment?.status ?? "").toUpperCase();
       const plan = typeof deployment?.plan === "string" ? deployment.plan.trim().toLowerCase() : "";
       const knownPtuPlan = plan === "ptu" || plan === "ptu_v2";
+      const knownModelRouterPlan = plan === "mr";
       const knownNonPtuPlan = plan === "mu" || plan === "cu" || plan === "lora";
       const hasMeaningfulPtuTier =
         typeof deployment?.ptu_service_tier === "string" &&
@@ -95,7 +96,7 @@ export default defineCommand({
         !Array.isArray(deployment.ptu_capacity) &&
         Object.keys(deployment.ptu_capacity).length > 0;
       const isPtu = knownPtuPlan || (!plan && (hasMeaningfulPtuTier || hasMeaningfulPtuCapacity));
-      if (!isPtu && !knownNonPtuPlan) {
+      if (!isPtu && !knownModelRouterPlan && !knownNonPtuPlan) {
         throw new BailianError(
           "Cannot determine deployment plan safely; deletion was not submitted. / 无法可靠判断部署计划类型；未提交删除请求。",
           ExitCode.USAGE,
@@ -161,7 +162,7 @@ export default defineCommand({
             );
           }
         }
-      } else if (status !== "STOPPED" && status !== "FAILED") {
+      } else if (!knownModelRouterPlan && status !== "STOPPED" && status !== "FAILED") {
         throw new BailianError(
           `Deployment ${deployedModel} must be STOPPED or FAILED before deletion (current: ${status || "unknown"}). / 部署 ${deployedModel} 删除前必须为 STOPPED 或 FAILED（当前：${status || "未知"}）。`,
           ExitCode.USAGE,

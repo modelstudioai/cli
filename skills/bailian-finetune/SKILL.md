@@ -10,6 +10,8 @@ description: >-
   把专属模型部署成服务时使用 `bl dataset` / `bl finetune` / `bl deploy`。链路是 validate 校验数据 →
   upload 拿 file-id → finetune create 建任务 → watch 看进度 → export 导出 → 可选 compress 量化压缩 → deploy 上线，需要 API key；
   Console 版本状态与独立部署服务查询使用 Console 鉴权。
+  百炼模型智能路由（智能选模、smart routing / model routing）的路由版本查询、服务创建、配置更新与服务删除也由本 skill 承接，不要求先精调。
+  百炼吞吐预留（PTU）、ModelCode 容量购买、扩缩容、续费、释放、退订与溢出策略也由本 skill 承接，不要求先精调。
   强化学习（RL）训练走 `bl finetune rl`，在隔离沙箱内执行，需先 `bl finetune runtime prepare` 准备运行时（沙箱仅支持 macOS / Linux）；
   OPD 蒸馏训练走 `bl finetune opd`，宿主直连 fine-tunes OpenAPI，无需沙箱运行时；
   授权检查与开通走 `bl finetune rl authorize` / `bl finetune opd authorize`（Console 鉴权）。
@@ -27,6 +29,8 @@ description: >-
 ```bash
 BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-finetune BAILIAN_SKILL_VERSION=<metadata.version> bl dataset validate --file train.jsonl
 ```
+
+模型智能路由是独立的服务管理流程，不需要先准备训练数据或创建精调任务。命令组 `bl deploy router` 覆盖版本查询、创建、列表、详情、配置更新和删除。`router update` 的 `--route-version`、`--strategy`、`--candidates` 至少提供一项；CLI 先读取当前配置，保留未提供的字段，再向服务端提交完整 `routing_config`。`--candidates` 使用逗号分隔并替换整个候选列表。三个配置项齐全时 `--dry-run` 不联网；部分参数预览会读取当前路由，但不会提交更新。普通部署的限流、扩缩容、启停命令不适用于智能路由。创建/删除遇到确认错误时遵循共享协议，不自动补 `--yes`。详见 `reference/deploy.md` 或 `bl deploy router --help`。
 
 ## End-to-end workflow (follow in order)
 
@@ -75,12 +79,19 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-f
 | Query capacity instances                               | `bl deploy capacity list` / `get`                                                                                                                |
 | Query / wait for a capacity operation                  | `bl deploy operation get` / `wait`                                                                                                               |
 | Buy / scale / renew / release capacity                 | `bl deploy capacity create` / `scale` / `renew` / `delete`                                                                                       |
+| Enable / disable automatic renewal                     | `bl deploy capacity auto-renew enable` / `disable`                                                                                               |
 | Unsubscribe a prepaid instance                         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                                                                        |
 | Configure ModelCode overflow strategy                  | `bl deploy overflow`                                                                                                                             |
+| List model-routing versions                            | `bl deploy router versions`                                                                                                                      |
+| Create a model router                                  | `bl deploy router create --name <name> --route-version <ver> --strategy <EFFECT_FIRST\|COST_FIRST> --candidates <id,...>`                        |
+| List model routers                                     | `bl deploy router list`                                                                                                                          |
+| Get model router detail                                | `bl deploy router get --deployed-model <id>`                                                                                                     |
+| Update selected model router fields                    | `bl deploy router update --deployed-model <id> [--route-version <ver>] [--strategy <strategy>] [--candidates <id,...>]`                          |
+| Delete a model router                                  | `bl deploy router delete --deployed-model <id>`                                                                                                  |
 
 The `capacity list` / `get`, `operation get` / `wait` and `deploy list` / `get` queries are read-only. Capacity values are kTPM; effective, configured and target capacities are distinct. `deploy list --status` filters only the fetched page locally, with the server total left unfiltered. `operation get` reports status as data; `operation wait` exits non-zero on failure or timeout and refreshes capacity after success. Use IDs returned by the API; waiting never retries a write.
 
-The `capacity create` / `scale` / `renew` / `delete` and `overflow` commands are high-risk writes: preview with `--dry-run`, then confirm with the runtime-injected `--yes`. Each write is submitted once and never auto-retried; HTTP 200 is not success, so pass `--wait` or check `operation_status`. Scale values are one instance's absolute kTPM, not deltas or ModelCode totals, and zero is not release. `capacity delete` releases an instance but keeps the ModelCode; active prepaid instances cannot be DELETEd — run `capacity unsubscribe --instance-id <id>` to get the billing console refund link and finish there (no API exists for refunds). Release is confirmed by `deleted=true`. `overflow` applies to the whole ModelCode, not one instance. There is no estimator or standalone auto-renewal endpoint — renewal settings ride along purchase/scale/renew.
+The `capacity create` / `scale` / `renew` / `auto-renew enable` / `auto-renew disable` / `delete` and `overflow` commands are high-risk writes: preview with `--dry-run`, then confirm with the runtime-injected `--yes`. Each write is submitted once and never auto-retried; HTTP 200 is not success, so pass `--wait` or check `operation_status`. Scale values are one instance's absolute kTPM, not deltas or ModelCode totals, and zero is not release. `capacity delete` releases an instance but keeps the ModelCode; active prepaid instances cannot be DELETEd — run `capacity unsubscribe --instance-id <id>` to get the billing console refund link and finish there (no API exists for refunds). Release is confirmed by `deleted=true`. `overflow` applies to the whole ModelCode, not one instance. There is no estimator. Change automatic renewal through `capacity auto-renew enable` / `disable`; enabling it starts recurring charges until disabled.
 
 Console reads are separate from API-key file/deployment queries; the API Key / `file_id` semantics of `dataset list` are unchanged. Discover `records[].datasetGroupId` with `dataset groups`, then pass it to `dataset version --dataset-group-id <group-id>` to get `{result:[...]}` with `result[].datasetId` and an optional `fileId`. Use `dataset version --dataset-id <version-id>` for details; exactly one of `--dataset-group-id` and `--dataset-id` is required, and they cannot be combined. `fileId` is not `datasetId`; never pass a file ID from `dataset list` as a Console version ID. Groups are paginated and contain only one nested version preview; `version --dataset-group-id` normalizes array responses to `result` without promising exhaustive results or exposing pagination. Keep the same workspace throughout this chain. `--include-status` is available only in detail mode (`dataset version --dataset-id <version-id> --include-status`) and preserves raw version and task state; missing/unknown state never means validation success or training readiness, and the returned task is not guaranteed to be the latest. A failed follow-up query retains metadata and exits nonzero. `deploy instances` returns one page (`records` is the list, `items` the total); reading does not establish inference or pause permission. With `--workspace-id`, these commands resolve that workspace's Console identity before business requests and stop on resolution failure. For an error-report file key, hand off to `bailian-cli` (`file url`); an existing report URL can be used directly.
 
