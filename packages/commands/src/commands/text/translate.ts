@@ -43,8 +43,9 @@ const TRANSLATE_FLAGS = {
     type: "array",
     valueHint: "<text>",
     description: {
-      "en-US": "Text to translate (repeatable user messages; or use --messages-file)",
-      "zh-CN": "待翻译文本（可重复的 user 消息；也可使用 --messages-file）",
+      "en-US":
+        "Text to translate (repeatable; literal text, not role: prefixes; or use --messages-file)",
+      "zh-CN": "待翻译文本（可重复；原文原样保留，不解析 role: 前缀；也可使用 --messages-file）",
     },
   },
   messagesFile: {
@@ -215,9 +216,9 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        "Language names use English full names (Chinese/English), not zh/en codes. Only user messages are accepted. Does not support --api responses, --batch, --prime, --tool, --enable-search, or thinking flags. For general chat use `text chat`.",
+        "Language names use English full names (Chinese/English), not zh/en codes. --message is literal text; role checks apply to --messages-file only. Does not support --api responses, --batch, --prime, --tool, --enable-search, or thinking flags. For general chat use `text chat`.",
       "zh-CN":
-        "语言名用英文全称（Chinese/English），不用 zh/en 代码。仅接受 user 消息。不支持 --api responses、--batch、--prime、--tool、--enable-search 及 thinking 参数。普通对话请用 `text chat`。",
+        "语言名用英文全称（Chinese/English），不用 zh/en 代码。--message 为原文；角色校验仅针对 --messages-file。不支持 --api responses、--batch、--prime、--tool、--enable-search 及 thinking 参数。普通对话请用 `text chat`。",
     },
   ],
   validate: (flags) => {
@@ -239,7 +240,7 @@ export default defineCommand({
       );
     }
 
-    const allMessages = buildChatMessages(parseTextMessages(flags));
+    const allMessages = buildChatMessages(parseTextMessages(flags, { allowRolePrefix: false }));
     assertUserOnlyTextMessages(allMessages, localize);
 
     const shouldStream = flags.stream || process.stdout.isTTY;

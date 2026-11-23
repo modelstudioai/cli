@@ -182,21 +182,60 @@ describe("e2e: text translate (Qwen-MT)", () => {
     expect(badTerm.stderr).toMatch(/--term/i);
   });
 
-  test("rejects system/assistant roles", async () => {
-    const withSystem = await runCommandInProcess(TEXT_TRANSLATE_ROUTES, [
+  test("--message keeps role-like prefixes as literal text", async () => {
+    const userPrefix = await runCommandInProcess(TEXT_TRANSLATE_ROUTES, [
       "text",
       "translate",
       "--message",
-      "system:You are a translator",
+      "user: hello",
+      "--target-lang",
+      "English",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(userPrefix.exitCode, userPrefix.stderr).toBe(0);
+    expect(
+      parseStdoutJson<{ request?: { messages?: Array<{ role?: string; content?: string }> } }>(
+        userPrefix.stdout,
+      ).request?.messages,
+    ).toEqual([{ role: "user", content: "user: hello" }]);
+
+    const assistantPrefix = await runCommandInProcess(TEXT_TRANSLATE_ROUTES, [
+      "text",
+      "translate",
       "--message",
-      "hello",
+      "assistant: hello",
+      "--target-lang",
+      "English",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(assistantPrefix.exitCode, assistantPrefix.stderr).toBe(0);
+    expect(
+      parseStdoutJson<{ request?: { messages?: Array<{ role?: string; content?: string }> } }>(
+        assistantPrefix.stdout,
+      ).request?.messages,
+    ).toEqual([{ role: "user", content: "assistant: hello" }]);
+  });
+
+  test("rejects non-user roles in --messages-file", async () => {
+    const messagesFile = join(isolatedDirectory, "assistant-messages.json");
+    writeFileSync(messagesFile, JSON.stringify([{ role: "assistant", content: "hello" }]));
+
+    const { stderr, exitCode } = await runCommandInProcess(TEXT_TRANSLATE_ROUTES, [
+      "text",
+      "translate",
+      "--messages-file",
+      messagesFile,
       "--target-lang",
       "English",
       "--dry-run",
       "--quiet",
     ]);
-    expect(withSystem.exitCode).toBe(2);
-    expect(withSystem.stderr).toMatch(/user|system/i);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/user|assistant|system/i);
   });
 
   test("rejects empty messages-file and empty message content → 2", async () => {

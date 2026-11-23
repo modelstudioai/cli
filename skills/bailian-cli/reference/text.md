@@ -119,7 +119,7 @@ bl text chat --prime --workspace-id <id> --model glm-5.3-prime --message "Explai
 | Flag                     | Type   | Required | Description                                                                                 |
 | ------------------------ | ------ | -------- | ------------------------------------------------------------------------------------------- |
 | `--model <model>`        | string | no       | Qwen-MT model ID (default: qwen-mt-flash; qwen-mt-plus\|flash\|lite, optional dated suffix) |
-| `--message <text>`       | array  | no       | Text to translate (repeatable user messages; or use --messages-file)                        |
+| `--message <text>`       | array  | no       | Text to translate (repeatable; literal text, not role: prefixes; or use --messages-file)    |
 | `--messages-file <path>` | string | no       | Messages array for one request (use - for stdin; user role only)                            |
 | `--source-lang <name>`   | string | no       | Translation source language (English name; default: auto)                                   |
 | `--target-lang <name>`   | string | yes      | Translation target language (English name)                                                  |
@@ -134,7 +134,7 @@ bl text chat --prime --workspace-id <id> --model glm-5.3-prime --message "Explai
 
 #### Notes
 
-- Language names use English full names (Chinese/English), not zh/en codes. Only user messages are accepted. Does not support --api responses, --batch, --prime, --tool, --enable-search, or thinking flags. For general chat use `text chat`.
+- Language names use English full names (Chinese/English), not zh/en codes. --message is literal text; role checks apply to --messages-file only. Does not support --api responses, --batch, --prime, --tool, --enable-search, or thinking flags. For general chat use `text chat`.
 
 #### Examples
 

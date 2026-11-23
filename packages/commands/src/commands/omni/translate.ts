@@ -11,11 +11,10 @@ import {
   type LocalizedText,
   type QwenMtUniRequest,
 } from "bailian-cli-core";
-import { downloadFile } from "bailian-cli-runtime";
 import { existsSync, statSync } from "fs";
 import { extname, join } from "path";
 import { randomBytes } from "crypto";
-import { pollDashScopeTask } from "../shared/dashscope-task.ts";
+import { downloadDashScopeTaskResult, pollDashScopeTask } from "../shared/dashscope-task.ts";
 import { hasNonAscii, isHttpUrl, parseTermPairs } from "../shared/translation.ts";
 
 const DEFAULT_MODEL = "qwen-mt-uni";
@@ -492,9 +491,7 @@ export default defineCommand({
     // Safe local basename only — never trust remote URL path segments.
     const destPath = join(outDir, `omni-translate-${randomBytes(6).toString("hex")}.${extension}`);
 
-    await downloadFile(translatedUrl, destPath, {
-      quiet: settings.quiet || settings.output === "json",
-    });
+    await downloadDashScopeTaskResult(ctx, taskId, translatedUrl, destPath);
 
     const result = {
       ...taskResponse,

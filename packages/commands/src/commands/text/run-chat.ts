@@ -26,10 +26,19 @@ export interface ParsedTextMessages {
   messages: ChatMessage[];
 }
 
+export interface ParseTextMessagesOptions {
+  /** When false, each --message is a literal user string (no role: prefix). Default true. */
+  allowRolePrefix?: boolean;
+}
+
 /** Parse --message / --messages-file / --system into chat messages. */
-export function parseTextMessages(flags: TextMessageFlags): ParsedTextMessages {
+export function parseTextMessages(
+  flags: TextMessageFlags,
+  options?: ParseTextMessagesOptions,
+): ParsedTextMessages {
   const messages: ChatMessage[] = [];
   let system: string | undefined;
+  const allowRolePrefix = options?.allowRolePrefix !== false;
 
   if (flags.system) {
     system = flags.system;
@@ -50,6 +59,11 @@ export function parseTextMessages(flags: TextMessageFlags): ParsedTextMessages {
   if (flags.message) {
     const validRoles = new Set(["system", "user", "assistant"]);
     for (const messageValue of flags.message) {
+      if (!allowRolePrefix) {
+        messages.push({ role: "user", content: messageValue });
+        continue;
+      }
+
       const colonIndex = messageValue.indexOf(":");
       const maybeRole = colonIndex !== -1 ? messageValue.slice(0, colonIndex) : "";
 

@@ -8,7 +8,7 @@ import {
   type LocalizedText,
   type Settings,
 } from "bailian-cli-core";
-import { poll } from "bailian-cli-runtime";
+import { downloadFile, poll } from "bailian-cli-runtime";
 
 function taskApiCode(output: DashScopeTaskResponse["output"]): string | undefined {
   if (output.Code !== undefined) return String(output.Code);
@@ -109,5 +109,34 @@ export async function pollDashScopeTask(
       );
     }
     throw error;
+  }
+}
+
+/** Download a succeeded task artifact; keep task_id on download / disk failures. */
+export async function downloadDashScopeTaskResult(
+  ctx: {
+    localize: (text: LocalizedText) => string;
+    settings: Pick<Settings, "quiet" | "output">;
+  },
+  taskId: string,
+  url: string,
+  destPath: string,
+): Promise<{ size: number }> {
+  try {
+    return await downloadFile(url, destPath, {
+      quiet: ctx.settings.quiet || ctx.settings.output === "json",
+    });
+  } catch (error) {
+    const originalMessage = error instanceof Error ? error.message : String(error);
+    const exitCode = error instanceof BailianError ? error.exitCode : ExitCode.GENERAL;
+    throw new BailianError(
+      `${originalMessage} task_id=${taskId}`,
+      exitCode,
+      ctx.localize({
+        "en-US": `Task already succeeded. Query or re-download with task_id ${taskId}; do not resubmit.`,
+        "zh-CN": `任务已成功。请用 task_id ${taskId} 查询或重新下载，勿重新提交。`,
+      }),
+      { cause: error },
+    );
   }
 }

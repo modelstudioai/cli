@@ -11,11 +11,10 @@ import {
   type ImageTranslationRequest,
   type LocalizedText,
 } from "bailian-cli-core";
-import { downloadFile } from "bailian-cli-runtime";
 import { existsSync, statSync } from "fs";
 import { join } from "path";
 import { randomBytes } from "crypto";
-import { pollDashScopeTask } from "../shared/dashscope-task.ts";
+import { downloadDashScopeTaskResult, pollDashScopeTask } from "../shared/dashscope-task.ts";
 import { hasNonAscii, isHttpUrl, parseTermPairs } from "../shared/translation.ts";
 
 const DEFAULT_MODEL = "qwen-mt-image";
@@ -337,9 +336,7 @@ export default defineCommand({
       subDir: flags.outDir ? undefined : "images",
     });
     const destPath = join(outDir, `image-translate-${randomBytes(6).toString("hex")}.jpg`);
-    await downloadFile(imageResultUrl, destPath, {
-      quiet: settings.quiet || settings.output === "json",
-    });
+    await downloadDashScopeTaskResult(ctx, taskId, imageResultUrl, destPath);
 
     const serverMessage = taskResponse.output.message;
     const result = {

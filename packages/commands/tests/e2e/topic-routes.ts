@@ -171,6 +171,8 @@ export const SPEECH_VOICE_ROUTES: E2eRouteExports = {
   "speech voice delete": "speechVoiceDelete",
   "speech voice preview": "speechVoicePreview",
   "speech synthesize": "speechSynthesize",
+  // Live Omni clone → same-model audio: `omni --model <target> --voice <id>`
+  omni: "textOmni",
 };
 
 export const SPEECH_GENERATE_ROUTES: E2eRouteExports = {

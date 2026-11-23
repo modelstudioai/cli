@@ -27,6 +27,7 @@ const tempDirs: string[] = [];
 
 const CLONE_TARGET_MODEL = "cosyvoice-v3-flash";
 const CLONE_SYSTEM_VOICE = "longxiaochun_v3";
+const OMNI_CLONE_TARGET_MODEL = "qwen3.5-omni-flash";
 
 afterEach(() => {
   for (const tempDir of tempDirs.splice(0)) {
@@ -981,5 +982,97 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         }
       }
     }, 300_000);
+
+    test("Omni clone → omni audio with the same target model → delete", async () => {
+      const outDir = makeE2eOutputDir("speech-voice-omni-live");
+      const refWav = join(outDir, "omni-clone-ref.wav");
+      const audioOut = join(outDir, "omni-cloned-voice.wav");
+      const prefix = `om${Date.now().toString(36).slice(-6)}`;
+      let voiceId = "";
+
+      try {
+        const reference = await runCommandE2e(SPEECH_VOICE_ROUTES, [
+          "speech",
+          "synthesize",
+          "--model",
+          CLONE_TARGET_MODEL,
+          "--voice",
+          CLONE_SYSTEM_VOICE,
+          "--text",
+          "各位听众朋友们大家好，欢迎收听今天的节目。今天我们一起聊聊城市夜景。",
+          "--format",
+          "wav",
+          "--out",
+          refWav,
+          "--output",
+          "json",
+          "--quiet",
+        ]);
+        expect(reference.exitCode, reference.stderr).toBe(0);
+        assertDecodableAudioFile(refWav);
+
+        const created = await runCommandE2e(SPEECH_VOICE_ROUTES, [
+          "speech",
+          "voice",
+          "clone",
+          "--audio",
+          refWav,
+          "--prefix",
+          prefix,
+          "--target-model",
+          OMNI_CLONE_TARGET_MODEL,
+          "--language-hint",
+          "zh",
+          "--output",
+          "json",
+          "--quiet",
+        ]);
+        expect(created.exitCode, created.stderr).toBe(0);
+        voiceId =
+          parseStdoutJson<{ output?: { voice?: string } }>(created.stdout).output?.voice ?? "";
+        expect(voiceId).toMatch(/^qwen-omni-vc-/);
+        writeFileSync(join(outDir, "omni-voice-id.txt"), `${voiceId}\n`);
+
+        const spoken = await runCommandE2e(SPEECH_VOICE_ROUTES, [
+          "omni",
+          "--model",
+          OMNI_CLONE_TARGET_MODEL,
+          "--voice",
+          voiceId,
+          "--message",
+          "请用一句话介绍今天的好天气。",
+          "--audio-out",
+          audioOut,
+          "--output",
+          "json",
+          "--quiet",
+        ]);
+        expect(spoken.exitCode, spoken.stderr).toBe(0);
+        const body = parseStdoutJson<{ audio_saved?: string; voice?: string; content?: string }>(
+          spoken.stdout,
+        );
+        expect(body.voice).toBe(voiceId);
+        expect(body.audio_saved).toBe(audioOut);
+        assertDecodableAudioFile(audioOut);
+        // `omni` requests audio.format=wav but wraps the streamed Base64 in its own 44-byte
+        // WAV header, assuming raw PCM. A second RIFF marker right after that header means the
+        // service honored format=wav and we shipped WAV-inside-WAV; the magic-byte check above
+        // cannot see it.
+        expect(readFileSync(audioOut).subarray(44, 48).toString("ascii")).not.toBe("RIFF");
+      } finally {
+        if (voiceId) {
+          const deleted = await runCommandE2e(SPEECH_VOICE_ROUTES, [
+            "speech",
+            "voice",
+            "delete",
+            "--id",
+            voiceId,
+            "--yes",
+            "--quiet",
+          ]);
+          expect(deleted.exitCode, deleted.stderr).toBe(0);
+        }
+      }
+    }, 600_000);
   },
 );

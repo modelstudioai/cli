@@ -316,6 +316,71 @@ describe("e2e: image translate", () => {
     expect(readFileSync(body.saved!).equals(jpgBytes)).toBe(true);
   });
 
+  test("download HTTP 503 after SUCCEEDED still includes task_id", async () => {
+    const { origin } = await startServer((request, response) => {
+      const url = new URL(request.url ?? "/", "http://127.0.0.1");
+      if (request.method === "POST") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            output: { task_id: "task-dl-fail-img", task_status: "PENDING" },
+            request_id: "req-dl-fail-img",
+          }),
+        );
+        return;
+      }
+      if (url.pathname === "/api/v1/tasks/task-dl-fail-img") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            output: {
+              task_id: "task-dl-fail-img",
+              task_status: "SUCCEEDED",
+              image_url: `${origin}/translated.jpg`,
+            },
+            request_id: "req-dl-fail-img",
+          }),
+        );
+        return;
+      }
+      if (url.pathname === "/translated.jpg") {
+        response.writeHead(503, { "content-type": "text/plain" });
+        response.end("unavailable");
+        return;
+      }
+      response.writeHead(404);
+      response.end();
+    });
+
+    const outDir = makeE2eOutputDir("image-translate-dl-fail");
+    tempDirs.push(outDir);
+
+    const { stderr, exitCode } = await runCommandInProcess(IMAGE_TRANSLATE_ROUTES, [
+      "image",
+      "translate",
+      "--base-url",
+      origin,
+      "--api-key",
+      "sk-test",
+      "--image",
+      "https://example.com/poster.png",
+      "--target-lang",
+      "en",
+      "--poll-interval",
+      "0.05",
+      "--timeout",
+      "10",
+      "--out-dir",
+      outDir,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(1);
+    expect(stderr).toMatch(/Download failed: HTTP 503/);
+    expect(stderr).toMatch(/task-dl-fail-img/);
+    expect(stderr).toMatch(/already succeeded|已成功/);
+  });
+
   test("FAILED preserves server message via load hook", async () => {
     const { origin } = await startServer((request, response) => {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");

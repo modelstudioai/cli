@@ -1,9 +1,27 @@
 import { httpTransport } from "bailian-cli-core";
-import { createWriteStream, mkdirSync, unlinkSync } from "fs";
-import { dirname } from "path";
+import { createWriteStream, mkdirSync, renameSync, unlinkSync } from "fs";
+import { basename, dirname, join } from "path";
 import { BailianError, ExitCode } from "bailian-cli-core";
 import { createProgressBar } from "../output/progress.ts";
 import type { ReadableStreamReadResult } from "stream/web";
+
+/** Replace dest with temp; Windows cannot rename over an existing path. */
+function publishDownloadedFile(tempPath: string, destPath: string): void {
+  try {
+    renameSync(tempPath, destPath);
+  } catch (error) {
+    const code =
+      error !== null && typeof error === "object" && "code" in error
+        ? (error as NodeJS.ErrnoException).code
+        : undefined;
+    if (code === "EEXIST" || code === "EPERM") {
+      unlinkSync(destPath);
+      renameSync(tempPath, destPath);
+      return;
+    }
+    throw error;
+  }
+}
 
 export async function downloadFile(
   url: string,
@@ -21,7 +39,12 @@ export async function downloadFile(
   if (!reader) throw new BailianError("No response body", ExitCode.GENERAL);
 
   mkdirSync(dirname(destPath), { recursive: true });
-  const writer = createWriteStream(destPath);
+  // Same-directory temp so rename stays on one filesystem; never truncate dest until publish.
+  const tempPath = join(
+    dirname(destPath),
+    `.${basename(destPath)}.${process.pid}.${Date.now()}.part`,
+  );
+  const writer = createWriteStream(tempPath);
   const progress =
     contentLength > 0 && !opts?.quiet ? createProgressBar(contentLength, "Downloading") : null;
 
@@ -59,11 +82,22 @@ export async function downloadFile(
 
     if (!completed) {
       try {
-        unlinkSync(destPath);
+        unlinkSync(tempPath);
       } catch {
         /* best effort */
       }
     }
+  }
+
+  try {
+    publishDownloadedFile(tempPath, destPath);
+  } catch (error) {
+    try {
+      unlinkSync(tempPath);
+    } catch {
+      /* best effort */
+    }
+    throw error;
   }
 
   return { size: received };

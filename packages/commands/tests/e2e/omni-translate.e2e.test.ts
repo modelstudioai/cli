@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 import {
+  cliTimeoutPrefix,
   isBailianE2EMediaEnabled,
   isDashScopeE2EReady,
   makeE2eOutputDir,
@@ -473,6 +474,78 @@ describe("e2e: omni translate loopback", () => {
     expect(getCount).toBe(1);
   });
 
+  test("download HTTP 503 after SUCCEEDED still includes task_id", async () => {
+    const { origin } = await startServer((request, response) => {
+      const url = new URL(request.url ?? "/", "http://127.0.0.1");
+      if (request.method === "POST") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            output: { task_id: "task-dl-fail-omni", task_status: "PENDING" },
+            request_id: "req-dl-fail-omni",
+          }),
+        );
+        return;
+      }
+      if (url.pathname === "/api/v1/tasks/task-dl-fail-omni") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            output: {
+              task_id: "task-dl-fail-omni",
+              task_status: "SUCCEEDED",
+              Success: true,
+              Code: 200,
+              Message: "Success",
+              RequestId: "biz-dl-fail",
+              Data: {
+                FileType: "document",
+                TranslatedFileUrl: `${origin}/out.pdf`,
+              },
+            },
+            request_id: "req-dl-fail-omni",
+          }),
+        );
+        return;
+      }
+      if (url.pathname === "/out.pdf") {
+        response.writeHead(503, { "content-type": "text/plain" });
+        response.end("unavailable");
+        return;
+      }
+      response.writeHead(404);
+      response.end();
+    });
+
+    const outDir = makeE2eOutputDir("omni-translate-dl-fail");
+    tempDirs.push(outDir);
+
+    const { stderr, exitCode } = await runCommandInProcess(OMNI_TRANSLATE_ROUTES, [
+      "omni",
+      "translate",
+      "--base-url",
+      origin,
+      "--api-key",
+      "sk-test",
+      "--file",
+      "https://example.com/a.pdf",
+      "--target-lang",
+      "en",
+      "--poll-interval",
+      "0.05",
+      "--timeout",
+      "10",
+      "--out-dir",
+      outDir,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(1);
+    expect(stderr).toMatch(/Download failed: HTTP 503/);
+    expect(stderr).toMatch(/task-dl-fail-omni/);
+    expect(stderr).toMatch(/already succeeded|已成功/);
+  });
+
   test("timeout includes submitted task_id", async () => {
     const { origin } = await startServer((request, response) => {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
@@ -713,6 +786,33 @@ describe("e2e: omni translate loopback", () => {
   });
 });
 
+/** Minimal one-page PDF with a Helvetica text line (ASCII only). */
+function writeMinimalPdf(filePath: string, line: string): void {
+  const escaped = line.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  const stream = `BT /F1 24 Tf 72 720 Td (${escaped}) Tj ET`;
+  const objects = [
+    "1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
+    "2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n",
+    "3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources<< /Font<< /F1 5 0 R >> >> >>endobj\n",
+    `4 0 obj<< /Length ${Buffer.byteLength(stream, "utf8")} >>stream\n${stream}\nendstream\nendobj\n`,
+    "5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n",
+  ];
+  let body = "%PDF-1.4\n";
+  const offsets: number[] = [0];
+  for (const object of objects) {
+    offsets.push(Buffer.byteLength(body, "utf8"));
+    body += object;
+  }
+  const xrefStart = Buffer.byteLength(body, "utf8");
+  let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (let index = 1; index <= objects.length; index += 1) {
+    xref += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
+  }
+  body += xref;
+  body += `trailer<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+  writeFileSync(filePath, body);
+}
+
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: omni translate live",
   () => {
@@ -738,5 +838,43 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       expect(body.translated_file_url).toBeTruthy();
       expect(body.saved && readFileSync(body.saved).length).toBeGreaterThan(0);
     }, 300_000);
+
+    test("uploads a local PDF, translates, and downloads the result", async () => {
+      const outDir = makeE2eOutputDir("omni-translate-live-pdf");
+      tempDirs.push(outDir);
+      const pdfPath = join(outDir, "brochure.pdf");
+      writeMinimalPdf(pdfPath, "Welcome to Bailian Model Studio.");
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(OMNI_TRANSLATE_ROUTES, [
+        "omni",
+        "translate",
+        // Real document translation polls an async task; the CLI default --timeout 300
+        // would abort long before this case's 600s budget. Follow the video-live convention.
+        ...cliTimeoutPrefix(),
+        "--file",
+        pdfPath,
+        "--source-lang",
+        "en",
+        "--target-lang",
+        "zh",
+        "--format-hint",
+        "pdf",
+        "--out-dir",
+        outDir,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const body = parseStdoutJson<{
+        task_id?: string;
+        translated_file_url?: string;
+        saved?: string;
+      }>(stdout);
+      expect(body.task_id).toMatch(/\S+/);
+      expect(body.translated_file_url).toMatch(/^https?:\/\//i);
+      expect(body.saved).toMatch(/\.pdf$/i);
+      expect(body.saved && readFileSync(body.saved).byteLength).toBeGreaterThan(64);
+      expect(body.saved && readFileSync(body.saved).subarray(0, 5).toString("ascii")).toBe("%PDF-");
+    }, 600_000);
   },
 );
