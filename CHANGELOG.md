@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.10.5] - 2026-11-23
+
+### Added
+
+- **Model router command group**: New `bl deploy router` group for postpaid model routing (`plan=mr`).
+  - `bl deploy router versions` lists available routing versions, supported strategies and candidate models with pagination.
+  - `bl deploy router create` creates a router from `--name`, `--route-version`, `--strategy` (`EFFECT_FIRST` / `COST_FIRST`) and `--candidates`; it starts RUNNING immediately and is gated by dry-run → confirmation → `--yes`.
+  - `bl deploy router list` / `get` query routers; `get` verifies the deployment is `plan=mr`.
+  - `bl deploy router update` updates selected fields of a RUNNING router while preserving unspecified fields; `--candidates` replaces the entire candidate list.
+  - `bl deploy router delete` permanently deletes a router after confirmation; a RUNNING router does not need to be stopped first.
+- **Capacity automatic renewal**: New `bl deploy capacity auto-renew enable` / `disable` toggle automatic renewal for one prepaid capacity instance using `--cycle Day` and `--auto-renewal-duration`. Both are high-risk billing operations with dry-run preview and instance capability prechecks; 8-hour off-peak instances are not supported.
+- **8-hour off-peak capacity**: `bl deploy capacity create` and `bl deploy text create --plan ptu` support the prepaid 8-hour off-peak window via `--pricing-cycle Hour --duration 8 --auto-renewal false`; PTU also requires `--service-tier ptu_default`. The selling window (22:00–24:00 Beijing time) and model support are validated server-side. Off-peak instances cannot be scaled, renewed, auto-renewed, released or unsubscribed and expire automatically.
+
+### Changed
+
+- **PTU thinking-output capacity**: `bl deploy text create --thinking-output-tpm` is no longer rejected locally for PTU; support is model-specific and validated server-side.
+- **Deployment deletion**: `bl deploy delete` recognizes model routers (`plan=mr`) and allows deleting a RUNNING router without stopping it first.
+
 ## [2.10.4] - 2026-11-20
 
 ### Added
