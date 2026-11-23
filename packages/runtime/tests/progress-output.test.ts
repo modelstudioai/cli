@@ -1,5 +1,14 @@
 import { afterEach, expect, test, vi } from "vite-plus/test";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { httpTransport, type Client, type Settings } from "bailian-cli-core";
@@ -142,6 +151,35 @@ test("successful download replaces destination via temp publish", async () => {
     expect(readFileSync(destination, "utf-8")).toBe("new-audio");
     expect(readdirSync(directory).some((name) => name.endsWith(".part"))).toBe(false);
     expect(existsSync(destination)).toBe(true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("successful overwrite preserves the previous destination mode", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "bl-download-mode-"));
+  const destination = join(directory, "take.wav");
+  writeFileSync(destination, "original-audio", { mode: 0o600 });
+  chmodSync(destination, 0o600);
+  expect(statSync(destination).mode & 0o777).toBe(0o600);
+  vi.spyOn(httpTransport, "fetch").mockResolvedValue(
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("new-audio"));
+          controller.close();
+        },
+      }),
+      { headers: { "content-length": "9" } },
+    ),
+  );
+  try {
+    expect(
+      await downloadFile("https://example.invalid/file", destination, { quiet: true }),
+    ).toEqual({ size: 9 });
+    expect(readFileSync(destination, "utf-8")).toBe("new-audio");
+    expect(statSync(destination).mode & 0o777).toBe(0o600);
+    expect(readdirSync(directory).filter((name) => name.endsWith(".bak"))).toEqual([]);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
