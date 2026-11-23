@@ -278,51 +278,37 @@ describe("e2e: speech voice help / validation", () => {
     expect(badDataUri.stderr).toMatch(/audio\/\*|MIME/i);
   });
 
-  test("clone/update dry-run reject local audio whose Base64 would exceed 10 MB", async () => {
+  test("CosyVoice uses raw 10 MB file limit; Omni uses Base64 payload limit", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "bl-voice-oversize-"));
     tempDirs.push(tempDir);
-    // ~8 MiB raw → ~10.67 MiB Base64; previously passed a raw-size check.
-    const oversizePath = join(tempDir, "huge.wav");
-    writeFileSync(oversizePath, Buffer.alloc(44, 0));
-    truncateSync(oversizePath, 8 * 1024 * 1024);
+    // ~8 MiB raw is under CosyVoice file-size limit but over Omni Base64 (~10.67 MiB).
+    const midPath = join(tempDir, "mid.wav");
+    writeFileSync(midPath, Buffer.alloc(44, 0));
+    truncateSync(midPath, 8 * 1024 * 1024);
 
-    const cloneResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+    const cosyMid = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
       "speech",
       "voice",
       "clone",
       "--audio",
-      oversizePath,
+      midPath,
       "--prefix",
       "demo",
       "--target-model",
       "cosyvoice-v3-flash",
       "--dry-run",
       "--quiet",
+      "--output",
+      "json",
     ]);
-    expect(cloneResult.exitCode).toBe(2);
-    expect(cloneResult.stderr).toMatch(/Base64|10 MB|exceeds/i);
-    expect(cloneResult.stderr).toMatch(/Compress|URL|压缩|公网/i);
+    expect(cosyMid.exitCode, cosyMid.stderr).toBe(0);
 
-    const updateResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
-      "speech",
-      "voice",
-      "update",
-      "--id",
-      "voice-x",
-      "--audio",
-      oversizePath,
-      "--dry-run",
-      "--quiet",
-    ]);
-    expect(updateResult.exitCode).toBe(2);
-    expect(updateResult.stderr).toMatch(/Base64|10 MB|exceeds/i);
-
-    const omniResult = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+    const omniMid = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
       "speech",
       "voice",
       "clone",
       "--audio",
-      oversizePath,
+      midPath,
       "--prefix",
       "guanyu",
       "--target-model",
@@ -330,8 +316,43 @@ describe("e2e: speech voice help / validation", () => {
       "--dry-run",
       "--quiet",
     ]);
-    expect(omniResult.exitCode).toBe(2);
-    expect(omniResult.stderr).toMatch(/Base64|10 MB|exceeds/i);
+    expect(omniMid.exitCode).toBe(2);
+    expect(omniMid.stderr).toMatch(/Base64|10 MB|exceeds/i);
+
+    const rawOverPath = join(tempDir, "raw-over.wav");
+    writeFileSync(rawOverPath, Buffer.alloc(44, 0));
+    truncateSync(rawOverPath, 10 * 1024 * 1024 + 1);
+
+    const cosyOver = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "clone",
+      "--audio",
+      rawOverPath,
+      "--prefix",
+      "demo",
+      "--target-model",
+      "cosyvoice-v3-flash",
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(cosyOver.exitCode).toBe(2);
+    expect(cosyOver.stderr).toMatch(/10 MB|exceeds/i);
+    expect(cosyOver.stderr).not.toMatch(/Base64/i);
+
+    const updateOver = await runCommandInProcess(SPEECH_VOICE_ROUTES, [
+      "speech",
+      "voice",
+      "update",
+      "--id",
+      "voice-x",
+      "--audio",
+      rawOverPath,
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(updateOver.exitCode).toBe(2);
+    expect(updateOver.stderr).toMatch(/10 MB|exceeds/i);
   });
 });
 

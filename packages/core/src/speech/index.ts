@@ -14,8 +14,10 @@ export {
 export { parseInstantVocabulary, parseVocabularyEntries } from "./vocabulary-input.ts";
 export {
   assertReferenceAudioBase64WithinLimit,
+  assertReferenceAudioRawWithinLimit,
   estimatedBase64ByteLength,
   MAX_REFERENCE_AUDIO_BASE64_BYTES,
+  MAX_REFERENCE_AUDIO_RAW_BYTES,
   REFERENCE_AUDIO_BASE64_LIMIT_HINT,
 } from "./reference-audio.ts";
 export {

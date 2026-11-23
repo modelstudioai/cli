@@ -281,8 +281,13 @@ describe("e2e: speech generate dry-run / mock HTTP", () => {
     expect(pcmDataUri.exitCode).toBe(2);
     expect(pcmDataUri.stderr).toMatch(/pcm|WAV.*MP3|OGG Opus|Unsupported reference/i);
 
-    const oversizePayload = "A".repeat(10 * 1024 * 1024 + 1);
-    const oversizeDataUri = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
+    const tempDir = mkdtempSync(join(tmpdir(), "bl-speech-gen-size-"));
+    tempDirs.push(tempDir);
+    // Official generate limit is raw file size; ~8 MiB must still pass dry-run.
+    const midWav = join(tempDir, "mid.wav");
+    writeFileSync(midWav, Buffer.alloc(44, 0));
+    truncateSync(midWav, 8 * 1024 * 1024);
+    const midFile = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
       "speech",
       "generate",
       "--workspace-id",
@@ -290,18 +295,17 @@ describe("e2e: speech generate dry-run / mock HTTP", () => {
       "--text-prompt",
       "用 @voice1 介绍",
       "--audio",
-      `data:audio/wav;base64,${oversizePayload}`,
+      midWav,
       "--dry-run",
       "--quiet",
+      "--output",
+      "json",
     ]);
-    expect(oversizeDataUri.exitCode).toBe(2);
-    expect(oversizeDataUri.stderr).toMatch(/Base64|10 MB|exceeds/i);
+    expect(midFile.exitCode, midFile.stderr).toBe(0);
 
-    const tempDir = mkdtempSync(join(tmpdir(), "bl-speech-gen-b64-"));
-    tempDirs.push(tempDir);
     const oversizeWav = join(tempDir, "huge.wav");
     writeFileSync(oversizeWav, Buffer.alloc(44, 0));
-    truncateSync(oversizeWav, 8 * 1024 * 1024);
+    truncateSync(oversizeWav, 10 * 1024 * 1024 + 1);
     const oversizeFile = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
       "speech",
       "generate",
@@ -315,9 +319,8 @@ describe("e2e: speech generate dry-run / mock HTTP", () => {
       "--quiet",
     ]);
     expect(oversizeFile.exitCode).toBe(2);
-    expect(oversizeFile.stderr).toMatch(/Base64|10 MB|exceeds/i);
-    expect(oversizeFile.stderr).toMatch(/Compress|URL/i);
-    expect(oversizeFile.stderr).toMatch(/Base64 payload|estimates/i);
+    expect(oversizeFile.stderr).toMatch(/10 MB|exceeds/i);
+    expect(oversizeFile.stderr).not.toMatch(/Base64/i);
 
     const badDir = mkdtempSync(join(tmpdir(), "bl-speech-gen-bad-"));
     tempDirs.push(badDir);

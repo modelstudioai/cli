@@ -236,9 +236,13 @@ export default defineCommand({
     const prefix = flags.prefix as string;
     const targetModel = flags.targetModel as string;
     const dryRun = settings.dryRun === true;
-    const resolved = resolveVoiceAudioSource(flags.audio, { encodeLocal: !dryRun });
+    const omniClone = isCliOmniVoiceCloneTarget(targetModel);
+    const resolved = resolveVoiceAudioSource(flags.audio, {
+      encodeLocal: !dryRun,
+      sizeLimit: omniClone ? "base64" : "raw",
+    });
 
-    if (isCliOmniVoiceCloneTarget(targetModel)) {
+    if (omniClone) {
       const input: Record<string, unknown> = {
         target_model: targetModel,
         preferred_name: prefix,

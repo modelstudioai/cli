@@ -2,6 +2,7 @@ import { existsSync, statSync } from "fs";
 import { extname } from "path";
 import {
   assertReferenceAudioBase64WithinLimit,
+  assertReferenceAudioRawWithinLimit,
   audioFileToDataUri,
   audioMimeForPath,
   BailianError,
@@ -145,11 +146,14 @@ export function validateLanguageHints(hints: string[] | undefined): string | und
  * Local paths become Data URIs (or a pending marker for dry-run);
  * http(s) URLs and existing Data URIs pass through.
  * Format checks run before encode so dry-run and live agree.
+ *
+ * sizeLimit: "raw" for CosyVoice/Qwen-Audio file-size docs; "base64" for Omni enrollment.
  */
 export function resolveVoiceAudioSource(
   audio: string,
-  options: { encodeLocal: boolean },
+  options: { encodeLocal: boolean; sizeLimit?: "raw" | "base64" },
 ): { audio: string; localPath?: string } {
+  const sizeLimit = options.sizeLimit ?? "raw";
   const trimmed = audio.trim();
   if (trimmed.length === 0) {
     throw new BailianError("--audio must not be empty.", ExitCode.USAGE);
@@ -165,7 +169,11 @@ export function resolveVoiceAudioSource(
       );
     }
     const payload = trimmed.slice(trimmed.indexOf(",") + 1);
-    assertReferenceAudioBase64WithinLimit(payload.length, "Data URI");
+    if (sizeLimit === "base64") {
+      assertReferenceAudioBase64WithinLimit(payload.length, "Data URI");
+    } else {
+      assertReferenceAudioRawWithinLimit(Buffer.from(payload, "base64").byteLength, "Data URI");
+    }
     return { audio: trimmed };
   }
   if (/^https?:\/\//i.test(trimmed)) {
@@ -178,8 +186,11 @@ export function resolveVoiceAudioSource(
   if (!stat.isFile()) {
     throw new BailianError(`Not a file: ${trimmed}`, ExitCode.USAGE);
   }
-  // Official limit is on Base64 size (~4/3 of raw); reject before encode.
-  assertReferenceAudioBase64WithinLimit(estimatedBase64ByteLength(stat.size), trimmed);
+  if (sizeLimit === "base64") {
+    assertReferenceAudioBase64WithinLimit(estimatedBase64ByteLength(stat.size), trimmed);
+  } else {
+    assertReferenceAudioRawWithinLimit(stat.size, trimmed);
+  }
   if (!audioMimeForPath(trimmed)) {
     const extension = extname(trimmed).toLowerCase() || "unknown";
     throw new BailianError(

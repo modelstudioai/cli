@@ -2,11 +2,10 @@ import { existsSync, statSync } from "fs";
 import { basename, extname, join } from "path";
 import { randomBytes } from "crypto";
 import {
-  assertReferenceAudioBase64WithinLimit,
+  assertReferenceAudioRawWithinLimit,
   audioFileToDataUri,
   BailianError,
   defineCommand,
-  estimatedBase64ByteLength,
   ExitCode,
   formatCommand,
   redactDataUri,
@@ -282,7 +281,7 @@ function assertSupportedReferenceDataUri(dataUri: string): void {
     );
   }
   const payload = dataUri.slice(dataUri.indexOf(",") + 1);
-  assertReferenceAudioBase64WithinLimit(payload.length, "Data URI");
+  assertReferenceAudioRawWithinLimit(Buffer.from(payload, "base64").byteLength, "Data URI");
 }
 
 function assertSupportedReferenceExtension(filePath: string): void {
@@ -318,7 +317,7 @@ function buildReference(
   if (!stat.isFile()) {
     throw new BailianError(`Not a file: ${trimmed}`, ExitCode.USAGE);
   }
-  assertReferenceAudioBase64WithinLimit(estimatedBase64ByteLength(stat.size), trimmed);
+  assertReferenceAudioRawWithinLimit(stat.size, trimmed);
   assertSupportedReferenceExtension(trimmed);
   if (!options.encodeLocal) {
     return { audio_data: trimmed, localPath: trimmed };
