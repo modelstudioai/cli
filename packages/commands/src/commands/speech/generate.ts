@@ -539,19 +539,18 @@ export default defineCommand({
       const originalMessage = error instanceof Error ? error.message : String(error);
       const exitCode = error instanceof BailianError ? error.exitCode : ExitCode.GENERAL;
       const requestId = response.request_id?.trim();
-      const detailParts = [
-        requestId ? `request_id=${requestId}` : undefined,
-        `url=${audioUrl}`,
-      ].filter((part): part is string => part !== undefined);
+      // Keep the signed URL in hint only — telemetry records message / api.requestId, not hint.
       throw new BailianError(
-        `${originalMessage} ${detailParts.join(" ")}`,
+        requestId ? `${originalMessage} request_id=${requestId}` : originalMessage,
         exitCode,
         ctx.localize({
-          "en-US":
-            "Audio was generated successfully. Re-download with the URL above; do not regenerate.",
-          "zh-CN": "音频已生成成功。请用上方 URL 重新下载，勿重新生成。",
+          "en-US": `Audio was generated successfully. Re-download from: ${audioUrl}; do not regenerate.`,
+          "zh-CN": `音频已生成成功。请从以下地址重新下载，勿重新生成：${audioUrl}`,
         }),
-        { cause: error },
+        {
+          cause: error,
+          ...(requestId ? { api: { requestId } } : {}),
+        },
       );
     }
 

@@ -7,7 +7,6 @@ import {
   lstatSync,
   mkdirSync,
   readlinkSync,
-  realpathSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -25,24 +24,70 @@ function errnoCode(error: unknown): string | undefined {
 }
 
 /**
- * Resolve where bytes should land. Symlink destinations keep the link and
- * update the target file (write-through), matching pre-temp-publish behavior.
+ * Walk the full symlink chain (including dangling links) so publish writes
+ * through to the final path and leaves intermediate links intact.
  */
 function resolvePublishPath(destPath: string): string {
+  let current = destPath;
+  const seen = new Set<string>();
+  for (;;) {
+    let stats;
+    try {
+      stats = lstatSync(current);
+    } catch {
+      return current;
+    }
+    if (!stats.isSymbolicLink()) {
+      return current;
+    }
+    if (seen.has(current)) {
+      throw new BailianError(
+        `Symbolic link cycle detected while resolving download path: ${destPath}`,
+        ExitCode.GENERAL,
+      );
+    }
+    seen.add(current);
+    const linkTarget = readlinkSync(current);
+    current = isAbsolute(linkTarget) ? linkTarget : join(dirname(current), linkTarget);
+  }
+}
+
+/**
+ * Refuse directories and other non-files before publish (matches 2.10.5 EISDIR
+ * fail-fast; avoids renaming a directory aside and rolling back on unlink).
+ */
+function assertPublishPathIsFileOrAbsent(publishPath: string): void {
   let stats;
   try {
-    stats = lstatSync(destPath);
+    stats = lstatSync(publishPath);
   } catch {
-    return destPath;
+    return;
   }
-  if (!stats.isSymbolicLink()) {
-    return destPath;
+  if (!stats.isFile()) {
+    throw new BailianError(
+      `Download destination must be a regular file: ${publishPath}`,
+      ExitCode.USAGE,
+    );
   }
+}
+
+/** renameSync with copy fallback for Windows / cross-device publishes. */
+function renameOrCopyIntoPlace(tempPath: string, destPath: string): void {
   try {
-    return realpathSync(destPath);
-  } catch {
-    const linkTarget = readlinkSync(destPath);
-    return isAbsolute(linkTarget) ? linkTarget : join(dirname(destPath), linkTarget);
+    renameSync(tempPath, destPath);
+  } catch (renameError) {
+    const code = errnoCode(renameError);
+    // Windows cannot rename onto an existing name; EXDEV needs a copy.
+    if (code === "EEXIST" || code === "EPERM" || code === "EXDEV") {
+      copyFileSync(tempPath, destPath);
+      try {
+        unlinkSync(tempPath);
+      } catch {
+        /* best effort */
+      }
+      return;
+    }
+    throw renameError;
   }
 }
 
@@ -56,7 +101,7 @@ function publishDownloadedFile(
   preserveMode: number | undefined,
 ): void {
   if (!existsSync(destPath)) {
-    renameSync(tempPath, destPath);
+    renameOrCopyIntoPlace(tempPath, destPath);
     return;
   }
 
@@ -67,23 +112,7 @@ function publishDownloadedFile(
   renameSync(destPath, backupPath);
 
   try {
-    try {
-      renameSync(tempPath, destPath);
-    } catch (renameError) {
-      const code = errnoCode(renameError);
-      // Windows cannot rename onto an existing name; EXDEV needs a copy.
-      // Never unlink dest first — backup already holds the previous bytes.
-      if (code === "EEXIST" || code === "EPERM" || code === "EXDEV") {
-        copyFileSync(tempPath, destPath);
-        try {
-          unlinkSync(tempPath);
-        } catch {
-          /* best effort */
-        }
-      } else {
-        throw renameError;
-      }
-    }
+    renameOrCopyIntoPlace(tempPath, destPath);
 
     if (preserveMode !== undefined) {
       chmodSync(destPath, preserveMode);
@@ -109,6 +138,9 @@ export async function downloadFile(
   destPath: string,
   opts?: { quiet?: boolean },
 ): Promise<{ size: number }> {
+  const publishPath = resolvePublishPath(destPath);
+  assertPublishPathIsFileOrAbsent(publishPath);
+
   const res = await httpTransport.fetch(url);
 
   if (!res.ok) {
@@ -119,9 +151,7 @@ export async function downloadFile(
   const reader = res.body?.getReader();
   if (!reader) throw new BailianError("No response body", ExitCode.GENERAL);
 
-  mkdirSync(dirname(destPath), { recursive: true });
-
-  const publishPath = resolvePublishPath(destPath);
+  mkdirSync(dirname(publishPath), { recursive: true });
 
   let preserveMode: number | undefined;
   try {
@@ -130,10 +160,10 @@ export async function downloadFile(
     // Destination (or symlink target) does not exist yet.
   }
 
-  // Same-directory temp so rename stays on one filesystem; never truncate dest until publish.
+  // Temp beside the publish path so rename stays on one filesystem when possible.
   const tempPath = join(
-    dirname(destPath),
-    `.${basename(destPath)}.${process.pid}.${Date.now()}.part`,
+    dirname(publishPath),
+    `.${basename(publishPath)}.${process.pid}.${Date.now()}.part`,
   );
   const writer = createWriteStream(tempPath);
   const progress =

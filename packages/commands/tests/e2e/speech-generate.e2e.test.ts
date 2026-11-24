@@ -523,9 +523,11 @@ describe("e2e: speech generate dry-run / mock HTTP", () => {
       expect(synthesizePosts).toBe(1);
       expect(failed.stderr).toMatch(/Download failed: HTTP 403/);
       expect(failed.stderr).toMatch(/request_id=req-gen-dl-fail/);
+      // Signed URL stays in the hint (CLI recovery), not as message `url=` for telemetry.
       expect(failed.stderr).toMatch(
-        new RegExp(`url=http://127\\.0\\.0\\.1:${address.port}/audio\\.wav`),
+        new RegExp(`http://127\\.0\\.0\\.1:${address.port}/audio\\.wav`),
       );
+      expect(failed.stderr).not.toMatch(/url=http:\/\//);
       expect(failed.stderr).toMatch(/do not regenerate|勿重新生成/i);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));

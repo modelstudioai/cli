@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import {
   chmodSync,
   lstatSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -12,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { httpTransport } from "bailian-cli-core";
+import { BailianError, ExitCode, httpTransport } from "bailian-cli-core";
 import { downloadFile } from "../src/utils/download.ts";
 
 // Publish-path failures (thrown after the body is fully downloaded) must never
@@ -156,4 +157,96 @@ test("symlink publish failure restores the previous target bytes", async () => {
   expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
   expect(readFileSync(targetPath, "utf-8")).toBe("original-audio");
   expect(readFileSync(linkPath, "utf-8")).toBe("original-audio");
+});
+
+test("nested dangling symlink chain creates the final target and keeps links", async () => {
+  const finalPath = join(directory, "final.wav");
+  const midPath = join(directory, "mid.wav");
+  const linkPath = join(directory, "out.wav");
+  symlinkSync(finalPath, midPath);
+  symlinkSync(midPath, linkPath);
+
+  serveBody("new-audio");
+  expect(await downloadFile("https://example.invalid/file", linkPath, { quiet: true })).toEqual({
+    size: 9,
+  });
+
+  expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+  expect(lstatSync(midPath).isSymbolicLink()).toBe(true);
+  expect(readFileSync(finalPath, "utf-8")).toBe("new-audio");
+  expect(readFileSync(linkPath, "utf-8")).toBe("new-audio");
+});
+
+test("dangling symlink to another directory creates the target file", async () => {
+  const otherDirectory = join(directory, "other");
+  mkdirSync(otherDirectory);
+  const targetPath = join(otherDirectory, "remote.wav");
+  const linkPath = join(directory, "alias.wav");
+  symlinkSync(targetPath, linkPath);
+
+  serveBody("new-audio");
+  expect(await downloadFile("https://example.invalid/file", linkPath, { quiet: true })).toEqual({
+    size: 9,
+  });
+
+  expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+  expect(readFileSync(targetPath, "utf-8")).toBe("new-audio");
+});
+
+test("new publish path EXDEV falls back to copy beside the resolved target", async () => {
+  const otherDirectory = join(directory, "other");
+  mkdirSync(otherDirectory);
+  const targetPath = join(otherDirectory, "remote.wav");
+  const linkPath = join(directory, "alias.wav");
+  symlinkSync(targetPath, linkPath);
+
+  serveBody("new-audio");
+  // First rename is temp -> publishPath (missing); EXDEV should copy instead of failing.
+  injection.renameCodes = ["EXDEV"];
+  expect(await downloadFile("https://example.invalid/file", linkPath, { quiet: true })).toEqual({
+    size: 9,
+  });
+
+  expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+  expect(readFileSync(targetPath, "utf-8")).toBe("new-audio");
+});
+
+test("refuses a directory destination without moving it aside", async () => {
+  const targetDirectory = join(directory, "target-dir");
+  mkdirSync(targetDirectory);
+  writeFileSync(join(targetDirectory, "keep.txt"), "keep");
+
+  const fetchSpy = vi.spyOn(httpTransport, "fetch");
+  await expect(
+    downloadFile("https://example.invalid/file", targetDirectory, { quiet: true }),
+  ).rejects.toSatisfy((error: unknown) => {
+    expect(error).toBeInstanceOf(BailianError);
+    expect((error as BailianError).exitCode).toBe(ExitCode.USAGE);
+    expect((error as BailianError).message).toMatch(/must be a regular file/);
+    return true;
+  });
+
+  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(lstatSync(targetDirectory).isDirectory()).toBe(true);
+  expect(readFileSync(join(targetDirectory, "keep.txt"), "utf-8")).toBe("keep");
+  expect(readdirSync(directory).some((name) => name.includes(".bak"))).toBe(false);
+});
+
+test("refuses a symlink whose final target is a directory", async () => {
+  const targetDirectory = join(directory, "target-dir");
+  mkdirSync(targetDirectory);
+  writeFileSync(join(targetDirectory, "keep.txt"), "keep");
+  const linkPath = join(directory, "out.wav");
+  symlinkSync(targetDirectory, linkPath);
+
+  const fetchSpy = vi.spyOn(httpTransport, "fetch");
+  await expect(
+    downloadFile("https://example.invalid/file", linkPath, { quiet: true }),
+  ).rejects.toThrow(/must be a regular file/);
+
+  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+  expect(lstatSync(targetDirectory).isDirectory()).toBe(true);
+  expect(readFileSync(join(targetDirectory, "keep.txt"), "utf-8")).toBe("keep");
+  expect(readdirSync(directory).some((name) => name.includes(".bak"))).toBe(false);
 });
