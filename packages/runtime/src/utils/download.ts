@@ -4,12 +4,15 @@ import {
   copyFileSync,
   createWriteStream,
   existsSync,
+  lstatSync,
   mkdirSync,
+  readlinkSync,
+  realpathSync,
   renameSync,
   statSync,
   unlinkSync,
 } from "fs";
-import { basename, dirname, join } from "path";
+import { basename, dirname, isAbsolute, join } from "path";
 import { BailianError, ExitCode } from "bailian-cli-core";
 import { createProgressBar } from "../output/progress.ts";
 import type { ReadableStreamReadResult } from "stream/web";
@@ -19,6 +22,28 @@ function errnoCode(error: unknown): string | undefined {
     return (error as NodeJS.ErrnoException).code;
   }
   return undefined;
+}
+
+/**
+ * Resolve where bytes should land. Symlink destinations keep the link and
+ * update the target file (write-through), matching pre-temp-publish behavior.
+ */
+function resolvePublishPath(destPath: string): string {
+  let stats;
+  try {
+    stats = lstatSync(destPath);
+  } catch {
+    return destPath;
+  }
+  if (!stats.isSymbolicLink()) {
+    return destPath;
+  }
+  try {
+    return realpathSync(destPath);
+  } catch {
+    const linkTarget = readlinkSync(destPath);
+    return isAbsolute(linkTarget) ? linkTarget : join(dirname(destPath), linkTarget);
+  }
 }
 
 /**
@@ -96,11 +121,13 @@ export async function downloadFile(
 
   mkdirSync(dirname(destPath), { recursive: true });
 
+  const publishPath = resolvePublishPath(destPath);
+
   let preserveMode: number | undefined;
   try {
-    preserveMode = statSync(destPath).mode & 0o7777;
+    preserveMode = statSync(publishPath).mode & 0o7777;
   } catch {
-    // Destination does not exist yet.
+    // Destination (or symlink target) does not exist yet.
   }
 
   // Same-directory temp so rename stays on one filesystem; never truncate dest until publish.
@@ -154,7 +181,7 @@ export async function downloadFile(
   }
 
   try {
-    publishDownloadedFile(tempPath, destPath, preserveMode);
+    publishDownloadedFile(tempPath, publishPath, preserveMode);
   } catch (error) {
     try {
       unlinkSync(tempPath);

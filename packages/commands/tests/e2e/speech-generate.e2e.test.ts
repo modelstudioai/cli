@@ -465,6 +465,72 @@ describe("e2e: speech generate dry-run / mock HTTP", () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
+
+  test("download HTTP failure keeps request_id and audio URL", async () => {
+    let synthesizePosts = 0;
+    const server = createServer((incoming, outgoing) => {
+      const url = incoming.url ?? "";
+      if (url.startsWith("/api/v1/services/audio/tts/SpeechSynthesizer")) {
+        synthesizePosts += 1;
+        const address = server.address() as AddressInfo;
+        outgoing.writeHead(200, { "Content-Type": "application/json" });
+        outgoing.end(
+          JSON.stringify({
+            output: {
+              audio: {
+                url: `http://127.0.0.1:${address.port}/audio.wav`,
+                data: "",
+                id: "audio-1",
+                expires_at: "2099-01-01T00:00:00Z",
+                duration: 1.5,
+              },
+            },
+            usage: { characters: 10 },
+            request_id: "req-gen-dl-fail",
+          }),
+        );
+        return;
+      }
+      if (url.startsWith("/audio.wav")) {
+        outgoing.writeHead(403, { "Content-Type": "text/plain" });
+        outgoing.end("forbidden");
+        return;
+      }
+      outgoing.writeHead(404);
+      outgoing.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address() as AddressInfo;
+    const outDir = makeE2eOutputDir("speech-generate-dl-fail");
+
+    try {
+      const failed = await runCommandInProcess(SPEECH_GENERATE_ROUTES, [
+        "speech",
+        "generate",
+        "--text-prompt",
+        "短播客",
+        "--base-url",
+        `http://127.0.0.1:${address.port}`,
+        "--api-key",
+        "sk-e2e",
+        "--out-dir",
+        outDir,
+        "--out-prefix",
+        "sample",
+        "--quiet",
+      ]);
+      expect(failed.exitCode).not.toBe(0);
+      expect(synthesizePosts).toBe(1);
+      expect(failed.stderr).toMatch(/Download failed: HTTP 403/);
+      expect(failed.stderr).toMatch(/request_id=req-gen-dl-fail/);
+      expect(failed.stderr).toMatch(
+        new RegExp(`url=http://127\\.0\\.0\\.1:${address.port}/audio\\.wav`),
+      );
+      expect(failed.stderr).toMatch(/do not regenerate|勿重新生成/i);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
 });
 
 describe.skipIf(!isSpeechGenerateE2EReady())("e2e: speech generate (live)", () => {

@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import {
   chmodSync,
+  lstatSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -118,4 +120,40 @@ test("publish rename EPERM falls back to copy and keeps the previous mode", asyn
   expect(readFileSync(destination, "utf-8")).toBe("new-audio");
   expect(statSync(destination).mode & 0o777).toBe(0o600);
   expect(readdirSync(directory)).toEqual(["take.wav"]);
+});
+
+test("symlink destination stays a link and the target receives new bytes", async () => {
+  const targetPath = join(directory, "canonical.wav");
+  const linkPath = join(directory, "alias.wav");
+  writeFileSync(targetPath, "original-audio", { mode: 0o600 });
+  chmodSync(targetPath, 0o600);
+  symlinkSync(targetPath, linkPath);
+
+  serveBody("new-audio");
+  expect(await downloadFile("https://example.invalid/file", linkPath, { quiet: true })).toEqual({
+    size: 9,
+  });
+
+  expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+  expect(readFileSync(targetPath, "utf-8")).toBe("new-audio");
+  expect(readFileSync(linkPath, "utf-8")).toBe("new-audio");
+  expect(statSync(targetPath).mode & 0o777).toBe(0o600);
+});
+
+test("symlink publish failure restores the previous target bytes", async () => {
+  const targetPath = join(directory, "canonical.wav");
+  const linkPath = join(directory, "alias.wav");
+  writeFileSync(targetPath, "original-audio", { mode: 0o600 });
+  chmodSync(targetPath, 0o600);
+  symlinkSync(targetPath, linkPath);
+
+  serveBody("new-audio");
+  injection.renameCodes = [null, "EIO"];
+  await expect(
+    downloadFile("https://example.invalid/file", linkPath, { quiet: true }),
+  ).rejects.toThrow("injected EIO");
+
+  expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+  expect(readFileSync(targetPath, "utf-8")).toBe("original-audio");
+  expect(readFileSync(linkPath, "utf-8")).toBe("original-audio");
 });

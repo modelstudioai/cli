@@ -531,9 +531,29 @@ export default defineCommand({
       );
     }
 
-    await downloadFile(audioUrl, destPath, {
-      quiet: settings.quiet || settings.output === "json",
-    });
+    try {
+      await downloadFile(audioUrl, destPath, {
+        quiet: settings.quiet || settings.output === "json",
+      });
+    } catch (error) {
+      const originalMessage = error instanceof Error ? error.message : String(error);
+      const exitCode = error instanceof BailianError ? error.exitCode : ExitCode.GENERAL;
+      const requestId = response.request_id?.trim();
+      const detailParts = [
+        requestId ? `request_id=${requestId}` : undefined,
+        `url=${audioUrl}`,
+      ].filter((part): part is string => part !== undefined);
+      throw new BailianError(
+        `${originalMessage} ${detailParts.join(" ")}`,
+        exitCode,
+        ctx.localize({
+          "en-US":
+            "Audio was generated successfully. Re-download with the URL above; do not regenerate.",
+          "zh-CN": "音频已生成成功。请用上方 URL 重新下载，勿重新生成。",
+        }),
+        { cause: error },
+      );
+    }
 
     const result = {
       ...response,
