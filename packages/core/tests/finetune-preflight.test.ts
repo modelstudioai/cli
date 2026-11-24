@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   getFineTuneHyperParameterDefaultNumber,
+  INSUFFICIENT_DECISION_SAMPLES_CODE,
   INSUFFICIENT_SAMPLES_CODE,
   preflightBatchSizeGate,
+  preflightDecisionSampleGate,
   validateFineTuneHyperParameterOverrides,
   type FineTuneParamHyperParam,
 } from "../src/index.ts";
@@ -49,6 +51,100 @@ describe("preflightBatchSizeGate", () => {
     expect(result.ok).toBe(false);
     expect(result.issue!.message).toMatch(/batch_size \(32\)/);
     expect(result.hint).toMatch(/range published for this model/);
+  });
+});
+
+describe("preflightDecisionSampleGate", () => {
+  test("with validation: train and val each at batch_size pass (>= rule)", () => {
+    const result = preflightDecisionSampleGate({
+      hasValidation: true,
+      trainingRecordCount: 8,
+      validationRecordCount: 8,
+      batchSize: 8,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.issue).toBeUndefined();
+    expect(result.hint).toBeUndefined();
+  });
+
+  test("with validation: a short validation set fails even when train is large", () => {
+    const result = preflightDecisionSampleGate({
+      hasValidation: true,
+      trainingRecordCount: 1000,
+      validationRecordCount: 7,
+      batchSize: 8,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.issue!.severity).toBe("error");
+    expect(result.issue!.code).toBe(INSUFFICIENT_DECISION_SAMPLES_CODE);
+    expect(result.issue!.message).toMatch(
+      /validation dataset has 7 sample\(s\), requires at least 8/,
+    );
+    expect(result.issue!.message).toMatch(/验证集仅 7 条样本/);
+  });
+
+  test("with validation: training minimum is batch_size, not batch_size x 10", () => {
+    const result = preflightDecisionSampleGate({
+      hasValidation: true,
+      trainingRecordCount: 7,
+      validationRecordCount: 8,
+      batchSize: 8,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.issue!.message).toMatch(
+      /training dataset has 7 sample\(s\), requires at least 8/,
+    );
+  });
+
+  test("training only: passes at the batch_size x 10 boundary", () => {
+    expect(
+      preflightDecisionSampleGate({
+        hasValidation: false,
+        trainingRecordCount: 80,
+        batchSize: 8,
+      }).ok,
+    ).toBe(true);
+  });
+
+  test("training only: one sample below batch_size x 10 fails", () => {
+    const result = preflightDecisionSampleGate({
+      hasValidation: false,
+      trainingRecordCount: 79,
+      batchSize: 8,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.issue!.message).toMatch(/requires at least 80/);
+    expect(result.issue!.message).toMatch(/至少需要 80 条/);
+    expect(result.hint).toMatch(/batch_size × 10/);
+    expect(result.hint).toMatch(/决策模型要求/);
+  });
+
+  test("unknown counts fall through to the platform (bare file-id flows)", () => {
+    expect(preflightDecisionSampleGate({ hasValidation: true, batchSize: 8 }).ok).toBe(true);
+    expect(preflightDecisionSampleGate({ hasValidation: false, batchSize: 8 }).ok).toBe(true);
+    // Only the known part is checked: unknown train count + short val set.
+    const result = preflightDecisionSampleGate({
+      hasValidation: true,
+      validationRecordCount: 3,
+      batchSize: 8,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.issue!.message).toMatch(/validation dataset/);
+    expect(result.issue!.message).not.toMatch(/training dataset/);
+  });
+
+  test("reports both failing parts in one bilingual issue", () => {
+    const result = preflightDecisionSampleGate({
+      hasValidation: true,
+      trainingRecordCount: 2,
+      validationRecordCount: 3,
+      batchSize: 8,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.issue!.message).toMatch(/training dataset has 2/);
+    expect(result.issue!.message).toMatch(/validation dataset has 3/);
+    expect(result.issue!.message).toMatch(/训练集仅 2 条样本/);
+    expect(result.issue!.message).toMatch(/验证集仅 3 条样本/);
   });
 });
 

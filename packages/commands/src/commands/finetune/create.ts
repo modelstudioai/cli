@@ -12,6 +12,9 @@ import {
   isTrainingTypeCli,
   TRAINING_TYPES_CLI,
   DEFAULT_TRAINING_TYPE,
+  preflightDecisionSampleGate,
+  readDecisionQuestionSignature,
+  compareDecisionQuestionTables,
   BailianError,
   ExitCode,
   type HttpDeps,
@@ -23,9 +26,10 @@ import {
   type FlagsDef,
 } from "bailian-cli-core";
 import { analyzeDatasetTokens, isLocalPath, uploadResolvedLocal } from "./dataset-input.ts";
+import { preflightTrainOptions } from "./train-options-shared.ts";
 
 /** The modality a `finetune <modality> create` subcommand is bound to. */
-type CommandModality = "text" | "audio" | "image" | "video";
+type CommandModality = "text" | "audio" | "image" | "video" | "decision";
 
 function explicitHyperParameterOverrides(
   commandModality: CommandModality,
@@ -37,6 +41,8 @@ function explicitHyperParameterOverrides(
       batchSize: "batch_size",
       learningRate: "learning_rate",
       maxLength: "max_length",
+      modality: "modality",
+      reasoningMode: "reasoning_mode",
       evalSteps: "eval_steps",
       loraAlpha: "lora_alpha",
       loraDropout: "lora_dropout",
@@ -51,6 +57,11 @@ function explicitHyperParameterOverrides(
     },
     image: { learningRate: "learning_rate" },
     video: {
+      nEpochs: "n_epochs",
+      batchSize: "batch_size",
+      learningRate: "learning_rate",
+    },
+    decision: {
       nEpochs: "n_epochs",
       batchSize: "batch_size",
       learningRate: "learning_rate",
@@ -297,6 +308,28 @@ const TEXT_FLAGS = {
     valueHint: "<n>",
     description: { "en-US": "Max sequence length", "zh-CN": "最大序列长度" },
   },
+  modality: {
+    type: "string",
+    valueHint: "<text|vision>",
+    description: {
+      "en-US":
+        "Training-option modality sent as hyper_parameters.modality (not the dataset format fixed by this subcommand). Only for models with dynamic train options; valid values come from the model's parameter schema.",
+      "zh-CN":
+        "训练选项模态，作为 hyper_parameters.modality 发送（与本子命令固定的数据格式无关）。仅适用于配置了动态训练选项的模型；合法值以该模型的参数配置为准。",
+    },
+    choices: ["text", "vision"] as const,
+  },
+  reasoningMode: {
+    type: "string",
+    valueHint: "<instruct|thinking>",
+    description: {
+      "en-US":
+        "Reasoning mode sent as hyper_parameters.reasoning_mode. Only for models with dynamic train options; valid values come from the model's parameter schema.",
+      "zh-CN":
+        "思考模式，作为 hyper_parameters.reasoning_mode 发送。仅适用于配置了动态训练选项的模型；合法值以该模型的参数配置为准。",
+    },
+    choices: ["instruct", "thinking"] as const,
+  },
 } satisfies FlagsDef;
 
 /**
@@ -340,7 +373,7 @@ const IMAGE_FLAGS = {
 } satisfies FlagsDef;
 
 const TEXT_USAGE =
-  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--job-name <name>] [--priority <L0|L1|L2|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
+  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--job-name <name>] [--priority <L0|L1|L2|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>] [--modality <text|vision>] [--reasoning-mode <instruct|thinking>]";
 
 const AUDIO_USAGE =
   "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
@@ -381,6 +414,51 @@ const VIDEO_FLAGS = {
 
 const VIDEO_USAGE =
   "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>]";
+
+/**
+ * Decision flags: the decision model only supports efficient_sft (LoRA
+ * high-efficiency training) and exactly three hyper-parameters. No
+ * --training-type is exposed (the method is fixed); defaults and valid ranges
+ * come from the platform parameter schema, so the flags carry no local clamps.
+ */
+const DECISION_FLAGS = {
+  ...COMMON_FLAGS,
+  jobName: {
+    type: "string",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Training job display name (job_name)",
+      "zh-CN": "训练任务显示名称（job_name）",
+    },
+  },
+  nEpochs: {
+    type: "number",
+    valueHint: "<n>",
+    description: {
+      "en-US": "Number of epochs (default: 2)",
+      "zh-CN": "训练轮数（默认：2）",
+    },
+  },
+  batchSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: {
+      "en-US": "Samples per training batch (default: 1)",
+      "zh-CN": "每个训练批次的样本数（默认：1）",
+    },
+  },
+  learningRate: {
+    type: "string",
+    valueHint: "<str>",
+    description: {
+      "en-US": 'Learning rate as a string to preserve precision (default: "2e-5")',
+      "zh-CN": '以字符串形式指定学习率以保留精度（默认："2e-5"）',
+    },
+  },
+} satisfies FlagsDef;
+
+const DECISION_USAGE =
+  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--job-name <name>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>]";
 
 const COMMON_NOTES = [
   {
@@ -428,6 +506,12 @@ const TEXT_NOTES = [
       "Pre-submit gate: if the training dataset's sample count is not greater than batch_size, the job is rejected before upload or quota consumption (the platform would otherwise fail ~10 min in, after data processing).",
     "zh-CN":
       "提交前检查：如果训练数据集的样本数不大于 batch_size，会在上传或消耗额度前拒绝任务（否则平台会在数据处理约 10 分钟后才失败）。",
+  },
+  {
+    "en-US":
+      "--modality / --reasoning-mode are training options forwarded as hyper_parameters entries, independent of the dataset format fixed by the subcommand. Models with dynamic train options require them to resolve the parameter schema (e.g. a vision-only CPT base needs --modality vision); models without dynamic options reject them. Invalid combinations are rejected by the server and surfaced as-is.",
+    "zh-CN":
+      "--modality / --reasoning-mode 是训练选项，作为 hyper_parameters 条目发送，与子命令固定的数据格式无关。配置了动态训练选项的模型需要它们才能解析参数配置（例如仅支持视觉训练的 CPT 基座需要 --modality vision）；未配置动态选项的模型会拒绝这两个 flag。非法组合由服务端拒绝并原样透传错误。",
   },
 ];
 
@@ -570,6 +654,8 @@ async function runCreate<F extends FlagsDef>(
 
   if (commandModality === "text") {
     const extraParameters: Record<string, string> = {
+      modality: "modality",
+      reasoningMode: "reasoning_mode",
       evalSteps: "eval_steps",
       loraAlpha: "lora_alpha",
       loraDropout: "lora_dropout",
@@ -639,10 +725,37 @@ async function runCreate<F extends FlagsDef>(
     }
   }
 
+  // Best-effort console precheck for dynamic train options: validate the
+  // combination and complete omitted options from the model defaults, so
+  // dynamic-option models work even without explicit flags. A missing console
+  // session degrades to a warning and leaves the user options unchanged.
+  if (commandModality === "text") {
+    const userTrainOptions: Record<string, string> = {};
+    if (typeof hp.modality === "string") userTrainOptions.modality = hp.modality;
+    if (typeof hp.reasoning_mode === "string") userTrainOptions.reasoning_mode = hp.reasoning_mode;
+    const resolved = await preflightTrainOptions(
+      ctx,
+      model,
+      profile.serverTrainingType,
+      userTrainOptions,
+    );
+    for (const [optionName, optionValue] of Object.entries(resolved.context)) {
+      hp[optionName] = optionValue;
+    }
+  }
+
+  // Dynamic train options (modality / reasoning_mode) double as the schema
+  // query context: models with dynamic options return an empty schema unless
+  // hyper_parameters carries the selected options.
+  const trainOptions: Record<string, string> = {};
+  if (typeof hp.modality === "string") trainOptions.modality = hp.modality;
+  if (typeof hp.reasoning_mode === "string") trainOptions.reasoning_mode = hp.reasoning_mode;
+
   const parameterResponse = await getFineTuneParams(ctx.client, {
     inputModel: model,
     trainingType: profile.serverTrainingType,
     paramType: "hyper",
+    trainOptions,
     workspaceId: settings.workspaceId,
   });
   const parameterSchema = parameterResponse.output?.hyper_params;
@@ -654,8 +767,10 @@ async function runCreate<F extends FlagsDef>(
       }),
       ExitCode.GENERAL,
       ctx.localize({
-        "en-US": "The dataset was not uploaded and the training job was not submitted.",
-        "zh-CN": "数据集未上传，训练任务未提交。",
+        "en-US":
+          "The dataset was not uploaded and the training job was not submitted. If this model has dynamic train options, pass --modality / --reasoning-mode (query valid values with the finetune params command first).",
+        "zh-CN":
+          "数据集未上传，训练任务未提交。若该模型配置了动态训练选项，请传入 --modality / --reasoning-mode（合法值可先用 finetune params 命令查询）。",
       }),
     );
   }
@@ -691,6 +806,50 @@ async function runCreate<F extends FlagsDef>(
       });
       if (!gate.ok && gate.issue) {
         throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
+      }
+    }
+  }
+
+  // Decision-specific pre-flight: the sample-count rule (train/val each ≥
+  // batch_size with a separate validation set, otherwise train ≥ batch_size ×
+  // 10) replaces the generic gate above, and the training/validation question
+  // definitions must match. Both only run on local data outside dry-run; bare
+  // file-id counts are unknown and fall through to the platform.
+  if (commandModality === "decision" && !settings.dryRun) {
+    if (training.recordCount !== undefined || validation?.recordCount !== undefined) {
+      const effectiveBatchSize =
+        typeof hp.batch_size === "number"
+          ? hp.batch_size
+          : getFineTuneHyperParameterDefaultNumber(parameterSchema, "batch_size");
+      if (effectiveBatchSize !== undefined) {
+        const gate = preflightDecisionSampleGate({
+          hasValidation: Boolean(flags.validations),
+          trainingRecordCount: training.recordCount,
+          validationRecordCount: validation?.recordCount,
+          batchSize: effectiveBatchSize,
+        });
+        if (!gate.ok && gate.issue) {
+          throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
+        }
+      }
+    }
+    const trainingPath = training.localPaths[0];
+    const validationPath = validation?.localPaths[0];
+    if (trainingPath && validationPath) {
+      const trainingSignature = await readDecisionQuestionSignature(trainingPath);
+      const validationSignature = await readDecisionQuestionSignature(validationPath);
+      if (trainingSignature && validationSignature) {
+        const driftedIds = compareDecisionQuestionTables(trainingSignature, validationSignature);
+        if (driftedIds.length > 0) {
+          ctx.output.warning({
+            code: "DECISION_QUESTION_DEFINITION_MISMATCH",
+            message: {
+              "en-US": `Training and validation question definitions differ (IDs: ${driftedIds.join(", ")}). Keep question ID, type, instructions and criteria identical across training, evaluation and online requests; changing them requires regenerating data and retraining.`,
+              "zh-CN": `训练集与验证集的问题定义不一致（ID：${driftedIds.join(", ")}）。训练、评估与线上请求的问题 ID、类型、instructions、criteria 必须保持一致；修改定义须重新准备数据并重训。`,
+            },
+            details: { questions: driftedIds },
+          });
+        }
       }
     }
   }
@@ -784,6 +943,7 @@ export const finetuneTextCreate = defineCommand({
     "zh-CN": "创建文本模型微调任务（sft | sft-lora | dpo | dpo-lora | cpt）",
   },
   auth: "apiKey",
+  optionalConsole: true,
   usageArgs: TEXT_USAGE,
   flags: TEXT_FLAGS,
   exampleArgs: [
@@ -794,6 +954,7 @@ export const finetuneTextCreate = defineCommand({
     "--base-model qwen3-8b --datasets ./train.jsonl --training-type sft",
     "--base-model qwen3-8b --datasets ./jev-train.jsonl --job-name jev-train-v1 --priority L0 --lora-rank 8 --lora-alpha 16 --lora-dropout 0.1 --lr-scheduler-type linear --eval-steps 50 --save-strategy epoch --save-total-limit 3 --split 0.9 --max-split-val-dataset-sample 1000 --data-augmentation false --dry-run",
     '--base-model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
+    "--base-model qwen3.6-plus-base-2026-04-02 --datasets file-xxx --training-type cpt --modality vision --reasoning-mode instruct",
     "--base-model qwen3-8b --datasets file-xxx --output json",
     "--base-model qwen3-8b --datasets file-xxx --dry-run",
   ],
@@ -880,4 +1041,66 @@ export const finetuneVideoCreate = defineCommand({
   ],
   notes: VIDEO_NOTES,
   run: (ctx) => runCreate("video", ctx),
+});
+
+const DECISION_NOTES = [
+  ...COMMON_NOTES,
+  {
+    "en-US":
+      "Training data is JSONL: each record carries an input state and a question table. Every question needs a hard label (choice: an option name; noul: true/false; score: a 0-based level index) and may carry a target soft-label distribution covering all options, with probabilities in [0, 1] summing to 1.",
+    "zh-CN":
+      "训练数据为 JSONL：每条记录包含输入 state 与问题表 questions。每个问题必填硬标签 label（choice：选项名；noul：true/false；score：从 0 开始的档位下标），可选软标签 target 须覆盖全部选项、概率在 [0, 1] 之间且合计为 1。",
+  },
+  {
+    "en-US":
+      'Decision fine-tuning always runs efficient_sft (LoRA high-efficiency training); full-parameter training is not available. Only n_epochs / batch_size / learning_rate are overridable; omitted values are sent with the documented defaults (2 / 1 / "2e-5") because the API requires them in the request body.',
+    "zh-CN":
+      '决策模型微调固定使用 efficient_sft（LoRA 高效训练），不支持全参训练。仅 n_epochs / batch_size / learning_rate 可覆盖；未指定项按文档默认值（2 / 1 / "2e-5"）显式发送——API 要求请求体必须携带这些超参。',
+  },
+  {
+    "en-US":
+      "Sample-count rule: with a separate validation dataset, train and validation samples must each be at least batch_size; with training data only, samples must be at least batch_size × 10. Hundreds of samples are recommended.",
+    "zh-CN":
+      "样本数规则：单独上传验证集时，训练集与验证集样本数均不小于 batch_size；仅上传训练集时，样本数不少于 batch_size × 10。推荐准备上百条样本。",
+  },
+  {
+    "en-US":
+      "Keep question definitions (ID, type, instructions, criteria) identical across training, evaluation and online requests; changing them shifts the distribution and requires regenerating data and retraining. The CLI warns on cross-record and train/validation definition drift.",
+    "zh-CN":
+      "训练、评估与线上请求的问题定义（ID、类型、instructions、criteria）必须保持一致；修改定义会造成分布漂移，须重新准备数据并重训。CLI 会对跨记录及训练/验证集的定义漂移发出警告。",
+  },
+  {
+    "en-US":
+      "--suffix is limited to 8 characters. After training, deploy the output model and invoke it with the decision command (--model <finetuned_output>); training-only fields label/target are stripped automatically when reusing a training sample as a request file.",
+    "zh-CN":
+      "--suffix 最多 8 个字符。训练完成后部署产出模型，再用决策调用命令（--model <finetuned_output>）调用；复用训练样本作为请求文件时会自动剥离训练专用字段 label/target。",
+  },
+];
+
+/** `bl finetune decision create` — fine-tune the decision model. Datasets are `.jsonl`. */
+export const finetuneDecisionCreate = defineCommand({
+  defaultOutput: "json",
+  description: {
+    "en-US":
+      "Create a decision model fine-tune job (efficient_sft; choice/noul/score training data)",
+    "zh-CN": "创建决策模型微调任务（efficient_sft 高效训练；choice/noul/score 训练数据）",
+  },
+  auth: "apiKey",
+  usageArgs: DECISION_USAGE,
+  flags: DECISION_FLAGS,
+  exampleArgs: [
+    "--base-model decision-model-preview-2026-09-24 --datasets ./tickets.train.jsonl --validations ./tickets.development.jsonl",
+    "--base-model decision-model-preview-2026-09-24 --datasets file-xxx",
+    '--base-model decision-model-preview-2026-09-24 --datasets ./tickets.train.jsonl --n-epochs 3 --batch-size 4 --learning-rate "2e-5" --suffix mytune',
+    "--base-model decision-model-preview-2026-09-24 --datasets ./tickets.train.jsonl --dry-run",
+  ],
+  notes: DECISION_NOTES,
+  validate: (flags) => {
+    const suffix = flags.suffix as string | undefined;
+    if (suffix !== undefined && suffix.length > 8) {
+      return "--suffix must be at most 8 characters for the decision model. / 决策模型的 --suffix 最多 8 个字符。";
+    }
+    return undefined;
+  },
+  run: (ctx) => runCreate("decision", ctx),
 });

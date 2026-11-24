@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
+import { tmpdir } from "node:os";
 import { join } from "path";
 import {
   isDashScopeE2EReady,
@@ -13,8 +15,69 @@ import { FINETUNE_ROUTES } from "./topic-routes.ts";
 
 let schemaServer: Server;
 let schemaOrigin = "";
+/** Query of the most recent schema request, for protocol assertions. */
+let lastSchemaQuery: URLSearchParams | null = null;
 
-function parameterSchema(inputModel: string): Array<Record<string, unknown>> {
+/** Vision-only dynamic-option base mirroring qwen3.6-plus-base-2026-04-02. */
+const DYNAMIC_OPTION_MODEL = "qwen3.6-plus-base-2026-04-02";
+
+function parameterSchema(
+  inputModel: string,
+  hyperParametersRaw: string | null,
+): Array<Record<string, unknown>> {
+  if (inputModel === DYNAMIC_OPTION_MODEL) {
+    // Mirror the platform: dynamic-option models return an empty schema unless
+    // hyper_parameters carries a legal option context (modality fixed vision).
+    let options: Record<string, unknown> = {};
+    try {
+      options = hyperParametersRaw ? JSON.parse(hyperParametersRaw) : {};
+    } catch {
+      options = {};
+    }
+    if (options.modality !== "vision") return [];
+    return [
+      {
+        name: "batch_size",
+        type: "number",
+        data_range: ["8", "8192"],
+        step: 8,
+        editable: true,
+        defaultValue: "8",
+      },
+      { name: "n_epochs", type: "number", data_range: ["1", "200"], step: 1, editable: true },
+      { name: "learning_rate", type: "input", editable: true },
+      { name: "modality", type: "select", support_values: ["vision"], editable: true },
+      {
+        name: "reasoning_mode",
+        type: "select",
+        support_values: ["instruct", "thinking"],
+        editable: true,
+      },
+    ];
+  }
+  if (inputModel.startsWith("decision-model")) {
+    // Decision preview model: only the three documented knobs; batch_size
+    // defaults to 1 within [1, 1024], n_epochs to 2 within [1, 200].
+    return [
+      {
+        name: "batch_size",
+        type: "number",
+        data_range: ["1", "1024"],
+        step: 1,
+        editable: true,
+        defaultValue: "1",
+      },
+      {
+        name: "n_epochs",
+        type: "number",
+        data_range: ["1", "200"],
+        step: 1,
+        editable: true,
+        defaultValue: "2",
+      },
+      { name: "learning_rate", type: "input", editable: true },
+    ];
+  }
   const videoModel = inputModel.startsWith("wan");
   return [
     {
@@ -122,10 +185,14 @@ beforeAll(async () => {
       response.end('{"message":"unexpected path"}');
       return;
     }
+    lastSchemaQuery = url.searchParams;
     response.end(
       JSON.stringify({
         output: {
-          hyper_params: parameterSchema(url.searchParams.get("input_model") ?? ""),
+          hyper_params: parameterSchema(
+            url.searchParams.get("input_model") ?? "",
+            url.searchParams.get("hyper_parameters"),
+          ),
         },
       }),
     );
@@ -323,6 +390,136 @@ describe("e2e: finetune (schema-gated)", () => {
       "json",
     ]);
     expect(exitCode, stdout + stderr).not.toBe(0);
+  });
+
+  test("finetune text create --help 展示训练选项 flag", async () => {
+    const { stderr, exitCode } = await runCommandHelp(FINETUNE_ROUTES, [
+      "finetune",
+      "text",
+      "create",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--modality/);
+    expect(stderr).toMatch(/--reasoning-mode/);
+  });
+
+  test("finetune create --dry-run 动态选项模型透传 modality/reasoning_mode 并作为 schema 查询上下文", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "text",
+      "create",
+      "--base-model",
+      DYNAMIC_OPTION_MODEL,
+      "--datasets",
+      "file-aaa",
+      "--training-type",
+      "cpt",
+      "--modality",
+      "vision",
+      "--reasoning-mode",
+      "instruct",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      body: {
+        training_type: string;
+        hyper_parameters: { modality: string; reasoning_mode: string };
+      };
+    }>(stdout);
+    expect(data.body.training_type).toBe("cpt");
+    expect(data.body.hyper_parameters.modality).toBe("vision");
+    expect(data.body.hyper_parameters.reasoning_mode).toBe("instruct");
+    // The schema query must carry the same options as hyper_parameters JSON.
+    expect(lastSchemaQuery).not.toBeNull();
+    expect(lastSchemaQuery?.get("training_type")).toBe("cpt");
+    expect(lastSchemaQuery?.get("hyper_parameters")).toBe(
+      JSON.stringify({ modality: "vision", reasoning_mode: "instruct" }),
+    );
+  });
+
+  test("finetune create 动态选项模型缺 modality 时空 schema 闸门给出训练选项提示", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "text",
+      "create",
+      "--base-model",
+      DYNAMIC_OPTION_MODEL,
+      "--datasets",
+      "file-aaa",
+      "--training-type",
+      "cpt",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(1);
+    expect(stderr).toMatch(/--modality/);
+    expect(stderr).toMatch(/dynamic train options|动态训练选项/i);
+  });
+
+  test("finetune create 动态选项模型拒绝 schema 外的 modality 值", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "text",
+      "create",
+      "--base-model",
+      DYNAMIC_OPTION_MODEL,
+      "--datasets",
+      "file-aaa",
+      "--training-type",
+      "cpt",
+      "--modality",
+      "text",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    // Empty schema (illegal context) hits the gate before override validation.
+    expect(exitCode).toBe(1);
+    expect(stderr).toMatch(/--modality/);
+  });
+
+  test("finetune create 无动态选项模型拒绝 --modality（schema unsupported）", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "text",
+      "create",
+      "--base-model",
+      "qwen3-8b",
+      "--datasets",
+      "file-aaa",
+      "--modality",
+      "vision",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/modality/);
+    expect(stderr).toMatch(/not supported|不支持/i);
+  });
+
+  test("finetune create --modality 拒绝枚举外的值 (2)", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "text",
+      "create",
+      "--base-model",
+      "qwen3-8b",
+      "--datasets",
+      "file-aaa",
+      "--modality",
+      "audio",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--modality/);
   });
 
   test("finetune create --dry-run 把本地路径标记为 pending 且不上传数据", async () => {
@@ -535,6 +732,72 @@ describe("e2e: finetune (schema-gated)", () => {
 
   test("finetune params 缺少 --base-model 时退出为用法错误 (2)", async () => {
     const { stderr, exitCode } = await runSchemaCommand(["finetune", "params", "--quiet"]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--base-model|Missing required argument/i);
+  });
+
+  test("finetune train-options --help 展示必填项与 console 凭证域 flag", async () => {
+    const { stderr, exitCode } = await runSchemaCommand(["finetune", "train-options", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--base-model/);
+    expect(stderr).toMatch(/--console-region/);
+  });
+
+  test("finetune train-options --dry-run 离线预览接口与映射后的训练类型", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "train-options",
+      "--base-model",
+      DYNAMIC_OPTION_MODEL,
+      "--training-type",
+      "sft-lora",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      api: string;
+      input: { models: string[]; trainingType: string };
+    }>(stdout);
+    expect(data.action).toBe("finetune.train-options");
+    expect(data.api).toContain("model-train-options");
+    expect(data.input.models).toEqual([DYNAMIC_OPTION_MODEL]);
+    expect(data.input.trainingType).toBe("efficient_sft");
+  });
+
+  test("finetune train-options 不传 --training-type 时默认 sft", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "train-options",
+      "--base-model",
+      DYNAMIC_OPTION_MODEL,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ input: { trainingType: string } }>(stdout);
+    expect(data.input.trainingType).toBe("sft");
+  });
+
+  test("finetune train-options 非法训练类型退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "train-options",
+      "--base-model",
+      "qwen3-8b",
+      "--training-type",
+      "nope",
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--training-type|nope/);
+  });
+
+  test("finetune train-options 缺少 --base-model 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runSchemaCommand(["finetune", "train-options", "--quiet"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--base-model|Missing required argument/i);
   });
@@ -772,6 +1035,405 @@ describe("e2e: finetune (schema-gated)", () => {
     expect(data.body.hyper_parameters.n_epochs).toBe(100);
     expect(data.body.hyper_parameters.batch_size).toBe(2);
     expect(data.body.hyper_parameters.learning_rate).toBe("1e-5");
+  });
+});
+
+describe("e2e: finetune decision create (offline)", () => {
+  const decisionModel = "decision-model-preview-2026-09-24";
+  let fixtureDir = "";
+  let train3 = "";
+  let train10 = "";
+  let val10 = "";
+  let val10Drift = "";
+  let badLabel = "";
+  let fakeZip = "";
+
+  function decisionRecord(overrides?: { instructions?: string; label?: string }): string {
+    return JSON.stringify({
+      state: "Customer complains the invoice title is wrong.",
+      questions: {
+        team: {
+          type: "choice",
+          instructions: overrides?.instructions ?? "Which team should handle this?",
+          criteria: { billing: "Payment and billing issues", technical: "Product fault issues" },
+          label: overrides?.label ?? "billing",
+        },
+      },
+    });
+  }
+
+  function decisionLines(count: number, overrides?: { instructions?: string }): string[] {
+    return Array.from({ length: count }, () => decisionRecord(overrides));
+  }
+
+  beforeAll(() => {
+    fixtureDir = mkdtempSync(join(tmpdir(), "bl-finetune-decision-e2e-"));
+    train3 = join(fixtureDir, "train-3.jsonl");
+    train10 = join(fixtureDir, "train-10.jsonl");
+    val10 = join(fixtureDir, "val-10.jsonl");
+    val10Drift = join(fixtureDir, "val-10-drift.jsonl");
+    badLabel = join(fixtureDir, "bad-label.jsonl");
+    fakeZip = join(fixtureDir, "data.zip");
+    writeFileSync(train3, decisionLines(3).join("\n"));
+    writeFileSync(train10, decisionLines(10).join("\n"));
+    writeFileSync(val10, decisionLines(10).join("\n"));
+    writeFileSync(
+      val10Drift,
+      decisionLines(10, { instructions: "A different wording?" }).join("\n"),
+    );
+    writeFileSync(badLabel, decisionRecord({ label: "sales" }));
+    writeFileSync(fakeZip, "not-a-real-zip");
+  });
+
+  afterAll(() => rmSync(fixtureDir, { recursive: true, force: true }));
+
+  test("decision create --help 展示三个超参且不暴露文本专属 flag", async () => {
+    const { stderr, exitCode } = await runCommandHelp(FINETUNE_ROUTES, [
+      "finetune",
+      "decision",
+      "create",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--base-model/);
+    expect(stderr).toMatch(/--datasets/);
+    expect(stderr).toMatch(/--n-epochs/);
+    expect(stderr).toMatch(/--batch-size/);
+    expect(stderr).toMatch(/--learning-rate/);
+    expect(stderr).not.toMatch(/--training-type|--max-length|--lora-rank|--split/);
+  });
+
+  test("decision create 缺少 --datasets 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--datasets|Missing required/i);
+  });
+
+  test("decision create 缺少 --base-model 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--datasets",
+      "file-aaa",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--base-model|Missing required/i);
+  });
+
+  test("decision create --suffix 超过 8 字符时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      "file-aaa",
+      "--suffix",
+      "waytoolong",
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/suffix/i);
+  });
+
+  test("decision create --dry-run 构造 efficient_sft 默认请求体", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      "file-aaa,file-bbb",
+      "--validations",
+      "file-ccc",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      body: {
+        model: string;
+        training_file_ids: string[];
+        validation_file_ids: string[];
+        training_type: string;
+        hyper_parameters: Record<string, unknown>;
+      };
+    }>(stdout);
+    expect(data.action).toBe("finetune.create");
+    expect(data.body.model).toBe(decisionModel);
+    expect(data.body.training_file_ids).toEqual(["file-aaa", "file-bbb"]);
+    expect(data.body.validation_file_ids).toEqual(["file-ccc"]);
+    expect(data.body.training_type).toBe("efficient_sft");
+    // The API requires hyper_parameters in the body; omitted knobs are sent
+    // with the documented defaults.
+    expect(data.body.hyper_parameters).toEqual({
+      n_epochs: 2,
+      batch_size: 1,
+      learning_rate: "2e-5",
+    });
+  });
+
+  test("decision create --dry-run 仅透传三个超参与命名 flag", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      "file-aaa",
+      "--n-epochs",
+      "3",
+      "--batch-size",
+      "4",
+      "--learning-rate",
+      "2e-5",
+      "--job-name",
+      "decision-job",
+      "--model-name",
+      "decision-model",
+      "--suffix",
+      "mytune",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      body: {
+        job_name: string;
+        model_name: string;
+        finetuned_output_suffix: string;
+        hyper_parameters: Record<string, unknown>;
+      };
+    }>(stdout);
+    expect(data.body.job_name).toBe("decision-job");
+    expect(data.body.model_name).toBe("decision-model");
+    expect(data.body.finetuned_output_suffix).toBe("mytune");
+    expect(data.body.hyper_parameters).toEqual({
+      n_epochs: 3,
+      batch_size: 4,
+      learning_rate: "2e-5",
+    });
+  });
+
+  test("decision create --dry-run 本地路径标记 pending 且不校验不上传", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      train3,
+      "--validations",
+      val10,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      body: { training_file_ids: string[]; validation_file_ids: string[] };
+      pending_uploads: { field: string; path: string }[];
+    }>(stdout);
+    expect(data.body.training_file_ids).toEqual([train3]);
+    expect(data.body.validation_file_ids).toEqual([val10]);
+    expect(data.pending_uploads.map((pending) => pending.field).sort()).toEqual([
+      "datasets",
+      "validations",
+    ]);
+  });
+
+  test.each([
+    ["--batch-size", "2000"],
+    ["--n-epochs", "0"],
+  ])("decision create 按平台参数 schema 拒绝非法 %s=%s", async (flagName, invalidValue) => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      "file-aaa",
+      flagName,
+      invalidValue,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/batch_size|n_epochs/);
+  });
+
+  test("decision create 本地数据校验失败时不上传", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      badLabel,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    const combined = `${stdout}\n${stderr}`;
+    expect(combined).toMatch(/DECISION_INVALID_CHOICE_LABEL/);
+    expect(combined).not.toMatch(/Uploaded .* → file-/);
+  });
+
+  test("decision create 拒绝非 .jsonl 数据文件", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      fakeZip,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    expect(`${stdout}\n${stderr}`).toMatch(/DECISION_UNSUPPORTED_FORMAT/);
+  });
+
+  test("decision create 仅训练集时样本数 < batch_size×10 提交前失败", async () => {
+    // Default batch_size=1 → training-only minimum is 10; 3 records fail.
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      train3,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    const combined = `${stdout}\n${stderr}`;
+    expect(combined).toMatch(/requires at least 10/);
+    expect(combined).toMatch(/INSUFFICIENT_DECISION_SAMPLES|样本数检查未通过/);
+    expect(combined).not.toMatch(/Uploaded .* → file-/);
+  });
+
+  test("decision create 显式 --batch-size 放大训练集门槛", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      train3,
+      "--batch-size",
+      "4",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    expect(`${stdout}\n${stderr}`).toMatch(/requires at least 40/);
+  });
+
+  test("decision create 有验证集时训练集门槛降为 batch_size 且验证集同检", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      train3,
+      "--validations",
+      val10,
+      "--batch-size",
+      "4",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    const combined = `${stdout}\n${stderr}`;
+    expect(combined).toMatch(/training dataset has 3 sample\(s\), requires at least 4/);
+    expect(combined).not.toMatch(/validation dataset has/);
+    expect(combined).not.toMatch(/Uploaded .* → file-/);
+  });
+
+  test("decision create 样本数达标时通过 gate（后续上传命中 mock 404）", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      train10,
+      "--output",
+      "json",
+    ]);
+    // The gate passes at the ≥10 boundary; the upload then hits the loopback
+    // 404 (no real network), proving the failure is no longer the sample gate.
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    const combined = `${stdout}\n${stderr}`;
+    expect(combined).not.toMatch(/sample-count check failed|样本数检查未通过/);
+    expect(combined).toMatch(/unexpected path/);
+  });
+
+  test("decision create 训练/验证问题定义漂移发出 warning 后继续", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      train10,
+      "--validations",
+      val10Drift,
+      "--output",
+      "json",
+    ]);
+    // Warning only (not blocking): the flow proceeds to the upload, which
+    // fails on the loopback 404.
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    expect(stderr).toMatch(/DECISION_QUESTION_DEFINITION_MISMATCH/);
+    expect(stderr).toMatch(/team/);
+    expect(stderr).toMatch(/unexpected path/);
+  });
+
+  test("decision create 训练/验证定义一致时不发漂移 warning", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "decision",
+      "create",
+      "--base-model",
+      decisionModel,
+      "--datasets",
+      train10,
+      "--validations",
+      val10,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).not.toMatch(/DECISION_QUESTION_DEFINITION_MISMATCH/);
+    expect(stderr).toMatch(/unexpected path/);
   });
 });
 

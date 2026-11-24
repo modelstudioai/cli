@@ -1,6 +1,7 @@
 export * from "./types.ts";
 export * from "./api.ts";
 export * from "./console.ts";
+export * from "./prepare/index.ts";
 export { detectModality } from "./inspect.ts";
 export {
   validateDataset,

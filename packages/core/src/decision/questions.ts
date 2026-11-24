@@ -230,3 +230,55 @@ export function inspectDecisionQuestions(questions: unknown, path = "questions")
   }
   return issues;
 }
+
+/**
+ * 问题定义的规范化签名：type + instructions + criteria（对象键排序，与书写顺序无关）。
+ * 微调学的是“输入 + 问题定义 → 答案”的映射，同一任务的训练、评估与线上请求
+ * 必须保持问题 ID、类型、instructions、criteria 一致；签名用于跨记录 / 跨文件比对。
+ * 训练专用的 label / target 不参与签名。非对象问题返回 undefined。
+ */
+export function decisionQuestionSignature(question: unknown): string | undefined {
+  if (!isDecisionObject(question)) return undefined;
+  const criteria = question.criteria;
+  let normalizedCriteria: unknown;
+  if (Array.isArray(criteria)) {
+    normalizedCriteria = criteria;
+  } else if (isDecisionObject(criteria)) {
+    normalizedCriteria = Object.fromEntries(
+      Object.keys(criteria)
+        .sort()
+        .map((optionName) => [optionName, criteria[optionName]]),
+    );
+  } else {
+    normalizedCriteria = criteria ?? null;
+  }
+  return JSON.stringify([question.type ?? null, question.instructions ?? null, normalizedCriteria]);
+}
+
+/** 问题表签名：问题 ID → 定义签名。非对象问题表返回 undefined；非对象问题跳过。 */
+export function decisionQuestionTableSignature(
+  questions: unknown,
+): Map<string, string> | undefined {
+  if (!isDecisionObject(questions)) return undefined;
+  const signatures = new Map<string, string>();
+  for (const [questionId, question] of Object.entries(questions)) {
+    const signature = decisionQuestionSignature(question);
+    if (signature !== undefined) signatures.set(questionId, signature);
+  }
+  return signatures;
+}
+
+/** 比对两份问题表签名，返回新增 / 缺失 / 定义变化的问题 ID（排序后）。 */
+export function compareDecisionQuestionTables(
+  baseline: Map<string, string>,
+  other: Map<string, string>,
+): string[] {
+  const driftedIds = new Set<string>();
+  for (const [questionId, signature] of baseline) {
+    if (other.get(questionId) !== signature) driftedIds.add(questionId);
+  }
+  for (const questionId of other.keys()) {
+    if (!baseline.has(questionId)) driftedIds.add(questionId);
+  }
+  return [...driftedIds].sort();
+}
