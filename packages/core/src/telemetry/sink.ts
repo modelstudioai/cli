@@ -1,7 +1,14 @@
 import { appendFileSync, statSync, unlinkSync } from "fs";
 import { join } from "path";
 import { getConfigDir, ensureConfigDir } from "../config/paths.ts";
-import { buildRemoteAemOptions, type TrackingEvent } from "./event.ts";
+import {
+  buildFirstInstallAemOptions,
+  buildRemoteAemOptions,
+  FIRST_INSTALL_EVENT_NAME,
+  isFirstInstallEvent,
+  type FirstInstallEvent,
+  type TrackingEvent,
+} from "./event.ts";
 import { detectEnv } from "./env.ts";
 import { ensureUid, loadUid } from "./uid.ts";
 import Tracker from "../../lib/remote-telemetry/tracker.cjs";
@@ -117,7 +124,7 @@ export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
   }
 }
 
-export async function localSink(event: TrackingEvent): Promise<void> {
+export async function localSink(event: TrackingEvent | FirstInstallEvent): Promise<void> {
   try {
     await ensureConfigDir();
     const path = TELEMETRY_FILE();
@@ -141,12 +148,19 @@ export async function localSink(event: TrackingEvent): Promise<void> {
   }
 }
 
-export async function remoteSink(event: TrackingEvent): Promise<void> {
+/** Returns whether the event was queued. Callers must not await before this function enqueues. */
+export async function remoteSink(event: TrackingEvent | FirstInstallEvent): Promise<boolean> {
   try {
     initRemote();
-    if (!remoteSendEvent) return;
-    remoteSendEvent(event.command, buildRemoteAemOptions(event));
+    if (!remoteSendEvent) return false;
+    if (isFirstInstallEvent(event)) {
+      remoteSendEvent(FIRST_INSTALL_EVENT_NAME, buildFirstInstallAemOptions(event));
+    } else {
+      remoteSendEvent(event.command, buildRemoteAemOptions(event));
+    }
+    return true;
   } catch {
     // Telemetry must never affect the CLI main flow
+    return false;
   }
 }
