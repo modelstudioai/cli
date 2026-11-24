@@ -7,6 +7,7 @@ import {
   lstatSync,
   mkdirSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -23,11 +24,56 @@ function errnoCode(error: unknown): string | undefined {
   return undefined;
 }
 
+/** OS physical realpath (same resolution family as 2.10.5 open/createWriteStream). */
+function nativeRealpath(pathToResolve: string): string {
+  return realpathSync.native(pathToResolve);
+}
+
 /**
- * Walk the full symlink chain (including dangling links) so publish writes
- * through to the final path and leaves intermediate links intact.
+ * Resolve a relative symlink target against the link location without path.join
+ * collapsing "dirsymlink/.." before the directory symlink is followed.
+ */
+function resolveRelativeLinkTarget(linkPath: string, linkTarget: string): string {
+  let resolvedBase: string;
+  try {
+    resolvedBase = nativeRealpath(dirname(linkPath));
+  } catch {
+    resolvedBase = dirname(linkPath);
+  }
+
+  const segments = linkTarget
+    .split(/[/\\]+/)
+    .filter((segment) => segment.length > 0 && segment !== ".");
+  let resolved = resolvedBase;
+  for (let index = 0; index < segments.length; index++) {
+    const segment = segments[index]!;
+    if (segment === "..") {
+      resolved = dirname(resolved);
+      continue;
+    }
+    const candidate = join(resolved, segment);
+    try {
+      // Follow directory (or file) symlinks the way open(2) does.
+      resolved = nativeRealpath(candidate);
+    } catch {
+      // Remainder is dangling — keep the physical prefix, join only the missing tail.
+      return join(candidate, ...segments.slice(index + 1));
+    }
+  }
+  return resolved;
+}
+
+/**
+ * Resolve where bytes should land. Prefer OS realpath (2.10.5 write-through
+ * semantics); for dangling links walk the chain without lexical ".." collapse.
  */
 function resolvePublishPath(destPath: string): string {
+  try {
+    return nativeRealpath(destPath);
+  } catch {
+    // Final path missing or unresolvable — walk links explicitly below.
+  }
+
   let current = destPath;
   const seen = new Set<string>();
   for (;;) {
@@ -48,7 +94,7 @@ function resolvePublishPath(destPath: string): string {
     }
     seen.add(current);
     const linkTarget = readlinkSync(current);
-    current = isAbsolute(linkTarget) ? linkTarget : join(dirname(current), linkTarget);
+    current = isAbsolute(linkTarget) ? linkTarget : resolveRelativeLinkTarget(current, linkTarget);
   }
 }
 

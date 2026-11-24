@@ -211,6 +211,51 @@ test("new publish path EXDEV falls back to copy beside the resolved target", asy
   expect(readFileSync(targetPath, "utf-8")).toBe("new-audio");
 });
 
+test("relative link through a directory symlink does not overwrite a lexical decoy", async () => {
+  // portal -> elsewhere/real-home; alias -> portal/../out.wav
+  // Lexical join would hit root/out.wav; OS resolution hits elsewhere/out.wav.
+  const elsewhere = join(directory, "elsewhere");
+  const realHome = join(elsewhere, "real-home");
+  mkdirSync(realHome, { recursive: true });
+  const trueTarget = join(elsewhere, "out.wav");
+  const decoyPath = join(directory, "out.wav");
+  writeFileSync(trueTarget, "true-old");
+  writeFileSync(decoyPath, "decoy-old");
+  symlinkSync(realHome, join(directory, "portal"));
+  const linkPath = join(directory, "alias.wav");
+  symlinkSync("portal/../out.wav", linkPath);
+
+  serveBody("new-audio");
+  expect(await downloadFile("https://example.invalid/file", linkPath, { quiet: true })).toEqual({
+    size: 9,
+  });
+
+  expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+  expect(readFileSync(trueTarget, "utf-8")).toBe("new-audio");
+  expect(readFileSync(decoyPath, "utf-8")).toBe("decoy-old");
+});
+
+test("dangling relative link through a directory symlink creates the physical target", async () => {
+  const elsewhere = join(directory, "elsewhere");
+  const realHome = join(elsewhere, "real-home");
+  mkdirSync(realHome, { recursive: true });
+  const trueTarget = join(elsewhere, "out.wav");
+  const decoyPath = join(directory, "out.wav");
+  writeFileSync(decoyPath, "decoy-old");
+  symlinkSync(realHome, join(directory, "portal"));
+  const linkPath = join(directory, "alias.wav");
+  symlinkSync("portal/../out.wav", linkPath);
+
+  serveBody("new-audio");
+  expect(await downloadFile("https://example.invalid/file", linkPath, { quiet: true })).toEqual({
+    size: 9,
+  });
+
+  expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+  expect(readFileSync(trueTarget, "utf-8")).toBe("new-audio");
+  expect(readFileSync(decoyPath, "utf-8")).toBe("decoy-old");
+});
+
 test("refuses a directory destination without moving it aside", async () => {
   const targetDirectory = join(directory, "target-dir");
   mkdirSync(targetDirectory);
