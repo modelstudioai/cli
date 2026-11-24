@@ -6,11 +6,31 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.11.1] - 2026-11-24
+
+### 修复
+
+- **符号链接下载目标**：文件下载会穿过符号链接写入真实文件，并保留链接本身，而不再把链接替换成普通文件。
+- **语音生成下载失败恢复**：`bl speech generate` 在音频已生成成功但落盘失败时，错误提示会带上可重新下载的地址，无需重新生成。
+
 ## [2.11.0] - 2026-11-24
 
 ### 新增
 
+- **语音音色命令组**：新增 `bl speech voice` 组，管理自定义音色注册。
+  - `bl speech voice clone` 用参考音频克隆音色。CosyVoice / Qwen-Audio 目标走 `voice-enrollment`，后续用 `bl speech synthesize --model <同一 target-model> --voice <id>`；Omni 目标（`qwen3.5-omni-flash` / `qwen3.5-omni-plus`，允许带日期后缀）走 `qwen-voice-enrollment`，后续用 `bl omni --model <同一 target-model> --voice <id>`；Realtime（`*-realtime`）目标在创建时会被拒绝。
+  - `bl speech voice design` 用文字描述生成 CosyVoice / Qwen-Audio 音色并本地保存一次性预览；正式试听仍用 `bl speech synthesize`。不支持 Omni 目标。
+  - `bl speech voice list` / `get` / `update` / `delete` / `preview` 管理已注册音色（`update` / `preview` / `get` 适用于 CosyVoice / Qwen-Audio；Omni 仅支持 clone / list / delete）。
+- **语音内容生成**：新增 `bl speech generate`，通过 `--text-prompt` 与可选的 `@voice1`…`@voice3` 参考音频（`--audio`，仅 WAV/MP3/OGG Opus）生成播客/对话类音频；默认北京 MaaS 端点需要 Workspace ID；不接受系统音色或已克隆 `voice` ID。
+- **Qwen-MT 翻译命令**：新增文本、图片排版与多模态文件翻译入口。
+  - `bl text translate` 用 Qwen-MT（`qwen-mt-flash` / `plus` / `lite`）翻译文本，支持 `--term` 术语对与可选流式输出。
+  - `bl image translate` 翻译图片内文字并尽量保留排版（默认 `qwen-mt-image`，可选 `qwen-mt-image-2.0`），支持等待完成或 `--async`。
+  - `bl omni translate` 用 Qwen-MT-Uni（`qwen-mt-uni`）翻译文档、图片或音频文件，支持术语表 / 敏感词等选项，以及等待完成或 `--async`。
 - **全局 `--biz-from` 参数**：所有命令支持 `--biz-from <source>`，调用方（skill/agent/产品）可声明业务来源，便于按来源统计命令调用（如 `flow-agent`）的 PV/UV。
+
+### 修复
+
+- **CLI npm 更新**：`bl update` 与自动更新改为从官方 npm registry 安装，与版本检测使用同一来源，从而避免因用户配置的镜像同步滞后而将未实际升级的安装结果报告为更新成功。
 
 ## [2.10.5] - 2026-11-23
 
