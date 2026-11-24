@@ -74,6 +74,7 @@ const HELP_TEXT = {
   },
   notes: { "en-US": "Notes:", "zh-CN": "说明：" },
   examples: { "en-US": "Examples:", "zh-CN": "示例：" },
+  subcommands: { "en-US": "Subcommands:", "zh-CN": "子命令：" },
   confirmedExample: {
     "en-US": "# Only after explicit confirmation:",
     "zh-CN": "# 仅在明确确认后执行：",
@@ -344,6 +345,12 @@ export class CommandRegistry {
 
     if (node.command) {
       this.printCommandHelp(node.command, commandPath, out);
+      // Hybrid leaf+group (e.g. `omni` + `omni translate`): append child commands.
+      if (node.children.size > 0) {
+        const prefix = commandPath.join(" ");
+        out.write(`\n${this.bold(this.localize(HELP_TEXT.subcommands), out)}\n`);
+        this.printChildren(node, prefix, out);
+      }
       return;
     }
 

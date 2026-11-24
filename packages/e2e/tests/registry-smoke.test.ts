@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { captureRegistryHelp } from "../src/registry-smoke.ts";
+import { captureRegistryHelp, deriveGroupPaths } from "../src/registry-smoke.ts";
 
 test("captureRegistryHelp 捕获指定命令路径的非 TTY 输出", () => {
   const requestedPaths: string[][] = [];
@@ -14,4 +14,16 @@ test("captureRegistryHelp 捕获指定命令路径的非 TTY 输出", () => {
 
   expect(output).toBe("Usage: bl text chat");
   expect(requestedPaths).toEqual([["text", "chat"]]);
+});
+
+test("deriveGroupPaths skips hybrid leaf prefixes that also have children", () => {
+  expect(
+    deriveGroupPaths([
+      "omni",
+      "omni translate",
+      "text chat",
+      "text translate",
+      "speech voice list",
+    ]),
+  ).toEqual(["speech", "speech voice", "text"]);
 });

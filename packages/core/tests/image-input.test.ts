@@ -58,6 +58,18 @@ describe("Token Plan image input compatibility", () => {
     expect(redactDataUri(dataUri)).toBe("data:image/png;base64,<omitted>");
   });
 
+  test("redacts Data URIs that include codecs or charset parameters", () => {
+    expect(redactDataUri("data:audio/mp4;codecs=mp4a.40.2;base64,SECRET")).toBe(
+      "data:audio/mp4;base64,<omitted>",
+    );
+    expect(redactDataUri("data:audio/wav;charset=utf-8;base64,SECRET")).toBe(
+      "data:audio/wav;base64,<omitted>",
+    );
+    expect(redactDataUri("data:image/png;foo=1;bar=2;base64,SECRET")).toBe(
+      "data:image/png;base64,<omitted>",
+    );
+  });
+
   test("rejects files whose image MIME type cannot be inferred", () => {
     const imagePath = makeImage(".unknown");
     expect(() => imageFileToDataUri(imagePath)).toThrow(/Unsupported image format/);

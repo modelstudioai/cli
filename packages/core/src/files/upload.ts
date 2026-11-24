@@ -265,10 +265,18 @@ export function audioFileToDataUri(filePath: string): string {
   return fileToDataUri(filePath, AUDIO_MIME_TYPES, "audio");
 }
 
-/** Keep dry-run output readable and avoid echoing the complete inline image. */
+/**
+ * Keep dry-run output readable and avoid echoing inline media payloads.
+ * Accepts optional Data URI parameters (codecs, charset, …) before `;base64,`.
+ */
 export function redactDataUri(input: string): string {
-  const match = /^data:([^;,]+);base64,/i.exec(input);
+  const match = /^data:([^;,]+).*?;base64,/i.exec(input);
   return match ? `data:${match[1]};base64,<omitted>` : input;
+}
+
+/** Return the audio MIME for a local path, or undefined when the extension is unsupported. */
+export function audioMimeForPath(filePath: string): string | undefined {
+  return AUDIO_MIME_TYPES[extname(filePath).toLowerCase()];
 }
 
 /**

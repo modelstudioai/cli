@@ -1,5 +1,7 @@
-import { describe, expect, test } from "vite-plus/test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 import {
   e2eLabelFromMetaUrl,
   isBailianE2EMediaEnabled,
@@ -12,11 +14,35 @@ import {
 } from "./helpers.ts";
 import { OMNI_ROUTES } from "./topic-routes.ts";
 
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  for (const directory of tempDirs.splice(0)) {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+function writeOmniProfile(defaultOmniModel: string): string {
+  const directory = mkdtempSync(join(tmpdir(), "bl-omni-cfg-"));
+  tempDirs.push(directory);
+  writeFileSync(
+    join(directory, "config.json"),
+    JSON.stringify({ default_omni_model: defaultOmniModel, telemetry: false }),
+  );
+  return directory;
+}
+
+const CLONED_VOICE = "qwen-omni-vc-demo-voice-1-abcd";
+
 describe("e2e: omni", () => {
   test("omni --help 正常退出", async () => {
     const { stderr, exitCode } = await runCommandHelp(OMNI_ROUTES, ["omni", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/omni|--message|--audio|text-only/i);
+    expect(stderr).toMatch(/Subcommands:|子命令：/);
+    expect(stderr).toMatch(/omni translate/);
+    expect(stderr).toMatch(/qwen-omni-vc-/);
+    expect(stderr).toMatch(/--model/);
   });
 
   test("omni --dry-run 无 --model/--text-only 时自动切换为 qwen3.5-omni-plus 并带 audio modalities", async () => {
@@ -47,6 +73,150 @@ describe("e2e: omni", () => {
     expect(data.request?.model).toBe("qwen3.8-omni-flash");
     expect(data.request?.modalities).toBeUndefined();
     expect(data.request?.audio).toBeUndefined();
+  });
+
+  test("cloned voice without --model is rejected before the plus auto-switch", async () => {
+    const { stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      [
+        "omni",
+        "--dry-run",
+        "--message",
+        "hi",
+        "--voice",
+        "qwen-omni-vc-demo-voice-1-abcd",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--model/);
+    expect(stderr).toMatch(/qwen3\.5-omni-plus|enrollment|复刻/);
+  });
+
+  test("cloned voice with --text-only does not require --model", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      [
+        "omni",
+        "--dry-run",
+        "--text-only",
+        "--message",
+        "hi",
+        "--voice",
+        "qwen-omni-vc-demo-voice-1-abcd",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; audio?: unknown };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen3.8-omni-flash");
+    expect(data.request?.audio).toBeUndefined();
+  });
+
+  test("cloned voice dry-run keeps the explicit enrollment model", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      [
+        "omni",
+        "--dry-run",
+        "--message",
+        "hi",
+        "--model",
+        "qwen3.5-omni-flash",
+        "--voice",
+        "qwen-omni-vc-demo-voice-1-abcd",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; audio?: { voice?: string } };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen3.5-omni-flash");
+    expect(data.request?.audio?.voice).toBe("qwen-omni-vc-demo-voice-1-abcd");
+  });
+
+  test("system voice without --model still auto-switches to qwen3.5-omni-plus", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      ["omni", "--dry-run", "--message", "hi", "--voice", "Sunny", "--output", "json"],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; audio?: { voice?: string } };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen3.5-omni-plus");
+    expect(data.request?.audio?.voice).toBe("Sunny");
+  });
+
+  test("cloned voice keeps Profile default_omni_model when it is not the flash auto-switch", async () => {
+    const configDir = writeOmniProfile("qwen3.5-omni-flash");
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      ["omni", "--dry-run", "--message", "hi", "--voice", CLONED_VOICE, "--output", "json"],
+      {
+        DASHSCOPE_API_KEY: "",
+        BAILIAN_CONFIG_DIR: configDir,
+        HOME: configDir,
+        USERPROFILE: configDir,
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; audio?: { voice?: string } };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen3.5-omni-flash");
+    expect(data.request?.audio?.voice).toBe(CLONED_VOICE);
+  });
+
+  test("Profile default qwen3.8-omni-flash still rejects cloned voice audio", async () => {
+    const configDir = writeOmniProfile("qwen3.8-omni-flash");
+    const { stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      ["omni", "--dry-run", "--message", "hi", "--voice", CLONED_VOICE, "--output", "json"],
+      {
+        DASHSCOPE_API_KEY: "",
+        BAILIAN_CONFIG_DIR: configDir,
+        HOME: configDir,
+        USERPROFILE: configDir,
+      },
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/qwen3\.5-omni-plus/);
+  });
+
+  test("explicit --model qwen3.5-omni-plus is kept for a cloned voice", async () => {
+    const { stdout, stderr, exitCode } = await runCommandInProcess(
+      OMNI_ROUTES,
+      [
+        "omni",
+        "--dry-run",
+        "--message",
+        "hi",
+        "--model",
+        "qwen3.5-omni-plus",
+        "--voice",
+        CLONED_VOICE,
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; audio?: { voice?: string } };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen3.5-omni-plus");
+    expect(data.request?.audio?.voice).toBe(CLONED_VOICE);
   });
 });
 
