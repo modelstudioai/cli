@@ -8,6 +8,19 @@
 
 ## [2.11.1] - 2026-11-24
 
+### 新增
+
+- **决策模型精调流水线**：决策模型的数据准备与训练全链路。
+  - `bl dataset generate` 依据 `workload.json` 业务配置合成带标注的决策训练样本。
+  - `bl dataset split` 将已标注 JSONL 切分为训练集与评估集。
+  - `bl finetune decision create` 提交决策模型精调（LoRA / efficient_sft）；`bl dataset validate` 支持决策样本格式校验。
+- **`bl finetune train-options`**：新命令，从控制台查询模型的动态训练选项（选项定义、默认值、合法组合）。`training_options: null` 表示该模型无需训练选项。`--training-type` 默认 `sft`。
+- **文本精调训练选项 flag**：`bl finetune text create` 新增 `--modality` 与 `--reasoning-mode`，适用于配置了动态训练选项的模型（如 modality 固定 vision 的模型）。
+
+### 变更
+
+- **精调参数预检**：`bl finetune params` 与 `bl finetune text create` 在控制台登录态可用时会调用一次动态训练选项接口——自动补齐选项默认值，并在提交前本地拦截非法取值或组合；无登录态时降级为 warning 并原样透传服务端。`finetune params` 的 JSON 输出新增 `precheck` 字段说明预检是否执行。
+
 ### 修复
 
 - **符号链接下载目标**：文件下载会穿过符号链接写入真实文件，并保留链接本身，而不再把链接替换成普通文件。

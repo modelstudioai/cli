@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [2.11.1] - 2026-11-24
 
+### Added
+
+- **Decision-model fine-tuning pipeline**: End-to-end data preparation and training for decision models.
+  - `bl dataset generate` synthesizes labeled decision training samples from a `workload.json` business config.
+  - `bl dataset split` splits a labeled JSONL file into training and evaluation sets.
+  - `bl finetune decision create` submits decision-model fine-tuning (LoRA / efficient_sft); `bl dataset validate` understands the decision sample schema.
+- **`bl finetune train-options`**: New command querying a model's dynamic training options (option definitions, defaults, supported combinations) from the Console. `training_options: null` means the model takes no training options. `--training-type` defaults to `sft`.
+- **Training-option flags for text fine-tuning**: `bl finetune text create` accepts `--modality` and `--reasoning-mode` for models with dynamic training options (e.g. vision-fixed models).
+
+### Changed
+
+- **Fine-tune parameter preflight**: `bl finetune params` and `bl finetune text create` now check the model's dynamic training options once via the Console when a Console session is available — auto-filling option defaults and rejecting unsupported values or combinations locally before submission. Without a Console session they degrade to a warning and pass through to the server. `finetune params` JSON output adds a `precheck` field describing whether the check ran.
+
 ### Fixed
 
 - **Symlink download destinations**: File downloads now write through a symlink to the real file and leave the symlink itself intact, instead of replacing the link with a regular file.
