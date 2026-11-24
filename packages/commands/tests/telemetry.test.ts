@@ -7,7 +7,7 @@ import {
   type AnyCommand,
   type Settings,
 } from "bailian-cli-core";
-import { createOutputReporter } from "bailian-cli-runtime";
+import { createOutputReporter, MODEL_TELEMETRY_DOC } from "bailian-cli-runtime";
 import { loadRouteCommands } from "./e2e/harness/routes.ts";
 import { ALERT_ROUTES, LOG_ROUTES, MONITOR_ROUTES } from "./e2e/topic-routes.ts";
 import {
@@ -29,7 +29,7 @@ const telemetryCommands = await loadRouteCommands({
   ...MONITOR_ROUTES,
   ...LOG_ROUTES,
 });
-const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
 const workspaceId = "ws-telemetry-test";
 const mappedAgent = 87654321;
 const originalAgent = 12345678;
@@ -97,7 +97,10 @@ function mockTelemetryGateway(
       new URLSearchParams(init.body).get("params") ?? "{}",
     );
     requests.push(request);
-    const payload = request.Api === workspaceApi ? { data: workspaces } : respond(request);
+    const payload =
+      request.Api === workspaceApi
+        ? { list: workspaces, total: workspaces.length, pageNo: 1, pageSize: 100 }
+        : respond(request);
     return new Response(JSON.stringify({ data: { DataV2: { data: { data: payload } } } }));
   });
 }
@@ -234,7 +237,6 @@ describe("遥测命令的空间身份与默认 JSON", () => {
   test("monitor 投递开通的并行预检、SLR、初始化、轮询与写入保持身份", async () => {
     vi.useFakeTimers();
     let serviceChecks = 0;
-    let slrChecks = 0;
     mockTelemetryGateway((request) => {
       if (request.Api.includes("getTelemetryServiceStatus")) {
         serviceChecks += 1;
@@ -244,10 +246,7 @@ describe("遥测命令的空间身份与默认 JSON", () => {
         };
       }
       if (request.Api.includes("getTelemetryGroupStatus")) return [];
-      if (request.Api.includes("getTelemetrySlrStatus")) {
-        slrChecks += 1;
-        return { result: slrChecks > 1 };
-      }
+      if (request.Api.includes("getTelemetrySlrStatus")) return { result: true };
       if (request.Api.includes("initTelemetryStoreInstance") && !request.Data.reqDTO?.asyncTaskId)
         return { taskId: "store-task" };
       return { result: true };
@@ -259,16 +258,12 @@ describe("遥测命令的空间身份与默认 JSON", () => {
     await vi.runAllTimersAsync();
     expect(JSON.parse(await promise).activated).toBe(true);
     assertScopedRequests();
-    for (const api of [
-      "createTelemetrySlr",
-      "initCmsService",
-      "initTelemetryStoreInstance",
-      "enableTelemetryGroup",
-    ])
+    for (const api of ["initCmsService", "initTelemetryStoreInstance", "enableTelemetryGroup"])
       expect(
         requests.some((request) => request.Api.endsWith(api)),
         api,
       ).toBe(true);
+    expect(requests.some((request) => request.Api.includes("createTelemetrySlr"))).toBe(false);
   });
 
   test("推理详情列表和原始内容回捞均使用目标身份", async () => {
@@ -303,6 +298,45 @@ describe("遥测命令的空间身份与默认 JSON", () => {
     assertScopedRequests();
     expect(requests.at(-1)?.Api).toContain("enableTelemetryGroup");
   });
+
+  test.each(["monitor delivery enable", "log audit enable", "log inference enable"])(
+    "%s SLR 未授权时停止执行并引导手动开通，不自动创建角色",
+    async (path) => {
+      mockTelemetryGateway((request) => {
+        if (request.Api.includes("getTelemetrySlrStatus")) return { result: false };
+        if (request.Api.includes("getTelemetryServiceStatus"))
+          return { openStatus: true, instanceStatus: "Ready" };
+        if (request.Api.includes("getTelemetryGroupStatus")) {
+          const telemetryType = request.Data.reqDTO?.telemetryType;
+          return {
+            list: [
+              {
+                workspaceId,
+                telemetryType,
+                telemetryStatus: telemetryType === "AuditLog" ? "enable" : "disable",
+              },
+            ],
+          };
+        }
+        return { result: true };
+      });
+      await expect(
+        runTelemetry(telemetryCommands[path], makeTelemetryContext({}, { noWait: true })),
+      ).rejects.toMatchObject({
+        exitCode: 3,
+        message: expect.stringContaining("service-linked role"),
+        hint: expect.stringContaining(MODEL_TELEMETRY_DOC),
+      });
+      assertScopedRequests();
+      expect(requests.some((request) => request.Api.includes("createTelemetrySlr"))).toBe(false);
+      expect(
+        requests.some((request) =>
+          /initCmsService|initTelemetryStoreInstance|enableTelemetryGroup/.test(request.Api),
+        ),
+      ).toBe(false);
+      expect(stdoutChunks).toEqual([]);
+    },
+  );
 
   test.each([
     "alert list",

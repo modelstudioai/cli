@@ -6,6 +6,62 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.11.0] - 2026-11-24
+
+### 新增
+
+- **全局 `--biz-from` 参数**：所有命令支持 `--biz-from <source>`，调用方（skill/agent/产品）可声明业务来源，便于按来源统计命令调用（如 `flow-agent`）的 PV/UV。
+
+## [2.10.5] - 2026-11-23
+
+### 新增
+
+- **模型路由命令组**：新增 `bl deploy router` 组，管理后付费模型路由（`plan=mr`）。
+  - `bl deploy router versions` 分页列出可用路由版本、支持策略与候选模型。
+  - `bl deploy router create` 通过 `--name`、`--route-version`、`--strategy`（`EFFECT_FIRST` / `COST_FIRST`）与 `--candidates` 创建路由；创建后立即进入 RUNNING 状态，遵循试运行 → 确认 → `--yes` 闸门。
+  - `bl deploy router list` / `get` 查询路由；`get` 会校验部署为 `plan=mr`。
+  - `bl deploy router update` 更新 RUNNING 路由的指定配置项并保留未提供字段；`--candidates` 会替换整个候选模型列表。
+  - `bl deploy router delete` 确认后永久删除路由；RUNNING 路由无需先停机。
+- **容量自动续费**：新增 `bl deploy capacity auto-renew enable` / `disable`，通过 `--cycle Day` 与 `--auto-renewal-duration` 开启或关闭单个预付费容量实例的自动续费。两者均为高风险计费操作，支持试运行预览与实例能力预检；8 小时闲时实例不支持。
+- **8 小时闲时容量**：`bl deploy capacity create` 与 `bl deploy text create --plan ptu` 支持通过 `--pricing-cycle Hour --duration 8 --auto-renewal false` 购买预付费 8 小时闲时窗口；PTU 还须显式指定 `--service-tier ptu_default`。售卖时段（北京时间 22:00–24:00）与模型支持由服务端校验。闲时实例不可变配、续订、自动续费、释放或退订，到期自动失效。
+
+### 变更
+
+- **PTU 思考输出容量**：`bl deploy text create --thinking-output-tpm` 不再在本地对 PTU 直接拒绝；是否支持由模型决定并由服务端校验。
+- **部署删除**：`bl deploy delete` 识别模型路由（`plan=mr`），允许 RUNNING 路由无需停机即可删除。
+
+## [2.10.4] - 2026-11-20
+
+### 新增
+
+- **RL 训练命令组**：新增 `bl finetune rl` 组，覆盖百炼强化学习训练的端到端链路。
+  - `bl finetune rl authorize` 检查准入白名单、服务关联角色与业务开通状态；绝不自动创建角色，角色缺失时中止并给出双语手动授权指引。`--authorize` 开通 RL 训练模式（高风险，需 `--yes`）。
+  - `bl finetune rl run` 通过 flag 或 YAML 规格提交训练任务，并打包 Rollout/Reward 函数代码；提交在托管的 OS 沙箱 Python 运行时内执行（仅 macOS/Linux）。创建任务消耗计费的 MTU 算力，遵循试运行 → 显式确认 → `--yes` 闸门；`--watch` 轮询至终态，超时不会取消云端任务。
+  - `bl finetune rl get` / `list` / `watch` / `logs` / `cancel` / `delete` 经共享的 fine-tunes 后端管理任务；`get` 原样返回完整 OpenAPI 响应（含数据集与 MTU 规格/容量）。
+- **OPD 蒸馏命令组**：新增 `bl finetune opd` 组，使用平台登记的教师模型进行纯模型在线蒸馏（`pg_opd`）。
+  - `bl finetune opd authorize` / `run` / `params` / `get` / `watch` / `logs` / `cancel` / `delete`；`run` 在计费提交前可用 `--dry-run` 预览任务规格，`params` 查询学生基座模型支持的超参数。
+- **托管运行时命令**：新增 `bl finetune runtime prepare` / `doctor` / `clean`，管理 RL/OPD 沙箱运行时。
+  - `prepare` 按受审查的多源清单下载固定版本 CPython + dashscope 运行时，逐源 SHA256 校验并带镜像回退，缓存后长期复用；受限地区可设 `BAILIAN_RL_PYTHON_MIRROR` / `BAILIAN_RL_PIP_INDEX_URL`，`BAILIAN_RL_RUNTIME` 可复用本机开发态运行时。
+  - `doctor` 验证沙箱隔离（凭据禁读、home 重定向、SDK 导入、代理出口管控），并以增强项探测宿主出站网络可达性：阻断网络的 agent 沙箱会收到降级提示与指引，而不是在提交中途失败。
+  - `clean` 回收孤儿任务目录与旧版本运行时，支持 `--dry-run` 预览；绝不触碰当前基线运行时。
+- **沙箱网络拒绝提示**：连接级网络拒绝（`EPERM` / `EACCES` / `ENETUNREACH` / `EHOSTUNREACH`）现在给出双语提示，说明执行环境（如 AI agent 沙箱）可能阻断出站网络，并引导放行网络、改在普通终端执行或设置 `HTTPS_PROXY`；运行时下载失败也会携带底层 errno。
+
+### 变更
+
+- **代理环境变量**：大写变量未设置时，小写 `http_proxy` / `https_proxy` / `no_proxy` 现在作为兜底生效；大写仍优先。
+
+## [2.10.3] - 2026-11-18
+
+### 修复
+
+- **工作空间列表**：`bl workspace list` 现在返回全部可访问的业务空间，不再只返回网关默认的第一页（10 个）。遥测、告警、日志、数据集、文件与部署命令使用的控制台工作空间解析同样覆盖第一页之外的空间。
+
+## [2.10.2] - 2026-11-17
+
+### 变更
+
+- **遥测服务关联角色**：`bl monitor delivery enable` 与 `bl log audit/inference enable` 不再自动创建服务关联角色，改为检查角色状态，缺失时以双语指引中止并指向模型可观测文档，避免静默授予跨服务权限。
+
 ## [2.10.1] - 2026-11-13
 
 ### 修复

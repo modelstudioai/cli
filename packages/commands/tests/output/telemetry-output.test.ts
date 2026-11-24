@@ -8,7 +8,7 @@ import {
   type AnyCommand,
   type LocalizedText,
 } from "bailian-cli-core";
-import { createOutputReporter } from "bailian-cli-runtime";
+import { createOutputReporter, MODEL_TELEMETRY_DOC } from "bailian-cli-runtime";
 import * as commands from "bailian-cli-commands";
 
 const range = { startTime: "2026-01-02T03:04:00", endTime: "2026-01-02T04:04:00" };
@@ -20,7 +20,7 @@ const service = {
   instanceStatus: "Ready",
   instanceInfo: { instanceId: "instance-test", instanceUrl: "https://example.com/instance" },
 };
-const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
 const mappedAgent = 87654321;
 const entry = {
   workspaceId: "ws-test",
@@ -236,6 +236,7 @@ const cases: Scenario[] = [
 ];
 let failure = false;
 let cold = false;
+let slrUnauthorized = false;
 let guardInference = false;
 let pendingFirst = false;
 let originEmpty = false;
@@ -245,6 +246,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   failure = false;
   cold = false;
+  slrUnauthorized = false;
   guardInference = false;
   pendingFirst = false;
   originEmpty = false;
@@ -293,7 +295,7 @@ async function invoke(
       },
     },
   });
-  let authorized = !cold,
+  let authorized = !slrUnauthorized,
     ready = !cold,
     opened = !cold;
   interface FixtureClient {
@@ -309,7 +311,12 @@ async function invoke(
         calls.push({ api, data: structuredClone(data), switchAgent });
         if (failure) throw new BailianError("Original gateway failure", ExitCode.GENERAL);
         if (api === workspaceApi)
-          return { data: [{ workspaceId: "ws-test", tenantId: String(mappedAgent) }] };
+          return {
+            list: [{ workspaceId: "ws-test", tenantId: String(mappedAgent) }],
+            total: 1,
+            pageNo: 1,
+            pageSize: 100,
+          };
         if (
           pendingFirst &&
           api.endsWith("getModelStatistic") &&
@@ -317,10 +324,6 @@ async function invoke(
         )
           return { taskId: "async-task" };
         if (api.includes("getTelemetrySlrStatus")) return { result: authorized };
-        if (api.includes("createTelemetrySlr")) {
-          authorized = true;
-          return {};
-        }
         if (api.includes("getTelemetryServiceStatus"))
           return ready
             ? structuredClone(service)
@@ -465,6 +468,31 @@ test("audit disable still refuses while inference is enabled", async () => {
 });
 
 test.each(["monitor delivery enable", "log audit enable", "log inference enable"])(
+  "%s stops with AUTH and doc guidance when the SLR is unauthorized",
+  async (name) => {
+    const base = cases.find((scenario) => scenario.name === name)!;
+    slrUnauthorized = true;
+    const result = await invoke(
+      { ...base, flags: { noWait: true } },
+      { format: "json", quiet: true },
+    );
+    expect(result.exitCode).toBe(ExitCode.AUTH);
+    expect(result.stdout).toBe("");
+    expect(result.strayOut).toBe("");
+    expect(result.strayErr).toBe("");
+    const error = JSON.parse(result.stderr).error;
+    expect(error.message).toContain("service-linked role");
+    expect(error.hint).toContain(MODEL_TELEMETRY_DOC);
+    expect(calls.some((call) => call.api.includes("createTelemetrySlr"))).toBe(false);
+    expect(
+      calls.some((call) =>
+        /initCmsService|initTelemetryStoreInstance|enableTelemetryGroup/.test(call.api),
+      ),
+    ).toBe(false);
+  },
+);
+
+test.each(["monitor delivery enable", "log audit enable", "log inference enable"])(
   "ordinary text keeps cold-start progress for %s",
   async (name) => {
     const base = cases.find((scenario) => scenario.name === name)!;
@@ -476,7 +504,6 @@ test.each(["monitor delivery enable", "log audit enable", "log inference enable"
     expect(result.exitCode, result.stderr).toBe(0);
     expect(result.strayOut).toBe("");
     expect(result.strayErr).toBe("");
-    expect(result.stderr).toContain("Authorizing the service-linked role");
     expect(result.stderr).toContain(
       name.startsWith("monitor") ? "CMS service" : "Initializing the SLS",
     );

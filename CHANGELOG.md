@@ -6,6 +6,62 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.11.0] - 2026-11-24
+
+### Added
+
+- **Global `--biz-from` flag**: All commands accept `--biz-from <source>` so callers (skills/agents/products) can declare their business source, enabling per-source usage analysis (PV/UV) of command calls (e.g. `flow-agent`).
+
+## [2.10.5] - 2026-11-23
+
+### Added
+
+- **Model router command group**: New `bl deploy router` group for postpaid model routing (`plan=mr`).
+  - `bl deploy router versions` lists available routing versions, supported strategies and candidate models with pagination.
+  - `bl deploy router create` creates a router from `--name`, `--route-version`, `--strategy` (`EFFECT_FIRST` / `COST_FIRST`) and `--candidates`; it starts RUNNING immediately and is gated by dry-run → confirmation → `--yes`.
+  - `bl deploy router list` / `get` query routers; `get` verifies the deployment is `plan=mr`.
+  - `bl deploy router update` updates selected fields of a RUNNING router while preserving unspecified fields; `--candidates` replaces the entire candidate list.
+  - `bl deploy router delete` permanently deletes a router after confirmation; a RUNNING router does not need to be stopped first.
+- **Capacity automatic renewal**: New `bl deploy capacity auto-renew enable` / `disable` toggle automatic renewal for one prepaid capacity instance using `--cycle Day` and `--auto-renewal-duration`. Both are high-risk billing operations with dry-run preview and instance capability prechecks; 8-hour off-peak instances are not supported.
+- **8-hour off-peak capacity**: `bl deploy capacity create` and `bl deploy text create --plan ptu` support the prepaid 8-hour off-peak window via `--pricing-cycle Hour --duration 8 --auto-renewal false`; PTU also requires `--service-tier ptu_default`. The selling window (22:00–24:00 Beijing time) and model support are validated server-side. Off-peak instances cannot be scaled, renewed, auto-renewed, released or unsubscribed and expire automatically.
+
+### Changed
+
+- **PTU thinking-output capacity**: `bl deploy text create --thinking-output-tpm` is no longer rejected locally for PTU; support is model-specific and validated server-side.
+- **Deployment deletion**: `bl deploy delete` recognizes model routers (`plan=mr`) and allows deleting a RUNNING router without stopping it first.
+
+## [2.10.4] - 2026-11-20
+
+### Added
+
+- **RL training command group**: New `bl finetune rl` group for end-to-end reinforcement learning on Bailian.
+  - `bl finetune rl authorize` checks the admission whitelist, service-linked roles and service activation. Roles are never created automatically; a missing role stops with bilingual manual-authorization guidance. `--authorize` enables the RL training mode (high-risk, requires `--yes`).
+  - `bl finetune rl run` submits jobs from flags or a YAML spec and packages Rollout/Reward function code. Submission executes inside a managed, OS-sandboxed Python runtime (macOS/Linux only). Creating a job consumes billed MTU capacity and is gated by dry-run → explicit confirmation → `--yes`; `--watch` polls to a terminal state and a timeout does not cancel the cloud job.
+  - `bl finetune rl get` / `list` / `watch` / `logs` / `cancel` / `delete` manage jobs through the shared fine-tunes backend; `get` returns the full OpenAPI response including datasets and MTU spec/capacity.
+- **OPD distillation command group**: New `bl finetune opd` group for pure-model online distillation (`pg_opd`) from a platform-registered teacher model.
+  - `bl finetune opd authorize` / `run` / `params` / `get` / `watch` / `logs` / `cancel` / `delete`; `run` previews the job spec with `--dry-run` before the billed submit, and `params` queries supported hyper-parameters for a student base model.
+- **Managed runtime commands**: New `bl finetune runtime prepare` / `doctor` / `clean` for the RL/OPD sandbox runtime.
+  - `prepare` downloads a pinned CPython + dashscope runtime from reviewed multi-source manifests with SHA256 verification and mirror fallback, then caches it for reuse; `BAILIAN_RL_PYTHON_MIRROR` / `BAILIAN_RL_PIP_INDEX_URL` cover restricted regions and `BAILIAN_RL_RUNTIME` reuses a local development runtime.
+  - `doctor` verifies sandbox isolation (credential read denial, home redirection, SDK import, proxy egress control) and probes host outbound network reachability as an advisory check, so agent sandboxes that block network are reported with guidance instead of failing mid-submission.
+  - `clean` reclaims orphaned task directories and superseded runtime versions with a `--dry-run` preview; the active baseline runtime is never touched.
+- **Sandbox network-denial hints**: Connect-level network denials (`EPERM` / `EACCES` / `ENETUNREACH` / `EHOSTUNREACH`) now produce bilingual hints explaining that the execution environment (for example an AI agent sandbox) may be blocking outbound network, with guidance to enable network access, run in a regular terminal, or set `HTTPS_PROXY`. Runtime download failures also carry the underlying errno.
+
+### Changed
+
+- **Proxy environment variables**: Lowercase `http_proxy` / `https_proxy` / `no_proxy` are now honored as a fallback when the uppercase variants are unset; uppercase still takes precedence.
+
+## [2.10.3] - 2026-11-18
+
+### Fixed
+
+- **Workspace list**: `bl workspace list` now returns every accessible workspace instead of only the gateway's default first page (10). Console workspace resolution used by telemetry, alert, log, dataset, file and deploy commands also covers workspaces beyond the first page.
+
+## [2.10.2] - 2026-11-17
+
+### Changed
+
+- **Telemetry service-linked role**: `bl monitor delivery enable` and `bl log audit/inference enable` no longer create the service-linked role automatically. They check the role status and stop with bilingual guidance to the model-telemetry documentation when it is missing, so cross-service permissions are never granted silently.
+
 ## [2.10.1] - 2026-11-13
 
 ### Fixed

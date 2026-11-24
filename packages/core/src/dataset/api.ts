@@ -32,6 +32,8 @@ export interface DatasetUploadParams {
   purpose?: string;
   /** 已由调用方校验的不可变字节；提供时不再读取 filePath。 */
   fileBlob?: Blob;
+  /** Sent as X-DashScope-WorkSpace; omit when the API key is workspace-bound. */
+  workspaceId?: string;
   signal?: AbortSignal;
 }
 
@@ -62,6 +64,7 @@ export async function uploadDataset(
     path: datasetUploadPath(),
     method: "POST",
     body: form,
+    headers: params.workspaceId ? { "X-DashScope-WorkSpace": params.workspaceId } : undefined,
     signal,
   });
 

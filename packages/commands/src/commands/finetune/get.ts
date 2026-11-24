@@ -77,6 +77,22 @@ export default defineCommand({
       charge_type: typeof job.charge_type === "string" ? job.charge_type : "",
     };
 
+    // OPD (pg_opd) readback fields — additive: only present on OPD jobs, so
+    // sft/dpo output is unchanged.
+    if (job.teacher_model !== undefined) item.teacher_model = job.teacher_model;
+    if (job.training_datasets !== undefined) item.training_datasets = job.training_datasets;
+    if (job.validation_datasets !== undefined) item.validation_datasets = job.validation_datasets;
+    if (job.mtu_spec_code !== undefined) item.mtu_spec_code = job.mtu_spec_code;
+    if (job.mtu_capacity !== undefined) item.mtu_capacity = job.mtu_capacity;
+    // Descriptor-carrying jobs show data in training_datasets/validation_datasets;
+    // the empty legacy id lists there mislead users into thinking upload failed.
+    if (job.training_datasets !== undefined && (job.training_file_ids ?? []).length === 0) {
+      delete item.training_files;
+    }
+    if (job.validation_datasets !== undefined && (job.validation_file_ids ?? []).length === 0) {
+      delete item.validation_files;
+    }
+
     // Actual fee: only when the platform reports a concrete token count
     // (SUCCEEDED / CANCELED). Best-effort — silently omitted on lookup failure.
     if (usageTokens !== undefined && usageTokens > 0 && job.model) {

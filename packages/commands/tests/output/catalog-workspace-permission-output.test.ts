@@ -16,7 +16,7 @@ import * as commands from "../../src/index.ts";
 const identity = { binName: "bl", version: "test", clientName: "test", npmPackage: "test" };
 const modelApi = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
 const schemaApi = "zeldaEasy.bmp.modelPredictRpcService.getPredictParamConfig";
-const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
+const workspaceApi = "zeldaEasy.bailian-dash-workspace.space.listMyWorkSpaces";
 const loginApi = "zeldaEasy.cornerstone-portal.cs-console.loginInfo";
 const buyResultApi = "zeldaEasy.bailian-commerce.bill.queryBuyPostpaidResult";
 const commodityApi = "zeldaEasy.bailian-commerce.bill.postpaidCommodityOrderInfo";
@@ -218,8 +218,10 @@ beforeEach(() => {
           list: missing ? [] : request.queryGroupByModel ? [modelFamily] : [family, deadFamily],
         };
       } else if (params.Api === schemaApi) payload = { predictConfig: schema };
-      else if (params.Api === workspaceApi) payload = missing ? [] : workspace;
-      else if (params.Api === loginApi)
+      else if (params.Api === workspaceApi) {
+        const workspaces = missing ? [] : workspace;
+        payload = { list: workspaces, total: workspaces.length, pageNo: 1, pageSize: 100 };
+      } else if (params.Api === loginApi)
         payload = {
           spaceInited: !uninitialized,
           aliyun: { uid: "fixture-user" },

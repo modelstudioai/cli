@@ -1,0 +1,12 @@
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"明天上海会下雨吗？"}],"rollout_extra":{"solution":"查询天气"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"帮我放一首周杰伦的歌。"}],"rollout_extra":{"solution":"播放音乐"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"早上七点半叫我起床。"}],"rollout_extra":{"solution":"设置闹钟"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"今天心情不太好，想找人聊聊天。"}],"rollout_extra":{"solution":"闲聊"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"北京这周末气温多少度？"}],"rollout_extra":{"solution":"查询天气"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"来点轻音乐，我想放松一下。"}],"rollout_extra":{"solution":"播放音乐"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"提醒我二十分钟后关火。"}],"rollout_extra":{"solution":"设置闹钟"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"你觉得人生的意义是什么？"}],"rollout_extra":{"solution":"闲聊"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"杭州现在外面冷不冷，要不要带外套？"}],"rollout_extra":{"solution":"查询天气"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"把刚才那首歌再循环播放一遍。"}],"rollout_extra":{"solution":"播放音乐"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"每天晚上十一点提醒我睡觉。"}],"rollout_extra":{"solution":"设置闹钟"}}
+{"messages":[{"role":"system","content":"你是一个意图分类器。请判断用户输入属于以下哪个意图，只输出意图标签本身，不要输出其他内容。可选标签：查询天气、播放音乐、设置闹钟、闲聊。"},{"role":"user","content":"给我讲个笑话吧。"}],"rollout_extra":{"solution":"闲聊"}}

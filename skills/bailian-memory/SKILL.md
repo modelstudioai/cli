@@ -1,7 +1,7 @@
 ---
 name: bailian-memory
 metadata:
-  version: "2.10.1"
+  version: "2.11.0"
   requires:
     bins: ["bl"]
 description: >-

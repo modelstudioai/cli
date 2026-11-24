@@ -1,4 +1,4 @@
-import { createChatCompletionStreamAccumulator } from "../shared/chat-completion-stream.ts";
+import { buildChatMessages, parseTextMessages, runChatCompletions } from "./run-chat.ts";
 import {
   defineCommand,
   resolveBatchChatEndpoint,
@@ -6,17 +6,12 @@ import {
   chatPath,
   responsesPath,
   parseSSE,
-  readTextFromPathOrStdin,
-  type ChatMessage,
   type ChatRequest,
-  type ChatResponse,
   type ResponsesRequest,
   type ResponsesResponse,
   type ResponsesStreamEvent,
   type FlagsDef,
-  type ParsedFlags,
 } from "bailian-cli-core";
-import { ansi } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
 import {
   assertResponsesStreamCompleted,
@@ -133,55 +128,6 @@ const CHAT_FLAGS = {
   },
   ...PRIME_FLAGS,
 } satisfies FlagsDef;
-type ChatFlags = ParsedFlags<typeof CHAT_FLAGS>;
-
-interface ParsedMessages {
-  system?: string;
-  messages: ChatMessage[];
-}
-
-function parseMessages(flags: ChatFlags): ParsedMessages {
-  const messages: ChatMessage[] = [];
-  let system: string | undefined;
-
-  if (flags.system) {
-    system = flags.system;
-  }
-
-  if (flags.messagesFile) {
-    const raw = readTextFromPathOrStdin(flags.messagesFile);
-    const parsed = JSON.parse(raw) as Array<{ role: string; content: string }>;
-    for (const parsedMessage of parsed) {
-      if (parsedMessage.role === "system") {
-        system = typeof parsedMessage.content === "string" ? parsedMessage.content : "";
-      } else {
-        messages.push(parsedMessage as ChatMessage);
-      }
-    }
-  }
-
-  if (flags.message) {
-    const validRoles = new Set(["system", "user", "assistant"]);
-    const messageValues = flags.message;
-    for (const messageValue of messageValues) {
-      const colonIndex = messageValue.indexOf(":");
-      const maybeRole = colonIndex !== -1 ? messageValue.slice(0, colonIndex) : "";
-
-      if (validRoles.has(maybeRole)) {
-        const content = messageValue.slice(colonIndex + 1);
-        if (maybeRole === "system") {
-          system = content;
-        } else {
-          messages.push({ role: maybeRole as "user" | "assistant", content });
-        }
-      } else {
-        messages.push({ role: "user", content: messageValue });
-      }
-    }
-  }
-
-  return { system, messages };
-}
 
 export default defineCommand({
   description: {
@@ -258,6 +204,11 @@ export default defineCommand({
       "zh-CN":
         '--enable-search 映射为 Chat Completions 的 enable_search 参数，需要模型支持内置联网搜索；白名单模型（qwen3.8-max）默认开启，可传 --enable-search false 显式关闭；Responses API 请改用 --tool \'{"type":"web_search"}\'。',
     },
+    {
+      "en-US":
+        "For dedicated Qwen-MT text translation, use `text translate` instead of this chat entry.",
+      "zh-CN": "如需 Qwen-MT 专用文本翻译，请使用 `text translate`，而不是本对话入口。",
+    },
   ],
   validate: (flags) => {
     if (!flags.message && !flags.messagesFile) return "Provide --message or --messages-file.";
@@ -287,18 +238,12 @@ export default defineCommand({
         "Batch Chat --timeout must be 60–3600 seconds.",
         "Batch Chat --timeout 必须为 60–3600 秒。",
       );
-    const { system, messages } = parseMessages(flags);
+
+    const allMessages = buildChatMessages(parseTextMessages(flags));
     const api = flags.api ?? "chat";
     const model = flags.model || settings.defaultTextModel || "qwen3.8-max";
     const shouldStream = flags.batch ? false : flags.stream || process.stdout.isTTY;
     const format = settings.output;
-
-    // Build messages array with system prompt
-    const allMessages: ChatMessage[] = [];
-    if (system) {
-      allMessages.push({ role: "system", content: system });
-    }
-    allMessages.push(...messages);
 
     let body: ChatRequest | ResponsesRequest;
     if (api === "responses") {
@@ -336,7 +281,6 @@ export default defineCommand({
       if (flags.enableSearch !== undefined) {
         body.enable_search = flags.enableSearch;
       } else if (SEARCH_BY_DEFAULT_MODELS.has(model)) {
-        // Whitelisted models get built-in web search unless explicitly opted out.
         body.enable_search = true;
       }
     }
@@ -361,6 +305,26 @@ export default defineCommand({
       body.tools = tools;
     }
 
+    if (api === "chat" && "messages" in body) {
+      const dryRunResult = flags.batch
+        ? { endpoint: requestPath, request: body, timeout: settings.timeout }
+        : flags.prime
+          ? { endpoint: requestPath, request: body }
+          : { request: body };
+
+      await runChatCompletions({
+        client: ctx.client,
+        output: ctx.output,
+        localize: ctx.localize,
+        settings,
+        path: requestPath,
+        body,
+        shouldStream,
+        dryRunResult,
+      });
+      return;
+    }
+
     if (settings.dryRun) {
       ctx.output.result(
         flags.batch
@@ -381,88 +345,40 @@ export default defineCommand({
       });
 
       let textContent = "";
-      let inThinking = false;
       let responsesCompleted = false;
-      const accumulator = createChatCompletionStreamAccumulator(ctx.localize);
       const writesStreamingStdout = format === "text";
-      const isTTY = process.stdout.isTTY;
-      const statusOut =
-        format === "json" ? process.stderr : isTTY ? process.stdout : process.stderr;
       const resultOut = process.stdout;
-      const statusColor = ansi(statusOut);
 
       for await (const event of parseSSE(responseStream)) {
-        if (api === "responses") {
-          if (event.data === "[DONE]") break;
-          let parsedEvent: ResponsesStreamEvent;
-          try {
-            parsedEvent = JSON.parse(event.data) as ResponsesStreamEvent;
-          } catch {
-            continue;
-          }
-
-          const update = inspectResponsesStreamEvent(parsedEvent);
-          if (update.delta) {
-            textContent += update.delta;
-            if (writesStreamingStdout) resultOut.write(update.delta);
-          }
-          if (update.completed) {
-            responsesCompleted = true;
-            break;
-          }
+        if (event.data === "[DONE]") break;
+        let parsedEvent: ResponsesStreamEvent;
+        try {
+          parsedEvent = JSON.parse(event.data) as ResponsesStreamEvent;
+        } catch {
           continue;
         }
 
-        const update = accumulator.accept(event);
-
-        // Write thinking/reasoning content to the status stream.
-        if (update.reasoning) {
-          if (writesStreamingStdout && !inThinking) {
-            inThinking = true;
-            statusOut.write(statusColor.dim("Thinking:\n"));
-          }
-          if (writesStreamingStdout) statusOut.write(update.reasoning);
+        const update = inspectResponsesStreamEvent(parsedEvent);
+        if (update.delta) {
+          textContent += update.delta;
+          if (writesStreamingStdout) resultOut.write(update.delta);
         }
-
-        // Write regular content to stdout; tool_calls stay off the text stream.
-        if (update.content) {
-          if (writesStreamingStdout && inThinking) {
-            statusOut.write(`${statusColor.reset}\n\nResponse:\n`);
-            inThinking = false;
-          }
-          if (writesStreamingStdout) resultOut.write(update.content);
+        if (update.completed) {
+          responsesCompleted = true;
+          break;
         }
-
-        if (accumulator.completed) break;
       }
-      if (api === "responses") assertResponsesStreamCompleted(responsesCompleted);
-      if (inThinking) statusOut.write(statusColor.reset);
-
-      if (api === "responses") {
-        ctx.output.result({ content: textContent }, format === "text" ? { text: "" } : undefined);
-      } else {
-        ctx.output.result(accumulator.finish(), format === "text" ? { text: "" } : undefined);
-      }
-    } else if (api === "responses") {
-      const response = await ctx.client.requestJson<ResponsesResponse>({
-        path: requestPath,
-        method: "POST",
-        body,
-      });
-
-      const text = extractResponsesText(response);
-
-      ctx.output.result(response, format === "text" ? { text } : undefined);
-    } else {
-      const response = await ctx.client.requestJson<ChatResponse>({
-        path: requestPath,
-        method: "POST",
-        body,
-      });
-
-      const text = response.choices?.[0]?.message?.content ?? "";
-
-      ctx.output.result(response, format === "text" ? { text } : undefined);
+      assertResponsesStreamCompleted(responsesCompleted);
+      ctx.output.result({ content: textContent }, format === "text" ? { text: "" } : undefined);
+      return;
     }
+
+    const response = await ctx.client.requestJson<ResponsesResponse>({
+      path: requestPath,
+      method: "POST",
+      body,
+    });
+    const text = extractResponsesText(response);
+    ctx.output.result(response, format === "text" ? { text } : undefined);
   },
 });

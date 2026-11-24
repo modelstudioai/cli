@@ -88,6 +88,23 @@ export function anonymousConsoleCall(
     );
 }
 
+function buildCornerstoneParam(
+  data: Record<string, unknown>,
+  switchAgent?: number,
+): Record<string, unknown> {
+  return {
+    protocol: "V2",
+    console: "ONE_CONSOLE",
+    productCode: "p_efm",
+    switchUserType: 3,
+    consoleSite: "BAILIAN_ALIYUN",
+    ...(switchAgent != null ? { switchAgent } : {}),
+    ...(typeof data.cornerstoneParam === "object" && data.cornerstoneParam !== null
+      ? (data.cornerstoneParam as Record<string, unknown>)
+      : {}),
+  };
+}
+
 function buildGatewayParams(
   api: string,
   data: Record<string, unknown>,
@@ -98,17 +115,7 @@ function buildGatewayParams(
     V: "1.0",
     Data: {
       ...data,
-      cornerstoneParam: {
-        protocol: "V2",
-        console: "ONE_CONSOLE",
-        productCode: "p_efm",
-        switchUserType: 3,
-        consoleSite: "BAILIAN_ALIYUN",
-        ...(switchAgent != null ? { switchAgent } : {}),
-        ...(typeof data.cornerstoneParam === "object" && data.cornerstoneParam !== null
-          ? (data.cornerstoneParam as Record<string, unknown>)
-          : {}),
-      },
+      cornerstoneParam: buildCornerstoneParam(data, switchAgent),
     },
   });
 }
@@ -156,7 +163,14 @@ export async function callConsoleGateway(
   });
 
   debugResponse(options, res);
+  return interpretGatewayResponse(res, options);
+}
 
+/** Shared HTTP + business-error interpretation for the console gateway. */
+async function interpretGatewayResponse(
+  res: Response,
+  options: Pick<HttpDeps, "debug"> & { recoveryHint?: string },
+): Promise<unknown> {
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     throw new BailianError(

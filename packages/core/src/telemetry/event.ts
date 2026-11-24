@@ -26,6 +26,8 @@ export interface TrackingEvent {
   skillVersion?: string;
   /** Channel from install.json. The install day is a separate event. */
   installChannel?: InstallAttribution["installChannel"];
+  /** Caller-declared call source (--biz-from), normalized; reported as AEM c6. */
+  bizFrom?: string;
 }
 
 export function createTrackingEvent(opts: {
@@ -39,6 +41,7 @@ export function createTrackingEvent(opts: {
   caller: CallerAttribution;
   /** Already-read install record. Callers must not create the file to fill this in. */
   install?: InstallAttribution;
+  bizFrom?: string;
 }): TrackingEvent {
   const event: TrackingEvent = {
     command: opts.command,
@@ -58,6 +61,10 @@ export function createTrackingEvent(opts: {
     if (opts.caller.skillVersion !== undefined) event.skillVersion = opts.caller.skillVersion;
   } else if (opts.caller.callerType === "script") {
     event.callerName = opts.caller.callerName;
+  }
+
+  if (opts.bizFrom !== undefined) {
+    event.bizFrom = opts.bizFrom;
   }
 
   if (opts.authMethod) {
@@ -153,6 +160,10 @@ export function buildRemoteAemOptions(event: TrackingEvent): Record<string, unkn
   }
   if (event.requestId) {
     opts.c5 = event.requestId;
+  }
+  // Dedicated flat dimension column for the business source (easy AEM filtering).
+  if (event.bizFrom !== undefined) {
+    opts.c6 = event.bizFrom;
   }
 
   return opts;

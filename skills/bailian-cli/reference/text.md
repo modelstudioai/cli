@@ -7,9 +7,10 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command        | Authentication | Description                                              |
-| -------------- | -------------- | -------------------------------------------------------- |
-| `bl text chat` | API Key        | Send a text model request (OpenAI compatible, DashScope) |
+| Command             | Authentication | Description                                                        |
+| ------------------- | -------------- | ------------------------------------------------------------------ |
+| `bl text chat`      | API Key        | Send a text model request (OpenAI compatible, DashScope)           |
+| `bl text translate` | API Key        | Translate text with Qwen-MT (Chat Completions translation_options) |
 
 ## Command details
 
@@ -52,6 +53,7 @@ Index: [index.md](index.md)
 - Prime mode requires an explicit model and currently supports only the Chat Completions API.
 - Prime endpoint: configured --base-url, DASHSCOPE_BASE_URL, or profile base_url takes precedence; otherwise workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
 - --enable-search maps to the Chat Completions enable_search parameter and requires a model with built-in web search support; whitelisted models (qwen3.8-max) enable it by default unless --enable-search false is passed; for the Responses API use --tool '{"type":"web_search"}' instead.
+- For dedicated Qwen-MT text translation, use `text translate` instead of this chat entry.
 
 #### Examples
 
@@ -101,4 +103,45 @@ bl text chat --enable-search true --message "Latest news about Alibaba Cloud"
 
 ```bash
 bl text chat --prime --workspace-id <id> --model glm-5.3-prime --message "Explain this code"
+```
+
+### `bl text translate`
+
+| Field              | Value                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| **Name**           | `text translate`                                                                              |
+| **Description**    | Translate text with Qwen-MT (Chat Completions translation_options)                            |
+| **Authentication** | API Key                                                                                       |
+| **Usage**          | `bl text translate (--message <text> \| --messages-file <path>) --target-lang <name> [flags]` |
+
+#### Flags
+
+| Flag                     | Type   | Required | Description                                                                                 |
+| ------------------------ | ------ | -------- | ------------------------------------------------------------------------------------------- |
+| `--model <model>`        | string | no       | Qwen-MT model ID (default: qwen-mt-flash; qwen-mt-plus\|flash\|lite, optional dated suffix) |
+| `--message <text>`       | array  | no       | Text to translate (repeatable; literal text, not role: prefixes; or use --messages-file)    |
+| `--messages-file <path>` | string | no       | Messages array for one request (use - for stdin; user role only)                            |
+| `--source-lang <name>`   | string | no       | Translation source language (English name; default: auto)                                   |
+| `--target-lang <name>`   | string | yes      | Translation target language (English name)                                                  |
+| `--term <source=target>` | array  | no       | Terminology pair source=target (repeatable)                                                 |
+| `--domain-hint <text>`   | string | no       | Translation domain hint in English (maps to domains)                                        |
+| `--max-tokens <n>`       | number | no       | Maximum tokens to generate (default: 4096)                                                  |
+| `--temperature <n>`      | number | no       | Sampling temperature (0.0, 2.0]                                                             |
+| `--top-p <n>`            | number | no       | Nucleus sampling threshold                                                                  |
+| `--stream`               | switch | no       | Stream response tokens (default: on in TTY)                                                 |
+| `--api-key <key>`        | string | no       | API key                                                                                     |
+| `--base-url <url>`       | string | no       | API base URL                                                                                |
+
+#### Notes
+
+- Language names use English full names (Chinese/English), not zh/en codes. --message is literal text; role checks apply to --messages-file only. Does not support --api responses, --batch, --prime, --tool, --enable-search, or thinking flags. For general chat use `text chat`.
+
+#### Examples
+
+```bash
+bl text translate --message "欢迎使用百炼。" --source-lang Chinese --target-lang English --term "百炼=Bailian" --dry-run --output json
+```
+
+```bash
+bl text translate --model qwen-mt-plus --message "欢迎使用百炼。" --target-lang English --stream --output json
 ```

@@ -33,12 +33,22 @@ export const CAPACITY_FLAGS = {
 } satisfies FlagsDef;
 
 export const PREPAID_FLAGS = {
+  pricingCycle: {
+    type: "string",
+    valueHint: "<Day|Hour>",
+    choices: ["Day", "Hour"] as const,
+    description: {
+      "en-US":
+        "Prepaid pricing cycle (case-sensitive): Day (default) or Hour for the 8-hour off-peak window",
+      "zh-CN": "预付费计费周期（区分大小写）：Day（默认）或 Hour（8 小时闲时窗口）",
+    },
+  },
   duration: {
     type: "number",
-    valueHint: "<days>",
+    valueHint: "<n>",
     description: {
-      "en-US": "Prepaid purchase/renewal duration, positive integer days",
-      "zh-CN": "预付费购买或续订天数，正整数",
+      "en-US": "Prepaid duration: positive integer days for Day, exactly 8 hours for Hour",
+      "zh-CN": "预付费时长：Day 使用正整数天数，Hour 固定为 8 小时",
     },
   },
   autoRenewal: {
@@ -127,9 +137,9 @@ export const MUTATION_NOTES: LocalizedText[] = [
   },
   {
     "en-US":
-      "Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal configuration is part of purchase/scale/renew, not a standalone free setting change.",
+      "Capacities are absolute kTPM for one instance, not increments or ModelCode totals. Zero capacity is not release. Model-specific steps, limits and purchase periods are validated by the server. Automatic renewal is configured at purchase/renewal and changed via `deploy capacity auto-renew enable` / `disable`.",
     "zh-CN":
-      "容量是单个实例的绝对 kTPM，不是增量或 ModelCode 总量；容量归零不等于释放。模型步长、上下限及购买时长限制由服务端校验。自动续费配置属于购买、变配或续订流程，不是独立免费设置操作。",
+      "容量是单个实例的绝对 kTPM，不是增量或 ModelCode 总量；容量归零不等于释放。模型步长、上下限及购买时长限制由服务端校验。自动续费在购买或续订时配置，变更请使用 `deploy capacity auto-renew enable` / `disable`。",
   },
 ];
 
@@ -169,10 +179,22 @@ export async function requireCapacityInstance(
   client: Client,
   code: string,
   id: string,
-  action: "scale" | "renew" | "delete",
+  action: "scale" | "renew" | "delete" | "enable_auto_renew" | "disable_auto_renew",
 ): Promise<CapacityInstance> {
   const response = await getCapacityInstance(client, code, id);
   const instance = response.output ?? response.data;
+  if (
+    action === "delete" &&
+    instance?.pre_paid_info?.pricing_cycle === "Hour" &&
+    instance.deleted !== true
+  ) {
+    throw new BailianError(
+      "8-hour off-peak instances cannot be released or unsubscribed; they expire automatically at gmt_expired. / 8 小时闲时实例不能释放或退订，到期后自动失效。",
+      ExitCode.USAGE,
+      undefined,
+      { cause: response },
+    );
+  }
   if (!instance || instance.deleted === true || instance[`can_${action}`] !== true) {
     throw new BailianError(
       `Capacity instance does not currently allow ${action}; refresh its details. / 容量实例当前不允许 ${action}，请刷新详情。`,

@@ -5,6 +5,7 @@ export {
   chatPath,
   imagePath,
   imageSyncPath,
+  multimodalGenerationPath,
   imageText2ImagePath,
   image2ImagePath,
   knowledgeChatEndpoint,
@@ -40,6 +41,7 @@ export {
   speechRecognizePath,
   speechSynthesizePath,
   speechVocabularyPath,
+  speechVoiceCustomizationPath,
   taskPath,
   userProfilePath,
   userProfileValuesPath,
@@ -151,3 +153,9 @@ export {
 export type { ServerSentEvent } from "./stream.ts";
 export { parseSSE } from "./stream.ts";
 export { httpTransport } from "./transport.ts";
+export {
+  networkCauseCode,
+  isSandboxNetworkDenialCode,
+  probeTcpHost,
+  SANDBOX_NETWORK_HINT,
+} from "./network-diagnostics.ts";

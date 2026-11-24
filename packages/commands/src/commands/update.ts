@@ -19,6 +19,7 @@ import {
   fetchBinaryChannelVersion,
   isValidUpdateTargetVersion,
   normalizeBinaryVersion,
+  NPM_REGISTRY,
   performBinaryUpdate,
 } from "bailian-cli-runtime";
 
@@ -302,7 +303,9 @@ export default defineCommand({
       }
     } else {
       const npmSpec = pinnedVersion ? `${npmPackage}@${pinnedVersion}` : `${npmPackage}@latest`;
-      const command = `npm install -g ${npmSpec}`;
+      // Detection queries the official registry; install must match, or a stale
+      // user-configured mirror silently reinstalls the current version.
+      const command = `npm install -g ${npmSpec} --registry=${NPM_REGISTRY}`;
       ctx.output.progress({
         "en-US": `Updating ${npmPackage} via npm...`,
         "zh-CN": `正在通过 npm 更新 ${npmPackage}...`,

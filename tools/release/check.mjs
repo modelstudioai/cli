@@ -70,6 +70,7 @@ export async function runCheck(options = {}) {
           "skills/bailian-memory/SKILL.md",
           "skills/bailian-knowledge/SKILL.md",
           "skills/bailian-web-search/SKILL.md",
+          "skills/bailian-opd/SKILL.md",
         ]),
     "skills/bailian-cli/reference/",
     "skills/bailian-gen/reference/",

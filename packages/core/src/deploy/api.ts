@@ -15,19 +15,24 @@ import {
   deploymentCapacityOperationPath,
   deploymentCapacityInstanceScalePath,
   deploymentCapacityInstanceRenewPath,
+  deploymentCapacityInstanceAutoRenewPath,
   deploymentOverflowPath,
+  modelRoutingVersionsPath,
 } from "../client/endpoints.ts";
 import type { Client } from "../client/client.ts";
 import type {
   CreateDeploymentRequest,
+  CreateModelRouterRequest,
   CreateDeploymentResponse,
   ListDeploymentsResponse,
+  ListModelRoutingVersionsResponse,
   GetDeploymentResponse,
   DeleteDeploymentResponse,
   ListDeployableModelsResponse,
   ScaleDeploymentRequest,
   ScaleDeploymentResponse,
   UpdateDeploymentRequest,
+  UpdateModelRouterRequest,
   UpdateDeploymentResponse,
   ListCapacityInstancesResponse,
   GetCapacityInstanceResponse,
@@ -35,6 +40,7 @@ import type {
   CreateCapacityInstanceRequest,
   ScaleCapacityInstanceRequest,
   RenewCapacityInstanceRequest,
+  UpdateCapacityAutoRenewRequest,
   CapacityOperationResponse,
   UpdateDeploymentOverflowResponse,
 } from "./types.ts";
@@ -54,7 +60,7 @@ function capacityWriteHeaders(requestId?: string): Record<string, string> | unde
 /** POST /api/v1/deployments; initial ModelCode creation has no instance-idempotency guarantee. */
 export async function createDeployment(
   client: Client,
-  body: CreateDeploymentRequest,
+  body: CreateDeploymentRequest | CreateModelRouterRequest,
   signal?: AbortSignal,
 ): Promise<CreateDeploymentResponse> {
   return client.requestJson<CreateDeploymentResponse>({
@@ -70,6 +76,29 @@ export interface ListDeploymentsParams {
   pageSize?: number;
   plan?: string;
   signal?: AbortSignal;
+}
+
+export interface ListModelRoutingVersionsParams {
+  pageNo?: number;
+  pageSize?: number;
+  signal?: AbortSignal;
+}
+
+/** GET /api/v1/deployments/model-routing/versions */
+export async function listModelRoutingVersions(
+  client: Client,
+  params: ListModelRoutingVersionsParams = {},
+): Promise<ListModelRoutingVersionsResponse> {
+  const query = new URLSearchParams();
+  if (params.pageNo !== undefined) query.set("page_no", String(params.pageNo));
+  if (params.pageSize !== undefined) query.set("page_size", String(params.pageSize));
+  const base = modelRoutingVersionsPath();
+  const path = query.toString() ? `${base}?${query.toString()}` : base;
+  return client.requestJson<ListModelRoutingVersionsResponse>({
+    path,
+    method: "GET",
+    signal: params.signal,
+  });
 }
 
 /** GET /api/v1/deployments */
@@ -216,6 +245,23 @@ export async function renewCapacityInstance(
   });
 }
 
+/** PUT /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}/auto-renew */
+export async function updateCapacityInstanceAutoRenew(
+  client: Client,
+  code: string,
+  id: string,
+  body: UpdateCapacityAutoRenewRequest,
+  options: CapacityWriteOptions = {},
+): Promise<CapacityOperationResponse> {
+  return client.requestJson<CapacityOperationResponse>({
+    path: deploymentCapacityInstanceAutoRenewPath(code, id),
+    method: "PUT",
+    body,
+    headers: capacityWriteHeaders(options.requestId),
+    signal: options.signal,
+  });
+}
+
 /** DELETE /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}; no JSON body. */
 export async function deleteCapacityInstance(
   client: Client,
@@ -316,7 +362,7 @@ export async function scaleDeployment(
 export async function updateDeployment(
   client: Client,
   deployedModel: string,
-  body: UpdateDeploymentRequest,
+  body: UpdateDeploymentRequest | UpdateModelRouterRequest,
   signal?: AbortSignal,
 ): Promise<UpdateDeploymentResponse> {
   return client.requestJson<UpdateDeploymentResponse>({

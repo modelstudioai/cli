@@ -8,6 +8,7 @@ export { default as authStatus } from "./commands/auth/status.ts";
 export { default as authLogout } from "./commands/auth/logout.ts";
 export { default as authGenerateAccessToken } from "./commands/auth/generate-access-token.ts";
 export { default as textChat } from "./commands/text/chat.ts";
+export { default as textTranslate } from "./commands/text/translate.ts";
 export { default as batchConvert } from "./commands/batch/convert.ts";
 export { default as batchCreate } from "./commands/batch/create.ts";
 export { default as batchList } from "./commands/batch/list.ts";
@@ -15,8 +16,10 @@ export { default as batchGet } from "./commands/batch/get.ts";
 export { default as batchCancel } from "./commands/batch/cancel.ts";
 export { default as batchDownload } from "./commands/batch/download.ts";
 export { default as textOmni } from "./commands/omni/chat.ts";
+export { default as omniTranslate } from "./commands/omni/translate.ts";
 export { default as imageGenerate } from "./commands/image/generate.ts";
 export { default as imageEdit } from "./commands/image/edit.ts";
+export { default as imageTranslate } from "./commands/image/translate.ts";
 export { default as videoGenerate } from "./commands/video/generate.ts";
 export { default as videoEdit } from "./commands/video/edit.ts";
 export { default as videoRef } from "./commands/video/ref.ts";
@@ -103,11 +106,19 @@ export { default as mcpTools } from "./commands/mcp/tools.ts";
 export { default as searchWeb } from "./commands/search/web.ts";
 export { default as speechSynthesize } from "./commands/speech/synthesize.ts";
 export { default as speechRecognize } from "./commands/speech/recognize.ts";
+export { default as speechGenerate } from "./commands/speech/generate.ts";
 export { default as speechVocabularyCreate } from "./commands/speech/vocabulary/create.ts";
 export { default as speechVocabularyList } from "./commands/speech/vocabulary/list.ts";
 export { default as speechVocabularyGet } from "./commands/speech/vocabulary/get.ts";
 export { default as speechVocabularyUpdate } from "./commands/speech/vocabulary/update.ts";
 export { default as speechVocabularyDelete } from "./commands/speech/vocabulary/delete.ts";
+export { default as speechVoiceClone } from "./commands/speech/voice/clone.ts";
+export { default as speechVoiceDesign } from "./commands/speech/voice/design.ts";
+export { default as speechVoiceList } from "./commands/speech/voice/list.ts";
+export { default as speechVoiceGet } from "./commands/speech/voice/get.ts";
+export { default as speechVoiceUpdate } from "./commands/speech/voice/update.ts";
+export { default as speechVoiceDelete } from "./commands/speech/voice/delete.ts";
+export { default as speechVoicePreview } from "./commands/speech/voice/preview.ts";
 export { default as fileUpload } from "./commands/file/upload.ts";
 export { default as fileUrl } from "./commands/file/url.ts";
 export { default as consoleCall } from "./commands/console/call.ts";
@@ -206,6 +217,25 @@ export { default as finetuneCompressWatch } from "./commands/finetune/compress-w
 export { default as finetuneCompressLogs } from "./commands/finetune/compress-logs.ts";
 export { default as finetuneCompressCancel } from "./commands/finetune/compress-cancel.ts";
 export { default as finetuneCompressDelete } from "./commands/finetune/compress-delete.ts";
+export { default as finetuneRlAuthorize } from "./commands/finetune/rl-authorize.ts";
+export { default as finetuneRlRun } from "./commands/finetune/rl-run.ts";
+export { default as finetuneRlGet } from "./commands/finetune/rl-get.ts";
+export { default as finetuneRlList } from "./commands/finetune/rl-list.ts";
+export { default as finetuneRlWatch } from "./commands/finetune/rl-watch.ts";
+export { default as finetuneRlLogs } from "./commands/finetune/rl-logs.ts";
+export { default as finetuneRlCancel } from "./commands/finetune/rl-cancel.ts";
+export { default as finetuneRlDelete } from "./commands/finetune/rl-delete.ts";
+export { default as finetuneOpdAuthorize } from "./commands/finetune/opd-authorize.ts";
+export { default as finetuneOpdRun } from "./commands/finetune/opd-run.ts";
+export { default as finetuneOpdParams } from "./commands/finetune/opd-params.ts";
+export { default as finetuneOpdGet } from "./commands/finetune/opd-get.ts";
+export { default as finetuneOpdWatch } from "./commands/finetune/opd-watch.ts";
+export { default as finetuneOpdLogs } from "./commands/finetune/opd-logs.ts";
+export { default as finetuneOpdCancel } from "./commands/finetune/opd-cancel.ts";
+export { default as finetuneOpdDelete } from "./commands/finetune/opd-delete.ts";
+export { default as finetuneRuntimePrepare } from "./commands/finetune/runtime-prepare.ts";
+export { default as finetuneRuntimeDoctor } from "./commands/finetune/runtime-doctor.ts";
+export { default as finetuneRuntimeClean } from "./commands/finetune/runtime-clean.ts";
 export {
   deployTextCreate,
   deployAudioCreate,
@@ -220,6 +250,8 @@ export {
   deployCapacityCreate,
   deployCapacityScale,
   deployCapacityRenew,
+  deployCapacityAutoRenewEnable,
+  deployCapacityAutoRenewDisable,
   deployCapacityDelete,
 } from "./commands/deploy/capacity-write.ts";
 export { default as deployCapacityUnsubscribe } from "./commands/deploy/capacity-unsubscribe.ts";
@@ -232,6 +264,12 @@ export { default as deployUpdate } from "./commands/deploy/update.ts";
 export { default as deployDelete } from "./commands/deploy/delete.ts";
 export { default as deployPause } from "./commands/deploy/pause.ts";
 export { default as deployResume } from "./commands/deploy/resume.ts";
+export { default as deployRouterVersions } from "./commands/deploy/router-versions.ts";
+export { default as deployRouterCreate } from "./commands/deploy/router-create.ts";
+export { default as deployRouterList } from "./commands/deploy/router-list.ts";
+export { default as deployRouterGet } from "./commands/deploy/router-get.ts";
+export { default as deployRouterUpdate } from "./commands/deploy/router-update.ts";
+export { default as deployRouterDelete } from "./commands/deploy/router-delete.ts";
 export { default as tokenPlanListSeats } from "./commands/token-plan/list-seats.ts";
 export { default as tokenPlanCreateKey } from "./commands/token-plan/create-key.ts";
 export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-seats.ts";

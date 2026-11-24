@@ -11,12 +11,12 @@ Index: [index.md](index.md)
 | -------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `bl log audit count`       | Console        | Count model audit logs in a time range (useful before exporting)                                                   |
 | `bl log audit disable`     | Console        | Disable audit log delivery for all models in the workspace                                                         |
-| `bl log audit enable`      | Console        | Enable audit log delivery to SLS (SLR authorization → SLS instance → log switch)                                   |
+| `bl log audit enable`      | Console        | Enable audit log delivery to SLS (SLR check → SLS instance → log switch)                                           |
 | `bl log audit get`         | Console        | Show a single audit log entry with its raw origin record                                                           |
 | `bl log audit list`        | Console        | Query model audit logs (call metadata; request/response content is not recorded)                                   |
 | `bl log inference count`   | Console        | Count model inference logs in a time range (useful before exporting)                                               |
 | `bl log inference disable` | Console        | Disable inference log delivery for all models in the workspace                                                     |
-| `bl log inference enable`  | Console        | Enable inference log delivery to SLS (SLR authorization → SLS instance → log switch)                               |
+| `bl log inference enable`  | Console        | Enable inference log delivery to SLS (SLR check → SLS instance → log switch)                                       |
 | `bl log inference get`     | Console        | Show a single inference log entry with full request/response content                                               |
 | `bl log inference list`    | Console        | Query model inference logs (requires inference log delivery; use `log inference get` for request/response content) |
 | `bl log status`            | Console        | Show model log delivery status (SLS authorization, audit / inference service and switches)                         |
@@ -113,12 +113,12 @@ bl log audit disable --output json
 
 ### `bl log audit enable`
 
-| Field              | Value                                                                            |
-| ------------------ | -------------------------------------------------------------------------------- |
-| **Name**           | `log audit enable`                                                               |
-| **Description**    | Enable audit log delivery to SLS (SLR authorization → SLS instance → log switch) |
-| **Authentication** | Console                                                                          |
-| **Usage**          | `bl log audit enable [--no-wait] [flags]`                                        |
+| Field              | Value                                                                    |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Name**           | `log audit enable`                                                       |
+| **Description**    | Enable audit log delivery to SLS (SLR check → SLS instance → log switch) |
+| **Authentication** | Console                                                                  |
+| **Usage**          | `bl log audit enable [--no-wait] [flags]`                                |
 
 #### Flags
 
@@ -132,7 +132,7 @@ bl log audit disable --output json
 
 #### Notes
 
-- Steps: 1) authorize the SLS service-linked role, 2) initialize the SLS store instance (async), 3) turn on audit log delivery for all models in the workspace.
+- Steps: 1) verify the SLS service-linked role is authorized (stops with manual-authorization guidance when missing), 2) initialize the SLS store instance (async), 3) turn on audit log delivery for all models in the workspace.
 - The audit log records call metadata only and is required before enabling the inference log.
 - Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
 - When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.
@@ -350,12 +350,12 @@ bl log inference disable --output json
 
 ### `bl log inference enable`
 
-| Field              | Value                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------ |
-| **Name**           | `log inference enable`                                                               |
-| **Description**    | Enable inference log delivery to SLS (SLR authorization → SLS instance → log switch) |
-| **Authentication** | Console                                                                              |
-| **Usage**          | `bl log inference enable [--no-wait] [flags]`                                        |
+| Field              | Value                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **Name**           | `log inference enable`                                                       |
+| **Description**    | Enable inference log delivery to SLS (SLR check → SLS instance → log switch) |
+| **Authentication** | Console                                                                      |
+| **Usage**          | `bl log inference enable [--no-wait] [flags]`                                |
 
 #### Flags
 
@@ -369,7 +369,7 @@ bl log inference disable --output json
 
 #### Notes
 
-- Steps: 1) authorize the SLS service-linked role, 2) initialize the SLS store instance (async), 3) turn on inference log delivery for all models in the workspace.
+- Steps: 1) verify the SLS service-linked role is authorized (stops with manual-authorization guidance when missing), 2) initialize the SLS store instance (async), 3) turn on inference log delivery for all models in the workspace.
 - Requires the audit log to be enabled first (`log audit enable`) — the console enforces the same rule.
 - Defaults to JSON, including when the Profile default is text. Use --output text or DASHSCOPE_OUTPUT=text to select text explicitly.
 - When a workspace is selected, its tenantId is resolved as switchAgent before any business request, overriding --console-switch-agent for this invocation only. Preflight, polling and follow-up requests share this identity; saved configuration is unchanged.

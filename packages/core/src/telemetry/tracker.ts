@@ -3,7 +3,7 @@ import { BailianError } from "../errors/base.ts";
 import { BINARY_PRODUCT_CLIENT_NAME } from "../install/method.ts";
 import { readInstallAttribution, type InstallAttribution } from "../install/record.ts";
 import type { AuthRequirement } from "../types/command.ts";
-import type { CallerAttribution } from "./caller.ts";
+import { normalizeBizFrom, type CallerAttribution } from "./caller.ts";
 import { createFirstInstallEvent, createTrackingEvent } from "./event.ts";
 import {
   FIRST_INSTALL_REPORT_ATTEMPTS,
@@ -199,6 +199,7 @@ export async function trackCommandExecution(
       params: extractParams(flags),
       caller: deps.caller,
       install,
+      bizFrom: normalizeBizFrom(deps.settings.bizFrom),
     });
 
     // The install day is reported when install succeeds, not from this command.

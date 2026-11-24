@@ -32,6 +32,12 @@ export interface ModelListParams {
   name?: string;
   providers?: string[];
   capabilities?: string[];
+  /**
+   * Server-side capability scope, e.g. `{ fineTune: true }` for the trainable
+   * catalog. Omitted by default, which returns the inference-scoped catalog;
+   * training-only base models and their snapshots only appear when scoped.
+   */
+  supports?: Record<string, boolean>;
 }
 
 export interface ModelListResult {
@@ -44,21 +50,29 @@ export async function fetchModelList(
   call: ConsoleCall,
   params: ModelListParams = {},
 ): Promise<ModelListResult> {
-  const { pageNo = 1, pageSize = 50, name = "", providers = [], capabilities = [] } = params;
+  const {
+    pageNo = 1,
+    pageSize = 50,
+    name = "",
+    providers = [],
+    capabilities = [],
+    supports,
+  } = params;
 
-  const result = (await call(MODEL_LIST_API, {
-    input: {
-      pageNo,
-      pageSize,
-      name,
-      providers,
-      inferenceProviders: [],
-      features: [],
-      group: true,
-      capabilities,
-      contextWindows: [],
-    },
-  })) as Record<string, unknown>;
+  const input: Record<string, unknown> = {
+    pageNo,
+    pageSize,
+    name,
+    providers,
+    inferenceProviders: [],
+    features: [],
+    group: true,
+    capabilities,
+    contextWindows: [],
+  };
+  if (supports) input.supports = supports;
+
+  const result = (await call(MODEL_LIST_API, { input })) as Record<string, unknown>;
 
   const responseData = unwrapResponse(result);
   const total = (responseData.total as number) ?? 0;
@@ -102,8 +116,9 @@ export async function fetchModelListAll(
 export async function findModelByName(
   call: ConsoleCall,
   modelName: string,
+  supports?: Record<string, boolean>,
 ): Promise<Record<string, unknown> | null> {
-  const result = await fetchModelList(call, { name: modelName, pageSize: 50 });
+  const result = await fetchModelList(call, { name: modelName, pageSize: 50, supports });
   return result.models.find((item) => item.model === modelName) ?? null;
 }
 

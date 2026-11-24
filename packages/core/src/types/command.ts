@@ -112,6 +112,18 @@ export const GLOBAL_FLAGS = {
       "zh-CN": "为当前命令使用指定配置 Profile",
     },
   },
+  // Caller-declared source for usage attribution. Skills/agents should pass their
+  // own name when invoking commands so PV/UV can be segmented by calling skill/product.
+  bizFrom: {
+    type: "string",
+    valueHint: "<source>",
+    description: {
+      "en-US":
+        "Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product",
+      "zh-CN":
+        "业务来源标识，用于用量统计；调用方/skill 调用命令时建议带上自身名称，以便归因到具体 skill/产品",
+    },
+  },
   help: {
     type: "switch",
     description: { "en-US": "Show help", "zh-CN": "显示帮助信息" },
