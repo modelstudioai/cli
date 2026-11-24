@@ -1,3 +1,4 @@
+import { buildSettings, buildSources } from "../config/loader.ts";
 import type { Identity, Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { BINARY_PRODUCT_CLIENT_NAME } from "../install/method.ts";
@@ -131,11 +132,24 @@ async function reportFirstInstall(
 }
 
 /**
+ * Same switch as a normal command: `DO_NOT_TRACK=1` or `telemetry: false`.
+ * A config that cannot be read does not enable a report and must not throw.
+ */
+function installReportTelemetryEnabled(): boolean {
+  if (process.env.DO_NOT_TRACK === "1") return false;
+  try {
+    return buildSettings(buildSources({})).telemetry;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Called by the installer as soon as a new user's install.json is on disk.
  * Not used by ordinary command telemetry.
  */
 export async function reportFirstInstallNow(identity: Identity): Promise<void> {
-  if (process.env.DO_NOT_TRACK === "1") return;
+  if (!installReportTelemetryEnabled()) return;
   if (identity.npmPackage !== BINARY_PRODUCT_CLIENT_NAME) return;
   try {
     await reportFirstInstall(identity, readCommandInstallAttribution(identity));

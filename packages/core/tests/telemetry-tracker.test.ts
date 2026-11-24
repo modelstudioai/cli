@@ -549,6 +549,33 @@ test("a failed install report does not consume the one attempt", async () => {
   });
 });
 
+test("a first-install report respects telemetry: false", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  sinkMocks.remoteSink.mockResolvedValue(true);
+  const installedAt = "2020-01-02T03:04:05.000Z";
+  writeFileSync(
+    join(isolatedConfigDir, "config.json"),
+    `${JSON.stringify({ telemetry: false })}\n`,
+  );
+  writeFileSync(
+    join(isolatedConfigDir, "install.json"),
+    `${JSON.stringify({
+      version: 1,
+      first_installed_at: installedAt,
+      observed_at: installedAt,
+      first_version: "2.8.6",
+      install_channel: "binary",
+    })}\n`,
+  );
+
+  await reportFirstInstallNow(identity);
+
+  expect(sinkMocks.localSink).not.toHaveBeenCalled();
+  expect(sinkMocks.remoteSink).not.toHaveBeenCalled();
+  expect(existsSync(join(isolatedConfigDir, FIRST_INSTALL_REPORT_FILE))).toBe(false);
+});
+
 test("does not call sinks when telemetry is disabled", async () => {
   sinkMocks.localSink.mockClear();
   sinkMocks.remoteSink.mockClear();

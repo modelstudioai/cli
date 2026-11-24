@@ -362,6 +362,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       // Installers launch `bl --bailian-first-install-report` with the env var
       // after a new user's install.json is written. Either one alone is a normal run.
       if (isFirstInstallReportLaunch(argv)) {
+        try {
+          setupProxyFromEnv();
+        } catch {
+          // An invalid proxy must not fail installation. The report then uses a direct connection.
+        }
         await reportFirstInstallNow(identity);
         return;
       }

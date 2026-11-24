@@ -102,7 +102,7 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 - `bizFrom`：全局 `--biz-from` 声明的业务来源（可选）；经 `normalizeBizFrom` 归一化（缺省省略，空白/非法 → `"unknown"`），与 `callerName` 独立；映射到 AEM `c6` 专用扁平列
 - 失败时的 `errorMessage`、`exitCode`、`httpStatus`、`requestId`
 - 安全 allowlist 过滤后的 `params`
-- 仅 `npmPackage=bailian-cli`：已有合法 `~/.bailian/install.json` 时，命令事件带 `installChannel`，不带安装日，也不发 `first_install`。新用户的 `first_installed_at` 在安装成功写盘后单独发一条事件名 `first_install` 的事件，`ext` 里是 `firstInstalledAt`、`installChannel`、`timestamp`（上报时刻）和 `cliVersion`。每个安装日只入队一次，次数记在 `~/.bailian/first-install-reported.json`；远端入队失败不计入，也不改由后续命令补发。`DO_NOT_TRACK=1` 不写文件、不发事件。没有安装日的老用户不发 `first_install`。命令不创建、不修补 `install.json`。`kscli` 不读这份文件。bootstrap 事件也不读取它
+- 仅 `npmPackage=bailian-cli`：已有合法 `~/.bailian/install.json` 时，命令事件带 `installChannel`，不带安装日，也不发 `first_install`。新用户的 `first_installed_at` 在安装成功写盘后单独发一条事件名 `first_install` 的事件，`ext` 里是 `firstInstalledAt`、`installChannel`、`timestamp`（上报时刻）和 `cliVersion`。每个安装日只入队一次，次数记在 `~/.bailian/first-install-reported.json`；远端入队失败不计入，也不改由后续命令补发。`DO_NOT_TRACK=1` 和配置 `telemetry: false` 都不写文件、不发事件，与普通命令同一个开关。没有安装日的老用户不发 `first_install`。命令不创建、不修补 `install.json`。`kscli` 不读这份文件。bootstrap 事件也不读取它
 
 `first_install` 由安装成功路径拉起，不经过命令 middleware：
 
@@ -113,6 +113,7 @@ postinstall.js launchFirstInstallReport
   └─ bl / dist/bailian.mjs --bailian-first-install-report
      环境变量 BAILIAN_FIRST_INSTALL_REPORT=1，最多等 8 秒
        create-cli.ts run
+         setupProxyFromEnv()（失败则直连，不让安装失败）
          tracker.ts reportFirstInstallNow
            event.ts createFirstInstallEvent
            sink.ts remoteSink → remoteSendEvent("first_install", ...)
@@ -207,7 +208,7 @@ AEM 映射：
 - [ ] 调用方字段经 `readCaller` → `TrackingDeps.caller` → 事件；显式 `agent` / `ai_agent` → `agent`，显式 `script` → `script`，其余 → `unknown`
 - [ ] 成功与失败均覆盖；遥测异常必须静默且不改变业务退出码
 - [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
-- [ ] 安装日只在新用户安装成功写盘后，由 `BAILIAN_FIRST_INSTALL_REPORT=1` 且参数 `--bailian-first-install-report` 进入 `reportFirstInstallNow`，事件名 `first_install`。只剩环境变量时普通命令照常执行。拉起最多等 8 秒。命令事件只带 `installChannel`。缺失或无法识别时不创建 `install.json`，不把当前时间补进 `firstInstalledAt`。每个安装日只入队一次；入队失败不记次数，也不改由后续命令补发。`kscli` 和 bootstrap 都不发这条事件
+- [ ] 安装日只在新用户安装成功写盘后，由 `BAILIAN_FIRST_INSTALL_REPORT=1` 且参数 `--bailian-first-install-report` 进入 `reportFirstInstallNow`，事件名 `first_install`。只剩环境变量时普通命令照常执行。拉起最多等 8 秒。这条入口先 `setupProxyFromEnv()`，代理无效则直连且安装继续；并遵守 `DO_NOT_TRACK=1` 与 `telemetry: false`。命令事件只带 `installChannel`。缺失或无法识别时不创建 `install.json`，不把当前时间补进 `firstInstalledAt`。每个安装日只入队一次；入队失败不记次数，也不改由后续命令补发。`kscli` 和 bootstrap 都不发这条事件
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口
 - [ ] `remoteSink` 从调用到 `remoteSendEvent` 入队之间不得出现 `await`（flush 只排空已入队事件）
 - [ ] 测试中调用 `remoteSink` 的用例必须使用 `enterIsolatedHome()`，避免写入真实配置目录
