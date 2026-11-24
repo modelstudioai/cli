@@ -28,6 +28,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - `bl omni translate` translates a document, image or audio file with Qwen-MT-Uni (`qwen-mt-uni`), including glossary / sensitive-term options and async wait or `--async`.
 - **Global `--biz-from` flag**: All commands accept `--biz-from <source>` so callers (skills/agents/products) can declare their business source, enabling per-source usage analysis (PV/UV) of command calls (e.g. `flow-agent`).
 
+### Fixed
+
+- **CLI update via npm**: `bl update` and automatic updates install from the official npm registry, consistent with version detection, so a delayed user-configured mirror cannot report a successful update while leaving the previously installed version unchanged.
+
 ## [2.10.5] - 2026-11-23
 
 ### Added

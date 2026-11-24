@@ -28,6 +28,10 @@
   - `bl omni translate` 用 Qwen-MT-Uni（`qwen-mt-uni`）翻译文档、图片或音频文件，支持术语表 / 敏感词等选项，以及等待完成或 `--async`。
 - **全局 `--biz-from` 参数**：所有命令支持 `--biz-from <source>`，调用方（skill/agent/产品）可声明业务来源，便于按来源统计命令调用（如 `flow-agent`）的 PV/UV。
 
+### 修复
+
+- **CLI npm 更新**：`bl update` 与自动更新改为从官方 npm registry 安装，与版本检测使用同一来源，从而避免因用户配置的镜像同步滞后而将未实际升级的安装结果报告为更新成功。
+
 ## [2.10.5] - 2026-11-23
 
 ### 新增
