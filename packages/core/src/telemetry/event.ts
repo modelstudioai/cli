@@ -23,6 +23,8 @@ export interface TrackingEvent {
   callerName?: string;
   skillName?: string;
   skillVersion?: string;
+  /** Caller-declared business source (--biz-source), normalized; reported as AEM c6. */
+  bizSource?: string;
 }
 
 export function createTrackingEvent(opts: {
@@ -34,6 +36,7 @@ export function createTrackingEvent(opts: {
   authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
   caller: CallerAttribution;
+  bizSource?: string;
 }): TrackingEvent {
   const event: TrackingEvent = {
     command: opts.command,
@@ -53,6 +56,10 @@ export function createTrackingEvent(opts: {
     if (opts.caller.skillVersion !== undefined) event.skillVersion = opts.caller.skillVersion;
   } else if (opts.caller.callerType === "script") {
     event.callerName = opts.caller.callerName;
+  }
+
+  if (opts.bizSource !== undefined) {
+    event.bizSource = opts.bizSource;
   }
 
   if (opts.authMethod) {
@@ -99,6 +106,10 @@ export function buildRemoteAemOptions(event: TrackingEvent): Record<string, unkn
   }
   if (event.requestId) {
     opts.c5 = event.requestId;
+  }
+  // Dedicated flat dimension column for the business source (easy AEM filtering).
+  if (event.bizSource !== undefined) {
+    opts.c6 = event.bizSource;
   }
 
   return opts;

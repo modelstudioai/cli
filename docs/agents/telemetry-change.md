@@ -99,8 +99,11 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 - `authMethod`
 - `callerType`（必填：`agent` | `script` | `unknown`）
 - `callerName`：`agent` 与 `script` 时发送（缺省/非法 → `"unknown"`）；`skillName` / `skillVersion` 仅 `agent` 时可选发送
+- `bizSource`：全局 `--biz-source` 声明的业务来源（可选）；经 `normalizeBizSource` 归一化（缺省省略，空白/非法 → `"unknown"`），与 `callerName` 独立；映射到 AEM `c6` 专用扁平列
 - 失败时的 `errorMessage`、`exitCode`、`httpStatus`、`requestId`
 - 安全 allowlist 过滤后的 `params`
+
+`bizSource` 是调用方（skill/agent/产品）通过全局 `--biz-source` 主动声明的来源标签，用于按来源区分命令调用的 PV/UV。它走 `GLOBAL_FLAGS` → `buildSettings` → `settings.bizSource` → `trackCommandExecution` 读取，不经命令自有 flag，也不进 `PARAM_ALLOWLIST`（c1）。归一化复用 caller 的 `NAME_PATTERN`（小写、空格/下划线转连字符， bounded charset）防 PII。AEM 侧除随 `ext` 上报外，另映射到专用扁平列 `c6`（标量字符串），无需 JSON 解析维度配置即可直接按 `c6` 筛选/分组：PV=事件计数，UV=distinct `uid`；按命令路径（如 `flow-agent *`）过滤即得某命令组的来源 PV/UV。`bizSource` 与 `callerType`/`callerName`（宿主归因）是独立维度，不得混用。
 
 调用方归因只认本次进程的 `BAILIAN_CALLER_*`（由 `readCaller` 归一化后写入事件）：
 
@@ -155,6 +158,7 @@ AEM 映射：
 | `c3`       | HTTP status                                                                                       |
 | `c4`       | 错误文案，最多 500 字符                                                                           |
 | `c5`       | request ID                                                                                        |
+| `c6`       | `bizSource` 业务来源（全局 `--biz-source`，归一化标量；专用扁平列，直接筛选/分组）                |
 
 远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。
 
