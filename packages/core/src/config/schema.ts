@@ -253,6 +253,6 @@ export interface Settings {
   quiet: boolean;
   dryRun: boolean;
   telemetry: boolean;
-  /** Per-invocation business source label (--biz-source) for usage analytics; not persisted. */
-  bizSource?: string;
+  /** Per-invocation business source label (--biz-from) for usage analytics; not persisted. */
+  bizFrom?: string;
 }

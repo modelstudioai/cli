@@ -70,7 +70,7 @@ describe("e2e: bl registry smoke", () => {
     expect(stderr).toMatch(/--console-region/);
     expect(stderr).toMatch(/--console-site/);
     expect(stderr).toMatch(/--console-switch-agent/);
-    expect(stderr).toMatch(/--biz-source/);
+    expect(stderr).toMatch(/--biz-from/);
     expect(stderr).not.toMatch(/^\s*--region\s/m);
   });
 

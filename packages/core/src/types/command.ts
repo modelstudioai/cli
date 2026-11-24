@@ -114,7 +114,7 @@ export const GLOBAL_FLAGS = {
   },
   // Caller-declared source for usage attribution. Skills/agents should pass their
   // own name when invoking commands so PV/UV can be segmented by calling skill/product.
-  bizSource: {
+  bizFrom: {
     type: "string",
     valueHint: "<source>",
     description: {

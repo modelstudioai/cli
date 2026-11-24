@@ -23,7 +23,7 @@ bl knowledge category add --name <text> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --collection-id <id>  | string | —        | Create under this collection (defaults to the platform collection)                                                                      |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -75,7 +75,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --category-id <id>    | string | yes      | Category ID to delete                                                                                                                   |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -120,7 +120,7 @@ bl knowledge category list [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --collection-id <id>  | string | —        | Filter by exact collection ID                                                                                                           |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -176,7 +176,7 @@ bl knowledge chat --message <text> --agent-id <id> [flags]
 | --agent-version <version>            | string  | —        | Service version to call: beta (draft for debugging) or a published number; default is the latest published version                      |
 | --api-key <key>                      | string  | —        | API key                                                                                                                                 |
 | --base-url <url>                     | string  | —        | API base URL                                                                                                                            |
-| --biz-source <source>                | string  | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>                  | string  | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>                      | string  | —        | Use a config profile for this command                                                                                                   |
 | --dry-run                            | switch  | —        | Dry run mode                                                                                                                            |
 | --enable-cache-control <true\|false> | boolean | —        | Explicit context cache control                                                                                                          |
@@ -237,7 +237,7 @@ bl knowledge chunk add --index-id <id> (--content <text> | --field <k=v>) [flags
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                                   |
 | --base-url <url>      | string | —        | API base URL                                                                                                                                              |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product                   |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product                   |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                                     |
 | --content <text>      | string | —        | Chunk body text, up to 6000 chars (document-type); alternative to --content-file                                                                          |
 | --content-file <path> | string | —        | Read chunk body from a UTF-8 plain text file (.md/.txt etc.)                                                                                              |
@@ -305,7 +305,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --chunk-id <id>       | array  | yes      | Chunk ID to delete (repeatable; batches of 10 are sent automatically)                                                                   |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -351,7 +351,7 @@ bl knowledge chunk list --index-id <id> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --doc-id <id>         | string | —        | Only show chunks belonging to this document                                                                                             |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -400,7 +400,7 @@ bl knowledge chunk update --index-id <id> --chunk-id <id> --doc-id <id> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --chunk-id <id>       | string | yes      | Chunk ID (metadata._id from the chunk list output)                                                                                      |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --content <text>      | string | —        | New chunk content, 10-6000 chars; alternative to --content-file                                                                         |
@@ -455,7 +455,7 @@ bl knowledge collection create --name <text> --description <text> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --description <text>  | string | yes      | What this collection holds and what it is for — tells collections apart in the list                                                     |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -507,7 +507,7 @@ bl knowledge collection get (--collection-id <id> | --name <text>) [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --collection-id <id>  | string | —        | Collection ID; alternative to --name                                                                                                    |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -548,7 +548,7 @@ bl knowledge create --name <text> --description <text> (--doc-id <id> | --catego
 | --------------------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>                         | string | —        | API key                                                                                                                                 |
 | --base-url <url>                        | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>                   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>                     | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --category-id <id>                      | array  | —        | Import every file under this category (repeatable); mutually exclusive with --doc-id                                                    |
 | --chunk-size <n>                        | number | —        | Chunk size in characters (default: 600, recommended 300-800)                                                                            |
 | --config <name>                         | string | —        | Use a config profile for this command                                                                                                   |
@@ -619,7 +619,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --help                | switch | —        | Show help                                                                                                                               |
@@ -672,7 +672,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --doc-id <id>         | array  | yes      | Document ID to delete (repeatable)                                                                                                      |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -724,7 +724,7 @@ bl knowledge doc import --index-id <id> (--doc-id <fileId> ... | --category-id <
 | ------------------------------------------------------ | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>                                        | string  | —        | API key                                                                                                                                 |
 | --base-url <url>                                       | string  | —        | API base URL                                                                                                                            |
-| --biz-source <source>                                  | string  | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>                                    | string  | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --category-id <id>                                     | array   | —        | Data-center category ID (repeatable; excludes --doc-id)                                                                                 |
 | --chunk-mode <h1\|h2\|h3\|h4\|h5\|length\|page\|regex> | string  | —        | Document chunk mode (not video time slicing)                                                                                            |
 | --chunk-size <characters>                              | number  | —        | Document chunk size, 1-6000 characters                                                                                                  |
@@ -777,7 +777,7 @@ bl knowledge doc import-oss --bucket <name> --region <id> --oss-key <key> [flags
 | --------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>             | string | —        | API key                                                                                                                                 |
 | --base-url <url>            | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>       | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>         | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --bucket <name>             | string | yes      | Authorized OSS bucket name                                                                                                              |
 | --category-id <id>          | string | —        | Target data-center category (default: the default category)                                                                             |
 | --config <name>             | string | —        | Use a config profile for this command                                                                                                   |
@@ -832,7 +832,7 @@ bl knowledge doc list --index-id <id> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --details             | switch | —        | Include file-level chunk configuration (page size up to 10)                                                                             |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -881,7 +881,7 @@ bl knowledge doc status --index-id <id> --job-id <id> [flags]
 | ------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>           | string | —        | API key                                                                                                                                 |
 | --base-url <url>          | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>     | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>       | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>           | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run                 | switch | —        | Dry run mode                                                                                                                            |
 | --help                    | switch | —        | Show help                                                                                                                               |
@@ -942,7 +942,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | ------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>           | string | —        | API key                                                                                                                                 |
 | --base-url <url>          | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>     | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>       | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --category-id <id>        | string | —        | Data-center category ID (default: workspace default on first run)                                                                       |
 | --config <name>           | string | —        | Use a config profile for this command                                                                                                   |
 | --delete                  | switch | —        | Delete managed index documents missing locally                                                                                          |
@@ -999,7 +999,7 @@ bl knowledge doc tag --doc-id <id> --tag <text> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --doc-id <id>         | array  | yes      | Data-center file ID to tag (repeatable, 1-20 per call)                                                                                  |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -1047,7 +1047,7 @@ bl knowledge doc upload --file <path> [flags]
 | -------------------------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>                              | string | —        | API key                                                                                                                                 |
 | --base-url <url>                             | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>                        | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>                          | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --category-id <id>                           | string | —        | Target data-center category; defaults to the workspace default category                                                                 |
 | --category-type <UNSTRUCTURED\|SESSION_FILE> | string | —        | File category type (SESSION_FILE for temporary chat attachments)                                                                        |
 | --config <name>                              | string | —        | Use a config profile for this command                                                                                                   |
@@ -1121,7 +1121,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --file-id <id>        | string | yes      | Data-center file ID to delete                                                                                                           |
@@ -1168,7 +1168,7 @@ bl knowledge file get --file-id <id> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --file-id <id>        | string | yes      | Data-center file ID                                                                                                                     |
@@ -1204,7 +1204,7 @@ bl knowledge file list --category-id <id> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --category-id <id>    | string | yes      | Category to list (find ids via the category list command); exact match                                                                  |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
@@ -1256,7 +1256,7 @@ bl knowledge info --index-id <id> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --help                | switch | —        | Show help                                                                                                                               |
@@ -1305,7 +1305,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | ------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>           | string | —        | API key                                                                                                                                 |
 | --base-url <url>          | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>     | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>       | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>           | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run                 | switch | —        | Dry run mode                                                                                                                            |
 | --help                    | switch | —        | Show help                                                                                                                               |
@@ -1360,7 +1360,7 @@ bl knowledge list [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --help                | switch | —        | Show help                                                                                                                               |
@@ -1412,7 +1412,7 @@ bl knowledge search --agent-id <id> (--query <text> | --image <url>) [flags]
 | --agent-version <version>       | string | —        | Service version to call: beta (draft for debugging) or a published number; default is the latest published version                      |
 | --api-key <key>                 | string | —        | API key                                                                                                                                 |
 | --base-url <url>                | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>           | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>             | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>                 | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run                       | switch | —        | Dry run mode                                                                                                                            |
 | --help                          | switch | —        | Show help                                                                                                                               |
@@ -1465,7 +1465,7 @@ bl knowledge service copy --agent-id <id> [flags]
 | --agent-id <id>       | string | yes      | Source service (agent) ID to copy                                                                                                       |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --help                | switch | —        | Show help                                                                                                                               |
@@ -1506,7 +1506,7 @@ bl knowledge service create --name <text> --scene <chat|search> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --config-file <path>  | string | —        | Complete agent_config JSON file (excludes --index-id)                                                                                   |
 | --description <text>  | string | —        | What this service answers and who it serves — recommended: agents read it to pick the right service (up to 1000 chars)                  |
@@ -1567,7 +1567,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --agent-id <id>       | string | yes      | Service (agent) ID                                                                                                                      |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --help                | switch | —        | Show help                                                                                                                               |
@@ -1622,7 +1622,7 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --agent-id <id>       | string | yes      | Service (agent) ID                                                                                                                      |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --help                | switch | —        | Show help                                                                                                                               |
@@ -1673,7 +1673,7 @@ bl knowledge service get --agent-id <id> [flags]
 | --agent-version <version> | string | —        | Specific version to inspect (beta or a published number); omit for all versions                                                         |
 | --api-key <key>           | string | —        | API key                                                                                                                                 |
 | --base-url <url>          | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>     | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>       | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>           | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run                 | switch | —        | Dry run mode                                                                                                                            |
 | --help                    | switch | —        | Show help                                                                                                                               |
@@ -1719,7 +1719,7 @@ bl knowledge service list --scene <chat|search> [flags]
 | --agent-id <id>       | string | —        | Filter by exact agent ID                                                                                                                |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --help                | switch | —        | Show help                                                                                                                               |
@@ -1772,7 +1772,7 @@ bl knowledge service update --agent-id <id> [flags]
 | --agent-version <version>    | string | —        | Target version (default: beta draft). Published versions only accept --version-desc                                                     |
 | --api-key <key>              | string | —        | API key                                                                                                                                 |
 | --base-url <url>             | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>        | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>          | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>              | string | —        | Use a config profile for this command                                                                                                   |
 | --config-file <path>         | string | —        | JSON file replacing the whole agent_config (for nested settings like kb_search_configs); mutually exclusive with scalar config flags    |
 | --description <text>         | string | —        | New service description (up to 1000 chars)                                                                                              |
@@ -1842,7 +1842,7 @@ bl knowledge stats --index-id <id> [flags]
 | --------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>       | string | —        | API key                                                                                                                                 |
 | --base-url <url>      | string | —        | API base URL                                                                                                                            |
-| --biz-source <source> | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>   | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>       | string | —        | Use a config profile for this command                                                                                                   |
 | --dry-run             | switch | —        | Dry run mode                                                                                                                            |
 | --end <time>          | string | —        | Range end: Unix seconds or ISO date, must be in the past (default: now)                                                                 |
@@ -1892,7 +1892,7 @@ bl knowledge update --index-id <id> [flags]
 | -------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | --api-key <key>            | string | —        | API key                                                                                                                                 |
 | --base-url <url>           | string | —        | API base URL                                                                                                                            |
-| --biz-source <source>      | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| --biz-from <source>        | string | —        | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | --config <name>            | string | —        | Use a config profile for this command                                                                                                   |
 | --description <text>       | string | —        | New knowledge base description                                                                                                          |
 | --dry-run                  | switch | —        | Dry run mode                                                                                                                            |

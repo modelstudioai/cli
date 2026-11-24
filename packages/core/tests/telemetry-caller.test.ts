@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { normalizeBizSource, readCaller } from "../src/telemetry/caller.ts";
+import { normalizeBizFrom, readCaller } from "../src/telemetry/caller.ts";
 
 test.each([
   { label: "missing", env: {} },
@@ -62,14 +62,14 @@ test("normalizes callerName and falls back to unknown", () => {
   });
 });
 
-test("normalizeBizSource keeps absent undefined and normalizes present labels", () => {
-  expect(normalizeBizSource(undefined)).toBeUndefined();
-  expect(normalizeBizSource("Coze")).toBe("coze");
-  expect(normalizeBizSource("My Skill")).toBe("my-skill");
-  expect(normalizeBizSource("qwen_code")).toBe("qwen-code");
-  expect(normalizeBizSource("")).toBe("unknown");
-  expect(normalizeBizSource("   ")).toBe("unknown");
-  expect(normalizeBizSource("bad/name!")).toBe("unknown");
+test("normalizeBizFrom keeps absent undefined and normalizes present labels", () => {
+  expect(normalizeBizFrom(undefined)).toBeUndefined();
+  expect(normalizeBizFrom("Coze")).toBe("coze");
+  expect(normalizeBizFrom("My Skill")).toBe("my-skill");
+  expect(normalizeBizFrom("qwen_code")).toBe("qwen-code");
+  expect(normalizeBizFrom("")).toBe("unknown");
+  expect(normalizeBizFrom("   ")).toBe("unknown");
+  expect(normalizeBizFrom("bad/name!")).toBe("unknown");
 });
 
 test("drops illegal skillName and only keeps version when skillName is valid", () => {
