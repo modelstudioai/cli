@@ -10,7 +10,7 @@
 
 ### 新增
 
-- **全局 `--biz-source` 参数**：所有命令支持 `--biz-source <source>`，调用方（skill/agent/产品）可声明业务来源。归一化后的来源上报到 AEM 专用扁平列 `c6`（及 `ext`），支持按来源统计命令调用（如 `flow-agent`）的 PV/UV。缺省省略；空白/非法 → `unknown`。
+- **全局 `--biz-from` 参数**：所有命令支持 `--biz-from <source>`，调用方（skill/agent/产品）可声明业务来源。归一化后的来源上报到 AEM 专用扁平列 `c6`（及 `ext`），支持按来源统计命令调用（如 `flow-agent`）的 PV/UV。缺省省略；空白/非法 → `unknown`。
 
 ## [2.10.5] - 2026-11-23
 

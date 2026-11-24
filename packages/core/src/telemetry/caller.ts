@@ -34,12 +34,12 @@ function normalizeCallerName(raw: string | undefined): string {
 }
 
 /**
- * Normalize a caller-declared business source label (--biz-source) to a stable id.
+ * Normalize a caller-declared business source label (--biz-from) to a stable id.
  * Absent (undefined) stays undefined so the event omits the field; a present but
  * blank/invalid label falls back to `unknown`, mirroring callerName. Reuses the
  * caller name pattern to keep the value space bounded and free of PII.
  */
-export function normalizeBizSource(raw: string | undefined): string | undefined {
+export function normalizeBizFrom(raw: string | undefined): string | undefined {
   return raw === undefined ? undefined : normalizeCallerName(raw);
 }
 

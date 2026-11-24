@@ -338,6 +338,6 @@ export function buildSettings(s: ResolutionSources): Settings {
     consoleSwitchAgent: flags.consoleSwitchAgent || file.console_switch_agent || undefined,
     dryRun: flags.dryRun || false,
     telemetry: env.DO_NOT_TRACK === "1" ? false : (file.telemetry ?? true),
-    bizSource: flags.bizSource ?? undefined,
+    bizFrom: flags.bizFrom ?? undefined,
   };
 }

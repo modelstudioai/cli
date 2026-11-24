@@ -124,7 +124,7 @@ Available on every command (in addition to command-specific flags):
 | `--verbose`             | switch | no       | Print HTTP request/response details                                                                                                     |
 | `--dry-run`             | switch | no       | Dry run mode                                                                                                                            |
 | `--config <name>`       | string | no       | Use a config profile for this command                                                                                                   |
-| `--biz-source <source>` | string | no       | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| `--biz-from <source>`   | string | no       | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
 | `--help`                | switch | no       | Show help                                                                                                                               |
 | `--version`             | switch | no       | Print version                                                                                                                           |
 

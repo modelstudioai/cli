@@ -313,22 +313,22 @@ test("does not call sinks when telemetry is disabled", async () => {
   expect(sinkMocks.remoteSink).not.toHaveBeenCalled();
 });
 
-test("reports bizSource as a structured field and dedicated AEM c6 column", () => {
+test("reports bizFrom as a structured field and dedicated AEM c6 column", () => {
   const event = createTrackingEvent({
     command: "flow-agent create",
     durationMs: 1,
     success: true,
     identity,
     caller: unknownCaller,
-    bizSource: "coze",
+    bizFrom: "coze",
   });
-  expect(event.bizSource).toBe("coze");
+  expect(event.bizFrom).toBe("coze");
   const opts = buildRemoteAemOptions(event);
   expect(opts.c6).toBe("coze");
-  expect(opts.ext).toMatchObject({ bizSource: "coze" });
+  expect(opts.ext).toMatchObject({ bizFrom: "coze" });
 });
 
-test("omits bizSource and c6 when no source is declared", () => {
+test("omits bizFrom and c6 when no source is declared", () => {
   const event = createTrackingEvent({
     command: "flow-agent create",
     durationMs: 1,
@@ -336,41 +336,38 @@ test("omits bizSource and c6 when no source is declared", () => {
     identity,
     caller: unknownCaller,
   });
-  expect(event.bizSource).toBeUndefined();
+  expect(event.bizFrom).toBeUndefined();
   const opts = buildRemoteAemOptions(event);
   expect(opts).not.toHaveProperty("c6");
-  expect(opts.ext).not.toHaveProperty("bizSource");
+  expect(opts.ext).not.toHaveProperty("bizFrom");
 });
 
 test.each([
-  { label: "valid", bizSource: "My Skill", expected: "my-skill" },
-  { label: "underscore", bizSource: "qwen_code", expected: "qwen-code" },
-  { label: "invalid", bizSource: "bad/name!", expected: "unknown" },
-  { label: "blank", bizSource: "   ", expected: "unknown" },
-  { label: "empty", bizSource: "", expected: "unknown" },
-])(
-  "normalizes settings.bizSource ($label) into the event and c6",
-  async ({ bizSource, expected }) => {
-    sinkMocks.localSink.mockClear();
-    sinkMocks.remoteSink.mockClear();
-    await trackCommandExecution(
-      {
-        identity,
-        settings: { telemetry: true, bizSource } as Settings,
-        authMethod: "console",
-        caller: unknownCaller,
-      },
-      ["flow-agent", "create"],
-      {},
-      async () => {},
-    );
-    const event = sinkMocks.remoteSink.mock.calls[0]![0];
-    expect(event.bizSource).toBe(expected);
-    expect(buildRemoteAemOptions(event).c6).toBe(expected);
-  },
-);
+  { label: "valid", bizFrom: "My Skill", expected: "my-skill" },
+  { label: "underscore", bizFrom: "qwen_code", expected: "qwen-code" },
+  { label: "invalid", bizFrom: "bad/name!", expected: "unknown" },
+  { label: "blank", bizFrom: "   ", expected: "unknown" },
+  { label: "empty", bizFrom: "", expected: "unknown" },
+])("normalizes settings.bizFrom ($label) into the event and c6", async ({ bizFrom, expected }) => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true, bizFrom } as Settings,
+      authMethod: "console",
+      caller: unknownCaller,
+    },
+    ["flow-agent", "create"],
+    {},
+    async () => {},
+  );
+  const event = sinkMocks.remoteSink.mock.calls[0]![0];
+  expect(event.bizFrom).toBe(expected);
+  expect(buildRemoteAemOptions(event).c6).toBe(expected);
+});
 
-test("absent settings.bizSource omits the field and c6", async () => {
+test("absent settings.bizFrom omits the field and c6", async () => {
   sinkMocks.localSink.mockClear();
   sinkMocks.remoteSink.mockClear();
   await trackCommandExecution(
@@ -385,6 +382,6 @@ test("absent settings.bizSource omits the field and c6", async () => {
     async () => {},
   );
   const event = sinkMocks.remoteSink.mock.calls[0]![0];
-  expect(event.bizSource).toBeUndefined();
+  expect(event.bizFrom).toBeUndefined();
   expect(buildRemoteAemOptions(event)).not.toHaveProperty("c6");
 });
