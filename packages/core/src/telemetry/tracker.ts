@@ -12,6 +12,7 @@ import {
   readFirstInstallReportAttempts,
 } from "./first-install.ts";
 import { flushTelemetry, localSink, remoteSink } from "./sink.ts";
+import type { TelemetrySiteResolution } from "./site.ts";
 
 const GLOBAL_FLAG_KEYS = new Set([
   "apiKey",
@@ -166,6 +167,11 @@ export interface TrackingDeps {
   authMethod?: AuthRequirement;
   /** From `readCaller(process.env)` in telemetryStage. */
   caller: CallerAttribution;
+  /**
+   * Lazy site resolution invoked in `finally` so Client.url() callback origins
+   * and authStage Client replacement are visible.
+   */
+  resolveSite?: () => TelemetrySiteResolution;
 }
 
 export async function trackCommandExecution(
@@ -202,6 +208,15 @@ export async function trackCommandExecution(
   } finally {
     const durationMs = Math.round(performance.now() - start);
     const install = readCommandInstallAttribution(deps.identity);
+    let siteResolution: TelemetrySiteResolution = {
+      site: "domestic",
+      siteReason: "default-fallback",
+    };
+    try {
+      if (deps.resolveSite) siteResolution = deps.resolveSite();
+    } catch {
+      // Site resolution must never mask command errors or block telemetry.
+    }
 
     const event = createTrackingEvent({
       command: commandPath.join(" "),
@@ -214,6 +229,8 @@ export async function trackCommandExecution(
       caller: deps.caller,
       install,
       bizFrom: normalizeBizFrom(deps.settings.bizFrom),
+      site: siteResolution.site,
+      siteReason: siteResolution.siteReason,
     });
 
     // The install day is reported when install succeeds, not from this command.

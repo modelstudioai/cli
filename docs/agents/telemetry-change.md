@@ -14,8 +14,8 @@
 ```text
 命令进入 run
   ├─ telemetryStage
-  │    ├─ ~/.bailian/telemetry.jsonl
-  │    └─ AEM(pid=bailian-cli-node, event name=命令路径)
+  │    ├─ ~/.bailian/telemetry.jsonl（含 site / siteReason）
+  │    └─ AEM（按 site 分流 pid + endpoint；event name=命令路径）
   │
   └─ confirmationStage
        └─ versionCheckStage → authStage
@@ -27,12 +27,12 @@
 
 ### 1. 三套鉴权与埋点标识
 
-| 命令声明          | 凭证 / 请求域                                       | 主要请求出口                                                                                    | 后端埋点标识                                                                      | 前端埋点标识（AEM）                              |
-| ----------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `auth: "apiKey"`  | API Key；DashScope / OpenAI-compatible 模型域       | `Client.request/requestJson`、`McpClient`、Managed Agent / Advisor instrumented fetch、上传策略 | 有：`User-Agent`、`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli` | 有：`pid=bailian-cli-node`、`authMethod=apiKey`  |
-| `auth: "console"` | Console access token；Bailian Console Gateway       | `callConsoleGateway()` → `/cli/api.json`                                                        | 有：Console Gateway 后端直接标识                                                  | 有：`pid=bailian-cli-node`、`authMethod=console` |
-| `auth: "openapi"` | AccessKey ID/Secret，可选 STS token；阿里云 OpenAPI | `Client.openApiJson()`                                                                          | 有：`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli`               | 有：`pid=bailian-cli-node`、`authMethod=openapi` |
-| `auth: "none"`    | 无凭证域                                            | 本地逻辑或命令自行管理的登录/配置流程                                                           | 无                                                                                | 有：`pid=bailian-cli-node`、`authMethod=none`    |
+| 命令声明          | 凭证 / 请求域                                       | 主要请求出口                                                                                    | 后端埋点标识                                                                      | 前端埋点标识（AEM）                                                                    |
+| ----------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `auth: "apiKey"`  | API Key；DashScope / OpenAI-compatible 模型域       | `Client.request/requestJson`、`McpClient`、Managed Agent / Advisor instrumented fetch、上传策略 | 有：`User-Agent`、`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli` | 有：按模型 host 分流 `bailian-cli-node` / `bailian-cli-node-intl`、`authMethod=apiKey` |
+| `auth: "console"` | Console access token；Bailian Console Gateway       | `callConsoleGateway()` → `/cli/api.json`                                                        | 有：Console Gateway 后端直接标识                                                  | 有：按 `consoleSite` 分流 pid、`authMethod=console`                                    |
+| `auth: "openapi"` | AccessKey ID/Secret，可选 STS token；阿里云 OpenAPI | `Client.openApiJson()`                                                                          | 有：`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli`               | 有：按模型域 baseUrl 分流 pid、`authMethod=openapi`（不用 ACS host）                   |
+| `auth: "none"`    | 无凭证域                                            | 本地逻辑或命令自行管理的登录/配置流程                                                           | 无                                                                                | 有：`consoleSite` ∨ 模型 host OR 分流、`authMethod=none`                               |
 
 `authMethod` 记录的是命令声明的鉴权域，不是凭证来源。它不会区分 API Key 来自 flag、env 还是 config。
 鉴权域是命令的准入门槛和主请求域，不保证命令内部只有一种网络出口；例如部分 `apiKey` 命令也可能读取匿名 Console 公共目录，Managed Agent 还可能访问其他 provider。
@@ -140,18 +140,42 @@ postinstall.js launchFirstInstallReport
 
 事件写入两处：
 
-1. 本地 `~/.bailian/telemetry.jsonl`：权限 `0600`，超过 5 MB 后重建；每行附带 `uid`（只读已有文件，不创建）
-2. AEM：`pid=bailian-cli-node`，源码运行自动使用 `env=dev`，npm 安装或编译二进制使用 `env=prod`
+1. 本地 `~/.bailian/telemetry.jsonl`：权限 `0600`，超过 5 MB 后重建；每行附带 `uid`（只读已有文件，不创建）以及 `site` / 可选 `siteReason`
+2. AEM：按 `site` 分流（见下节），源码运行自动使用 `env=dev`，npm 安装或编译二进制使用 `env=prod`
+
+#### 国内 / 国际 AEM 分流（best-effort）
+
+命令事件按声明口径分流到国内或新加坡采集集群；**不是**「国际相关数据绝不出境」的硬保证。后端渠道头（`x-dashscope-source-config` / `User-Agent`）**不**随本分流改动。
+
+| 站点          | AEM pid                 | 采集端点                        |
+| ------------- | ----------------------- | ------------------------------- |
+| domestic      | `bailian-cli-node`      | `https://gm.mmstat.com/aes.1.1` |
+| international | `bailian-cli-node-intl` | `https://sg.mmstat.com/aes.1.1` |
+
+判定（D4=B：console=账号站，模型=host/region）：
+
+| `auth`               | 信号                                                    | 国际条件                                 | 缺省                                                       |
+| -------------------- | ------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------- |
+| `console`            | `settings.consoleSite`（不看 `consoleRegion`）          | `international`                          | domestic                                                   |
+| `apiKey` / `openapi` | `Client.lastResolvedOrigin` 优先，否则 `client.baseUrl` | 已知国际 host/region（含 `cn-hongkong`） | domestic；未知 host → domestic + `siteReason=unknown-host` |
+| `none`               | consoleSite **或** 模型 host（OR）                      | 任一侧国际                               | domestic                                                   |
+
+- 模型 host 分类清单上收在 `packages/core/src/config/model-endpoints.ts`（与 API Key 登录候选共用）；`site.ts` 只调用 helper，禁止再写第四份。
+- `lastResolvedOrigin` 仅在 `Client.url()` / upload 的 `defaultBaseUrl` 回调路径记录；主流量仍靠 `baseUrl`。runtime **禁止**泛化读取各命令 `flags.region`。
+- openapi **禁止**用 ACS `opts.host` 分类。
+- `remoteSink` 按 site 使用 keyed `Map` 持有 Tracker；同进程可同时存在国内与国际实例。`uid` / tracker `device_id` **跨站同值**。
+- vendored tracker 仅保留本仓对 `send` 的本地改造（登记于此）；国际 path 与国内同为 `/aes.1.1`，**不加** `endpointPath` patch。升级 SDK 时必须保留 `send` 改造。
+- 已知残留：未知/反代 host、残缺配置、登录写盘前首条 `none`、managed-agent 外部拼 host、旧版 CLI、账号站与模型地域混维拆站、`first_install` 固定报国内站（安装阶段没有 auth / Client 上下文）。
 
 编译二进制的 `env=prod` 由 `BAILIAN_COMPILED=1` 决定，并且必须先于 `NODE_ENV`。`bun build --compile`（当前 pin 1.3.14）会把点访问 `process.env.NODE_ENV` 内联成构建机的值，未设置时是 `"development"`；`tools/release/lib/binary-compile.mjs` 同时 `--define process.env.NODE_ENV="production"`。这两处读取必须写成 `process.env.*`，包进别的变量后 `--define` 匹配不到。
 
 旁路状态：`~/.bailian/telemetry-uid`（遵循 `BAILIAN_CONFIG_DIR`）由 `ensureUid` 在首次远端上报时生成，不是事件落盘目标。
 
-底层 Node tracker 还会附加公共设备字段：OS 类型/版本、Node 应用名与版本、平台，以及内置的 `device_id`（本机网卡 MAC 的 MD5，保持不变）。稳定匿名 install id 写入 AEM 的 `uid`：来自 `~/.bailian/telemetry-uid`，首次远端上报时生成随机 UUID v4，以 0600 权限原子发布；生成失败时不上报 `uid`。遥测关闭时不生成该文件。本地 `telemetry.jsonl` 每行附带同名 `uid`。注意：这不是账号用户 ID，只是上报到 AEM `uid` 字段的匿名标识；与 Tracker 内置 `device_id` 无关。
+底层 Node tracker 还会附加公共设备字段：OS 类型/版本、Node 应用名与版本、平台，以及内置的 `device_id`（本机网卡 MAC 的 MD5，保持不变）。稳定匿名 install id 写入 AEM 的 `uid`：来自 `~/.bailian/telemetry-uid`，首次远端上报时生成随机 UUID v4，以 0600 权限原子发布；生成失败时不上报 `uid`。遥测关闭时不生成该文件。本地 `telemetry.jsonl` 每行附带同名 `uid`。注意：这不是账号用户 ID，只是上报到 AEM `uid` 字段的匿名标识；与 Tracker 内置 `device_id` 无关。国内/国际两站共用同一 `uid` / `device_id`。
 
 `ensureUid` 无锁：稳态只读；缺失或损坏时同目录 temp 写满后 `rename` 发布（内容原子替换；并发首次创建时后写覆盖先写，磁盘最终为一个 UUID）。失败则省略 `uid`，不阻塞业务退出。
 
-从 2.8.2 起，每条命令事件通过 `commandPrefix` 显式记录调用入口，三种入口仍共用 `pid=bailian-cli-node`：
+从 2.8.2 起，每条命令事件通过 `commandPrefix` 显式记录调用入口；pid 按上表 `site` 分流，三种入口仍靠 `commandPrefix` 区分：
 
 | 调用入口    | `commandPrefix` |
 | ----------- | --------------- |
@@ -167,17 +191,19 @@ postinstall.js launchFirstInstallReport
 
 AEM 映射：
 
-| AEM 字段   | 内容                                                                                                                                                |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| event name | 命令路径                                                                                                                                            |
-| `et`       | `EXP`                                                                                                                                               |
-| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType`、失败时的 `exitCode`，以及读到的 `installChannel`。安装日不在命令事件里 |
-| `c1`       | allowlist 参数                                                                                                                                      |
-| `c2`       | `success` / `failure`                                                                                                                               |
-| `c3`       | HTTP status                                                                                                                                         |
-| `c4`       | 错误文案，最多 500 字符                                                                                                                             |
-| `c5`       | request ID                                                                                                                                          |
-| `c6`       | `bizFrom` 业务来源（全局 `--biz-from`，归一化标量；专用扁平列，直接筛选/分组）                                                                      |
+| AEM 字段   | 内容 |
+| ---------- | ---- |
+| event name | 命令路径 |
+| `et`       | `EXP` |
+| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType`、`site`、可选 `siteReason`、失败时的 `exitCode`，以及读到的 `installChannel`。安装日不在命令事件里 |
+| `c1`       | allowlist 参数 |
+| `c2`       | `success` / `failure` |
+| `c3`       | HTTP status |
+| `c4`       | 错误文案，最多 500 字符 |
+| `c5`       | request ID |
+| `c6`       | `bizFrom` 业务来源（全局 `--biz-from`，归一化标量；专用扁平列，直接筛选/分组） |
+
+`siteReason` 为粗粒度枚举（`positive-domestic` / `positive-international` / `default-fallback` / `unknown-host`），**禁止**带原始 host。漏判量化用国内站 `siteReason` 兜底类占比；不要用「国内 pid 出现 `site=international`」做告警（国际事件不会进国内 pid）。
 
 远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。
 
@@ -220,9 +246,9 @@ AEM 映射：
 
 ```sh
 rg -n "trackingHeaders|x-dashscope-source-config|User-Agent" packages --glob '*.ts'
-rg -n "trackCommandExecution|PARAM_ALLOWLIST|buildRemoteAemOptions|readCaller" packages/core packages/runtime --glob '*.ts'
+rg -n "trackCommandExecution|PARAM_ALLOWLIST|buildRemoteAemOptions|readCaller|resolveTelemetrySite|classifyModelHost" packages/core packages/runtime --glob '*.ts'
 vp check
-vp test packages/core/tests/telemetry-uid.test.ts packages/core/tests/telemetry-sink.test.ts packages/core/tests/telemetry-tracker.test.ts packages/core/tests/telemetry-send.test.ts packages/runtime/tests/telemetry-stage.test.ts packages/commands/tests/e2e/auth.e2e.test.ts
+vp test packages/core/tests/telemetry-uid.test.ts packages/core/tests/telemetry-sink.test.ts packages/core/tests/telemetry-tracker.test.ts packages/core/tests/telemetry-send.test.ts packages/core/tests/telemetry-site.test.ts packages/core/tests/client-last-resolved-origin.test.ts packages/runtime/tests/telemetry-stage.test.ts packages/commands/tests/e2e/auth.e2e.test.ts
 ```
 
 ## 常见漏点
@@ -235,3 +261,7 @@ vp test packages/core/tests/telemetry-uid.test.ts packages/core/tests/telemetry-
 - ✗ 只改 `bl` 入口，导致 `kscli` 的产品名或版本标签错误
 - ✗ 把帮助、版本或参数校验失败算进“全部命令”；这些路径当前没有进入 telemetry middleware
 - ✗ 把 `NODE_ENV` 判断放在 `BAILIAN_COMPILED` 前面。Bun 编译会把 `process.env.NODE_ENV` 折成 `"development"`，二进制流量全部进 `env=dev`，生产看板为空
+- ✗ 在 runtime 里泛化读取 `flags.region` 做站点判定；必须用 `baseUrl` / `lastResolvedOrigin` / `consoleSite`
+- ✗ 用 openapi ACS host 或「非 cn- 前缀」推断国际站（`cn-hongkong` 是国际）
+- ✗ 把 AEM 分流叙事写成「国际数据绝不出境」硬保证；实际是 best-effort 声明口径
+- ✗ 升级 vendored AEM tracker 时丢掉本仓 `send` 改造

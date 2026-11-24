@@ -28,6 +28,7 @@ import {
   readCaller,
   resolveModelBaseUrlState,
   resolveModelConnectionProvenance,
+  resolveTelemetrySite,
   selectApiKeyResolutionSources,
   trackCommandExecution,
 } from "bailian-cli-core";
@@ -293,6 +294,13 @@ export const telemetryStage: Middleware = (ctx, next) => {
       settings: ctx.settings,
       authMethod: ctx.command.auth,
       caller: readCaller(process.env),
+      resolveSite: () =>
+        resolveTelemetrySite({
+          auth: ctx.command.auth,
+          consoleSite: ctx.settings.consoleSite,
+          lastResolvedOrigin: ctx.client.lastResolvedOrigin,
+          baseUrl: ctx.client.baseUrl,
+        }),
     },
     ctx.path,
     ctx.flags,

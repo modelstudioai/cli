@@ -3,6 +3,7 @@ import type { InstallAttribution } from "../install/record.ts";
 import { formatCommand } from "../output/command.ts";
 import type { AuthRequirement } from "../types/command.ts";
 import type { CallerAttribution } from "./caller.ts";
+import type { TelemetrySite, TelemetrySiteReason } from "./site.ts";
 
 export interface TrackingEvent {
   command: string;
@@ -28,6 +29,10 @@ export interface TrackingEvent {
   installChannel?: InstallAttribution["installChannel"];
   /** Caller-declared call source (--biz-from), normalized; reported as AEM c6. */
   bizFrom?: string;
+  /** AEM reporting site (domestic vs international). */
+  site: TelemetrySite;
+  /** Coarse site resolution reason; never includes raw hosts. */
+  siteReason?: TelemetrySiteReason;
 }
 
 export function createTrackingEvent(opts: {
@@ -42,6 +47,8 @@ export function createTrackingEvent(opts: {
   /** Already-read install record. Callers must not create the file to fill this in. */
   install?: InstallAttribution;
   bizFrom?: string;
+  site?: TelemetrySite;
+  siteReason?: TelemetrySiteReason;
 }): TrackingEvent {
   const event: TrackingEvent = {
     command: opts.command,
@@ -53,6 +60,7 @@ export function createTrackingEvent(opts: {
     nodeVersion: process.version,
     os: process.platform,
     callerType: opts.caller.callerType,
+    site: opts.site ?? "domestic",
   };
 
   if (opts.caller.callerType === "agent") {
@@ -84,6 +92,10 @@ export function createTrackingEvent(opts: {
 
   if (opts.install) {
     event.installChannel = opts.install.installChannel;
+  }
+
+  if (opts.siteReason) {
+    event.siteReason = opts.siteReason;
   }
 
   return event;

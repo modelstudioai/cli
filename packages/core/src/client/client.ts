@@ -77,6 +77,8 @@ export interface OpenApiResponse {
  */
 export class Client {
   private consoleSession: ConsoleSession;
+  /** Last origin from url()/upload defaultBaseUrl resolution (telemetry only). */
+  private recordedOrigin: string | undefined;
 
   constructor(private readonly deps: ClientDeps) {
     this.consoleSession = new ConsoleSession(deps);
@@ -109,6 +111,23 @@ export class Client {
   }
 
   /**
+   * Origin last selected by {@link url} / upload defaultBaseUrl callbacks.
+   * Used by telemetry site routing; undefined when no valid origin was recorded.
+   */
+  get lastResolvedOrigin(): string | undefined {
+    return this.recordedOrigin;
+  }
+
+  private rememberResolvedOrigin(baseUrl: string): void {
+    try {
+      const origin = new URL(baseUrl).origin;
+      if (origin && origin !== "null") this.recordedOrigin = origin;
+    } catch {
+      // Invalid or empty callback origins (e.g. managed-agent) are ignored.
+    }
+  }
+
+  /**
    * Export the model-domain credential for delegation to an embedded SDK that
    * owns its own transport (e.g. @openagentpack/sdk). Deliberate escape hatch:
    * regular commands keep calling {@link request}/{@link requestJson} and never
@@ -138,6 +157,7 @@ export class Client {
    */
   url(path: string, defaultBaseUrl?: () => string): string {
     const baseUrl = this.deps.baseUrlIsDefault && defaultBaseUrl ? defaultBaseUrl() : this.baseUrl;
+    this.rememberResolvedOrigin(baseUrl);
     return baseUrl + path;
   }
 

@@ -24,7 +24,7 @@ vi.mock("bailian-cli-core", async () => {
 
 import { telemetryStage, type RunContext } from "../src/middleware.ts";
 
-function makeContext(): RunContext {
+function makeContext(overrides: Record<string, unknown> = {}): RunContext {
   return {
     identity: {
       binName: "bl",
@@ -36,6 +36,7 @@ function makeContext(): RunContext {
     command: { auth: "none" },
     settings: { telemetry: true },
     flags: {},
+    ...overrides,
   } as RunContext;
 }
 
@@ -60,6 +61,7 @@ test("wires process.env through readCaller into trackCommandExecution", async ()
   const deps = trackerMocks.trackCommandExecution.mock.calls[0]![0] as {
     caller: CallerAttribution;
     authMethod: string;
+    resolveSite?: () => { site: string; siteReason: string };
   };
   expect(deps.caller).toEqual({
     callerType: "agent",
@@ -68,7 +70,55 @@ test("wires process.env through readCaller into trackCommandExecution", async ()
     skillVersion: "2.5.0",
   });
   expect(deps.authMethod).toBe("none");
+  expect(typeof deps.resolveSite).toBe("function");
   expect(next).toHaveBeenCalledOnce();
+});
+
+test("resolveSite uses client lastResolvedOrigin and settings.consoleSite", async () => {
+  const next = vi.fn(async () => {});
+  const context = makeContext({
+    command: { auth: "apiKey" },
+    client: {
+      baseUrl: "https://dashscope.aliyuncs.com",
+      lastResolvedOrigin: "https://ws.ap-southeast-1.maas.aliyuncs.com",
+    },
+    settings: { telemetry: true, consoleSite: "domestic" },
+  });
+
+  await telemetryStage(context, next);
+
+  const deps = trackerMocks.trackCommandExecution.mock.calls[0]![0] as {
+    resolveSite: () => { site: string; siteReason: string };
+  };
+  expect(deps.resolveSite()).toEqual({
+    site: "international",
+    siteReason: "positive-international",
+  });
+});
+
+test("resolveSite for console auth ignores model baseUrl (D4=B)", async () => {
+  const next = vi.fn(async () => {});
+  const context = makeContext({
+    command: { auth: "console" },
+    client: {
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+      lastResolvedOrigin: undefined,
+    },
+    settings: {
+      telemetry: true,
+      consoleSite: "international",
+    },
+  });
+
+  await telemetryStage(context, next);
+
+  const deps = trackerMocks.trackCommandExecution.mock.calls[0]![0] as {
+    resolveSite: () => { site: string; siteReason: string };
+  };
+  expect(deps.resolveSite()).toEqual({
+    site: "international",
+    siteReason: "positive-international",
+  });
 });
 
 test("defaults to unknown when caller env is unset", async () => {

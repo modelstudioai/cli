@@ -103,9 +103,65 @@ test("derives event version and prefix from identity", () => {
     command: "config show",
     cliVersion: "identity-version",
     commandPrefix: "bl",
+    site: "domestic",
   });
   expect(buildRemoteAemOptions(event)).toMatchObject({
-    ext: { cliVersion: "identity-version", commandPrefix: "bl" },
+    ext: { cliVersion: "identity-version", commandPrefix: "bl", site: "domestic" },
+  });
+});
+
+test("resolveSite runs in finally and attaches site fields", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  let calledAfterCommand = false;
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true } as Settings,
+      authMethod: "apiKey",
+      caller: unknownCaller,
+      resolveSite: () => {
+        calledAfterCommand = true;
+        return { site: "international", siteReason: "positive-international" };
+      },
+    },
+    ["text", "chat"],
+    {},
+    async () => {
+      expect(calledAfterCommand).toBe(false);
+    },
+  );
+  expect(calledAfterCommand).toBe(true);
+  const event = sinkMocks.localSink.mock.calls[0]![0];
+  expect(event).toMatchObject({
+    site: "international",
+    siteReason: "positive-international",
+  });
+  expect(buildRemoteAemOptions(event).ext).toMatchObject({
+    site: "international",
+    siteReason: "positive-international",
+  });
+});
+
+test("resolveSite failure still emits domestic event", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true } as Settings,
+      caller: unknownCaller,
+      resolveSite: () => {
+        throw new Error("resolve boom");
+      },
+    },
+    ["config", "show"],
+    {},
+    async () => {},
+  );
+  expect(sinkMocks.localSink.mock.calls[0]![0]).toMatchObject({
+    site: "domestic",
+    siteReason: "default-fallback",
   });
 });
 
