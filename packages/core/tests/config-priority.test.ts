@@ -33,6 +33,13 @@ function src(s: {
 
 const resolve = (s: Parameters<typeof src>[0]): Settings => buildSettings(src(s));
 
+test("maps --biz-source flag into settings.bizSource (not persisted)", () => {
+  expect(resolve({ flags: { bizSource: "coze" } }).bizSource).toBe("coze");
+  expect(resolve({ flags: {} }).bizSource).toBeUndefined();
+  // Explicit empty string is preserved (declared-but-empty), not folded to undefined.
+  expect(resolve({ flags: { bizSource: "" } }).bizSource).toBe("");
+});
+
 test("token-plan Profile 预设保持固定", () => {
   expect(getModelProfilePreset("token-plan")).toEqual({
     baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com",

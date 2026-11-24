@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.11.0] - 2026-11-24
+
+### Added
+
+- **Global `--biz-source` flag**: All commands accept `--biz-source <source>` so callers (skills/agents/products) can declare their business source. The normalized label is reported to AEM as a dedicated flat column `c6` (plus `ext`), enabling per-source PV/UV analysis of command usage (e.g. `flow-agent`). Absent → omitted; blank/invalid → `unknown`.
+
 ## [2.10.5] - 2026-11-23
 
 ### Added

@@ -1,7 +1,7 @@
 ---
 name: bailian-managed-agent
 metadata:
-  version: "2.10.5"
+  version: "2.11.0"
   requires:
     bins: ["bl"]
 description: >-
