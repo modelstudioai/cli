@@ -27,6 +27,7 @@ import type {
 } from "./types.ts";
 import { makeIssue, pickSampleLines } from "./common.ts";
 import { pickRecordSchema } from "./schemas/index.ts";
+import type { RecordSchemaSession } from "./schemas/types.ts";
 
 interface QuickScanResult {
   totalLines: number;
@@ -74,6 +75,16 @@ interface DeepCheckResult {
   issues: ValidationIssue[];
 }
 
+/**
+ * Mutable holder for the cross-record session of the first schema that
+ * provides one. Records picking a different schema still go through the
+ * stateless per-record dispatch.
+ */
+interface SessionState {
+  schemaName?: DatasetSchema;
+  session?: RecordSchemaSession;
+}
+
 async function deepCheck(
   filePath: string,
   totalLines: number,
@@ -86,6 +97,7 @@ async function deepCheck(
   const issues: ValidationIssue[] = [];
   let sampled = 0;
   const MAX_ISSUES = 30;
+  const sessionState: SessionState = {};
 
   const stream = createReadStream(filePath, { encoding: "utf8" });
   const rl = createInterface({ input: stream, crlfDelay: Infinity });
@@ -111,7 +123,7 @@ async function deepCheck(
       continue;
     }
 
-    issues.push(...inspectRecord(obj, lineNo, schema));
+    issues.push(...inspectRecord(obj, lineNo, schema, sessionState));
   }
   return { sampled, issues };
 }
@@ -121,8 +133,18 @@ async function deepCheck(
  * The registry decides whether the record is DPO, ChatML, or some future
  * shape — this function only owns the "is this even an object?" guard so the
  * downstream specs can assume a real object.
+ *
+ * When a session holder is given, the first record whose schema provides a
+ * `createSession` starts a cross-record session (e.g. decision question
+ * definition consistency); later records of that same schema are inspected
+ * through the session instead of the stateless spec.
  */
-function inspectRecord(obj: unknown, lineNo: number, schema?: DatasetSchema): ValidationIssue[] {
+function inspectRecord(
+  obj: unknown,
+  lineNo: number,
+  schema?: DatasetSchema,
+  sessionState?: SessionState,
+): ValidationIssue[] {
   if (obj === null || typeof obj !== "object" || Array.isArray(obj)) {
     return [
       makeIssue(
@@ -135,6 +157,15 @@ function inspectRecord(obj: unknown, lineNo: number, schema?: DatasetSchema): Va
   }
   const record = obj as Record<string, unknown>;
   const spec = pickRecordSchema(record, schema);
+  if (sessionState) {
+    if (!sessionState.session && spec.createSession) {
+      sessionState.schemaName = spec.name;
+      sessionState.session = spec.createSession();
+    }
+    if (sessionState.session && sessionState.schemaName === spec.name) {
+      return sessionState.session.inspect(record, lineNo);
+    }
+  }
   return spec.inspect(record, lineNo);
 }
 

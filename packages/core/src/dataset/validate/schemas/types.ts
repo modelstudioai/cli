@@ -16,6 +16,16 @@
  */
 import type { DatasetSchema, ValidationIssue } from "../types.ts";
 
+/**
+ * Stateful per-file inspector. A schema whose rules span records (e.g. the
+ * decision model requires identical question definitions across the whole
+ * training file) creates one session per validation run; the first inspected
+ * record establishes the baseline and later records are compared against it.
+ */
+export interface RecordSchemaSession {
+  inspect(record: Record<string, unknown>, lineNo: number): ValidationIssue[];
+}
+
 export interface RecordSchemaSpec {
   /** Schema id — must match a value in the `DatasetSchema` union. */
   name: DatasetSchema;
@@ -27,4 +37,11 @@ export interface RecordSchemaSpec {
   detect(record: Record<string, unknown>): boolean;
   /** Run schema-specific structural checks on the parsed record. */
   inspect(record: Record<string, unknown>, lineNo: number): ValidationIssue[];
+  /**
+   * Optional cross-record session factory. When present, the JSONL validator
+   * instantiates one session from the first sampled record that picks this
+   * schema and routes subsequent same-schema records through it (memory stays
+   * bounded by the sampling cap). Schemas without cross-record rules omit it.
+   */
+  createSession?(): RecordSchemaSession;
 }

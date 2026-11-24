@@ -9,6 +9,7 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
+import { preflightTrainOptions } from "./train-options-shared.ts";
 
 /**
  * Build the training-option context from the dedicated flags. The OpenAPI
@@ -91,15 +92,6 @@ const PARAMS_FLAGS = {
       "zh-CN": "服务端展示文案的语言（例如 en、zh）。不传由服务端决定。",
     },
   },
-  workspaceId: {
-    type: "string",
-    valueHint: "<id>",
-    description: {
-      "en-US":
-        "Workspace ID sent as X-DashScope-WorkSpace; omit when your API key is already workspace-bound.",
-      "zh-CN": "以 X-DashScope-WorkSpace 头发送的业务空间 ID；API Key 已绑定空间时可省略。",
-    },
-  },
 } satisfies FlagsDef;
 
 export default defineCommand({
@@ -109,8 +101,9 @@ export default defineCommand({
     "zh-CN": "查询基础模型的训练超参配置",
   },
   auth: "apiKey",
+  optionalConsole: true,
   usageArgs:
-    "--base-model <model> [--training-type <t>] [--param-type <hyper|resource>] [--mtu-spec-code <code>] [--modality <text|vision>] [--reasoning-mode <instruct|thinking>] [--lang <locale>] [--workspace-id <id>]",
+    "--base-model <model> [--training-type <t>] [--param-type <hyper|resource>] [--mtu-spec-code <code>] [--modality <text|vision>] [--reasoning-mode <instruct|thinking>] [--lang <locale>]",
   flags: PARAMS_FLAGS,
   exampleArgs: [
     "--base-model qwen3-8b",
@@ -130,9 +123,9 @@ export default defineCommand({
     },
     {
       "en-US":
-        "--modality / --reasoning-mode travel as one hyper_parameters query parameter (JSON). Supported values and combinations vary per model; invalid combinations are rejected by the server and surfaced as-is. Models without dynamic train options ignore these flags.",
+        "--modality / --reasoning-mode travel as one hyper_parameters query parameter (JSON). When a console session is available, the combination is prechecked against the model's supported combinations and omitted options are completed from its defaults; invalid combinations fail with a usage error. Without a console session the check is skipped with a warning and the server result is authoritative.",
       "zh-CN":
-        "--modality / --reasoning-mode 会合并为单个 hyper_parameters query 参数（JSON）发送。各模型支持的取值与组合不同；非法组合由服务端拒绝并原样透传错误。未配置动态训练选项的模型可忽略这两个 flag。",
+        "--modality / --reasoning-mode 会合并为单个 hyper_parameters query 参数（JSON）发送。控制台会话可用时，会按模型支持的组合预检，并从默认值补齐未传的选项；非法组合报用法错误。无控制台会话时跳过预检并输出警告，以服务端结果为准。",
     },
     {
       "en-US":
@@ -152,7 +145,7 @@ export default defineCommand({
       );
     }
     const trainingType = TRAINING_TYPE_MAP[trainingTypeCli].server;
-    const trainOptions = buildTrainOptions(flags.modality, flags.reasoningMode);
+    let trainOptions = buildTrainOptions(flags.modality, flags.reasoningMode);
 
     if (settings.dryRun) {
       const resultData = {
@@ -165,7 +158,7 @@ export default defineCommand({
           ? { hyper_parameters: JSON.stringify(trainOptions) }
           : {}),
         ...(flags.lang ? { lang: flags.lang } : {}),
-        ...(flags.workspaceId ? { workspace_id: flags.workspaceId } : {}),
+        ...(settings.workspaceId ? { workspace_id: settings.workspaceId } : {}),
       };
       ctx.output.result(
         resultData,
@@ -174,6 +167,13 @@ export default defineCommand({
       return;
     }
 
+    // Best-effort console precheck: validate the combination against the
+    // model's supportedCombinations and complete omitted options from its
+    // defaults. Skipped offline in dry-run; a missing console session degrades
+    // to a warning and passes the user options through unchanged.
+    const resolved = await preflightTrainOptions(ctx, flags.baseModel, trainingType, trainOptions);
+    trainOptions = resolved.context;
+
     const response = await getFineTuneParams(ctx.client, {
       inputModel: flags.baseModel,
       trainingType,
@@ -181,11 +181,12 @@ export default defineCommand({
       paramType: flags.paramType || undefined,
       trainOptions,
       lang: flags.lang || undefined,
-      workspaceId: flags.workspaceId || undefined,
+      workspaceId: settings.workspaceId,
     });
 
+    const payload = { ...response, precheck: resolved.precheck };
     ctx.output.result(
-      response,
+      payload,
       ctx.settings.output === "text" ? { text: JSON.stringify(response, null, 2) } : undefined,
     );
   },

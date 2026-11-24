@@ -75,6 +75,73 @@ export function preflightBatchSizeGate(input: BatchSizeGateInput): BatchSizeGate
   };
 }
 
+/** Stable issue code for the decision-model sample-count rule. */
+export const INSUFFICIENT_DECISION_SAMPLES_CODE = "INSUFFICIENT_DECISION_SAMPLES";
+
+export interface DecisionSampleGateInput {
+  /** Whether a separate validation dataset was supplied (`--validations`). */
+  hasValidation: boolean;
+  /**
+   * Training-sample count, when known (every `--datasets` token was a local
+   * file). Undefined for bare file-id flows — that part of the check is then
+   * left to the platform.
+   */
+  trainingRecordCount?: number;
+  /** Validation-sample count, when known. Same fall-through as training. */
+  validationRecordCount?: number;
+  /** Effective batch_size from the user override or the service default. */
+  batchSize: number;
+}
+
+/**
+ * Pre-flight the decision model's sample-count rule (documented FAQ):
+ *   - with a separate validation dataset: train ≥ batch_size AND val ≥ batch_size;
+ *   - training only: train ≥ batch_size × 10.
+ *
+ * Unlike the generic text gate this is a "≥" rule and covers the validation
+ * set too. Conservative by design: each part only fires when its record count
+ * is known (local files, non dry-run); bare file-id tokens fall through to the
+ * platform rather than risk a false positive.
+ */
+export function preflightDecisionSampleGate(input: DecisionSampleGateInput): BatchSizeGateResult {
+  const { hasValidation, trainingRecordCount, validationRecordCount, batchSize } = input;
+  const trainingMinimum = hasValidation ? batchSize : batchSize * 10;
+  const failuresEnglish: string[] = [];
+  const failuresChinese: string[] = [];
+
+  if (trainingRecordCount !== undefined && trainingRecordCount < trainingMinimum) {
+    failuresEnglish.push(
+      `training dataset has ${trainingRecordCount} sample(s), requires at least ${trainingMinimum}`,
+    );
+    failuresChinese.push(`训练集仅 ${trainingRecordCount} 条样本，至少需要 ${trainingMinimum} 条`);
+  }
+  if (hasValidation && validationRecordCount !== undefined && validationRecordCount < batchSize) {
+    failuresEnglish.push(
+      `validation dataset has ${validationRecordCount} sample(s), requires at least ${batchSize}`,
+    );
+    failuresChinese.push(`验证集仅 ${validationRecordCount} 条样本，至少需要 ${batchSize} 条`);
+  }
+
+  if (failuresEnglish.length === 0) return { ok: true };
+  return {
+    ok: false,
+    issue: {
+      severity: "error",
+      code: INSUFFICIENT_DECISION_SAMPLES_CODE,
+      message: `Decision model sample-count check failed: ${failuresEnglish.join("; ")}. / 决策模型样本数检查未通过：${failuresChinese.join("；")}。`,
+    },
+    hint: [
+      "The decision model requires: with a separate validation dataset, both train and validation",
+      "samples ≥ batch_size; with training data only, samples ≥ batch_size × 10.",
+      "Options:",
+      "  • add more data (recommended: hundreds of samples),",
+      "  • lower --batch-size within the range published for this model.",
+      "决策模型要求：单独上传验证集时，训练集与验证集样本数均不小于 batch_size；仅上传训练集时，",
+      "样本数不少于 batch_size × 10。建议补充数据（推荐上百条）或在模型允许范围内调低 --batch-size。",
+    ].join("\n"),
+  };
+}
+
 export type FineTuneHyperParameterIssueCode =
   | "unsupported"
   | "not_editable"

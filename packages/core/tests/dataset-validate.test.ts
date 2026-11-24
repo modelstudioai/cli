@@ -332,6 +332,81 @@ describe("validateDataset — decision schema", () => {
     expect(result.valid).toBe(true);
     expect(codes(result).errors).not.toContain("DECISION_INVALID_QUESTIONS");
   });
+
+  const decisionBaseline = JSON.parse(DECISION_OK) as {
+    state: unknown;
+    questions: Record<string, Record<string, unknown>>;
+  };
+
+  function decisionVariant(questions: Record<string, Record<string, unknown>>): string {
+    return JSON.stringify({ state: decisionBaseline.state, questions });
+  }
+
+  test("repeated identical decision records produce no drift warning", async () => {
+    const datasetPath = file("decision_consistent.jsonl", [DECISION_OK, DECISION_OK, DECISION_OK]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(result.valid).toBe(true);
+    expect(codes(result).warnings).not.toContain("DECISION_QUESTION_DRIFT");
+  });
+
+  test("changed instructions on a later record warn DECISION_QUESTION_DRIFT (not an error)", async () => {
+    const drifted = decisionVariant({
+      ...decisionBaseline.questions,
+      department: { ...decisionBaseline.questions.department, instructions: "换了一个问法？" },
+    });
+    const datasetPath = file("decision_drift.jsonl", [DECISION_OK, drifted]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(result.valid).toBe(true);
+    const driftWarnings = result.warnings.filter(
+      (warning) => warning.code === "DECISION_QUESTION_DRIFT",
+    );
+    expect(driftWarnings).toHaveLength(1);
+    expect(driftWarnings[0].message).toContain("department");
+    expect(driftWarnings[0].message).toContain("重新准备数据并重训");
+    expect(driftWarnings[0]).toMatchObject({ line: 2, path: "questions" });
+  });
+
+  test("criteria key order does not count as drift", async () => {
+    const reordered = decisionVariant({
+      ...decisionBaseline.questions,
+      department: {
+        ...decisionBaseline.questions.department,
+        criteria: { technical: "产品故障问题", billing: "支付和账单问题" },
+        label: "technical",
+        target: { technical: 0.9, billing: 0.1 },
+      },
+    });
+    const datasetPath = file("decision_reordered.jsonl", [DECISION_OK, reordered]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(result.valid).toBe(true);
+    expect(codes(result).warnings).not.toContain("DECISION_QUESTION_DRIFT");
+  });
+
+  test("a missing question ID on a later record is reported as drift", async () => {
+    const subset = decisionVariant({
+      escalate: decisionBaseline.questions.escalate,
+      severity: decisionBaseline.questions.severity,
+    });
+    const datasetPath = file("decision_subset.jsonl", [DECISION_OK, subset]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(result.valid).toBe(true);
+    const driftWarnings = result.warnings.filter(
+      (warning) => warning.code === "DECISION_QUESTION_DRIFT",
+    );
+    expect(driftWarnings).toHaveLength(1);
+    expect(driftWarnings[0].message).toContain("department");
+  });
+
+  test("mixed ChatML + decision file: session survives other-schema records", async () => {
+    const drifted = decisionVariant({
+      ...decisionBaseline.questions,
+      escalate: { ...decisionBaseline.questions.escalate, instructions: "另一个问法？" },
+    });
+    const datasetPath = file("decision_mixed.jsonl", [DECISION_OK, SFT_OK, drifted]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(result.valid).toBe(true);
+    expect(codes(result).warnings).toContain("DECISION_QUESTION_DRIFT");
+  });
 });
 
 describe("validateDataset — CPT schema", () => {

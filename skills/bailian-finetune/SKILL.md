@@ -1,15 +1,16 @@
 ---
 name: bailian-finetune
 metadata:
-  version: "2.11.1"
+  version: "2.11.2"
   requires:
     bins: ["bl"]
 description: >-
   阿里云百炼模型精调训练入口：用户要精调、微调、训练自己的模型（fine-tune，支持 SFT / SFT-LoRA / DPO / DPO-LoRA / CPT，
-  覆盖文本、语音、图像）、校验或上传训练数据集、看训练进度和日志、挑 checkpoint、导出精调产物、
+  覆盖文本、语音、图像、决策模型）、校验或上传训练数据集、看训练进度和日志、挑 checkpoint、导出精调产物、
   把专属模型部署成服务时使用 `bl dataset` / `bl finetune` / `bl deploy`。链路是 validate 校验数据 →
   upload 拿 file-id → finetune create 建任务 → watch 看进度 → export 导出 → 可选 compress 量化压缩 → deploy 上线，需要 API key；
   Console 版本状态与独立部署服务查询使用 Console 鉴权。
+  决策模型微调（choice/noul/score 决策数据，state+questions+label）走 `bl finetune decision create`，固定 efficient_sft。
   百炼模型智能路由（智能选模、smart routing / model routing）的路由版本查询、服务创建、配置更新与服务删除也由本 skill 承接，不要求先精调。
   百炼吞吐预留（PTU）、ModelCode 容量购买、扩缩容、续费、释放、退订与溢出策略也由本 skill 承接，不要求先精调。
   强化学习（RL）训练走 `bl finetune rl`，在隔离沙箱内执行，需先 `bl finetune runtime prepare` 准备运行时（沙箱仅支持 macOS / Linux）；
@@ -35,7 +36,7 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-f
 ## End-to-end workflow (follow in order)
 
 ```
-1. Validate data   bl dataset validate --file train.jsonl [--schema chatml|dpo|cpt|tts|image]
+1. Validate data   bl dataset validate --file train.jsonl [--schema chatml|dpo|cpt|decision|tts|image]
 2. Upload data     bl dataset upload --file train.jsonl          # returns a file-id
 3. Create job      bl finetune text|audio|image create --base-model <base> --datasets <file-id|path>
 4. Watch progress  bl finetune watch --job-id ft-xxx             # or get / logs
@@ -54,40 +55,43 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-f
 
 ## When to use which command
 
-| Intent                                                 | Command                                                                                                                                          |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Validate / upload training data                        | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                                                                            |
-| Dataset list / detail / delete                         | `bl dataset list` / `get` / `delete`                                                                                                             |
-| Console dataset groups / discover version and file IDs | `bl dataset groups` → `bl dataset version --dataset-group-id <group-id>` (Console auth)                                                          |
-| Console version detail / import and release state      | `bl dataset version --dataset-id <version-id>` (Console auth; optional `--include-status`)                                                       |
-| Console independent deployment services                | `bl deploy instances` (Console auth; not capacity instances or replicas)                                                                         |
-| Create a fine-tuning job                               | `bl finetune text\|audio\|image create`                                                                                                          |
-| Job list / detail / follow                             | `bl finetune list` / `get` / `watch` / `logs`                                                                                                    |
-| Artifacts and export                                   | `bl finetune checkpoints` / `export`                                                                                                             |
-| Quantize / compress a full model                       | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                                                                  |
-| Cancel / delete a compression job                      | `bl finetune compress cancel` / `delete`                                                                                                         |
-| Cancel / delete a fine-tuning job                      | `bl finetune cancel` / `delete`                                                                                                                  |
-| Reinforcement-learning (RL) training                   | `bl finetune rl run` / `get` / `list` / `watch` / `logs` / `cancel` / `delete` (sandbox)                                                         |
-| RL / OPD authorization check and enablement            | `bl finetune rl authorize` / `bl finetune opd authorize` (Console auth; `--authorize` to mutate)                                                 |
-| OPD distillation training                              | `bl finetune opd run --teacher-model <id>` / `get` / `watch` / `logs` / `cancel` / `delete` (OpenAPI; forces `pg_opd`; list via `finetune list`) |
-| OPD training / resource parameter query                | `bl finetune opd params --base-model <id> [--param-type hyper\|resource]`                                                                        |
-| Prepare / check / clean the RL sandbox runtime         | `bl finetune runtime prepare` / `doctor` / `clean`                                                                                               |
-| Import an external OSS LoRA model                      | Hand-off: `bl cmodel import *` — hub-owned commands; see `bailian-cli` reference or `bl cmodel --help`                                           |
-| Trainable capability lookup                            | `bl finetune capability`                                                                                                                         |
-| Deploy / lifecycle                                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models`                                                 |
-| Query throughput reservations                          | `bl deploy list --plan ptu` / `bl deploy get`                                                                                                    |
-| Query capacity instances                               | `bl deploy capacity list` / `get`                                                                                                                |
-| Query / wait for a capacity operation                  | `bl deploy operation get` / `wait`                                                                                                               |
-| Buy / scale / renew / release capacity                 | `bl deploy capacity create` / `scale` / `renew` / `delete`                                                                                       |
-| Enable / disable automatic renewal                     | `bl deploy capacity auto-renew enable` / `disable`                                                                                               |
-| Unsubscribe a prepaid instance                         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                                                                        |
-| Configure ModelCode overflow strategy                  | `bl deploy overflow`                                                                                                                             |
-| List model-routing versions                            | `bl deploy router versions`                                                                                                                      |
-| Create a model router                                  | `bl deploy router create --name <name> --route-version <ver> --strategy <EFFECT_FIRST\|COST_FIRST> --candidates <id,...>`                        |
-| List model routers                                     | `bl deploy router list`                                                                                                                          |
-| Get model router detail                                | `bl deploy router get --deployed-model <id>`                                                                                                     |
-| Update selected model router fields                    | `bl deploy router update --deployed-model <id> [--route-version <ver>] [--strategy <strategy>] [--candidates <id,...>]`                          |
-| Delete a model router                                  | `bl deploy router delete --deployed-model <id>`                                                                                                  |
+| Intent                                                        | Command                                                                                                                                          |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Validate / upload training data                               | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                                                                            |
+| Prepare decision training data (split / teacher generate)     | `bl dataset split` / `bl dataset generate` (`--schema decision` only today; see below)                                                           |
+| Dataset list / detail / delete                                | `bl dataset list` / `get` / `delete`                                                                                                             |
+| Console dataset groups / discover version and file IDs        | `bl dataset groups` → `bl dataset version --dataset-group-id <group-id>` (Console auth)                                                          |
+| Console version detail / import and release state             | `bl dataset version --dataset-id <version-id>` (Console auth; optional `--include-status`)                                                       |
+| Console independent deployment services                       | `bl deploy instances` (Console auth; not capacity instances or replicas)                                                                         |
+| Create a fine-tuning job                                      | `bl finetune text\|audio\|image create`                                                                                                          |
+| Decision-model fine-tuning (choice/noul/score data)           | `bl finetune decision create --base-model decision-model-preview-2026-09-24 --datasets <jsonl>` (fixed efficient_sft; see below)                 |
+| Job list / detail / follow                                    | `bl finetune list` / `get` / `watch` / `logs`                                                                                                    |
+| Artifacts and export                                          | `bl finetune checkpoints` / `export`                                                                                                             |
+| Quantize / compress a full model                              | `bl finetune compress templates` / `create` / `watch` / `get` / `logs` / `list`                                                                  |
+| Cancel / delete a compression job                             | `bl finetune compress cancel` / `delete`                                                                                                         |
+| Cancel / delete a fine-tuning job                             | `bl finetune cancel` / `delete`                                                                                                                  |
+| Reinforcement-learning (RL) training                          | `bl finetune rl run` / `get` / `list` / `watch` / `logs` / `cancel` / `delete` (sandbox)                                                         |
+| RL / OPD authorization check and enablement                   | `bl finetune rl authorize` / `bl finetune opd authorize` (Console auth; `--authorize` to mutate)                                                 |
+| OPD distillation training                                     | `bl finetune opd run --teacher-model <id>` / `get` / `watch` / `logs` / `cancel` / `delete` (OpenAPI; forces `pg_opd`; list via `finetune list`) |
+| OPD training / resource parameter query                       | `bl finetune opd params --base-model <id> [--param-type hyper\|resource]`                                                                        |
+| Prepare / check / clean the RL sandbox runtime                | `bl finetune runtime prepare` / `doctor` / `clean`                                                                                               |
+| Import an external OSS LoRA model                             | Hand-off: `bl cmodel import *` — hub-owned commands; see `bailian-cli` reference or `bl cmodel --help`                                           |
+| Trainable capability lookup                                   | `bl finetune capability`                                                                                                                         |
+| Dynamic train-option combinations (modality / reasoning-mode) | `bl finetune train-options --base-model <base>` (Console auth; params/text create precheck against it automatically)                             |
+| Deploy / lifecycle                                            | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models`                                                 |
+| Query throughput reservations                                 | `bl deploy list --plan ptu` / `bl deploy get`                                                                                                    |
+| Query capacity instances                                      | `bl deploy capacity list` / `get`                                                                                                                |
+| Query / wait for a capacity operation                         | `bl deploy operation get` / `wait`                                                                                                               |
+| Buy / scale / renew / release capacity                        | `bl deploy capacity create` / `scale` / `renew` / `delete`                                                                                       |
+| Enable / disable automatic renewal                            | `bl deploy capacity auto-renew enable` / `disable`                                                                                               |
+| Unsubscribe a prepaid instance                                | `bl deploy capacity unsubscribe` (builds the billing console refund link)                                                                        |
+| Configure ModelCode overflow strategy                         | `bl deploy overflow`                                                                                                                             |
+| List model-routing versions                                   | `bl deploy router versions`                                                                                                                      |
+| Create a model router                                         | `bl deploy router create --name <name> --route-version <ver> --strategy <EFFECT_FIRST\|COST_FIRST> --candidates <id,...>`                        |
+| List model routers                                            | `bl deploy router list`                                                                                                                          |
+| Get model router detail                                       | `bl deploy router get --deployed-model <id>`                                                                                                     |
+| Update selected model router fields                           | `bl deploy router update --deployed-model <id> [--route-version <ver>] [--strategy <strategy>] [--candidates <id,...>]`                          |
+| Delete a model router                                         | `bl deploy router delete --deployed-model <id>`                                                                                                  |
 
 The `capacity list` / `get`, `operation get` / `wait` and `deploy list` / `get` queries are read-only. Capacity values are kTPM; effective, configured and target capacities are distinct. `deploy list --status` filters only the fetched page locally, with the server total left unfiltered. `operation get` reports status as data; `operation wait` exits non-zero on failure or timeout and refreshes capacity after success. Use IDs returned by the API; waiting never retries a write.
 
@@ -96,6 +100,82 @@ The `capacity create` / `scale` / `renew` / `auto-renew enable` / `auto-renew di
 Console reads are separate from API-key file/deployment queries; the API Key / `file_id` semantics of `dataset list` are unchanged. Discover `records[].datasetGroupId` with `dataset groups`, then pass it to `dataset version --dataset-group-id <group-id>` to get `{result:[...]}` with `result[].datasetId` and an optional `fileId`. Use `dataset version --dataset-id <version-id>` for details; exactly one of `--dataset-group-id` and `--dataset-id` is required, and they cannot be combined. `fileId` is not `datasetId`; never pass a file ID from `dataset list` as a Console version ID. Groups are paginated and contain only one nested version preview; `version --dataset-group-id` normalizes array responses to `result` without promising exhaustive results or exposing pagination. Keep the same workspace throughout this chain. `--include-status` is available only in detail mode (`dataset version --dataset-id <version-id> --include-status`) and preserves raw version and task state; missing/unknown state never means validation success or training readiness, and the returned task is not guaranteed to be the latest. A failed follow-up query retains metadata and exits nonzero. `deploy instances` returns one page (`records` is the list, `items` the total); reading does not establish inference or pause permission. With `--workspace-id`, these commands resolve that workspace's Console identity before business requests and stop on resolution failure. For an error-report file key, hand off to `bailian-cli` (`file url`); an existing report URL can be used directly.
 
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
+
+## Decision data preparation
+
+`bl dataset split` and `bl dataset generate` prepare decision-model training data (`--schema decision` only today; future modalities extend the same commands). Chain: `dataset generate` (or `split` on already-labelled data) → `dataset validate --schema decision` → `finetune decision create`.
+
+- `bl dataset split --input labeled.jsonl [--out-dir <dir>] [--prefix tickets] [--seed 0] [--dev-ratio 0.15] [--workload workload.json | --id-fields a,b]` — keyless, zero cost: dedupes states (ignoring `id_fields`, default `ticket_id`), requires ≥7 records, seeded shuffle, writes `<prefix>.train.jsonl` / `<prefix>.development.jsonl` and self-checks the train split. Duplicate states or too few records are usage errors; `--dry-run` previews counts without writing.
+- `bl dataset generate --workload workload.json [--samples 200] [--unknowable 0] [--model qwen3.8-max] [--batch 5] [--concurrency 8] [--target-temp 1.5] [--out-dir data]` — teacher pipeline: balanced state synthesis → per-state probability labelling → hard labels + smoothed soft targets (`--no-soft-target` for hard only) → 15% development split → manifest (workload sha256, label balance, generator/teacher agreement, usage). Generation and labelling call the teacher model and consume tokens (billing applies); preview plans and prompts with `--dry-run` (zero network).
+  - Modes: `--states-only` stops after synthesis (no labelling spend); `--from-states <file>` labels existing `{state, plan?}` JSONL; `--from-states` + `--resume-raw <file>` skips already-labelled states to continue an interrupted run; `--from-raw <file>` re-converts saved teacher labels with zero API calls (e.g. to adjust `--target-temp`).
+  - workload.json: field rules and a complete three-question example — see [workload.json format](#workloadjson-format) below.
+  - Crash resilience: states append per batch, labels per row; bad batches and invalid teacher distributions are skipped with warnings. Labelling forces `enable_search=false`. The shuffle PRNG differs from Python `random.Random` — the same seed reproduces results within this CLI only. The state token-budget check is skipped (needs the Python transformers tokenizer).
+- Flags, usage, and examples: see [`reference/dataset.md`](reference/dataset.md) or `bl dataset split --help` / `bl dataset generate --help`.
+
+### workload.json format
+
+Complete example (one question of each type; copy and adapt to your business — field names are free to rename):
+
+```json
+{
+  "name": "cloud-support-zh",
+  "description": "客服工单分流：判断处理团队、是否升级、严重程度",
+  "state_schema": {
+    "ticket_id": "工单编号",
+    "content": "工单正文，包含客户问题与关键事实"
+  },
+  "id_fields": ["ticket_id"],
+  "questions": {
+    "team": {
+      "type": "choice",
+      "instructions": "应该由哪个团队处理？",
+      "criteria": { "billing": "账单与支付问题", "technical": "产品故障问题" }
+    },
+    "escalate": {
+      "type": "noul",
+      "instructions": "是否需要升级处理？",
+      "criteria": { "false": "常规流程可解决", "true": "涉及退款或投诉，需升级" }
+    },
+    "severity": {
+      "type": "score",
+      "instructions": "问题严重程度",
+      "criteria": ["轻微", "一般", "严重", "紧急"]
+    }
+  },
+  "guidance": ["涉及退款一律升级"],
+  "axes": { "team": ["billing", "technical"], "severity": [0, 1, 2, 3] },
+  "difficulty_hints": { "clean": "信息完整，判断依据明确。" }
+}
+```
+
+| Field               | Required        | Rules                                                                                                                                                                                                    |
+| ------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `questions`         | yes             | Non-empty object keyed by question ID. Same definition format as training records and online `bl decision` requests — keep ID / type / instructions / criteria identical across train, eval and serving. |
+| `description`       | generation mode | Non-empty business goal; tells the generator what to synthesize.                                                                                                                                         |
+| `state_schema`      | generation mode | At least one input field; each value is a non-empty content-requirement string. Generated states carry exactly these fields.                                                                             |
+| `name` / `language` | no              | Free-form metadata.                                                                                                                                                                                      |
+| `id_fields`         | no              | Record-id fields ignored by dedup; default `["ticket_id"]`; set `[]` when states have no ids.                                                                                                            |
+| `guidance`          | no              | String array of business rules appended to the teacher prompt.                                                                                                                                           |
+| `axes`              | no              | Axis → non-empty value array; the balanced cross product is cycled to `--samples`. A profile field named after a question ID is the expected answer (score: 0-based level index).                        |
+| `difficulty_hints`  | no              | Overrides the built-in generation hints for `clean` / `unknowable` profiles.                                                                                                                             |
+
+Question types (`instructions` is an optional string for all three):
+
+- `choice`: `criteria` is an option-name → description object, 1–255 options, names and descriptions non-empty strings; hard label = option name.
+- `noul`: `criteria` optional; when provided, an object with only `"true"` / `"false"` string descriptions; hard label = true/false.
+- `score`: `criteria` is an array of 2–255 non-empty level descriptions, low → high; hard label = 0-based level index.
+
+`--unknowable` appends evidence-free states (no axis fields) whose targets stay uniform. All workload validation runs before any API call and reports bilingual usage errors; preview the resulting plans and prompts with `--dry-run`.
+
+## Decision-model fine-tuning
+
+`bl finetune decision create` trains the decision model (`decision-model-preview-2026-09-24`, account-whitelisted preview) with fixed `efficient_sft` (LoRA high-efficiency training; no full-parameter option). Only `--n-epochs` / `--batch-size` / `--learning-rate` are overridable; omitted values are sent with the documented defaults (2 / 1 / "2e-5"), which the API requires in the request body. `--suffix` is limited to 8 characters.
+
+- Data: JSONL, each record `{state, questions}`. Every question needs a hard `label` (choice: an option name; noul: true/false; score: a 0-based level index) and may carry a `target` soft-label distribution covering all options, probabilities in [0, 1] summing to 1. Validate with `bl dataset validate --file train.jsonl --schema decision` (auto-detect also works).
+- Sample-count rule (CLI fails fast before upload): with a separate `--validations` set, train and validation samples must each be ≥ batch_size; with training data only, samples ≥ batch_size × 10. Hundreds of samples are recommended.
+- Keep question definitions (ID, type, instructions, criteria) identical across training, evaluation and online requests — changing them shifts the distribution and requires regenerating data and retraining. The CLI warns on cross-record drift (`DECISION_QUESTION_DRIFT`) and train/validation mismatch (`DECISION_QUESTION_DEFINITION_MISMATCH`); warnings do not block.
+- After training: `bl finetune watch` / `checkpoints` / `export` as usual, then deploy with `bl deploy text create --model-name <exported-model> --display-name <name> --plan mu --capacity 1` (MU spec auto-picked; high-risk — preview with `--dry-run`, then confirm per protocol), and invoke with `bl decision --model <deployed-model>` (owned by `bailian-cli`; `--request-file` reuses a training sample and strips label/target automatically).
+- Flags, usage, and examples: see [`reference/finetune.md`](reference/finetune.md) or `bl finetune decision create --help`.
 
 ## RL sandbox / OPD distillation training
 

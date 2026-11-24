@@ -191,11 +191,14 @@ export { default as datasetVersion } from "./commands/dataset/version.ts";
 export { default as datasetGroups } from "./commands/dataset/groups.ts";
 export { default as datasetDelete } from "./commands/dataset/delete.ts";
 export { default as datasetValidate } from "./commands/dataset/validate.ts";
+export { default as datasetSplit } from "./commands/dataset/split.ts";
+export { default as datasetGenerate } from "./commands/dataset/generate.ts";
 export {
   finetuneTextCreate,
   finetuneAudioCreate,
   finetuneImageCreate,
   finetuneVideoCreate,
+  finetuneDecisionCreate,
 } from "./commands/finetune/create.ts";
 export { default as finetuneList } from "./commands/finetune/list.ts";
 export { default as finetuneGet } from "./commands/finetune/get.ts";
@@ -208,6 +211,7 @@ export { default as finetuneWatch } from "./commands/finetune/watch.ts";
 export { default as finetuneCapability } from "./commands/finetune/capability.ts";
 export { default as finetunePrice } from "./commands/finetune/price.ts";
 export { default as finetuneParams } from "./commands/finetune/params.ts";
+export { default as finetuneTrainOptions } from "./commands/finetune/train-options.ts";
 export { default as finetuneMetrics } from "./commands/finetune/metrics.ts";
 export { default as finetuneCompressTemplates } from "./commands/finetune/compress-templates.ts";
 export { default as finetuneCompressCreate } from "./commands/finetune/compress-create.ts";

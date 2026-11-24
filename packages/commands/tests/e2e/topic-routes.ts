@@ -367,6 +367,8 @@ export const DATASET_ROUTES: E2eRouteExports = {
   "dataset get": "datasetGet",
   "dataset delete": "datasetDelete",
   "dataset validate": "datasetValidate",
+  "dataset split": "datasetSplit",
+  "dataset generate": "datasetGenerate",
 };
 
 export const FINETUNE_ROUTES: E2eRouteExports = {
@@ -374,6 +376,7 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune audio create": "finetuneAudioCreate",
   "finetune image create": "finetuneImageCreate",
   "finetune video create": "finetuneVideoCreate",
+  "finetune decision create": "finetuneDecisionCreate",
   "finetune list": "finetuneList",
   "finetune get": "finetuneGet",
   "finetune cancel": "finetuneCancel",
@@ -384,6 +387,7 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune watch": "finetuneWatch",
   "finetune capability": "finetuneCapability",
   "finetune params": "finetuneParams",
+  "finetune train-options": "finetuneTrainOptions",
   "finetune metrics": "finetuneMetrics",
   "finetune compress templates": "finetuneCompressTemplates",
   "finetune compress create": "finetuneCompressCreate",
