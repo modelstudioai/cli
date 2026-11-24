@@ -531,9 +531,28 @@ export default defineCommand({
       );
     }
 
-    await downloadFile(audioUrl, destPath, {
-      quiet: settings.quiet || settings.output === "json",
-    });
+    try {
+      await downloadFile(audioUrl, destPath, {
+        quiet: settings.quiet || settings.output === "json",
+      });
+    } catch (error) {
+      const originalMessage = error instanceof Error ? error.message : String(error);
+      const exitCode = error instanceof BailianError ? error.exitCode : ExitCode.GENERAL;
+      const requestId = response.request_id?.trim();
+      // Keep the signed URL in hint only — telemetry records message / api.requestId, not hint.
+      throw new BailianError(
+        requestId ? `${originalMessage} request_id=${requestId}` : originalMessage,
+        exitCode,
+        ctx.localize({
+          "en-US": `Audio was generated successfully. Re-download from: ${audioUrl}; do not regenerate.`,
+          "zh-CN": `音频已生成成功。请从以下地址重新下载，勿重新生成：${audioUrl}`,
+        }),
+        {
+          cause: error,
+          ...(requestId ? { api: { requestId } } : {}),
+        },
+      );
+    }
 
     const result = {
       ...response,
