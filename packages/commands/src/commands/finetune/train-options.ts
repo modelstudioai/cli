@@ -103,32 +103,32 @@ export default defineCommand({
     };
 
     if (settings.output === "text") {
+      const lines: string[] = [];
       if (!options) {
-        process.stdout.write(
-          `No dynamic train options configured for ${flags.baseModel} (${trainingType}).\n`,
-        );
-        return;
+        lines.push(`No dynamic train options configured for ${flags.baseModel} (${trainingType}).`);
+      } else {
+        for (const definition of options.optionDefinitions ?? []) {
+          const values = (definition.supportValues ?? []).join(" | ");
+          const required = definition.required ? ", required" : "";
+          const recommended = definition.recommendValue
+            ? `, recommend=${definition.recommendValue}`
+            : "";
+          lines.push(`${definition.name}: ${values}${required}${recommended}`);
+        }
+        const defaults = Object.entries(options.defaults ?? {})
+          .map(([key, value]) => `${key}=${value}`)
+          .join(", ");
+        if (defaults) lines.push(`defaults: ${defaults}`);
+        const combinations = (options.supportedCombinations ?? [])
+          .map((combination) =>
+            Object.entries(combination)
+              .map(([key, value]) => `${key}=${value}`)
+              .join("+"),
+          )
+          .join("; ");
+        if (combinations) lines.push(`supported combinations: ${combinations}`);
       }
-      for (const definition of options.optionDefinitions ?? []) {
-        const values = (definition.supportValues ?? []).join(" | ");
-        const required = definition.required ? ", required" : "";
-        const recommended = definition.recommendValue
-          ? `, recommend=${definition.recommendValue}`
-          : "";
-        process.stdout.write(`${definition.name}: ${values}${required}${recommended}\n`);
-      }
-      const defaults = Object.entries(options.defaults ?? {})
-        .map(([key, value]) => `${key}=${value}`)
-        .join(", ");
-      if (defaults) process.stdout.write(`defaults: ${defaults}\n`);
-      const combinations = (options.supportedCombinations ?? [])
-        .map((combination) =>
-          Object.entries(combination)
-            .map(([key, value]) => `${key}=${value}`)
-            .join("+"),
-        )
-        .join("; ");
-      if (combinations) process.stdout.write(`supported combinations: ${combinations}\n`);
+      ctx.output.result(result, { text: lines.join("\n") });
       return;
     }
 
