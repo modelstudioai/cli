@@ -17,6 +17,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **Speech voice command group**: New `bl speech voice` group for custom voice enrollment.
+  - `bl speech voice clone` clones a voice from reference audio. CosyVoice / Qwen-Audio targets enroll via `voice-enrollment` and are used with `bl speech synthesize --model <same-target-model> --voice <id>`. Omni targets (`qwen3.5-omni-flash` / `qwen3.5-omni-plus`, dated suffixes allowed) enroll via `qwen-voice-enrollment` and are used with `bl omni --model <same-target-model> --voice <id>`; Realtime `*-realtime` targets are rejected at create.
+  - `bl speech voice design` creates a CosyVoice / Qwen-Audio voice from a text description and saves a one-shot preview locally; formal listen still uses `bl speech synthesize`. Not available for Omni targets.
+  - `bl speech voice list` / `get` / `update` / `delete` / `preview` manage enrolled voices (`update` / `preview` / `get` apply to CosyVoice / Qwen-Audio; Omni supports clone / list / delete).
+- **Speech generate**: New `bl speech generate` creates podcast/dialogue audio from `--text-prompt` and optional `@voice1`…`@voice3` reference audio (`--audio`, WAV/MP3/OGG Opus). The default Beijing MaaS endpoint requires a Workspace ID. It does not take system or cloned voice IDs.
+- **Qwen-MT translate commands**: New translation entries for text, image layout, and multimodal files.
+  - `bl text translate` translates text with Qwen-MT (`qwen-mt-flash` / `plus` / `lite`), including `--term` glossary pairs and optional streaming.
+  - `bl image translate` translates text in an image while preserving layout (default `qwen-mt-image`; optional `qwen-mt-image-2.0`), with async wait or `--async`.
+  - `bl omni translate` translates a document, image or audio file with Qwen-MT-Uni (`qwen-mt-uni`), including glossary / sensitive-term options and async wait or `--async`.
 - **Global `--biz-from` flag**: All commands accept `--biz-from <source>` so callers (skills/agents/products) can declare their business source, enabling per-source usage analysis (PV/UV) of command calls (e.g. `flow-agent`).
 
 ## [2.10.5] - 2026-11-23
