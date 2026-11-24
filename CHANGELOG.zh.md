@@ -6,6 +6,28 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.11.0] - 2026-11-24
+
+### 新增
+
+- **语音音色命令组**：新增 `bl speech voice` 系列命令，用于自定义音色登记与管理。
+  - `bl speech voice clone` 从参考音频复刻音色，支持 CosyVoice / Qwen-Audio（后续用 `speech synthesize --voice`）以及 Omni（`qwen3.5-omni-flash` / `plus`，再以 `omni --model <同 target-model> --voice <id>` 使用；Realtime 目标会被拒绝）。
+  - `bl speech voice design` 通过文本描述与预览文案设计音色（CosyVoice / Qwen-Audio）。
+  - `bl speech voice list` / `get` / `update` / `preview` / `delete` 管理已登记音色；Omni 仅支持 clone 与 delete。
+- **语音内容生成**：新增 `bl speech generate`，根据 `--text-prompt` 生成播客/对话类音频，可选 `--audio` 参考音（`@voice1` / `@voice2` / `@voice3`），并通过 `--out-dir` / `--out-prefix` 下载结果。
+- **Qwen-MT 翻译命令**：新增文本、图片与多模态文件的专用翻译入口。
+  - `bl text translate` 使用 Qwen-MT（`qwen-mt-flash` / `plus` / `lite`）翻译文本，支持 `--source-lang` / `--target-lang`、术语对、领域提示与流式输出。
+  - `bl image translate` 使用 Qwen-MT-Image 翻译图片中的文字；等待异步任务完成后下载 JPG（或用 `--async` 仅返回任务 ID）。
+  - `bl omni translate` 使用 Qwen-MT-Uni 翻译文档、图片或音频（`--file`、术语表、敏感词、`--image-segment`）。
+
+### 修复
+
+- **`bl update`**：改为从官方 npm registry 安装，使版本检测与安装同源，避免配置镜像落后于发布时误报更新成功。
+- **文件下载**：覆盖已有下载目标时不再先删除原文件；发布失败会尽量恢复旧文件，并在可行时保留目标权限。
+- **异步任务轮询**：DashScope 轮询 GET 卡住时仍保留 `task_id`，超时的翻译/生成等待仍可继续排查。
+- **Omni 复刻音色**：使用 `qwen-omni-vc-*` 复刻音色时须显式传入与 clone `--target-model` 一致的 `--model`；若省略 `--model` 会触发 `qwen3.8-omni-flash` 自动切到 plus 的音频路径，将被拒绝。
+- **翻译 / 语音边界情况**：修正 Omni 翻译输出后缀、空术语目标与 `--message` 原文保留；CosyVoice 的 Base64 音频体积限制仅在登记链路需要时生效。
+
 ## [2.10.5] - 2026-11-23
 
 ### 新增

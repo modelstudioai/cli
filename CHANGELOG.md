@@ -6,6 +6,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.11.0] - 2026-11-24
+
+### Added
+
+- **Speech voice command group**: New `bl speech voice` commands for custom voice enrollment and management.
+  - `bl speech voice clone` clones a voice from reference audio for CosyVoice / Qwen-Audio (via `speech synthesize --voice`) or Omni (`qwen3.5-omni-flash` / `plus`, then `omni --model <same-target-model> --voice <id>`; Realtime targets are rejected).
+  - `bl speech voice design` creates a voice from a text prompt and preview text (CosyVoice / Qwen-Audio).
+  - `bl speech voice list` / `get` / `update` / `preview` / `delete` manage enrolled voices; Omni covers clone and delete only.
+- **Speech audio generation**: New `bl speech generate` builds podcast/dialogue audio from `--text-prompt`, with optional `--audio` references (`@voice1` / `@voice2` / `@voice3`) and download via `--out-dir` / `--out-prefix`.
+- **Qwen-MT translation commands**: Dedicated translation entries for text, image, and multimodal files.
+  - `bl text translate` translates with Qwen-MT (`qwen-mt-flash` / `plus` / `lite`), supporting `--source-lang` / `--target-lang`, terminology pairs, domain hints, and streaming.
+  - `bl image translate` translates text in images with Qwen-MT-Image; waits for the async task and downloads a JPG (or returns the task id with `--async`).
+  - `bl omni translate` translates documents, images, or audio with Qwen-MT-Uni (`--file`, glossary, sensitive phrases, `--image-segment`).
+
+### Fixed
+
+- **`bl update`**: Installs from the official npm registry so version detection and install use the same source when a configured mirror lags behind a publish.
+- **File downloads**: Replacing an existing download target no longer deletes it first; the previous file is restored if publish fails, and destination permissions are preserved when possible.
+- **Async task polling**: Hung DashScope poll GETs keep reporting the `task_id`, so timed-out translate/generate waits remain actionable.
+- **Omni cloned voices**: Using a cloned `qwen-omni-vc-*` voice requires an explicit `--model` that matches the clone `--target-model`; omitting `--model` is rejected when it would auto-switch `qwen3.8-omni-flash` to plus for audio output.
+- **Translate / speech edge cases**: Omni translate output suffixes, empty glossary targets, and preserved `--message` text; CosyVoice Base64 audio size limits apply only where enrollment requires them.
+
 ## [2.10.5] - 2026-11-23
 
 ### Added
