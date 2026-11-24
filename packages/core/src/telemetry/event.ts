@@ -1,4 +1,5 @@
 import type { Identity } from "../config/schema.ts";
+import type { InstallAttribution } from "../install/record.ts";
 import { formatCommand } from "../output/command.ts";
 import type { AuthRequirement } from "../types/command.ts";
 import type { CallerAttribution } from "./caller.ts";
@@ -23,6 +24,10 @@ export interface TrackingEvent {
   callerName?: string;
   skillName?: string;
   skillVersion?: string;
+  /** Channel from install.json. The install day is a separate event. */
+  installChannel?: InstallAttribution["installChannel"];
+  /** Caller-declared call source (--biz-from), normalized; reported as AEM c6. */
+  bizFrom?: string;
 }
 
 export function createTrackingEvent(opts: {
@@ -34,6 +39,9 @@ export function createTrackingEvent(opts: {
   authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
   caller: CallerAttribution;
+  /** Already-read install record. Callers must not create the file to fill this in. */
+  install?: InstallAttribution;
+  bizFrom?: string;
 }): TrackingEvent {
   const event: TrackingEvent = {
     command: opts.command,
@@ -55,6 +63,10 @@ export function createTrackingEvent(opts: {
     event.callerName = opts.caller.callerName;
   }
 
+  if (opts.bizFrom !== undefined) {
+    event.bizFrom = opts.bizFrom;
+  }
+
   if (opts.authMethod) {
     event.authMethod = opts.authMethod;
   }
@@ -70,7 +82,56 @@ export function createTrackingEvent(opts: {
     event.params = opts.params;
   }
 
+  if (opts.install) {
+    event.installChannel = opts.install.installChannel;
+  }
+
   return event;
+}
+
+/** Event name for a machine's first install day. Not a command path. */
+export const FIRST_INSTALL_EVENT_NAME = "first_install";
+
+export interface FirstInstallEvent {
+  kind: typeof FIRST_INSTALL_EVENT_NAME;
+  /** When this report was queued, not the install day. */
+  timestamp: string;
+  firstInstalledAt: string;
+  installChannel: InstallAttribution["installChannel"];
+  cliVersion: string;
+}
+
+export function isFirstInstallEvent(
+  event: TrackingEvent | FirstInstallEvent,
+): event is FirstInstallEvent {
+  return "kind" in event && event.kind === FIRST_INSTALL_EVENT_NAME;
+}
+
+export function createFirstInstallEvent(opts: {
+  firstInstalledAt: string;
+  installChannel: InstallAttribution["installChannel"];
+  cliVersion: string;
+  reportedAt?: Date;
+}): FirstInstallEvent {
+  return {
+    kind: FIRST_INSTALL_EVENT_NAME,
+    timestamp: (opts.reportedAt ?? new Date()).toISOString(),
+    firstInstalledAt: opts.firstInstalledAt,
+    installChannel: opts.installChannel,
+    cliVersion: opts.cliVersion,
+  };
+}
+
+export function buildFirstInstallAemOptions(event: FirstInstallEvent): Record<string, unknown> {
+  return {
+    et: "EXP",
+    ext: {
+      timestamp: event.timestamp,
+      firstInstalledAt: event.firstInstalledAt,
+      installChannel: event.installChannel,
+      cliVersion: event.cliVersion,
+    },
+  };
 }
 
 const AEM_TEXT_MAX = 500;
@@ -99,6 +160,10 @@ export function buildRemoteAemOptions(event: TrackingEvent): Record<string, unkn
   }
   if (event.requestId) {
     opts.c5 = event.requestId;
+  }
+  // Dedicated flat dimension column for the business source (easy AEM filtering).
+  if (event.bizFrom !== undefined) {
+    opts.c6 = event.bizFrom;
   }
 
   return opts;

@@ -121,6 +121,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl skill remove`                | No Auth        | Remove locally installed skills (registry is untouched)                                                            | [skill.md](skill.md)           |
 | `bl skill update`                | No Auth        | Update installed skills to the latest registry versions                                                            | [skill.md](skill.md)           |
 | `bl text chat`                   | API Key        | Send a text model request (OpenAI compatible, DashScope)                                                           | [text.md](text.md)             |
+| `bl text translate`              | API Key        | Translate text with Qwen-MT (Chat Completions translation_options)                                                 | [text.md](text.md)             |
 | `bl token-plan add-member`       | AK/SK          | Add a member to a Token Plan organization                                                                          | [token-plan.md](token-plan.md) |
 | `bl token-plan assign-seats`     | AK/SK          | Batch assign Token Plan seats to members                                                                           | [token-plan.md](token-plan.md) |
 | `bl token-plan create-key`       | AK/SK          | Create a Token Plan API key for a seat                                                                             | [token-plan.md](token-plan.md) |
@@ -163,7 +164,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `quota`      | `check`, `delete`, `history`, `list`, `update`                                                                                                                                                                               | [quota.md](quota.md)           |
 | `search`     | `web`                                                                                                                                                                                                                        | [search.md](search.md)         |
 | `skill`      | `add`, `init`, `list`, `remove`, `update`                                                                                                                                                                                    | [skill.md](skill.md)           |
-| `text`       | `chat`                                                                                                                                                                                                                       | [text.md](text.md)             |
+| `text`       | `chat`, `translate`                                                                                                                                                                                                          | [text.md](text.md)             |
 | `token-plan` | `add-member`, `assign-seats`, `create-key`, `harness-quota`, `list-seats`                                                                                                                                                    | [token-plan.md](token-plan.md) |
 | `update`     | `(root)`                                                                                                                                                                                                                     | [update.md](update.md)         |
 | `usage`      | `coding-plan`, `free`, `freetier`, `stats`, `summary`, `token-plan`                                                                                                                                                          | [usage.md](usage.md)           |
@@ -173,17 +174,18 @@ Use this index for the skill-scoped quick index and global flags.
 
 Available on every command (in addition to command-specific flags):
 
-| Flag                    | Type   | Required | Description                                               |
-| ----------------------- | ------ | -------- | --------------------------------------------------------- |
-| `--introspect`          | switch | no       | Print the machine-readable command schema (JSON) and exit |
-| `--output <text\|json>` | string | no       | Output format: text, json                                 |
-| `--timeout <seconds>`   | number | no       | Request timeout                                           |
-| `--quiet`               | switch | no       | Suppress non-essential output                             |
-| `--verbose`             | switch | no       | Print HTTP request/response details                       |
-| `--dry-run`             | switch | no       | Dry run mode                                              |
-| `--config <name>`       | string | no       | Use a config profile for this command                     |
-| `--help`                | switch | no       | Show help                                                 |
-| `--version`             | switch | no       | Print version                                             |
+| Flag                    | Type   | Required | Description                                                                                                                             |
+| ----------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--introspect`          | switch | no       | Print the machine-readable command schema (JSON) and exit                                                                               |
+| `--output <text\|json>` | string | no       | Output format: text, json                                                                                                               |
+| `--timeout <seconds>`   | number | no       | Request timeout                                                                                                                         |
+| `--quiet`               | switch | no       | Suppress non-essential output                                                                                                           |
+| `--verbose`             | switch | no       | Print HTTP request/response details                                                                                                     |
+| `--dry-run`             | switch | no       | Dry run mode                                                                                                                            |
+| `--config <name>`       | string | no       | Use a config profile for this command                                                                                                   |
+| `--biz-from <source>`   | string | no       | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| `--help`                | switch | no       | Show help                                                                                                                               |
+| `--version`             | switch | no       | Print version                                                                                                                           |
 
 ## Model auth flags
 

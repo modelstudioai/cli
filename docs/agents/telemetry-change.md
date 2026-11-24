@@ -99,8 +99,30 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 - `authMethod`
 - `callerType`（必填：`agent` | `script` | `unknown`）
 - `callerName`：`agent` 与 `script` 时发送（缺省/非法 → `"unknown"`）；`skillName` / `skillVersion` 仅 `agent` 时可选发送
+- `bizFrom`：全局 `--biz-from` 声明的业务来源（可选）；经 `normalizeBizFrom` 归一化（缺省省略，空白/非法 → `"unknown"`），与 `callerName` 独立；映射到 AEM `c6` 专用扁平列
 - 失败时的 `errorMessage`、`exitCode`、`httpStatus`、`requestId`
 - 安全 allowlist 过滤后的 `params`
+- 仅 `npmPackage=bailian-cli`：已有合法 `~/.bailian/install.json` 时，命令事件带 `installChannel`，不带安装日，也不发 `first_install`。新用户的 `first_installed_at` 在安装成功写盘后单独发一条事件名 `first_install` 的事件，`ext` 里是 `firstInstalledAt`、`installChannel`、`timestamp`（上报时刻）和 `cliVersion`。每个安装日只入队一次，次数记在 `~/.bailian/first-install-reported.json`；远端入队失败不计入，也不改由后续命令补发。`DO_NOT_TRACK=1` 和配置 `telemetry: false` 都不写文件、不发事件，与普通命令同一个开关。没有安装日的老用户不发 `first_install`。命令不创建、不修补 `install.json`。`kscli` 不读这份文件。bootstrap 事件也不读取它
+
+`first_install` 由安装成功路径拉起，不经过命令 middleware：
+
+```text
+install.sh report_first_install
+install.ps1 Send-FirstInstallReport
+postinstall.js launchFirstInstallReport
+  └─ bl / dist/bailian.mjs --bailian-first-install-report
+     环境变量 BAILIAN_FIRST_INSTALL_REPORT=1，最多等 8 秒
+       create-cli.ts run
+         setupProxyFromEnv()（失败则直连，不让安装失败）
+         tracker.ts reportFirstInstallNow
+           event.ts createFirstInstallEvent
+           sink.ts remoteSink → remoteSendEvent("first_install", ...)
+           first-install.ts noteFirstInstallReportQueued
+```
+
+普通 `bl` 命令的 `trackCommandExecution` 只把 `installChannel` 放进命令事件。
+
+`bizFrom` 是调用方（skill/agent/产品）通过全局 `--biz-from` 主动声明的来源标签，用于按来源区分命令调用的 PV/UV。它走 `GLOBAL_FLAGS` → `buildSettings` → `settings.bizFrom` → `trackCommandExecution` 读取，不经命令自有 flag，也不进 `PARAM_ALLOWLIST`（c1）。归一化复用 caller 的 `NAME_PATTERN`（小写、空格/下划线转连字符， bounded charset）防 PII。AEM 侧除随 `ext` 上报外，另映射到专用扁平列 `c6`（标量字符串），无需 JSON 解析维度配置即可直接按 `c6` 筛选/分组：PV=事件计数，UV=distinct `uid`；按命令路径（如 `flow-agent *`）过滤即得某命令组的来源 PV/UV。`bizFrom` 与 `callerType`/`callerName`（宿主归因）是独立维度，不得混用。
 
 调用方归因只认本次进程的 `BAILIAN_CALLER_*`（由 `readCaller` 归一化后写入事件）：
 
@@ -145,16 +167,17 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 AEM 映射：
 
-| AEM 字段   | 内容                                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------------- |
-| event name | 命令路径                                                                                          |
-| `et`       | `EXP`                                                                                             |
-| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType` 与失败时的 `exitCode` |
-| `c1`       | allowlist 参数                                                                                    |
-| `c2`       | `success` / `failure`                                                                             |
-| `c3`       | HTTP status                                                                                       |
-| `c4`       | 错误文案，最多 500 字符                                                                           |
-| `c5`       | request ID                                                                                        |
+| AEM 字段   | 内容                                                                                                                                                |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| event name | 命令路径                                                                                                                                            |
+| `et`       | `EXP`                                                                                                                                               |
+| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType`、失败时的 `exitCode`，以及读到的 `installChannel`。安装日不在命令事件里 |
+| `c1`       | allowlist 参数                                                                                                                                      |
+| `c2`       | `success` / `failure`                                                                                                                               |
+| `c3`       | HTTP status                                                                                                                                         |
+| `c4`       | 错误文案，最多 500 字符                                                                                                                             |
+| `c5`       | request ID                                                                                                                                          |
+| `c6`       | `bizFrom` 业务来源（全局 `--biz-from`，归一化标量；专用扁平列，直接筛选/分组）                                                                      |
 
 远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。
 
@@ -185,6 +208,7 @@ AEM 映射：
 - [ ] 调用方字段经 `readCaller` → `TrackingDeps.caller` → 事件；显式 `agent` / `ai_agent` → `agent`，显式 `script` → `script`，其余 → `unknown`
 - [ ] 成功与失败均覆盖；遥测异常必须静默且不改变业务退出码
 - [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
+- [ ] 安装日只在新用户安装成功写盘后，由 `BAILIAN_FIRST_INSTALL_REPORT=1` 且参数 `--bailian-first-install-report` 进入 `reportFirstInstallNow`，事件名 `first_install`。只剩环境变量时普通命令照常执行。拉起最多等 8 秒。这条入口先 `setupProxyFromEnv()`，代理无效则直连且安装继续；并遵守 `DO_NOT_TRACK=1` 与 `telemetry: false`。命令事件只带 `installChannel`。缺失或无法识别时不创建 `install.json`，不把当前时间补进 `firstInstalledAt`。每个安装日只入队一次；入队失败不记次数，也不改由后续命令补发。`kscli` 和 bootstrap 都不发这条事件
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口
 - [ ] `remoteSink` 从调用到 `remoteSendEvent` 入队之间不得出现 `await`（flush 只排空已入队事件）
 - [ ] 测试中调用 `remoteSink` 的用例必须使用 `enterIsolatedHome()`，避免写入真实配置目录

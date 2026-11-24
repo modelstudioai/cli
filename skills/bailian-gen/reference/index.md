@@ -13,7 +13,10 @@ Use this index for the skill-scoped quick index and global flags.
 | ----------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | `bl image edit`               | API Key        | Edit an existing image with text instructions (Qwen-Image / Wan 2.7)                                                 | [image.md](image.md)   |
 | `bl image generate`           | API Key        | Generate images (Qwen-Image / wan2.x)                                                                                | [image.md](image.md)   |
+| `bl image translate`          | API Key        | Translate text in an image (Qwen-MT-Image)                                                                           | [image.md](image.md)   |
 | `bl omni`                     | API Key        | Multimodal chat with text + audio output (Qwen-Omni)                                                                 | [omni.md](omni.md)     |
+| `bl omni translate`           | API Key        | Translate a document, image or audio file (Qwen-MT-Uni)                                                              | [omni.md](omni.md)     |
+| `bl speech generate`          | API Key        | Generate podcast/dialogue audio content from a text prompt                                                           | [speech.md](speech.md) |
 | `bl speech recognize`         | API Key        | Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash)                                                    | [speech.md](speech.md) |
 | `bl speech synthesize`        | API Key        | Synthesize speech from text                                                                                          | [speech.md](speech.md) |
 | `bl speech vocabulary create` | API Key        | Create a precompiled hot-word vocabulary for ASR                                                                     | [speech.md](speech.md) |
@@ -21,6 +24,13 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl speech vocabulary get`    | API Key        | Get details of a precompiled hot-word vocabulary                                                                     | [speech.md](speech.md) |
 | `bl speech vocabulary list`   | API Key        | List precompiled hot-word vocabularies                                                                               | [speech.md](speech.md) |
 | `bl speech vocabulary update` | API Key        | Replace the contents of a precompiled hot-word vocabulary                                                            | [speech.md](speech.md) |
+| `bl speech voice clone`       | API Key        | Clone a custom voice from reference audio                                                                            | [speech.md](speech.md) |
+| `bl speech voice delete`      | API Key        | Delete a custom voice                                                                                                | [speech.md](speech.md) |
+| `bl speech voice design`      | API Key        | Design a custom voice from a text description                                                                        | [speech.md](speech.md) |
+| `bl speech voice get`         | API Key        | Get details of a custom voice                                                                                        | [speech.md](speech.md) |
+| `bl speech voice list`        | API Key        | List custom voices                                                                                                   | [speech.md](speech.md) |
+| `bl speech voice preview`     | API Key        | Fetch the reference audio URL for a cloned voice                                                                     | [speech.md](speech.md) |
+| `bl speech voice update`      | API Key        | Update the reference audio of a cloned voice                                                                         | [speech.md](speech.md) |
 | `bl video download`           | API Key        | Download a completed video by task ID                                                                                | [video.md](video.md)   |
 | `bl video edit`               | API Key        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                               | [video.md](video.md)   |
 | `bl video generate`           | API Key        | Generate a video from text or image (wan3.0-video / wan2.6-t2v / happyhorse-1.1-i2v)                                 | [video.md](video.md)   |
@@ -30,29 +40,30 @@ Use this index for the skill-scoped quick index and global flags.
 
 ## By group
 
-| Group    | Commands                                                                                                                      | Reference              |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `image`  | `edit`, `generate`                                                                                                            | [image.md](image.md)   |
-| `omni`   | `(root)`                                                                                                                      | [omni.md](omni.md)     |
-| `speech` | `recognize`, `synthesize`, `vocabulary create`, `vocabulary delete`, `vocabulary get`, `vocabulary list`, `vocabulary update` | [speech.md](speech.md) |
-| `video`  | `download`, `edit`, `generate`, `ref`, `task get`                                                                             | [video.md](video.md)   |
-| `vision` | `describe`                                                                                                                    | [vision.md](vision.md) |
+| Group    | Commands                                                                                                                                                                                                                                             | Reference              |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `image`  | `edit`, `generate`, `translate`                                                                                                                                                                                                                      | [image.md](image.md)   |
+| `omni`   | `(root)`, `translate`                                                                                                                                                                                                                                | [omni.md](omni.md)     |
+| `speech` | `generate`, `recognize`, `synthesize`, `vocabulary create`, `vocabulary delete`, `vocabulary get`, `vocabulary list`, `vocabulary update`, `voice clone`, `voice delete`, `voice design`, `voice get`, `voice list`, `voice preview`, `voice update` | [speech.md](speech.md) |
+| `video`  | `download`, `edit`, `generate`, `ref`, `task get`                                                                                                                                                                                                    | [video.md](video.md)   |
+| `vision` | `describe`                                                                                                                                                                                                                                           | [vision.md](vision.md) |
 
 ## Global flags
 
 Available on every command (in addition to command-specific flags):
 
-| Flag                    | Type   | Required | Description                                               |
-| ----------------------- | ------ | -------- | --------------------------------------------------------- |
-| `--introspect`          | switch | no       | Print the machine-readable command schema (JSON) and exit |
-| `--output <text\|json>` | string | no       | Output format: text, json                                 |
-| `--timeout <seconds>`   | number | no       | Request timeout                                           |
-| `--quiet`               | switch | no       | Suppress non-essential output                             |
-| `--verbose`             | switch | no       | Print HTTP request/response details                       |
-| `--dry-run`             | switch | no       | Dry run mode                                              |
-| `--config <name>`       | string | no       | Use a config profile for this command                     |
-| `--help`                | switch | no       | Show help                                                 |
-| `--version`             | switch | no       | Print version                                             |
+| Flag                    | Type   | Required | Description                                                                                                                             |
+| ----------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--introspect`          | switch | no       | Print the machine-readable command schema (JSON) and exit                                                                               |
+| `--output <text\|json>` | string | no       | Output format: text, json                                                                                                               |
+| `--timeout <seconds>`   | number | no       | Request timeout                                                                                                                         |
+| `--quiet`               | switch | no       | Suppress non-essential output                                                                                                           |
+| `--verbose`             | switch | no       | Print HTTP request/response details                                                                                                     |
+| `--dry-run`             | switch | no       | Dry run mode                                                                                                                            |
+| `--config <name>`       | string | no       | Use a config profile for this command                                                                                                   |
+| `--biz-from <source>`   | string | no       | Business source for usage analytics; callers/skills should pass their name so command calls are attributed to the calling skill/product |
+| `--help`                | switch | no       | Show help                                                                                                                               |
+| `--version`             | switch | no       | Print version                                                                                                                           |
 
 ## Model auth flags
 
