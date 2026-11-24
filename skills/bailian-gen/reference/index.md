@@ -34,7 +34,10 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl video download`           | API Key        | Download a completed video by task ID                                                                                | [video.md](video.md)   |
 | `bl video edit`               | API Key        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                               | [video.md](video.md)   |
 | `bl video generate`           | API Key        | Generate a video from text or image (wan3.0-video / wan2.6-t2v / happyhorse-1.1-i2v)                                 | [video.md](video.md)   |
+| `bl video portrait`           | API Key        | Drive a talking-head video with audio (VideoRetalk / videoretalk)                                                    | [video.md](video.md)   |
 | `bl video ref`                | API Key        | Reference-to-video generation (wan3.0-video / happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice | [video.md](video.md)   |
+| `bl video retouch`            | API Key        | Wan 2.1 VACE unified video edit (repaint / local edit / extension / outpainting / image reference)                   | [video.md](video.md)   |
+| `bl video style`              | API Key        | Restyle a video (video-style-transform)                                                                              | [video.md](video.md)   |
 | `bl video task get`           | API Key        | Query async task status                                                                                              | [video.md](video.md)   |
 | `bl vision describe`          | API Key        | Describe an image or video using Qwen-VL                                                                             | [vision.md](vision.md) |
 
@@ -45,7 +48,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `image`  | `edit`, `generate`, `translate`                                                                                                                                                                                                                      | [image.md](image.md)   |
 | `omni`   | `(root)`, `translate`                                                                                                                                                                                                                                | [omni.md](omni.md)     |
 | `speech` | `generate`, `recognize`, `synthesize`, `vocabulary create`, `vocabulary delete`, `vocabulary get`, `vocabulary list`, `vocabulary update`, `voice clone`, `voice delete`, `voice design`, `voice get`, `voice list`, `voice preview`, `voice update` | [speech.md](speech.md) |
-| `video`  | `download`, `edit`, `generate`, `ref`, `task get`                                                                                                                                                                                                    | [video.md](video.md)   |
+| `video`  | `download`, `edit`, `generate`, `portrait`, `ref`, `retouch`, `style`, `task get`                                                                                                                                                                    | [video.md](video.md)   |
 | `vision` | `describe`                                                                                                                                                                                                                                           | [vision.md](vision.md) |
 
 ## Global flags

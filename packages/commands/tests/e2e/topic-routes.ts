@@ -135,9 +135,30 @@ export const VIDEO_ROUTES: E2eRouteExports = {
   "video generate": "videoGenerate",
   "video edit": "videoEdit",
   "video ref": "videoRef",
+  "video portrait": "videoPortrait",
+  "video style": "videoStyle",
+  "video retouch": "videoRetouch",
   "video task get": "videoTaskGet",
   "video download": "videoDownload",
   "speech synthesize": "speechSynthesize",
+};
+
+export const VIDEO_PORTRAIT_ROUTES: E2eRouteExports = {
+  "video portrait": "videoPortrait",
+  "video task get": "videoTaskGet",
+  "video download": "videoDownload",
+};
+
+export const VIDEO_STYLE_ROUTES: E2eRouteExports = {
+  "video style": "videoStyle",
+  "video task get": "videoTaskGet",
+  "video download": "videoDownload",
+};
+
+export const VIDEO_RETOUCH_ROUTES: E2eRouteExports = {
+  "video retouch": "videoRetouch",
+  "video task get": "videoTaskGet",
+  "video download": "videoDownload",
 };
 
 export const VISION_ROUTES: E2eRouteExports = {

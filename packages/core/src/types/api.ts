@@ -281,6 +281,76 @@ export interface DashScopeVideoEditRequest {
   };
 }
 
+/** VideoRetalk (bl video portrait) request body. */
+export interface DashScopeVideoRetalkRequest {
+  model: string;
+  input: {
+    video_url: string;
+    audio_url: string;
+    ref_image_url?: string;
+  };
+  parameters?: {
+    video_extension?: boolean;
+    query_face_threshold?: number;
+  };
+}
+
+/** Video style transform (bl video style) request body. */
+export interface DashScopeVideoStyleTransformRequest {
+  model: string;
+  input: {
+    video_url: string;
+  };
+  parameters?: {
+    style?: number;
+    video_fps?: number;
+    animate_emotion?: boolean;
+    min_len?: number;
+    use_SR?: boolean;
+  };
+}
+
+export type WanxVaceFunction =
+  | "video_repainting"
+  | "video_edit"
+  | "video_extension"
+  | "video_outpainting"
+  | "image_reference";
+
+/** Wanx 2.1 VACE (bl video retouch) request body. */
+export interface DashScopeVideoVaceRequest {
+  model: string;
+  input: {
+    function: WanxVaceFunction;
+    prompt?: string;
+    video_url?: string;
+    ref_images_url?: string[];
+    mask_image_url?: string;
+    mask_video_url?: string;
+    mask_frame_id?: number;
+    first_frame_url?: string;
+    last_frame_url?: string;
+    first_clip_url?: string;
+    last_clip_url?: string;
+  };
+  parameters?: {
+    control_condition?: string;
+    strength?: number;
+    prompt_extend?: boolean;
+    watermark?: boolean;
+    seed?: number;
+    mask_type?: string;
+    expand_ratio?: number;
+    expand_mode?: string;
+    size?: string;
+    top_scale?: number;
+    bottom_scale?: number;
+    left_scale?: number;
+    right_scale?: number;
+    obj_or_bg?: Array<"obj" | "bg">;
+  };
+}
+
 // ---- Application (Agent / Workflow) ----
 
 export interface AppCompletionRequest {
@@ -962,7 +1032,16 @@ export interface QwenMtUniOutputData {
 export interface DashScopeTaskResponse {
   output: {
     task_id: string;
-    task_status: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "UNKNOWN" | "CANCELED";
+    task_status:
+      | "PENDING"
+      | "RUNNING"
+      | "SUCCEEDED"
+      | "FAILED"
+      | "UNKNOWN"
+      | "CANCELED"
+      | "PRE-PROCESSING"
+      | "POST-PROCESSING"
+      | "SUSPENDED";
     finished?: boolean;
     task_metrics?: {
       TOTAL?: number;
@@ -981,6 +1060,11 @@ export interface DashScopeTaskResponse {
     results?: Array<{ url: string }>;
     // Video generation returns video_url
     video_url?: string;
+    // video-style-transform returns output_video_url
+    output_video_url?: string;
+    // VACE / edit prompt echoes
+    orig_prompt?: string;
+    actual_prompt?: string;
     // Image translation (qwen-mt-image) returns image_url
     image_url?: string;
     // qwen-mt-uni business envelope (exact casing)
