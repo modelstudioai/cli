@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
-## [2.11.1] - 2026-11-24
+## [2.11.2] - 2026-11-24
 
 ### Added
 
@@ -20,6 +20,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - **Fine-tune parameter preflight**: `bl finetune params` and `bl finetune text create` now check the model's dynamic training options once via the Console when a Console session is available — auto-filling option defaults and rejecting unsupported values or combinations locally before submission. Without a Console session they degrade to a warning and pass through to the server. `finetune params` JSON output adds a `precheck` field describing whether the check ran.
+
+## [2.11.1] - 2026-11-24
 
 ### Fixed
 

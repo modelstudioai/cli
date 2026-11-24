@@ -6,7 +6,7 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [2.11.1] - 2026-11-24
+## [2.11.2] - 2026-11-24
 
 ### 新增
 
@@ -20,6 +20,8 @@
 ### 变更
 
 - **精调参数预检**：`bl finetune params` 与 `bl finetune text create` 在控制台登录态可用时会调用一次动态训练选项接口——自动补齐选项默认值，并在提交前本地拦截非法取值或组合；无登录态时降级为 warning 并原样透传服务端。`finetune params` 的 JSON 输出新增 `precheck` 字段说明预检是否执行。
+
+## [2.11.1] - 2026-11-24
 
 ### 修复
 
