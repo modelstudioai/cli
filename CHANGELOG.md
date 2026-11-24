@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.11.1] - 2026-11-24
+
+### Fixed
+
+- **Symlink download destinations**: File downloads now write through a symlink to the real file and leave the symlink itself intact, instead of replacing the link with a regular file.
+- **Speech generate download recovery**: When `bl speech generate` creates audio successfully but fails to save the file, the error includes a recovery hint with the download URL so you can re-download without regenerating.
+
 ## [2.11.0] - 2026-11-24
 
 ### Added
