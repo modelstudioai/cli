@@ -155,7 +155,7 @@ These read-only commands use Console authentication. An optional `--workspace-id
 
 ### RAG audio and video
 
-`bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode hides progress and informational messages while preserving the final result, including every JSON field. See the [command guide](docs/knowledge/knowledge-cli-guide.md).
+`bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode hides progress and informational messages while preserving the final result, including every JSON field. See the [command guide](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md).
 
 ## ParseX
 
