@@ -183,6 +183,7 @@ bl speech recognize --url https://example.com/audio.mp3 --model qwen-audio-3.0-a
 
 #### Notes
 
+- Built-in default (when --model and Profile default_speech_model are both unset) is qwen-audio-3.1-tts-flash. Voice IDs are model-specific: keep CosyVoice voices such as longanyang only with --model cosyvoice-v3-flash; for the new default use matching IDs (e.g. longanyang_v3.1) via --list-voices.
 - Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.
 
 #### Examples

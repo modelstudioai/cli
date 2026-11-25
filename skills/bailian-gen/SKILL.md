@@ -55,6 +55,8 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-g
 
 Unless the user explicitly specifies a model, omit `--model` and let the CLI use the active Profile’s default.
 
+TTS migration: the built-in synthesize default is `qwen-audio-3.1-tts-flash`. CosyVoice voice IDs (e.g. `longanyang`) are not valid for that model — keep them only with explicit `--model cosyvoice-v3-flash`, or switch to matching 3.1 IDs (e.g. `longanyang_v3.1`; use `--list-voices`).
+
 Token Plan TTS: keep Profile `default_speech_model` (`qwen-audio-3.0-tts-plus`) — omit `--model`. Do **not** pass `qwen-audio-3.1-tts-flash` or `qwen-audio-3.1-tts-plus`; Token Plan does not support those models.
 
 For ASR model selection, keep `fun-asr` (or other `*-filetrans`) for long recordings, repeated files, speaker diarization, or asynchronous task IDs. For one local or remote audio file up to about five minutes when the user asks for low-latency Flash models, use `--model fun-asr-flash-2026-06-15`, `--model qwen-audio-3.0-asr-flash`, or `--model qwen3-asr-flash`. Flash recognition is synchronous and accepts exactly one file per call.
