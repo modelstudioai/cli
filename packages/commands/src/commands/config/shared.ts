@@ -78,7 +78,7 @@ export const UI_MODEL_DEFAULTS: Record<string, string> = {
   default_video_model: "wan3.0-video",
   default_image_to_video_model: "wan3.0-video",
   default_reference_to_video_model: "wan3.0-video",
-  default_speech_model: "cosyvoice-v3-flash",
+  default_speech_model: "qwen-audio-3.1-tts-flash",
   default_speech_recognition_model: "fun-asr",
   default_omni_model: "qwen3.8-omni-flash",
 };
@@ -123,8 +123,10 @@ export const UI_MODEL_CATALOG: Record<string, ModelOption[]> = {
     { id: "happyhorse-1.1-r2v", role: "video/ref · reference-to-video" },
   ],
   default_speech_model: [
-    { id: "cosyvoice-v3-flash", role: "speech/synthesize (TTS) default" },
-    { id: "qwen-audio-3.0-tts-plus", role: "Token Plan speech/synthesize (TTS)" },
+    { id: "qwen-audio-3.1-tts-flash", role: "speech/synthesize (TTS) default · not Token Plan" },
+    { id: "qwen-audio-3.1-tts-plus", role: "speech/synthesize (TTS) · not Token Plan" },
+    { id: "cosyvoice-v3-flash", role: "speech/synthesize (TTS) · not Token Plan" },
+    { id: "qwen-audio-3.0-tts-plus", role: "Token Plan speech/synthesize (TTS) only" },
   ],
   default_speech_recognition_model: [
     { id: "fun-asr", role: "speech/recognize (ASR) default" },

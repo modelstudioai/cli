@@ -282,32 +282,51 @@ test("stream dry-run still allows JSON preview without --out", async () => {
   expect(requests).toEqual([]);
   expect(result.stderr).toBe("");
 });
-test.each(["qwen-audio-3.0-tts-plus", "cosyvoice-v3.5-flash", "unknown-model"])(
-  "voice list returns one JSON result for %s",
-  async (model) => {
-    const result = await invoke({ listVoices: true, model }, { format: "json", quiet: true });
-    expect(result.exitCode).toBe(0);
-    const data = JSON.parse(result.stdout);
-    expect(data.model).toBe(model);
-    expect(data.voice_list_url).toBeTypeOf("string");
-    if (model === "unknown-model") {
-      expect(data.voices).toBeNull();
-      expect(data.total).toBeNull();
-    } else if (model === "cosyvoice-v3.5-flash") {
-      expect(data.voices).toEqual([]);
-      expect(data.total).toBe(0);
-      expect(data.clone_design_docs_url).toBeTypeOf("string");
-    } else {
-      expect(data.total).toBe(2);
-      expect(data.voices.map((entry: { voice: string }) => entry.voice)).toEqual([
-        "longanlingxin",
-        "longanlufeng",
-      ]);
-    }
-    expect(requests).toEqual([]);
-    expect(result.stderr).toBe("");
-  },
-);
+test.each([
+  "qwen-audio-3.1-tts-flash",
+  "qwen-audio-3.1-tts-plus",
+  "qwen-audio-3.0-tts-plus",
+  "cosyvoice-v3.5-flash",
+  "unknown-model",
+])("voice list returns one JSON result for %s", async (model) => {
+  const result = await invoke({ listVoices: true, model }, { format: "json", quiet: true });
+  expect(result.exitCode).toBe(0);
+  const data = JSON.parse(result.stdout);
+  expect(data.model).toBe(model);
+  expect(data.voice_list_url).toBeTypeOf("string");
+  if (model === "unknown-model") {
+    expect(data.voices).toBeNull();
+    expect(data.total).toBeNull();
+  } else if (model === "cosyvoice-v3.5-flash") {
+    expect(data.voices).toEqual([]);
+    expect(data.total).toBe(0);
+    expect(data.clone_design_docs_url).toBeTypeOf("string");
+  } else if (model === "qwen-audio-3.1-tts-flash") {
+    expect(data.total).toBe(20);
+    expect(data.voices.map((entry: { voice: string }) => entry.voice).slice(0, 4)).toEqual([
+      "longanlingxin_v3.1",
+      "xunanchuan_v3.1",
+      "longanhuan_v3.1",
+      "longanfengyue_v3.1",
+    ]);
+  } else if (model === "qwen-audio-3.1-tts-plus") {
+    expect(data.total).toBe(4);
+    expect(data.voices.map((entry: { voice: string }) => entry.voice)).toEqual([
+      "longanlingxin_v3.1",
+      "xunanchuan_v3.1",
+      "longanhuan_v3.1",
+      "longanfengyue_v3.1",
+    ]);
+  } else {
+    expect(data.total).toBe(2);
+    expect(data.voices.map((entry: { voice: string }) => entry.voice)).toEqual([
+      "longanlingxin",
+      "longanlufeng",
+    ]);
+  }
+  expect(requests).toEqual([]);
+  expect(result.stderr).toBe("");
+});
 test.each(["submit", "empty", "download"] as const)(
   "nonstream %s failure retains one JSON error",
   async (mode) => {

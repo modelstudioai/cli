@@ -152,7 +152,7 @@ command again to persist a newer preset:
 - Text-to-video model (`default_video_model`): `happyhorse-1.1-t2v`
 - Image-to-video model (`default_image_to_video_model`): `happyhorse-1.1-i2v`
 - Reference-to-video model (`default_reference_to_video_model`): `happyhorse-1.1-r2v`
-- Speech synthesis model (`default_speech_model`): `qwen-audio-3.0-tts-plus`
+- Speech synthesis model (`default_speech_model`): `qwen-audio-3.0-tts-plus` (Token Plan does not support `qwen-audio-3.1-tts-flash` / `qwen-audio-3.1-tts-plus`)
 - Speech recognition model (`default_speech_recognition_model`): `qwen-audio-3.0-asr-flash`
 - API Key capabilities: `text.chat`, `vision.describe`, `image.generate`, `image.edit`, `speech.recognize`, `speech.synthesize`, `video.generate`, `video.ref`, `video.task.get`, `video.download`
 

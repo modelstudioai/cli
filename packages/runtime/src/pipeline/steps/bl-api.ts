@@ -522,7 +522,7 @@ export async function speechSynthesize(
     });
   }
 
-  const model = input.model || "cosyvoice-v3-flash";
+  const model = input.model || "qwen-audio-3.1-tts-flash";
 
   const body: DashScopeTTSRequest = {
     model,
