@@ -1,7 +1,9 @@
 import {
   BailianError,
   ExitCode,
+  REGIONS,
   resolveOutputDir,
+  ASYNC_FLAG,
   type Client,
   type CommandContext,
   type DashScopeAsyncResponse,
@@ -9,20 +11,52 @@ import {
   type FlagsDef,
   type LocalizedText,
 } from "bailian-cli-core";
-import { join } from "path";
-import { existsSync, statSync } from "fs";
+import { dirname, join } from "path";
+import { accessSync, constants, existsSync, lstatSync, statSync } from "fs";
 import { downloadDashScopeTaskResult, pollDashScopeTask } from "../shared/dashscope-task.ts";
-import { hasNonAscii, isHttpUrl } from "../shared/translation.ts";
+import { isHttpUrl } from "../shared/translation.ts";
 
 /** Floor aligned with video edit/ref long-running tasks. */
 export const SPECIALIZED_VIDEO_TIMEOUT_FLOOR_SEC = 600;
+
+const BEIJING_ONLY_MESSAGE: LocalizedText = {
+  "en-US":
+    "This model is available only in China (Beijing). Use the Beijing base URL (https://dashscope.aliyuncs.com) and a Beijing-region API Key.",
+  "zh-CN":
+    "该模型仅支持华北 2（北京）地域。请使用北京地域 base URL（https://dashscope.aliyuncs.com）和北京地域 API Key。",
+};
+
+export const SPECIALIZED_VIDEO_SHARED_FLAGS = {
+  download: {
+    type: "string",
+    valueHint: "<path>",
+    description: {
+      "en-US": "Save video to this file on completion (default: <output-dir>/videos/<task_id>.mp4)",
+      "zh-CN": "完成后将视频保存到此文件（默认：<output-dir>/videos/<task_id>.mp4）",
+    },
+  },
+  ...ASYNC_FLAG,
+  pollInterval: {
+    type: "number",
+    valueHint: "<seconds>",
+    description: {
+      "en-US": "Polling interval when waiting (default: 15)",
+      "zh-CN": "等待任务时的轮询间隔（默认：15 秒）",
+    },
+  },
+} satisfies FlagsDef;
 
 export function pendingUploadMarker(localPath: string): string {
   return `<local-file:${localPath};pending-upload>`;
 }
 
 export function previewMediaUrl(value: string): string {
-  return isHttpUrl(value) ? value : pendingUploadMarker(value);
+  if (isHttpUrl(value) || value.startsWith("oss://")) return value;
+  return pendingUploadMarker(value);
+}
+
+function isOssUrl(value: string): boolean {
+  return value.startsWith("oss://");
 }
 
 /** Usage error for media flags; safe for command.validate (auth-independent). */
@@ -37,11 +71,13 @@ export function mediaInputError(
       "zh-CN": `${flagName} 不能为空。`,
     };
   }
-  if (isHttpUrl(value)) {
-    if (hasNonAscii(value)) {
+  // Pass http(s) through as-is (including non-ASCII); no encodeURI.
+  if (isHttpUrl(value)) return undefined;
+  if (isOssUrl(value)) {
+    if (options?.allowLocal === false) {
       return {
-        "en-US": `${flagName} URL must not contain non-ASCII characters.`,
-        "zh-CN": `${flagName} URL 不能包含非 ASCII 字符。`,
+        "en-US": `${flagName} must be a public http(s) URL (oss:// and local paths are not supported in v1).`,
+        "zh-CN": `${flagName} 必须是公网 http(s) URL（v1 不支持 oss:// 与本地路径）。`,
       };
     }
     return undefined;
@@ -67,13 +103,108 @@ export function mediaInputError(
   return undefined;
 }
 
+/** Validate --download before submitting a billable task. */
+export function downloadPathError(downloadPath: string | undefined): LocalizedText | undefined {
+  if (downloadPath === undefined || downloadPath === "") return undefined;
+  try {
+    const entry = lstatSync(downloadPath);
+    const targetStats = entry.isSymbolicLink() ? statSync(downloadPath) : entry;
+    if (!targetStats.isFile()) {
+      return {
+        "en-US": `--download must be a regular file path (not a directory): ${downloadPath}`,
+        "zh-CN": `--download 必须是普通文件路径（不能是目录）：${downloadPath}`,
+      };
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      return {
+        "en-US": `Cannot access --download path: ${downloadPath}`,
+        "zh-CN": `无法访问 --download 路径：${downloadPath}`,
+      };
+    }
+  }
+
+  const parentDir = dirname(downloadPath);
+  if (!existsSync(parentDir)) return undefined;
+  try {
+    accessSync(parentDir, constants.W_OK);
+  } catch {
+    return {
+      "en-US": `--download parent directory is not writable: ${parentDir}`,
+      "zh-CN": `--download 父目录不可写：${parentDir}`,
+    };
+  }
+  return undefined;
+}
+
+/** Shared validate for --async / --download / --poll-interval. */
+export function specializedLifecycleFlagError(flags: {
+  async?: boolean;
+  download?: string;
+  pollInterval?: number;
+}): LocalizedText | undefined {
+  if (
+    flags.pollInterval !== undefined &&
+    (!(flags.pollInterval > 0) || !Number.isFinite(flags.pollInterval))
+  ) {
+    return {
+      "en-US": "--poll-interval must be a positive number.",
+      "zh-CN": "--poll-interval 必须为正数。",
+    };
+  }
+  if (flags.async) {
+    if (flags.download !== undefined) {
+      return {
+        "en-US": "--async cannot be combined with --download.",
+        "zh-CN": "--async 不能与 --download 同时使用。",
+      };
+    }
+    if (flags.pollInterval !== undefined) {
+      return {
+        "en-US": "--async cannot be combined with --poll-interval.",
+        "zh-CN": "--async 不能与 --poll-interval 同时使用。",
+      };
+    }
+  }
+  return downloadPathError(flags.download);
+}
+
 export async function resolveMediaUrl(
   client: Client,
   value: string,
   model: string,
 ): Promise<string> {
-  if (isHttpUrl(value)) return value;
+  if (isHttpUrl(value) || isOssUrl(value)) return value;
   return client.uploadFile(value, model);
+}
+
+/** Reject known non-Beijing official DashScope hosts before submitting. */
+export function assertBeijingDashScopeEndpoint(
+  endpointUrl: string,
+  localize: (text: LocalizedText) => string,
+): void {
+  let hostname: string;
+  try {
+    hostname = new URL(endpointUrl).hostname;
+  } catch {
+    return;
+  }
+  const beijingHost = new URL(REGIONS.cn).hostname;
+  if (hostname === beijingHost) return;
+  if (hostname.endsWith(".cn-beijing.maas.aliyuncs.com")) return;
+
+  const intlHost = new URL(REGIONS.intl).hostname;
+  const usHost = new URL(REGIONS.us).hostname;
+  const isKnownNonBeijing =
+    hostname === intlHost ||
+    hostname === usHost ||
+    hostname.includes("dashscope-intl") ||
+    hostname.includes("dashscope-us") ||
+    hostname.includes("ap-southeast-1") ||
+    hostname.includes("us-east-1");
+  if (!isKnownNonBeijing) return;
+
+  throw new BailianError(localize(BEIJING_ONLY_MESSAGE), ExitCode.USAGE);
 }
 
 export type SpecializedVideoUrlExtractor = (task: DashScopeTaskResponse) => string | undefined;
@@ -97,7 +228,7 @@ type SpecializedLifecycleOptions = {
   async?: boolean;
 };
 
-/** Submit / poll / download lifecycle shared by portrait, style, and retouch. */
+/** Submit / poll / download lifecycle shared by retalk and style. */
 export async function runSpecializedVideoLifecycle<F extends FlagsDef>(
   ctx: CommandContext<F>,
   options: SpecializedLifecycleOptions,
@@ -107,9 +238,21 @@ export async function runSpecializedVideoLifecycle<F extends FlagsDef>(
   const endpoint = ctx.client.url(options.endpointPath);
 
   if (settings.dryRun) {
+    try {
+      assertBeijingDashScopeEndpoint(endpoint, localize);
+    } catch (error) {
+      if (error instanceof BailianError) {
+        ctx.output.progress({
+          "en-US": `Warning: ${error.message}`,
+          "zh-CN": `警告：${error.message}`,
+        });
+      }
+    }
     ctx.output.result({ endpoint, request: options.previewRequest });
     return;
   }
+
+  assertBeijingDashScopeEndpoint(endpoint, localize);
 
   const liveRequest = await options.resolveLiveRequest();
   const submitted = await ctx.client.requestJson<DashScopeAsyncResponse>({
@@ -120,10 +263,19 @@ export async function runSpecializedVideoLifecycle<F extends FlagsDef>(
   });
 
   const taskId = submitted.output.task_id;
+  ctx.output.progress({
+    "en-US": `Submitted. task_id=${taskId}`,
+    "zh-CN": `已提交。task_id=${taskId}`,
+  });
+
   if (options.async) {
     ctx.output.result({ task_id: taskId, request_id: submitted.request_id });
     return;
   }
+
+  const pollIntervalSec = options.pollInterval ?? 15;
+  // Avoid racing the first task lookup right after submit (UNKNOWN can mean "not visible yet").
+  await new Promise((resolve) => setTimeout(resolve, pollIntervalSec * 1000));
 
   const pollTimeoutSec = Math.max(settings.timeout, SPECIALIZED_VIDEO_TIMEOUT_FLOOR_SEC);
   const taskResponse = await pollDashScopeTask(
@@ -132,17 +284,21 @@ export async function runSpecializedVideoLifecycle<F extends FlagsDef>(
       settings: { ...settings, timeout: pollTimeoutSec },
     },
     taskId,
-    { pollInterval: options.pollInterval ?? 15 },
+    { pollInterval: pollIntervalSec },
   );
 
   const videoUrl = options.extractVideoUrl(taskResponse);
   if (!videoUrl) {
     throw new BailianError(
       localize({
-        "en-US": "Task succeeded but no video URL was returned.",
-        "zh-CN": "任务成功但未返回视频 URL。",
+        "en-US": `Task succeeded but no video URL was returned. task_id=${taskId}`,
+        "zh-CN": `任务成功但未返回视频 URL。task_id=${taskId}`,
       }),
       ExitCode.GENERAL,
+      localize({
+        "en-US": `Query or re-download with task_id ${taskId}; do not resubmit.`,
+        "zh-CN": `请用 task_id ${taskId} 查询或重新下载，勿重新提交。`,
+      }),
     );
   }
 
@@ -150,15 +306,10 @@ export async function runSpecializedVideoLifecycle<F extends FlagsDef>(
     options.download || join(resolveOutputDir(settings, { subDir: "videos" }), `${taskId}.mp4`);
   await downloadDashScopeTaskResult(ctx, taskId, videoUrl, destPath);
 
-  const result: Record<string, unknown> = {
+  ctx.output.result({
     ...taskResponse,
     task_id: taskId,
     video_url: videoUrl,
     saved: destPath,
-  };
-  if (taskResponse.output.output_video_url) {
-    result.output_video_url = taskResponse.output.output_video_url;
-  }
-
-  ctx.output.result(result);
+  });
 }

@@ -33,6 +33,26 @@ function isTimeoutLikeError(error: unknown): boolean {
   return false;
 }
 
+function joinHints(...parts: Array<string | undefined>): string | undefined {
+  const joined = parts
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+    .join(" ");
+  return joined.length > 0 ? joined : undefined;
+}
+
+/**
+ * Terminal FAILED/CANCELED/UNKNOWN thrown from load() set api without httpStatus.
+ * HTTP failures from the poll GET go through mapApiError and set api.httpStatus.
+ */
+function isTerminalTaskStatusError(error: BailianError): boolean {
+  return (
+    error.exitCode === ExitCode.GENERAL &&
+    error.api !== undefined &&
+    error.api.httpStatus === undefined
+  );
+}
+
 /** Poll a DashScope async task until SUCCEEDED, FAILED, CANCELED, or UNKNOWN. */
 export async function pollDashScopeTask(
   ctx: {
@@ -48,6 +68,15 @@ export async function pollDashScopeTask(
     extraCheck?: (data: DashScopeTaskResponse) => void;
   },
 ): Promise<DashScopeTaskResponse> {
+  const pollInterruptHint = ctx.localize({
+    "en-US": `Task may still be running. Query or re-download with task_id ${taskId}; do not resubmit.`,
+    "zh-CN": `任务可能仍在执行。请用 task_id ${taskId} 查询或重新下载，勿重新提交。`,
+  });
+  const terminalHint = ctx.localize({
+    "en-US": `Inspect with task_id ${taskId}.`,
+    "zh-CN": `可用 task_id ${taskId} 查询任务。`,
+  });
+
   try {
     return await poll<DashScopeTaskResponse>(ctx.client, {
       output: ctx.output,
@@ -93,22 +122,42 @@ export async function pollDashScopeTask(
       getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
     });
   } catch (error) {
-    // Include submitted task_id for both poll-loop TIMEOUT and hung single GETs (AbortError).
+    // Keep messages intact for AEM; put task_id only in hint (timeout / interrupt / terminal).
     if (isTimeoutLikeError(error)) {
       throw new BailianError(
         ctx.localize({
-          "en-US": `Polling timed out. task_id=${taskId}`,
-          "zh-CN": `轮询超时。task_id=${taskId}`,
+          "en-US": "Polling timed out.",
+          "zh-CN": "轮询超时。",
         }),
         ExitCode.TIMEOUT,
-        ctx.localize({
-          "en-US": `Try increasing --timeout, or query the task with id ${taskId}.`,
-          "zh-CN": `可增大 --timeout，或用 task_id ${taskId} 查询任务状态。`,
-        }),
+        joinHints(
+          ctx.localize({
+            "en-US": `Try increasing --timeout, or query the task with id ${taskId}.`,
+            "zh-CN": `可增大 --timeout，或用 task_id ${taskId} 查询任务状态。`,
+          }),
+          pollInterruptHint,
+        ),
         { cause: error },
       );
     }
-    throw error;
+    if (error instanceof BailianError) {
+      if (isTerminalTaskStatusError(error)) {
+        throw new BailianError(error.message, error.exitCode, joinHints(error.hint, terminalHint), {
+          cause: error.cause ?? error,
+          api: error.api,
+          rawResponse: error.rawResponse,
+        });
+      }
+      // Poll interrupt: preserve message; append do-not-resubmit hint (includes task_id).
+      throw new BailianError(
+        error.message,
+        error.exitCode,
+        joinHints(error.hint, pollInterruptHint),
+        { cause: error.cause ?? error, api: error.api, rawResponse: error.rawResponse },
+      );
+    }
+    const originalMessage = error instanceof Error ? error.message : String(error);
+    throw new BailianError(originalMessage, ExitCode.GENERAL, pollInterruptHint, { cause: error });
   }
 }
 

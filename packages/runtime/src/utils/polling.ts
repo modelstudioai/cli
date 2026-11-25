@@ -45,7 +45,10 @@ export async function poll<T>(client: Client, opts: PollOptions): Promise<T> {
       );
     }
 
-    await new Promise((resolve) => setTimeout(resolve, opts.intervalSec * 1000));
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
+    const sleepMs = Math.min(opts.intervalSec * 1000, remainingMs);
+    await new Promise((resolve) => setTimeout(resolve, sleepMs));
   }
 
   throw new BailianError(

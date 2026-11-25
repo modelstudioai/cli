@@ -1,7 +1,6 @@
 import {
   defineCommand,
   image2videoPath,
-  ASYNC_FLAG,
   stripUndefined,
   type DashScopeVideoRetalkRequest,
   type FlagsDef,
@@ -12,11 +11,13 @@ import {
   previewMediaUrl,
   resolveMediaUrl,
   runSpecializedVideoLifecycle,
+  SPECIALIZED_VIDEO_SHARED_FLAGS,
+  specializedLifecycleFlagError,
 } from "./specialized-shared.ts";
 
 const MODEL = "videoretalk";
 
-const PORTRAIT_FLAGS = {
+const RETALK_FLAGS = {
   video: {
     type: "string",
     valueHint: "<url-or-path>",
@@ -60,33 +61,17 @@ const PORTRAIT_FLAGS = {
       "zh-CN": "人脸匹配阈值 120–200（默认 170；仅与 --ref-image 联用）",
     },
   },
-  download: {
-    type: "string",
-    valueHint: "<path>",
-    description: {
-      "en-US": "Save video to file on completion (default: output dir)",
-      "zh-CN": "完成后将视频保存到文件（默认输出目录）",
-    },
-  },
-  ...ASYNC_FLAG,
-  pollInterval: {
-    type: "number",
-    valueHint: "<seconds>",
-    description: {
-      "en-US": "Polling interval when waiting (default: 15)",
-      "zh-CN": "等待任务时的轮询间隔（默认：15 秒）",
-    },
-  },
+  ...SPECIALIZED_VIDEO_SHARED_FLAGS,
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: {
-    "en-US": "Drive a talking-head video with audio (VideoRetalk / videoretalk)",
-    "zh-CN": "用音频驱动人像口型视频（VideoRetalk / videoretalk）",
+    "en-US": "Drive a talking-head video with audio (VideoRetalk)",
+    "zh-CN": "用音频驱动人像口型视频（VideoRetalk）",
   },
   auth: "apiKey",
   usageArgs: "--video <url-or-path> --audio <url-or-path> [flags]",
-  flags: PORTRAIT_FLAGS,
+  flags: RETALK_FLAGS,
   exampleArgs: [
     {
       "en-US":
@@ -104,20 +89,14 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        "Fixed model videoretalk (Beijing). Supports temporary OSS upload for local media. Requires model access on the account.",
-      "zh-CN": "固定模型 videoretalk（北京）。本地媒体支持临时 OSS 上传。需账号已开通该模型权限。",
+        "Fixed model videoretalk (Beijing only). Wait-mode polling uses at least 600s (--timeout lower values are raised).",
+      "zh-CN":
+        "固定模型 videoretalk（仅北京）。等待模式轮询至少 600 秒（更小的 --timeout 会被抬高）。",
     },
   ],
   validate: (flags) => {
-    if (
-      flags.pollInterval !== undefined &&
-      (!(flags.pollInterval > 0) || !Number.isFinite(flags.pollInterval))
-    ) {
-      return {
-        "en-US": "--poll-interval must be a positive number.",
-        "zh-CN": "--poll-interval 必须为正数。",
-      };
-    }
+    const sharedError = specializedLifecycleFlagError(flags);
+    if (sharedError) return sharedError;
     if (flags.faceThreshold !== undefined) {
       if (
         !Number.isInteger(flags.faceThreshold) ||

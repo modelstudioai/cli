@@ -87,7 +87,7 @@ describe("e2e: video style", () => {
     expect(stderr).not.toMatch(/--concurrent/);
   });
 
-  test("missing video / local path / non-ASCII → 2", async () => {
+  test("missing video / local path / oss / async conflict → 2", async () => {
     const missing = await runCommandInProcess(VIDEO_STYLE_ROUTES, ["video", "style", "--quiet"]);
     expect(missing.exitCode).toBe(2);
     expect(missing.stderr).toMatch(/--video/i);
@@ -101,14 +101,42 @@ describe("e2e: video style", () => {
     expect(localPath.exitCode).toBe(2);
     expect(localPath.stderr).toMatch(/public|公网|local|本地/i);
 
-    const nonAscii = await runCommandInProcess(VIDEO_STYLE_ROUTES, [
+    const ossUrl = await runCommandInProcess(VIDEO_STYLE_ROUTES, [
       "video",
       "style",
       "--video",
-      "https://example.com/风格.mp4",
+      "oss://bucket/clip.mp4",
     ]);
-    expect(nonAscii.exitCode).toBe(2);
-    expect(nonAscii.stderr).toMatch(/non-ASCII|非 ASCII/i);
+    expect(ossUrl.exitCode).toBe(2);
+    expect(ossUrl.stderr).toMatch(/public|公网|oss:\/\//i);
+
+    const asyncDownload = await runCommandInProcess(VIDEO_STYLE_ROUTES, [
+      "video",
+      "style",
+      "--video",
+      "https://example.com/clip.mp4",
+      "--async",
+      "--poll-interval",
+      "5",
+    ]);
+    expect(asyncDownload.exitCode).toBe(2);
+    expect(asyncDownload.stderr).toMatch(/--async|--poll-interval/i);
+  });
+
+  test("non-ASCII public URL passes through on dry-run", async () => {
+    const videoUrl = "https://example.com/风格.mp4";
+    const { stdout, stderr, exitCode } = await runCommandInProcess(VIDEO_STYLE_ROUTES, [
+      "video",
+      "style",
+      "--video",
+      videoUrl,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const body = parseStdoutJson<{ request?: { input?: { video_url?: string } } }>(stdout);
+    expect(body.request?.input?.video_url).toBe(videoUrl);
   });
 
   test("dry-run preserves style=0 and boolean false", async () => {
@@ -234,13 +262,13 @@ describe("e2e: video style", () => {
     const body = parseStdoutJson<{
       task_id?: string;
       video_url?: string;
-      output_video_url?: string;
       saved?: string;
+      output?: { output_video_url?: string };
       usage?: { SR?: number };
     }>(stdout);
     expect(body.task_id).toBe("task-style-1");
     expect(body.video_url).toMatch(/styled\.mp4$/);
-    expect(body.output_video_url).toMatch(/styled\.mp4$/);
+    expect(body.output?.output_video_url).toMatch(/styled\.mp4$/);
     expect(body.usage?.SR).toBe(720);
     expect(readFileSync(dest).equals(mp4Bytes)).toBe(true);
   });

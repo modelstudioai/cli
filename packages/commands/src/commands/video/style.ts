@@ -1,7 +1,6 @@
 import {
   defineCommand,
   videoGeneratePath,
-  ASYNC_FLAG,
   stripUndefined,
   type DashScopeVideoStyleTransformRequest,
   type FlagsDef,
@@ -10,6 +9,8 @@ import {
   extractStyleOutputVideoUrl,
   mediaInputError,
   runSpecializedVideoLifecycle,
+  SPECIALIZED_VIDEO_SHARED_FLAGS,
+  specializedLifecycleFlagError,
 } from "./specialized-shared.ts";
 
 const MODEL = "video-style-transform";
@@ -38,8 +39,8 @@ const STYLE_FLAGS = {
     type: "number",
     valueHint: "<n>",
     description: {
-      "en-US": "Output video FPS 15–25 (maps to video_fps)",
-      "zh-CN": "输出视频帧率 15–25（映射为 video_fps）",
+      "en-US": "Output video FPS 15–25 (default: 15; maps to video_fps)",
+      "zh-CN": "输出视频帧率 15–25（默认 15；映射为 video_fps）",
     },
   },
   animateEmotion: {
@@ -54,41 +55,28 @@ const STYLE_FLAGS = {
     type: "number",
     valueHint: "<n>",
     description: {
-      "en-US": "Short-side length 540 or 720 (server default: 720)",
-      "zh-CN": "短边长度 540 或 720（服务端默认 720）",
+      "en-US": "Short-side length 540 or 720 (server default: 720; 720P costs more than 540P)",
+      "zh-CN": "短边长度 540 或 720（服务端默认 720；720P 比 540P 更贵）",
     },
   },
   superResolution: {
     type: "boolean",
     valueHint: "<bool>",
     description: {
-      "en-US": "Enable super-resolution (maps to use_SR; server default: false)",
-      "zh-CN": "是否启用超分（映射为 use_SR；服务端默认 false）",
+      "en-US":
+        "Enable super-resolution (maps to use_SR; server default: false; with min_len=540 outputs 1080P billed as 540P)",
+      "zh-CN":
+        "是否启用超分（映射为 use_SR；服务端默认 false；min_len=540 时输出 1080P 仍按 540P 计费）",
     },
   },
-  download: {
-    type: "string",
-    valueHint: "<path>",
-    description: {
-      "en-US": "Save video to file on completion (default: output dir)",
-      "zh-CN": "完成后将视频保存到文件（默认输出目录）",
-    },
-  },
-  ...ASYNC_FLAG,
-  pollInterval: {
-    type: "number",
-    valueHint: "<seconds>",
-    description: {
-      "en-US": "Polling interval when waiting (default: 15)",
-      "zh-CN": "等待任务时的轮询间隔（默认：15 秒）",
-    },
-  },
+  ...SPECIALIZED_VIDEO_SHARED_FLAGS,
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: {
-    "en-US": "Restyle a video (video-style-transform)",
-    "zh-CN": "视频风格重绘（video-style-transform）",
+    "en-US":
+      "Restyle a video with 8 presets (video-style-transform); for prompt-based edit use video edit",
+    "zh-CN": "按 8 种预设风格重绘视频（video-style-transform）；基于提示词的编辑请用 video edit",
   },
   auth: "apiKey",
   usageArgs: "--video <url> [flags]",
@@ -108,21 +96,14 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        "Fixed model video-style-transform (Beijing only). Success field is output.output_video_url. Local paths are rejected until temporary OSS support is verified. Requires model access.",
+        "Fixed model video-style-transform (Beijing only). Wait-mode polling uses at least 600s (--timeout lower values are raised).",
       "zh-CN":
-        "固定模型 video-style-transform（仅北京）。成功字段为 output.output_video_url。在临时 OSS 验证前拒绝本地路径。需账号已开通该模型权限。",
+        "固定模型 video-style-transform（仅北京）。等待模式轮询至少 600 秒（更小的 --timeout 会被抬高）。",
     },
   ],
   validate: (flags) => {
-    if (
-      flags.pollInterval !== undefined &&
-      (!(flags.pollInterval > 0) || !Number.isFinite(flags.pollInterval))
-    ) {
-      return {
-        "en-US": "--poll-interval must be a positive number.",
-        "zh-CN": "--poll-interval 必须为正数。",
-      };
-    }
+    const sharedError = specializedLifecycleFlagError(flags);
+    if (sharedError) return sharedError;
     if (flags.style !== undefined) {
       if (!Number.isInteger(flags.style) || flags.style < 0 || flags.style > 7) {
         return {

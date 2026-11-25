@@ -21,8 +21,9 @@ import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailia
 export default defineCommand({
   description: {
     "en-US":
-      "Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)",
-    "zh-CN": "使用 happyhorse-1.0-video-edit 编辑视频（风格转换、对象替换等）",
+      "Edit a video with happyhorse-1.0-video-edit (prompt-based style/object edits; preset comic/ink restyle → video style)",
+    "zh-CN":
+      "使用 happyhorse-1.0-video-edit 编辑视频（基于提示词的风格/对象编辑；预设漫画/水墨重绘请用 video style）",
   },
   auth: "apiKey",
   usageArgs: "--video <url> --prompt <text> [flags]",

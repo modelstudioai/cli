@@ -70,8 +70,6 @@ export type {
   DashScopeVideoRequest,
   DashScopeVideoRetalkRequest,
   DashScopeVideoStyleTransformRequest,
-  DashScopeVideoVaceRequest,
-  WanxVaceFunction,
   KnowledgeChatContentPart,
   KnowledgeChatMessage,
   KnowledgeChatRequest,
