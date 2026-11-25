@@ -40,6 +40,7 @@ export default defineCommand({
         task_id: response.output.task_id,
         task_status: response.output.task_status,
         video_url: response.output.video_url,
+        output_video_url: response.output.output_video_url,
         image_url: response.output.image_url,
         results: response.output.results,
         Success: response.output.Success,

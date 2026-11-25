@@ -281,6 +281,35 @@ export interface DashScopeVideoEditRequest {
   };
 }
 
+/** VideoRetalk (bl video retalk) request body. */
+export interface DashScopeVideoRetalkRequest {
+  model: string;
+  input: {
+    video_url: string;
+    audio_url: string;
+    ref_image_url?: string;
+  };
+  parameters?: {
+    video_extension?: boolean;
+    query_face_threshold?: number;
+  };
+}
+
+/** Video style transform (bl video style) request body. */
+export interface DashScopeVideoStyleTransformRequest {
+  model: string;
+  input: {
+    video_url: string;
+  };
+  parameters?: {
+    style?: number;
+    video_fps?: number;
+    animate_emotion?: boolean;
+    min_len?: number;
+    use_SR?: boolean;
+  };
+}
+
 // ---- Application (Agent / Workflow) ----
 
 export interface AppCompletionRequest {
@@ -962,7 +991,16 @@ export interface QwenMtUniOutputData {
 export interface DashScopeTaskResponse {
   output: {
     task_id: string;
-    task_status: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "UNKNOWN" | "CANCELED";
+    task_status:
+      | "PENDING"
+      | "RUNNING"
+      | "SUCCEEDED"
+      | "FAILED"
+      | "UNKNOWN"
+      | "CANCELED"
+      | "PRE-PROCESSING"
+      | "POST-PROCESSING"
+      | "SUSPENDED";
     finished?: boolean;
     task_metrics?: {
       TOTAL?: number;
@@ -981,6 +1019,8 @@ export interface DashScopeTaskResponse {
     results?: Array<{ url: string }>;
     // Video generation returns video_url
     video_url?: string;
+    // video-style-transform returns output_video_url
+    output_video_url?: string;
     // Image translation (qwen-mt-image) returns image_url
     image_url?: string;
     // qwen-mt-uni business envelope (exact casing)

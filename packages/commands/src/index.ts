@@ -23,6 +23,8 @@ export { default as imageTranslate } from "./commands/image/translate.ts";
 export { default as videoGenerate } from "./commands/video/generate.ts";
 export { default as videoEdit } from "./commands/video/edit.ts";
 export { default as videoRef } from "./commands/video/ref.ts";
+export { default as videoRetalk } from "./commands/video/retalk.ts";
+export { default as videoStyle } from "./commands/video/style.ts";
 export { default as videoTaskGet } from "./commands/video/task-get.ts";
 export { default as videoDownload } from "./commands/video/download.ts";
 export { default as visionDescribe } from "./commands/vision/describe.ts";

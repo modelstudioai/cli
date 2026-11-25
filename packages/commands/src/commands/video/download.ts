@@ -62,7 +62,9 @@ export default defineCommand({
     }
 
     const downloadUrl =
-      taskInfo.output.video_url || (taskInfo.output.results && taskInfo.output.results[0]?.url);
+      taskInfo.output.video_url ||
+      taskInfo.output.output_video_url ||
+      (taskInfo.output.results && taskInfo.output.results[0]?.url);
 
     if (!downloadUrl) {
       throw new BailianError("No download URL available for this task.", ExitCode.GENERAL);

@@ -135,9 +135,23 @@ export const VIDEO_ROUTES: E2eRouteExports = {
   "video generate": "videoGenerate",
   "video edit": "videoEdit",
   "video ref": "videoRef",
+  "video retalk": "videoRetalk",
+  "video style": "videoStyle",
   "video task get": "videoTaskGet",
   "video download": "videoDownload",
   "speech synthesize": "speechSynthesize",
+};
+
+export const VIDEO_RETALK_ROUTES: E2eRouteExports = {
+  "video retalk": "videoRetalk",
+  "video task get": "videoTaskGet",
+  "video download": "videoDownload",
+};
+
+export const VIDEO_STYLE_ROUTES: E2eRouteExports = {
+  "video style": "videoStyle",
+  "video task get": "videoTaskGet",
+  "video download": "videoDownload",
 };
 
 export const VISION_ROUTES: E2eRouteExports = {
