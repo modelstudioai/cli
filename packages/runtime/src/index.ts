@@ -2,10 +2,16 @@
 // each entrypoint (bl / rag / …) injects its own command set via createCli().
 
 // Entrypoint factory + identity
-export { createCli, registerInterruptHandler } from "./create-cli.ts";
+export { createCli, registerInterruptHandler, runToExit } from "./create-cli.ts";
 export { buildCommandSchema, serializeCommandSchema } from "./introspect.ts";
 export type { CommandSchema, CommandSchemaNode } from "./introspect.ts";
 export type { Cli, CliOptions } from "./create-cli.ts";
+export {
+  DEFAULT_FLUSH_TIMEOUT_MS,
+  flushOutput,
+  INTERRUPT_FLUSH_TIMEOUT_MS,
+  trackStreamWrites,
+} from "./output/flush.ts";
 
 // Command Pack product policy
 export type {

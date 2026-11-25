@@ -66,3 +66,52 @@ test("临时 Ctrl-C 处理释放后恢复默认退出 130，释放可重复调�
     isolated.dispose();
   }
 });
+
+test("第二次 Ctrl-C 在中断刷新期间立即退出", async () => {
+  const isolated = buildIsolatedCliEnv({
+    overrides: {
+      HTTP_PROXY: "",
+      HTTPS_PROXY: "",
+      http_proxy: "",
+      https_proxy: "",
+      NODE_OPTIONS: "",
+      NO_UPDATE_NOTIFIER: "1",
+    },
+  });
+  try {
+    await runInProcess(
+      async () => {
+        const cli = createCli(
+          {
+            fixture: {
+              auth: "none",
+              description: "fixture",
+              async run() {
+                const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+                try {
+                  process.emit("SIGINT");
+                  process.emit("SIGINT");
+                  await vi.waitFor(() => expect(exit.mock.calls.length).toBeGreaterThanOrEqual(2));
+                  expect(exit.mock.calls.every((call) => call[0] === 130)).toBe(true);
+                } finally {
+                  exit.mockRestore();
+                }
+              },
+            },
+          },
+          {
+            binName: "test-cli",
+            version: "0.0.0-test",
+            npmPackage: "test-cli",
+            clientName: "test-client",
+          },
+        );
+        await cli.run(["fixture"]);
+      },
+      [],
+      { env: isolated.env },
+    );
+  } finally {
+    isolated.dispose();
+  }
+});
