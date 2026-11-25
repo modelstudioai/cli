@@ -10,12 +10,12 @@
 
 ### 新增
 
-- **视频口型驱动**：新增 `bl video retalk`，用音频驱动人像口型视频（`videoretalk`，仅北京）。需 `--video` 与 `--audio`（URL 或本地文件）；多人场景可选 `--ref-image` / `--face-threshold`；音频长于视频时可加 `--video-extension`。
-- **视频风格预设**：新增 `bl video style`，按 8 种预设重绘视频（`video-style-transform`，仅北京），通过 `--style` `0`–`7` 选择风格。输入为公网 URL；可选 `--fps`、`--animate-emotion`、`--min-len`、`--super-resolution`。基于提示词的编辑仍用 `bl video edit`。
+- **视频口型驱动**：新增 `bl video retalk`，根据驱动音频生成人像口型视频（固定模型 `videoretalk`，仅北京）。需提供 `--video` 与 `--audio`（URL 或本地路径）；多人输入可选 `--ref-image` / `--face-threshold`；音频长于视频时可使用 `--video-extension`。
+- **视频风格转换**：新增 `bl video style`，按 8 种预设风格转换视频（固定模型 `video-style-transform`，仅北京），通过 `--style` `0`–`7` 指定；输入为公网视频 URL；可选 `--fps`、`--animate-emotion`、`--min-len`、`--super-resolution`。基于提示词的编辑仍使用 `bl video edit`。
 
 ### 变更
 
-- **默认 TTS 模型**：未传 `--model` 且 Profile 未配置 `default_speech_model` 时，`bl speech synthesize` 与配置界面的语音默认改为 `qwen-audio-3.1-tts-flash`（原为 `cosyvoice-v3-flash`）。音色 ID 与模型绑定——继续使用 CosyVoice 旧音色（如 `longanyang`）时请显式加 `--model cosyvoice-v3-flash`；使用新默认时请用匹配音色（如 `longanlingxin_v3.1`，可用 `--list-voices` 查看）。
+- **默认 TTS 模型**：`bl speech synthesize` 与 Profile `default_speech_model` 的默认值改为 `qwen-audio-3.1-tts-flash`（原 `cosyvoice-v3-flash`）。音色 ID 仍与模型绑定；CosyVoice 音色需显式指定 `--model cosyvoice-v3-flash`。
 
 ## [2.11.2] - 2026-11-24
 

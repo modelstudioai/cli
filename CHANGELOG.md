@@ -10,12 +10,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- **Video retalk**: New `bl video retalk` drives a talking-head video with audio (`videoretalk`, Beijing only). Requires `--video` and `--audio` (URL or local file); optional `--ref-image` / `--face-threshold` for multi-person clips and `--video-extension` when audio is longer than the video.
-- **Video style presets**: New `bl video style` restyles a video with 8 presets (`video-style-transform`, Beijing only) via `--style` `0`–`7`. Input is a public URL; optional `--fps`, `--animate-emotion`, `--min-len`, and `--super-resolution`. Prompt-based edits remain on `bl video edit`.
+- **Video retalk**: New `bl video retalk` generates talking-head video from driving audio (fixed model `videoretalk`, Beijing only). Requires `--video` and `--audio` (URL or local path); optional `--ref-image` / `--face-threshold` for multi-person input and `--video-extension` when audio exceeds video length.
+- **Video style transform**: New `bl video style` applies one of eight preset styles (fixed model `video-style-transform`, Beijing only) via `--style` `0`–`7`. Accepts a public video URL; optional `--fps`, `--animate-emotion`, `--min-len`, and `--super-resolution`. Prompt-based edits remain under `bl video edit`.
 
 ### Changed
 
-- **Default TTS model**: When `--model` and Profile `default_speech_model` are unset, `bl speech synthesize` and the config UI speech default use `qwen-audio-3.1-tts-flash` (was `cosyvoice-v3-flash`). Voice IDs are model-specific — keep CosyVoice voices such as `longanyang` with `--model cosyvoice-v3-flash`; for the new default use matching IDs (e.g. `longanlingxin_v3.1`) via `--list-voices`.
+- **Default TTS model**: `bl speech synthesize` and the Profile `default_speech_model` now default to `qwen-audio-3.1-tts-flash` (was `cosyvoice-v3-flash`). Voice IDs remain model-specific; CosyVoice voices require an explicit `--model cosyvoice-v3-flash`.
 
 ## [2.11.2] - 2026-11-24
 
