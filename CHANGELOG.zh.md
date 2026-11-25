@@ -6,6 +6,17 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.12.0] - 2026-11-25
+
+### 新增
+
+- **视频口型驱动**：新增 `bl video retalk`，根据驱动音频生成人像口型视频（固定模型 `videoretalk`，仅北京）。需提供 `--video` 与 `--audio`（URL 或本地路径）；多人输入可选 `--ref-image` / `--face-threshold`；音频长于视频时可使用 `--video-extension`。
+- **视频风格转换**：新增 `bl video style`，按 8 种预设风格转换视频（固定模型 `video-style-transform`，仅北京），通过 `--style` `0`–`7` 指定；输入为公网视频 URL；可选 `--fps`、`--animate-emotion`、`--min-len`、`--super-resolution`。基于提示词的编辑仍使用 `bl video edit`。
+
+### 变更
+
+- **默认 TTS 模型**：`bl speech synthesize` 与 Profile `default_speech_model` 的默认值改为 `qwen-audio-3.1-tts-flash`（原 `cosyvoice-v3-flash`）。音色 ID 仍与模型绑定；CosyVoice 音色需显式指定 `--model cosyvoice-v3-flash`。
+
 ## [2.11.2] - 2026-11-24
 
 ### 新增

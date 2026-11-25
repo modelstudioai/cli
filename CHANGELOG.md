@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.12.0] - 2026-11-25
+
+### Added
+
+- **Video retalk**: New `bl video retalk` generates talking-head video from driving audio (fixed model `videoretalk`, Beijing only). Requires `--video` and `--audio` (URL or local path); optional `--ref-image` / `--face-threshold` for multi-person input and `--video-extension` when audio exceeds video length.
+- **Video style transform**: New `bl video style` applies one of eight preset styles (fixed model `video-style-transform`, Beijing only) via `--style` `0`–`7`. Accepts a public video URL; optional `--fps`, `--animate-emotion`, `--min-len`, and `--super-resolution`. Prompt-based edits remain under `bl video edit`.
+
+### Changed
+
+- **Default TTS model**: `bl speech synthesize` and the Profile `default_speech_model` now default to `qwen-audio-3.1-tts-flash` (was `cosyvoice-v3-flash`). Voice IDs remain model-specific; CosyVoice voices require an explicit `--model cosyvoice-v3-flash`.
+
 ## [2.11.2] - 2026-11-24
 
 ### Added
