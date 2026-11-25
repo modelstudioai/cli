@@ -423,6 +423,10 @@ export default defineCommand({
   usageArgs: "--text <text> [flags]",
   flags: SYNTHESIZE_FLAGS,
   exampleArgs: [
+    {
+      "en-US": "# Ordinary API Key",
+      "zh-CN": "# 普通 API Key",
+    },
     "--list-voices --model qwen-audio-3.1-tts-flash",
     "--list-voices --model cosyvoice-v3-flash",
     {
@@ -430,6 +434,14 @@ export default defineCommand({
         '--text "Hello, I am Qwen" --model qwen-audio-3.1-tts-flash --voice longanlingxin_v3.1',
       "zh-CN":
         '--text "你好，我是通义千问" --model qwen-audio-3.1-tts-flash --voice longanlingxin_v3.1',
+    },
+    {
+      "en-US": "# Token Plan (omit --model to use Profile default qwen-audio-3.0-tts-plus)",
+      "zh-CN": "# Token Plan（省略 --model，使用 Profile 默认 qwen-audio-3.0-tts-plus）",
+    },
+    {
+      "en-US": '--text "Hello, I am Qwen" --voice longanlingxin',
+      "zh-CN": '--text "你好，我是通义千问" --voice longanlingxin',
     },
     {
       "en-US": '--text "Hello world" --voice <voice_id> --language en',
@@ -466,9 +478,9 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        "Built-in default (when --model and Profile default_speech_model are both unset) is qwen-audio-3.1-tts-flash. Voice IDs are model-specific: keep CosyVoice voices such as longanyang only with --model cosyvoice-v3-flash; for the new default use matching IDs (e.g. longanyang_v3.1) via --list-voices.",
+        "Built-in default (when --model and Profile default_speech_model are both unset) is qwen-audio-3.1-tts-flash. Voice IDs are model-specific: keep CosyVoice voices such as longanyang only with --model cosyvoice-v3-flash; for the new default use matching IDs (e.g. longanlingxin_v3.1) via --list-voices.",
       "zh-CN":
-        "未传 --model 且 Profile 未配置 default_speech_model 时，内置默认为 qwen-audio-3.1-tts-flash。音色 ID 与模型绑定：继续使用 CosyVoice 旧音色（如 longanyang）时请显式加 --model cosyvoice-v3-flash；使用新默认时请用匹配音色（如 longanyang_v3.1，可用 --list-voices 查看）。",
+        "未传 --model 且 Profile 未配置 default_speech_model 时，内置默认为 qwen-audio-3.1-tts-flash。音色 ID 与模型绑定：继续使用 CosyVoice 旧音色（如 longanyang）时请显式加 --model cosyvoice-v3-flash；使用新默认时请用匹配音色（如 longanlingxin_v3.1，可用 --list-voices 查看）。",
     },
     {
       "en-US":
