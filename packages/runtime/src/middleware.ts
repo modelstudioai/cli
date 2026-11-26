@@ -300,6 +300,7 @@ export const telemetryStage: Middleware = (ctx, next) => {
           consoleSite: ctx.settings.consoleSite,
           lastResolvedOrigin: ctx.client.lastResolvedOrigin,
           baseUrl: ctx.client.baseUrl,
+          baseUrlIsDefault: ctx.client.baseUrlIsDefault,
         }),
     },
     ctx.path,

@@ -110,6 +110,11 @@ export class Client {
     return this.deps.apiCred?.baseUrl ?? this.deps.baseUrl;
   }
 
+  /** True when the model base URL came from the built-in default (nothing configured). */
+  get baseUrlIsDefault(): boolean {
+    return this.deps.baseUrlIsDefault === true;
+  }
+
   /**
    * Origin last selected by {@link url} / upload defaultBaseUrl callbacks.
    * Used by telemetry site routing; undefined when no valid origin was recorded.

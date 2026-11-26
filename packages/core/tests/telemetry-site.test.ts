@@ -49,7 +49,7 @@ test("console auth uses consoleSite only (D4=B)", () => {
       consoleSite: "domestic",
       baseUrl: "https://dashscope-intl.aliyuncs.com",
     }),
-  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+  ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
 
   expect(
     resolveTelemetrySite({
@@ -65,6 +65,7 @@ test("apiKey prefers lastResolvedOrigin over baseUrl", () => {
       auth: "apiKey",
       lastResolvedOrigin: "https://ws.ap-southeast-1.maas.aliyuncs.com",
       baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
     }),
   ).toEqual({ site: "international", siteReason: "positive-international" });
 
@@ -72,8 +73,35 @@ test("apiKey prefers lastResolvedOrigin over baseUrl", () => {
     resolveTelemetrySite({
       auth: "apiKey",
       baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: false,
     }),
   ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
+});
+
+test("default model baseUrl is a fallback, not positive domestic", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "openapi",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "openapi",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+      baseUrlIsDefault: false,
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
 });
 
 test("openapi classifies model-domain baseUrl, not ACS hosts", () => {
@@ -81,6 +109,7 @@ test("openapi classifies model-domain baseUrl, not ACS hosts", () => {
     resolveTelemetrySite({
       auth: "openapi",
       baseUrl: "https://dashscope-intl.aliyuncs.com",
+      baseUrlIsDefault: false,
     }),
   ).toEqual({ site: "international", siteReason: "positive-international" });
 
@@ -89,6 +118,7 @@ test("openapi classifies model-domain baseUrl, not ACS hosts", () => {
     resolveTelemetrySite({
       auth: "openapi",
       baseUrl: "https://modelstudio.ap-southeast-1.aliyuncs.com",
+      baseUrlIsDefault: false,
     }),
   ).toEqual({ site: "domestic", siteReason: "unknown-host" });
 });
@@ -117,6 +147,7 @@ test("auth none ORs consoleSite with model host", () => {
       auth: "none",
       consoleSite: "international",
       baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
     }),
   ).toEqual({ site: "international", siteReason: "positive-international" });
 
@@ -125,14 +156,25 @@ test("auth none ORs consoleSite with model host", () => {
       auth: "none",
       consoleSite: "domestic",
       baseUrl: "https://dashscope-intl.aliyuncs.com",
+      baseUrlIsDefault: false,
     }),
   ).toEqual({ site: "international", siteReason: "positive-international" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      consoleSite: "domestic",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
 
   expect(
     resolveTelemetrySite({
       auth: "none",
       lastResolvedOrigin: "https://ws.ap-southeast-1.maas.aliyuncs.com",
       baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
     }),
   ).toEqual({ site: "international", siteReason: "positive-international" });
 
@@ -140,8 +182,17 @@ test("auth none ORs consoleSite with model host", () => {
     resolveTelemetrySite({
       auth: "none",
       baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: false,
     }),
   ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
 });
 
 test("mixed profile: console domestic does not force apiKey domestic", () => {

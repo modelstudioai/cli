@@ -152,19 +152,27 @@ postinstall.js launchFirstInstallReport
 | domestic      | `bailian-cli-node`      | `https://gm.mmstat.com/aes.1.1` |
 | international | `bailian-cli-node-intl` | `https://sg.mmstat.com/aes.1.1` |
 
+端点已端到端实测（2026-11-24 手工上报，在 `bailian-cli-node-intl` 查到 4 条，`event_category` 分别是 `text chat` / `config show` / `usage free`，覆盖 `apiKey` / `console` / `none` 三个鉴权域，`ext` 里 `site=international`、`siteReason=positive-international`）：国际站**不需要** `sg.mmstat.com/alicloud/aes.1.1` 变体 —— `/alicloud` 是阿里云国际站**页面**经 A+ 上报的通道，Node 直连 POST 用裸 `sg.mmstat.com` 即可落库。
+
+mmstat 网关对任何 POST 都返回 `200` + GIF，端点或 pid 写错不会报错、不会重试，只会让看板永远为空。改端点 / 换 pid 后必须重新做一次落库验证，不能只看 HTTP 状态码。
+
+国际站数据在 [AEM 新加坡站](https://sg.aem.alibaba-inc.com/) 查看；用 `aem` CLI 取数必须带 `--region sg`（AK 按 region 隔离存储），否则查的是 cn 租户 —— "查不到数据"不等于"埋点坏了"。
+
 判定（D4=B：console=账号站，模型=host/region）：
 
-| `auth`               | 信号                                                    | 国际条件                                 | 缺省                                                       |
-| -------------------- | ------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------- |
-| `console`            | `settings.consoleSite`（不看 `consoleRegion`）          | `international`                          | domestic                                                   |
-| `apiKey` / `openapi` | `Client.lastResolvedOrigin` 优先，否则 `client.baseUrl` | 已知国际 host/region（含 `cn-hongkong`） | domestic；未知 host → domestic + `siteReason=unknown-host` |
-| `none`               | consoleSite **或** 模型 host（OR）                      | 任一侧国际                               | domestic                                                   |
+| `auth`               | 信号                                                          | 国际条件                                 | 缺省                                                                                         |
+| -------------------- | ------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `console`            | `settings.consoleSite`（不看 `consoleRegion`）                | `international`                          | 未设置 → domestic + `default-fallback`；显式 `domestic` → `positive-domestic`                |
+| `apiKey` / `openapi` | `Client.lastResolvedOrigin` 优先，否则非默认 `client.baseUrl` | 已知国际 host/region（含 `cn-hongkong`） | 无有效 host / `baseUrlIsDefault` → domestic + `default-fallback`；未知 host → `unknown-host` |
+| `none`               | consoleSite **或** 模型 host（OR）                            | 任一侧国际                               | 同上两侧兜底                                                                                 |
 
+- `siteReason`：`positive-*` 仅表示有明确信号（显式 consoleSite / 非默认 model host / `lastResolvedOrigin`）；内置默认 `baseUrl`（`baseUrlIsDefault`）不计为 positive，走 `default-fallback`。
 - 模型 host 分类清单上收在 `packages/core/src/config/model-endpoints.ts`（与 API Key 登录候选共用）；`site.ts` 只调用 helper，禁止再写第四份。
 - `lastResolvedOrigin` 仅在 `Client.url()` / upload 的 `defaultBaseUrl` 回调路径记录；主流量仍靠 `baseUrl`。runtime **禁止**泛化读取各命令 `flags.region`。
 - openapi **禁止**用 ACS `opts.host` 分类。
 - `remoteSink` 按 site 使用 keyed `Map` 持有 Tracker；同进程可同时存在国内与国际实例。`uid` / tracker `device_id` **跨站同值**。
 - vendored tracker 仅保留本仓对 `send` 的本地改造（登记于此）；国际 path 与国内同为 `/aes.1.1`，**不加** `endpointPath` patch。升级 SDK 时必须保留 `send` 改造。
+- 看板元数据还没跟上：`site` / `siteReason` 两站都未建自定义维度；`callerType` / `callerName` / `cliVersion` / `cliVersionCode` / `commandPrefix` 国内项目有、国际项目一个都没有。数据已经在 `ext` 里，但国际站要做筛选/聚合（含 Agent 调用率、入口区分）必须先补这些维度。
 - 已知残留：未知/反代 host、残缺配置、登录写盘前首条 `none`、managed-agent 外部拼 host、旧版 CLI、账号站与模型地域混维拆站、`first_install` 固定报国内站（安装阶段没有 auth / Client 上下文）。
 
 编译二进制的 `env=prod` 由 `BAILIAN_COMPILED=1` 决定，并且必须先于 `NODE_ENV`。`bun build --compile`（当前 pin 1.3.14）会把点访问 `process.env.NODE_ENV` 内联成构建机的值，未设置时是 `"development"`；`tools/release/lib/binary-compile.mjs` 同时 `--define process.env.NODE_ENV="production"`。这两处读取必须写成 `process.env.*`，包进别的变量后 `--define` 匹配不到。
@@ -191,17 +199,17 @@ postinstall.js launchFirstInstallReport
 
 AEM 映射：
 
-| AEM 字段   | 内容 |
-| ---------- | ---- |
-| event name | 命令路径 |
-| `et`       | `EXP` |
+| AEM 字段   | 内容                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| event name | 命令路径                                                                                                                                                                       |
+| `et`       | `EXP`                                                                                                                                                                          |
 | `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType`、`site`、可选 `siteReason`、失败时的 `exitCode`，以及读到的 `installChannel`。安装日不在命令事件里 |
-| `c1`       | allowlist 参数 |
-| `c2`       | `success` / `failure` |
-| `c3`       | HTTP status |
-| `c4`       | 错误文案，最多 500 字符 |
-| `c5`       | request ID |
-| `c6`       | `bizFrom` 业务来源（全局 `--biz-from`，归一化标量；专用扁平列，直接筛选/分组） |
+| `c1`       | allowlist 参数                                                                                                                                                                 |
+| `c2`       | `success` / `failure`                                                                                                                                                          |
+| `c3`       | HTTP status                                                                                                                                                                    |
+| `c4`       | 错误文案，最多 500 字符                                                                                                                                                        |
+| `c5`       | request ID                                                                                                                                                                     |
+| `c6`       | `bizFrom` 业务来源（全局 `--biz-from`，归一化标量；专用扁平列，直接筛选/分组）                                                                                                 |
 
 `siteReason` 为粗粒度枚举（`positive-domestic` / `positive-international` / `default-fallback` / `unknown-host`），**禁止**带原始 host。漏判量化用国内站 `siteReason` 兜底类占比；不要用「国内 pid 出现 `site=international`」做告警（国际事件不会进国内 pid）。
 

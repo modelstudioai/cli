@@ -22,6 +22,8 @@ export interface ResolveTelemetrySiteInput {
   lastResolvedOrigin?: string;
   /** Model-domain base URL (or its host). */
   baseUrl?: string;
+  /** baseUrl is the built-in default, not a user signal. */
+  baseUrlIsDefault?: boolean;
 }
 
 export interface TelemetryRemoteTarget {
@@ -56,25 +58,35 @@ export function resolveTelemetrySite(input: ResolveTelemetrySiteInput): Telemetr
     if (input.consoleSite === "international") {
       return { site: "international", siteReason: "positive-international" };
     }
+    if (input.consoleSite === "domestic") {
+      return { site: "domestic", siteReason: "positive-domestic" };
+    }
     return { site: "domestic", siteReason: "default-fallback" };
   }
 
   if (input.auth === "apiKey" || input.auth === "openapi") {
-    return classifyFromModelOrigin(input.lastResolvedOrigin, input.baseUrl);
+    return classifyFromModelOrigin(input);
   }
 
   // auth: none — OR
   if (input.consoleSite === "international") {
     return { site: "international", siteReason: "positive-international" };
   }
-  return classifyFromModelOrigin(input.lastResolvedOrigin, input.baseUrl);
+  const modelResolution = classifyFromModelOrigin(input);
+  if (modelResolution.site === "international") {
+    return modelResolution;
+  }
+  if (input.consoleSite === "domestic") {
+    return { site: "domestic", siteReason: "positive-domestic" };
+  }
+  return modelResolution;
 }
 
-function classifyFromModelOrigin(
-  lastResolvedOrigin: string | undefined,
-  baseUrl: string | undefined,
-): TelemetrySiteResolution {
-  const host = hostnameOf(lastResolvedOrigin) ?? hostnameOf(baseUrl);
+function classifyFromModelOrigin(input: ResolveTelemetrySiteInput): TelemetrySiteResolution {
+  // lastResolvedOrigin is a real per-command choice and wins over the shared base URL.
+  const host =
+    hostnameOf(input.lastResolvedOrigin) ??
+    (input.baseUrlIsDefault ? undefined : hostnameOf(input.baseUrl));
   if (!host) {
     return { site: "domestic", siteReason: "default-fallback" };
   }

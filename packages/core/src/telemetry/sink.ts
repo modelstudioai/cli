@@ -166,7 +166,9 @@ export async function localSink(event: TrackingEvent | FirstInstallEvent): Promi
 export async function remoteSink(event: TrackingEvent | FirstInstallEvent): Promise<boolean> {
   try {
     // first_install has no command/auth context; it always reports domestic (best-effort).
-    const site: TelemetrySite = isFirstInstallEvent(event) ? "domestic" : (event.site ?? "domestic");
+    const site: TelemetrySite = isFirstInstallEvent(event)
+      ? "domestic"
+      : (event.site ?? "domestic");
     const entry = initRemoteForSite(site);
     if (!entry) return false;
     if (isFirstInstallEvent(event)) {

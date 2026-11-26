@@ -80,6 +80,7 @@ test("resolveSite uses client lastResolvedOrigin and settings.consoleSite", asyn
     command: { auth: "apiKey" },
     client: {
       baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
       lastResolvedOrigin: "https://ws.ap-southeast-1.maas.aliyuncs.com",
     },
     settings: { telemetry: true, consoleSite: "domestic" },
@@ -102,6 +103,7 @@ test("resolveSite for console auth ignores model baseUrl (D4=B)", async () => {
     command: { auth: "console" },
     client: {
       baseUrl: "https://dashscope-intl.aliyuncs.com",
+      baseUrlIsDefault: false,
       lastResolvedOrigin: undefined,
     },
     settings: {
@@ -118,6 +120,29 @@ test("resolveSite for console auth ignores model baseUrl (D4=B)", async () => {
   expect(deps.resolveSite()).toEqual({
     site: "international",
     siteReason: "positive-international",
+  });
+});
+
+test("resolveSite treats default baseUrl as fallback", async () => {
+  const next = vi.fn(async () => {});
+  const context = makeContext({
+    command: { auth: "openapi" },
+    client: {
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+      lastResolvedOrigin: undefined,
+    },
+    settings: { telemetry: true },
+  });
+
+  await telemetryStage(context, next);
+
+  const deps = trackerMocks.trackCommandExecution.mock.calls[0]![0] as {
+    resolveSite: () => { site: string; siteReason: string };
+  };
+  expect(deps.resolveSite()).toEqual({
+    site: "domestic",
+    siteReason: "default-fallback",
   });
 });
 
