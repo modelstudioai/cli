@@ -1181,6 +1181,8 @@ describe("e2e: auth", () => {
     expect(data.console?.region).toBe("cn-beijing");
     expect(data.hint).toContain("尚未配置模型 API Key");
     expect(data.hint).toContain("bl auth login --api-key <key>");
+    expect(data.hint).toContain("OpenAPI（AK/SK）未配置");
+    expect(data.hint).toContain("bl auth login --open-api");
     expect(json.stdout).not.toContain("console-token-placeholder");
 
     const text = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "text"], env);
@@ -1188,10 +1190,8 @@ describe("e2e: auth", () => {
     expect(text.stdout).toContain("API key (model):  not configured");
     expect(text.stdout).toContain("尚未配置模型 API Key");
     expect(text.stdout).toContain("OpenAPI (AK/SK):  not configured");
+    expect(text.stdout).toContain("OpenAPI（AK/SK）未配置");
     expect(text.stdout).toContain("bl auth login --open-api");
-    expect(text.stdout).toContain(
-      "bl auth login --open-api --access-key-id <id> --access-key-secret <secret>",
-    );
   });
 
   test("auth logout 清除当前 Config 的全部凭证和 Base URL，保留普通配置", async () => {
