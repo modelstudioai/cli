@@ -11,6 +11,7 @@ export {
   flushOutput,
   INTERRUPT_FLUSH_TIMEOUT_MS,
   trackStreamWrites,
+  type FlushOutputOptions,
 } from "./output/flush.ts";
 
 // Command Pack product policy

@@ -121,6 +121,7 @@ function presentationFlags(argv: string[]): Partial<SourceFlags> {
 interface ProcessOutputContext {
   getReporter: () => OutputReporter;
   localize: (text: LocalizedText) => string;
+  getOutputFormat: () => "text" | "json";
 }
 
 const activeProcessOutputs = new Set<ProcessOutputContext>();
@@ -160,7 +161,12 @@ function handleInterrupt(): void {
     );
   void flushTelemetry(500)
     .catch(() => undefined)
-    .then(() => flushOutput(INTERRUPT_FLUSH_TIMEOUT_MS))
+    .then(() =>
+      flushOutput(INTERRUPT_FLUSH_TIMEOUT_MS, {
+        mode: "deadline",
+        format: active.getOutputFormat(),
+      }),
+    )
     .finally(() => process.exit(130));
 }
 
@@ -171,7 +177,10 @@ function handleStdoutPipeError(error: NodeJS.ErrnoException): void {
   const active = activeProcessOutputs.values().next().value;
   if (active) {
     const code = active.getReporter().error(error);
-    void flushOutput().finally(() => process.exit(code));
+    void flushOutput(INTERRUPT_FLUSH_TIMEOUT_MS, {
+      mode: "deadline",
+      format: active.getOutputFormat(),
+    }).finally(() => process.exit(code));
     return;
   }
   // Outside an invocation, let other listeners handle errors or retain Node's failure behavior.
@@ -181,6 +190,7 @@ function handleStdoutPipeError(error: NodeJS.ErrnoException): void {
 function installProcessHandlers(
   getReporter: () => OutputReporter,
   localize: (text: LocalizedText) => string,
+  getOutputFormat: () => "text" | "json",
 ): () => void {
   if (!process.stdout.listeners("error").includes(handleStdoutPipeError)) {
     process.stdout.on("error", handleStdoutPipeError);
@@ -189,7 +199,7 @@ function installProcessHandlers(
     interruptExiting = false;
     process.on("SIGINT", handleInterrupt);
   }
-  const context = { getReporter, localize };
+  const context = { getReporter, localize, getOutputFormat };
   activeProcessOutputs.add(context);
   return () => {
     activeProcessOutputs.delete(context);
@@ -394,6 +404,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       let translator = createTranslator(DEFAULT_LANGUAGE);
       const localize = (text: LocalizedText) => translator.localize(text);
       const initialSettings = buildOutputSettings({ flags, env: process.env });
+      let outputFormat: "text" | "json" = initialSettings.output;
       let reporter = createOutputReporter({
         settings: initialSettings,
         localize,
@@ -401,13 +412,19 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         hasCommand,
       });
       const warnings: OutputDiagnostic[] = [];
-      const cleanup = installProcessHandlers(() => reporter, localize);
+      const cleanup = installProcessHandlers(
+        () => reporter,
+        localize,
+        () => outputFormat,
+      );
       try {
         const sources = buildSources(flags, (warning) => warnings.push(warning));
         const recoveryConfigName = resolveRecoveryConfigName(sources);
         translator = createTranslator(sources.file.language ?? DEFAULT_LANGUAGE);
+        const sourceSettings = buildOutputSettings(sources);
+        outputFormat = sourceSettings.output;
         reporter = createOutputReporter({
-          settings: buildOutputSettings(sources),
+          settings: sourceSettings,
           localize,
           commandPrefix,
           hasCommand,
@@ -416,6 +433,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         setupProxyFromEnv();
         const registry = await getRegistry(translator);
         await dispatch(registry, argv, localize, sources, (settings) => {
+          outputFormat = settings.output;
           reporter = createOutputReporter({
             settings,
             localize,
@@ -445,11 +463,14 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
  * `run()` itself stays unchanged for in-process harnesses. Install write
  * tracking before `run()` so every real write's callback is awaited; an empty
  * `write("")` flush is not reliable on Bun when stdout is a pipe.
+ *
+ * Success-path flush waits until writes complete (no hard timeout) so slow
+ * readers such as `| less` are not truncated.
  */
 export async function runToExit(cli: Cli, argv?: string[]): Promise<void> {
   trackStreamWrites(process.stdout);
   trackStreamWrites(process.stderr);
   await cli.run(argv);
-  await flushOutput();
+  await flushOutput(null);
   process.exit(process.exitCode ?? 0);
 }

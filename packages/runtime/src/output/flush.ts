@@ -10,13 +10,23 @@ import { writeSync } from "node:fs";
 const pending = new Set<Promise<void>>();
 const tracked = new WeakSet<NodeJS.WriteStream>();
 
-/** Default wait for success / error-render paths. */
+/** Default idle window when a numeric timeout is requested. */
 export const DEFAULT_FLUSH_TIMEOUT_MS = 5000;
 
-/** Short wait for Ctrl-C so a stuck write cannot feel like a hang. */
+/** Short hard deadline for Ctrl-C / broken-pipe paths. */
 export const INTERRUPT_FLUSH_TIMEOUT_MS = 500;
 
 type WriteCallback = (error?: Error | null) => void;
+
+export type FlushOutputOptions = {
+  /**
+   * `idle` (default): reset the timer whenever a write completes; time out only
+   * after `timeoutMs` with no progress. `deadline`: one shot from start.
+   */
+  mode?: "idle" | "deadline";
+  /** Skip the plain-text diagnostic when stderr must stay JSON-only. */
+  format?: "text" | "json";
+};
 
 export function trackStreamWrites(stream: NodeJS.WriteStream): void {
   if (tracked.has(stream)) return;
@@ -53,37 +63,91 @@ export function trackStreamWrites(stream: NodeJS.WriteStream): void {
   }) as typeof stream.write;
 }
 
+function emitFlushTimeoutWarning(format: "text" | "json" | undefined): void {
+  // JSON mode must keep stderr as parseable JSON lines; skip the plain warning.
+  if (format === "json") return;
+  try {
+    writeSync(
+      2,
+      "Warning: timed out waiting for stdout/stderr to flush; output may be truncated.\n" +
+        "警告：等待标准输出刷新超时，输出可能被截断。\n",
+    );
+  } catch {
+    // stderr may already be broken; ignore.
+  }
+}
+
 /**
- * Wait until every tracked write has completed, or `timeoutMs` has passed.
- * Returns true when the wait timed out (output may be truncated). Does not
- * change process.exitCode; callers keep their existing exit codes.
+ * Wait until every tracked write has completed.
+ *
+ * - `timeoutMs === null`: wait until all pending writes finish (no truncation on
+ *   slow readers such as `| less`).
+ * - numeric + `mode: "idle"`: reset the timer on each write completion; time out
+ *   only after `timeoutMs` with no progress.
+ * - numeric + `mode: "deadline"`: hard cap from the start (interrupt paths).
+ *
+ * Returns true when the wait timed out. Does not change process.exitCode.
  */
-export async function flushOutput(timeoutMs = DEFAULT_FLUSH_TIMEOUT_MS): Promise<boolean> {
+export async function flushOutput(
+  timeoutMs: number | null = DEFAULT_FLUSH_TIMEOUT_MS,
+  options: FlushOutputOptions = {},
+): Promise<boolean> {
   if (pending.size === 0) return false;
+
+  if (timeoutMs === null) {
+    await Promise.all(pending);
+    return false;
+  }
+
+  const mode = options.mode ?? "idle";
   const waiting = [...pending];
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timedOut = await Promise.race([
-    Promise.all(waiting).then(() => false),
-    new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => resolve(true), timeoutMs);
-      timer.unref?.();
-    }),
-  ]);
-  clearTimeout(timer);
-  // Drop waiters that never completed so a later flush is not blocked by them.
+  let timedOut = false;
+
+  if (mode === "deadline") {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    timedOut = await Promise.race([
+      Promise.all(waiting).then(() => false),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(true), timeoutMs);
+        timer.unref?.();
+      }),
+    ]);
+    clearTimeout(timer);
+  } else {
+    timedOut = await new Promise<boolean>((resolve) => {
+      let finished = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const finish = (timedOutResult: boolean) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        resolve(timedOutResult);
+      };
+
+      const armIdle = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => finish(true), timeoutMs);
+        timer.unref?.();
+      };
+
+      const onProgress = () => {
+        if (finished) return;
+        if (pending.size === 0) {
+          finish(false);
+          return;
+        }
+        armIdle();
+      };
+
+      for (const item of waiting) void item.then(onProgress);
+      armIdle();
+    });
+  }
+
   if (timedOut) {
     for (const done of waiting) pending.delete(done);
-    // Observable signal only — do not change exit codes. writeSync bypasses the
-    // tracked wrapper so this diagnostic is not itself left pending.
-    try {
-      writeSync(
-        2,
-        "Warning: timed out waiting for stdout/stderr to flush; output may be truncated.\n" +
-          "警告：等待标准输出刷新超时，输出可能被截断。\n",
-      );
-    } catch {
-      // stderr may already be broken; ignore.
-    }
+    emitFlushTimeoutWarning(options.format);
   }
   return timedOut;
 }

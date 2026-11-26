@@ -53,12 +53,53 @@ test("flushOutput waits for tracked write callbacks", async () => {
   expect(timedOut).toBe(false);
 });
 
-test("flushOutput returns true when a callback never fires", async () => {
+test("flushOutput with null timeout waits until writes complete", async () => {
+  vi.useFakeTimers();
+  const writable = createDeferredWriteStream();
+  writable.stream.write("slow");
+  const pending = flushOutput(null);
+  let settled = false;
+  void pending.then(() => {
+    settled = true;
+  });
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(settled).toBe(false);
+  writable.completeNext();
+  expect(await pending).toBe(false);
+  expect(settled).toBe(true);
+});
+
+test("flushOutput idle mode resets the timer when a write completes", async () => {
+  vi.useFakeTimers();
+  const writable = createDeferredWriteStream();
+  writable.stream.write("one");
+  writable.stream.write("two");
+
+  const pending = flushOutput(100, { mode: "idle" });
+  await vi.advanceTimersByTimeAsync(90);
+  writable.completeNext();
+  await vi.advanceTimersByTimeAsync(90);
+  expect(writable.pendingCount()).toBe(1);
+  writable.completeNext();
+  expect(await pending).toBe(false);
+});
+
+test("flushOutput deadline mode times out from the start", async () => {
   vi.useFakeTimers();
   const writable = createDeferredWriteStream({ neverComplete: true });
   writable.stream.write("stuck");
 
-  const pending = flushOutput(50);
+  const pending = flushOutput(50, { mode: "deadline" });
+  await vi.advanceTimersByTimeAsync(50);
+  expect(await pending).toBe(true);
+});
+
+test("flushOutput returns true when idle window elapses with no progress", async () => {
+  vi.useFakeTimers();
+  const writable = createDeferredWriteStream({ neverComplete: true });
+  writable.stream.write("stuck");
+
+  const pending = flushOutput(50, { mode: "idle" });
   await vi.advanceTimersByTimeAsync(50);
   expect(await pending).toBe(true);
 });

@@ -81,6 +81,13 @@ test("第二次 Ctrl-C 在中断刷新期间立即退出", async () => {
   try {
     await runInProcess(
       async () => {
+        const flush = await import("../src/output/flush.ts");
+        let releaseFlush!: (timedOut: boolean) => void;
+        const flushGate = new Promise<boolean>((resolve) => {
+          releaseFlush = resolve;
+        });
+        // Hold the first interrupt in flush so only the second SIGINT can exit synchronously.
+        const flushSpy = vi.spyOn(flush, "flushOutput").mockImplementation(() => flushGate);
         const cli = createCli(
           {
             fixture: {
@@ -90,11 +97,16 @@ test("第二次 Ctrl-C 在中断刷新期间立即退出", async () => {
                 const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
                 try {
                   process.emit("SIGINT");
+                  expect(exit).not.toHaveBeenCalled();
                   process.emit("SIGINT");
+                  expect(exit).toHaveBeenCalledTimes(1);
+                  expect(exit).toHaveBeenCalledWith(130);
+                  // Finish the first interrupt chain while exit is still mocked.
+                  releaseFlush(false);
                   await vi.waitFor(() => expect(exit.mock.calls.length).toBeGreaterThanOrEqual(2));
-                  expect(exit.mock.calls.every((call) => call[0] === 130)).toBe(true);
                 } finally {
                   exit.mockRestore();
+                  flushSpy.mockRestore();
                 }
               },
             },

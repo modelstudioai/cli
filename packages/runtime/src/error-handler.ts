@@ -17,7 +17,8 @@ export async function handleError(
   reporter: Pick<OutputReporter, "error">,
 ): Promise<never> {
   const code = reporter.error(error);
-  await flushOutput();
+  // Wait until writes complete; no timeout, so format-based warnings do not apply.
+  await flushOutput(null);
   process.exit(code);
 }
 
