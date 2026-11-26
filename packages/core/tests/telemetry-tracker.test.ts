@@ -132,7 +132,7 @@ test("resolveSite runs in finally and attaches site fields", async () => {
     },
   );
   expect(calledAfterCommand).toBe(true);
-  const event = sinkMocks.localSink.mock.calls[0]![0];
+  const event = asCommand(sinkMocks.localSink.mock.calls[0]![0]);
   expect(event).toMatchObject({
     site: "international",
     siteReason: "positive-international",
@@ -159,7 +159,7 @@ test("resolveSite failure still emits domestic event", async () => {
     {},
     async () => {},
   );
-  expect(sinkMocks.localSink.mock.calls[0]![0]).toMatchObject({
+  expect(asCommand(sinkMocks.localSink.mock.calls[0]![0])).toMatchObject({
     site: "domestic",
     siteReason: "default-fallback",
   });
