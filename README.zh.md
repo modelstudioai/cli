@@ -219,11 +219,13 @@ bl auth login --console --token-stdin --console-site international --console-reg
 
 MCP 管理命令和云端 Skill 命令会用工作空间 ID 自动拼接北京地域的专属域名。可用 `bl config set workspace_id <id>` 配置一次，也可通过 `BAILIAN_WORKSPACE_ID` 或 `--workspace-id` 指定。若已通过参数、环境变量或 Profile 设置模型 Base URL，则优先使用该地址。
 
-使用百炼 API Key 查询云端 Skill，例如 `bl skill search --keyword pdf --type official`。用结果中的 `skill_code` 执行 `bl skill get --name <skill_code>`，可查看最新版本及本地安装路径。省略 `--type` 会同时检索官方 Skill 和当前工作空间的私有 Skill。`skill get` 默认读取最新版本包中 `mcp-config.json` 声明的 MCP 服务编码。只需元数据时，加 `--with-mcp false` 可跳过下载。
+使用百炼 API Key 查询云端 Skill，例如 `bl skill search --keyword pdf --type official`。用结果中的 `skill_code` 执行 `bl skill get --code <skill_code>`，可查看最新版本及本地安装路径。省略 `--type` 会同时检索官方 Skill 和当前工作空间的私有 Skill。`skill get` 默认读取最新版本包中 `mcp-config.json` 声明的 MCP 服务编码。只需元数据时，加 `--with-mcp false` 可跳过下载。
 
-用 `bl skill add --name <skill_code> --agent cursor --scope project` 安装搜索到的 Skill。加 `--skill-version 1.0` 可固定版本。`bl skill list --scope project` 显示安装位置和状态。`bl skill update --name <skill_code> --scope project --diff --dry-run` 预览更新，去掉 `--dry-run` 后应用。`bl skill remove --name <skill_code> --agent cursor --scope project` 只移除该 Agent 的本地安装，可离线执行。这四个命令默认使用云端 OpenAPI。管理公开 Registry 的 Skill 时，加上 `--source oss`。
+用 `bl skill add --code <skill_code> --agent cursor --scope project` 安装搜索到的 Skill。加 `--skill-version 1.0` 可固定版本。`bl skill list --scope project` 显示安装位置和状态。`bl skill update --code <skill_code> --scope project --diff --dry-run` 预览更新，去掉 `--dry-run` 后应用。`bl skill remove --code <skill_code> --agent cursor --scope project` 只移除该 Agent 的本地安装，可离线执行。
 
-运行 Skill 命令时，CLI 会检查当前来源中未固定版本的已安装项，并在 stderr 提示可用更新。检查会复用本次目录查询，版本信息缓存 24 小时；卸载时只读有效缓存。执行 `bl skill update` 可应用更新，公开 Registry 加 `--source oss`。
+对指定 Skill 执行 `get`、`add`、`update`、`remove` 时，使用 `--code` 传入云端 OpenAPI 编码，或用 `--name` 传入公开 OSS Registry 名称，二者互斥。例如，`bl skill add --name spark-video` 安装一个公开 Skill，`bl skill add --all` 安装公开 OSS Registry 中的全部 Skill。用 `bl skill list --source oss` 查看公开目录。
+
+运行 Skill 命令时，CLI 会检查当前来源中未固定版本的已安装项，并在 stderr 提示可用更新。检查会复用本次目录查询，版本信息缓存 24 小时；卸载时只读有效缓存。运行 `bl skill update` 更新已安装的云端 Skill，或用 `bl skill update --all` 更新已安装的 OSS Skill。原有写法 `bl skill update --name all` 与 `bl skill update --all` 等效。
 
 安装时默认开通包内声明且尚未启用的 MCP 依赖，可能产生费用。使用 `--dry-run` 可预览开通计划。仅安装 Skill 可加 `--with-mcp false`。
 

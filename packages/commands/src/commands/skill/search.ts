@@ -112,7 +112,7 @@ export default defineSkillCommand({
       return;
     }
 
-    const local = readCatalogInstalls(ctx.client.baseUrl);
+    const local = readCatalogInstalls(ctx.client.baseUrl, "openapi");
     const skills = [];
     let pageEnd = page;
     let total: number;

@@ -51,8 +51,8 @@ export default defineSkillCommand({
       "zh-CN": "获取 Registry 索引并安装名称以 `bailian-` 开头的所有 Skill。",
     },
     {
-      "en-US": `Equivalent to: \`${commandRef("skill add --source oss --all")}\` (filtered to \`bailian-*\` skills).`,
-      "zh-CN": `等价于：\`${commandRef("skill add --source oss --all")}\`（筛选为 \`bailian-*\` Skill）。`,
+      "en-US": `Installs the \`bailian-*\` subset of \`${commandRef("skill add --all")}\`.`,
+      "zh-CN": `安装 \`${commandRef("skill add --all")}\` 中名称以 \`bailian-\` 开头的 Skill。`,
     },
   ],
   async run(ctx) {

@@ -4,7 +4,7 @@ import { BailianError, type CommandContext } from "bailian-cli-core";
 import { runSkillLifecycle, useTargetRecords, withSkillMutation } from "./lifecycle.ts";
 import { runRegistryLifecycle } from "./registry-lifecycle.ts";
 import { SkillAddPackages } from "./mcp-dependencies.ts";
-import { needsCloud, sourceFlag, targetFlags, validateSelection } from "./targets.ts";
+import { selectorFlags, sourceFlag, targetFlags, validateSelection } from "./targets.ts";
 
 const flags = {
   ...WORKSPACE_FLAG,
@@ -29,18 +29,11 @@ const flags = {
   all: {
     type: "switch",
     description: {
-      "en-US": "Install all skills from the registry",
-      "zh-CN": "安装 Registry 中的全部 Skill",
+      "en-US": "Install all skills from the public OSS registry",
+      "zh-CN": "安装公开 OSS Registry 中的全部 Skill",
     },
   },
-  name: {
-    type: "string",
-    valueHint: "<name,...>",
-    description: {
-      "en-US": "Comma-separated skill names to install",
-      "zh-CN": "要安装的 Skill 名称，以逗号分隔",
-    },
-  },
+  ...selectorFlags,
 } as const;
 
 type AddContext = Pick<
@@ -92,10 +85,10 @@ export default defineSkillCommand<typeof flags, SkillAddPackages | undefined>({
     "zh-CN": "将百炼 Skill Registry 中的 Skill 安装到本地 Agent",
   },
   auth: "apiKey",
-  requiresApiKey: (values) => needsCloud(values) || (values.withMcp !== false && "optional"),
+  requiresApiKey: (values) => values.code !== undefined || (values.withMcp !== false && "optional"),
   defaultOutput: "json",
   usageArgs:
-    "(--all | --name <code,...>) [--source oss|cloud] [--agent <agent|all>] [--scope user|project] [--skill-version <version>] [--with-mcp <bool>]",
+    "(--name <name,...> | --code <code,...> | --all) [--agent <agent|all>] [--scope user|project] [--skill-version <version>] [--with-mcp <bool>]",
   flags,
   notes: [
     {
@@ -106,12 +99,12 @@ export default defineSkillCommand<typeof flags, SkillAddPackages | undefined>({
     },
   ],
   validate(flags) {
-    return validateSelection(flags, true);
+    return validateSelection(flags, "add");
   },
   exampleArgs: [
     "--all",
-    "--source oss --name spark-video,bailian-model-recommend",
-    "--name pdf --agent cursor --scope project --skill-version 1.0 --dry-run",
+    "--name spark-video,bailian-model-recommend",
+    "--code skill_example --agent cursor --scope project --skill-version 1.0 --dry-run",
   ],
 
   async prepare(ctx) {

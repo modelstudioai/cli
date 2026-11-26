@@ -37,6 +37,7 @@ function fixture(workspaceId?: string) {
   mkdirSync(project);
   const state = {
     latest: "1.0",
+    cloudCodes: [id],
     expire: false,
     malformed: false,
     manifest: undefined as string | undefined,
@@ -153,7 +154,12 @@ function fixture(workspaceId?: string) {
       display_name: "Document reader",
     };
     if (url.pathname === collection)
-      return ok({ items: [skill], page_no: 1, page_size: 100, total: 1 });
+      return ok({
+        items: state.cloudCodes.map((code) => ({ ...skill, id: code })),
+        page_no: 1,
+        page_size: 100,
+        total: state.cloudCodes.length,
+      });
     if (url.pathname === collection + "/" + id) return ok(skill);
     if (url.pathname.startsWith(collection + "/" + id + "/versions/")) {
       const [version, content] = url.pathname
@@ -176,7 +182,92 @@ function fixture(workspaceId?: string) {
 
 const cursor = ["--agent", "cursor", "--scope", "project"];
 const claude = ["--agent", "claude-code", "--scope", "project"];
-test("default cloud and explicit OSS isolate same-name installs, including legacy records", async () => {
+test("ambiguous lifecycle selectors fail before authentication, requests or writes", async () => {
+  const { home, requests, run } = fixture();
+  const noKey = { DASHSCOPE_API_KEY: "" };
+  for (const command of ["add", "update", "remove", "list"]) {
+    const result = await run([command, "--name", "reader", "--code", id], noKey);
+    expect(result.exitCode, result.stderr).toBe(2);
+  }
+  for (const args of [
+    ["add", "--code", id, "--all"],
+    ["update", "--name", "reader", "--all"],
+    ["update", "--code", ""],
+    ["add", "--name", "reader,"],
+    ["list", "--name", "reader", "--source", "cloud"],
+    ["list", "--code", id, "--source", "oss"],
+    ["add", "--source", "cloud", "--all"],
+    ["update", "--source", "cloud", "--all"],
+    ["add", "--source", "oss", "--code", id],
+    ["update", "--source", "cloud", "--name", "reader"],
+    ["remove", "--source", "oss", "--code", id],
+  ]) {
+    const result = await run(args, noKey);
+    expect(result.exitCode, result.stderr).toBe(2);
+  }
+  expect(requests).toEqual([]);
+  expect(existsSync(join(home, "config", "skills"))).toBe(false);
+});
+
+test("bare add --all installs only public packages without cloud credentials", async () => {
+  const { home, state, requests, run } = fixture();
+  state.ossNames = ["reader", id];
+  const result = await run(["add", "--all"], { DASHSCOPE_API_KEY: "", DASHSCOPE_BASE_URL: "" });
+  expect(result.exitCode, result.stderr).toBe(0);
+  expect(JSON.parse(result.stdout).summary).toMatchObject({ succeeded: 2, failed: 0 });
+  expect(requests.sort()).toEqual(["/index.json", "/reader/skill.tar.br", `/${id}/skill.tar.br`]);
+  for (const name of state.ossNames)
+    expect(readFileSync(join(home, "config", "skills", name, "SKILL.md"), "utf8")).toContain(
+      "Public fixture",
+    );
+});
+
+test("update --all applies a new OSS revision only to installed project skills", async () => {
+  const { home, project, state, requests, run } = fixture();
+  const noCloud = { DASHSCOPE_API_KEY: "", DASHSCOPE_BASE_URL: "", BAILIAN_WORKSPACE_ID: "" };
+  state.ossNames = ["reader", "not-installed"];
+  const add = await run(["add", "--name", "reader", ...cursor, "--with-mcp", "false"], noCloud);
+  expect(add.exitCode, add.stderr).toBe(0);
+  const root = join(project, ".cursor", "skills");
+  const installed = join(root, "reader");
+  const revision = join(home, "new-revision");
+  mkdirSync(revision);
+  writeFileSync(join(revision, "SKILL.md"), readFileSync(join(installed, "SKILL.md")));
+  state.manifest = "{}";
+  writeFileSync(join(revision, "mcp-config.json"), state.manifest);
+  state.ossHash = core.computeDirContentHash(revision);
+
+  const list = await run(["list", "--name", "reader", ...cursor], noCloud);
+  expect(list.exitCode, list.stderr).toBe(0);
+  expect(JSON.parse(list.stderr).warning.details.update_command).toBe(
+    "bl skill update --all --scope project",
+  );
+  requests.length = 0;
+  const update = await run(["update", "--all", "--scope", "project"], noCloud);
+  expect(update.exitCode, update.stderr).toBe(0);
+  expect(JSON.parse(update.stdout).results).toMatchObject([
+    { code: "reader", source: "oss", reason: "UPDATED", agent: "cursor", scope: "project" },
+  ]);
+  expect(requests).toEqual(["/index.json", "/reader/skill.tar.br"]);
+  expect(core.computeDirContentHash(installed)).toBe(state.ossHash);
+  expect(existsSync(join(root, "not-installed"))).toBe(false);
+});
+
+test("list selects and filters by public name or exact OpenAPI code", async () => {
+  const { state, requests, run } = fixture();
+  state.ossNames = ["reader", id];
+  state.cloudCodes.push("other_code");
+  const publicList = await run(["list", "--name", id], { DASHSCOPE_API_KEY: "" });
+  expect(publicList.exitCode, publicList.stderr).toBe(0);
+  expect(JSON.parse(publicList.stdout).skills).toMatchObject([{ name: id, source: "oss" }]);
+  expect(requests.splice(0)).toEqual(["/index.json"]);
+  const cloudList = await run(["list", "--code", id]);
+  expect(cloudList.exitCode, cloudList.stderr).toBe(0);
+  expect(JSON.parse(cloudList.stdout).skills).toMatchObject([{ skill_code: id, source: "cloud" }]);
+  expect(requests).not.toContain("/index.json");
+});
+
+test("name and code select separate sources for same-name installs, including legacy records", async () => {
   const { home, run, requests } = fixture();
   const root = join(home, "config", "skills");
   const localFile = join(root, "reader", "SKILL.md");
@@ -191,7 +282,7 @@ test("default cloud and explicit OSS isolate same-name installs, including legac
       skills: { reader: { installedAt: "2026-01-01", links: [missingOssPath] } },
     }),
   );
-  const noKey = { DASHSCOPE_API_KEY: "" };
+  const noKey = { DASHSCOPE_API_KEY: "", DASHSCOPE_BASE_URL: "", BAILIAN_WORKSPACE_ID: "" };
   const unauthenticated = await run(["list"], noKey);
   expect(unauthenticated.exitCode, unauthenticated.stderr).toBe(3);
   expect(requests).toEqual([]);
@@ -206,27 +297,53 @@ test("default cloud and explicit OSS isolate same-name installs, including legac
   expect(JSON.parse(cloudList.stdout).skills).toMatchObject([
     { skill_code: id, source: "cloud", status: "not-installed" },
   ]);
-  const conflict = await run(["add", "--name", id, "--agent", "claude-code"]);
+  const conflict = await run(["add", "--code", id, "--agent", "claude-code"]);
   expect(conflict.exitCode).toBe(1);
   expect(JSON.parse(conflict.stdout).results[0].reason).toBe("SOURCE_CONFLICT");
   expect(existsSync(missingOssPath)).toBe(false);
-  const add = await run(["add", "--name", id, "--agent", "cursor"]);
+  const add = await run(["add", "--code", id, "--agent", "cursor"]);
   expect(add.exitCode, add.stderr).toBe(0);
   expect(existsSync(cloudFile)).toBe(true);
-  const update = await run(["update", "--all"]);
+  const byAlias = await run([
+    "add",
+    "--code",
+    "reader",
+    "--agent",
+    "cursor",
+    "--with-mcp",
+    "false",
+  ]);
+  expect(byAlias.exitCode, byAlias.stderr).toBe(1);
+  expect(requests).toContain(`${collection}/reader`);
+  const update = await run(["update"]);
   expect(update.exitCode, update.stderr).toBe(0);
   expect(JSON.parse(update.stdout).results).toMatchObject([{ code: id, reason: "UP_TO_DATE" }]);
   expect(requests).not.toContain("/index.json");
   requests.length = 0;
-  const ossUpdate = await run(["update", "--source", "oss", "--all", "--dry-run"], noKey);
+  const ossUpdate = await run(["update", "--all", "--dry-run"], noKey);
   expect(ossUpdate.exitCode, ossUpdate.stderr).toBe(0);
   expect(JSON.parse(ossUpdate.stdout).results).toMatchObject([{ code: "reader" }]);
   expect(requests.splice(0)).toEqual(["/index.json"]);
-  const remove = await run(["remove", "--name", "all"], noKey);
+  for (const selector of [
+    ["--source", "oss"],
+    ["--name", "all"],
+  ]) {
+    const legacyUpdate = await run(["update", ...selector, "--dry-run"], noKey);
+    expect(legacyUpdate.exitCode, legacyUpdate.stderr).toBe(0);
+    expect(JSON.parse(legacyUpdate.stdout)).toEqual(JSON.parse(ossUpdate.stdout));
+    expect(requests.splice(0)).toEqual(["/index.json"]);
+  }
+  const wrongCode = await run(["remove", "--code", "reader"], noKey);
+  expect(wrongCode.exitCode, wrongCode.stderr).toBe(1);
+  expect(JSON.parse(wrongCode.stdout).results).toMatchObject([
+    { code: "reader", reason: "NOT_INSTALLED" },
+  ]);
+  expect(existsSync(cloudFile)).toBe(true);
+  const remove = await run(["remove", "--code", id], noKey);
   expect(remove.exitCode, remove.stderr).toBe(0);
   expect(existsSync(cloudFile)).toBe(false);
   expect(readFileSync(localFile, "utf8")).toBe("public copy");
-  const removeOss = await run(["remove", "--source", "oss", "--name", "reader"], noKey);
+  const removeOss = await run(["remove", "--name", "reader"], noKey);
   expect(removeOss.exitCode, removeOss.stderr).toBe(0);
   expect(existsSync(localFile)).toBe(false);
   expect(requests).toEqual([]);
@@ -236,7 +353,7 @@ test("cloud installs share packages, respect pins, preview and apply updates, th
   const cursorFile = join(project, ".cursor", "skills", "reader", "SKILL.md");
   const claudeFile = join(project, ".claude", "skills", "reader", "SKILL.md");
   const lock = join(home, "config", "skills", "skill-lock.json");
-  const add = ["add", "--name", id];
+  const add = ["add", "--code", id];
   const preview = await run([...add, ...cursor, "--dry-run"]);
   expect(preview.exitCode, preview.stderr).toBe(0);
   expect(requests.splice(0)).toEqual([
@@ -281,11 +398,12 @@ test("cloud installs share packages, respect pins, preview and apply updates, th
       details: {
         scope: "project",
         source: "cloud",
+        update_command: "bl skill update --scope project",
         skills: [{ skill_code: id, agent: "cursor", current: "1.0", latest: "1.1" }],
       },
     },
   });
-  const update = ["update", "--name", "reader", ...cursor, "--diff"];
+  const update = ["update", "--code", id, ...cursor, "--diff"];
   const before = readFileSync(lock);
   const plan = await run([...update, "--dry-run"]);
   expect(JSON.parse(plan.stdout).results[0].diff).toEqual({
@@ -299,11 +417,11 @@ test("cloud installs share packages, respect pins, preview and apply updates, th
   expect(updated.exitCode, updated.stderr).toBe(0);
   expect(JSON.parse(updated.stdout).results[0].diff.modified).toEqual(["SKILL.md"]);
   expect(readFileSync(cursorFile, "utf8")).toContain("1.1");
-  const fixed = await run(["update", "--name", id, ...claude]);
+  const fixed = await run(["update", "--code", id, ...claude]);
   expect(JSON.parse(fixed.stdout).summary.noop).toBe(1);
   expect(readFileSync(claudeFile, "utf8")).toContain("1.0");
   const count = requests.length;
-  const removed = await run(["remove", "--name", "reader", ...cursor], {
+  const removed = await run(["remove", "--code", id, ...cursor], {
     DASHSCOPE_API_KEY: "",
     BAILIAN_WORKSPACE_ID: "",
   });
@@ -319,25 +437,25 @@ test("untracked and edited files survive; invalid replacement preserves both ins
   mkdirSync(directory, { recursive: true });
   const file = join(directory, "SKILL.md");
   writeFileSync(file, "existing");
-  const add = ["add", "--source", "cloud", "--name", id, ...cursor];
+  const add = ["add", "--code", id, ...cursor];
   const conflict = await run(add);
   expect(JSON.parse(conflict.stdout).results[0].reason).toBe("UNTRACKED_CONFLICT");
   expect(readFileSync(file, "utf8")).toBe("existing");
   rmSync(directory, { recursive: true });
-  const partial = await run(["add", "--source", "cloud", "--name", id + ",unknown", ...cursor]);
+  const partial = await run(["add", "--code", id + ",unknown", ...cursor]);
   expect(partial.exitCode).toBe(1);
   expect(JSON.parse(partial.stdout).summary).toEqual({ succeeded: 1, failed: 1, noop: 0 });
   const lock = join(home, "config", "skills", "skill-lock.json");
   const before = readFileSync(lock);
   state.latest = "1.1";
   state.malformed = true;
-  const failed = await run(["update", "--name", id, ...cursor]);
+  const failed = await run(["update", "--code", id, ...cursor]);
   expect(failed.exitCode).toBe(1);
   expect(readFileSync(lock)).toEqual(before);
   expect(readFileSync(file, "utf8")).toContain("1.0");
   writeFileSync(file, "local edit");
   for (const action of ["update", "remove"]) {
-    const result = await run([action, "--name", id, ...cursor]);
+    const result = await run([action, "--code", id, ...cursor]);
     expect(result.exitCode).toBe(1);
     expect(JSON.parse(result.stdout).results[0].reason).toBe("MODIFIED_CONFLICT");
   }
@@ -350,7 +468,7 @@ test("list reconciles disk, scoped records and the catalog; update restores a mi
   const args = ["list", ...cursor];
   const empty = await run(args);
   expect(JSON.parse(empty.stdout).skills[0].status).toBe("not-installed");
-  const installed = await run(["add", "--source", "cloud", "--all", ...cursor]);
+  const installed = await run(["add", "--code", id, ...cursor]);
   expect(installed.exitCode, installed.stderr).toBe(0);
   const root = join(project, ".cursor", "skills");
   mkdirSync(join(root, "handmade"));
@@ -364,7 +482,7 @@ test("list reconciles disk, scoped records and the catalog; update restores a mi
   const missing = await run([...args, "--status", "missing"]);
   expect(JSON.parse(missing.stdout).skills[0].status).toBe("missing");
   const fetched = requests.filter((path) => path === "/1.0").length;
-  const repair = await run(["update", "--all", ...cursor]);
+  const repair = await run(["update", ...cursor]);
   expect(repair.exitCode, repair.stderr).toBe(0);
   expect(readFileSync(join(root, "reader", "SKILL.md"), "utf8")).toContain("1.0");
   expect(requests.filter((path) => path === "/1.0")).toHaveLength(fetched);
@@ -388,7 +506,7 @@ test("skill add previews dependencies without writing and activates each require
     DASHSCOPE_API_KEY: "private-placeholder",
   });
   const base = "/api/v1/mcp/servers/";
-  const args = ["add", "--name", id, ...cursor];
+  const args = ["add", "--code", id, ...cursor];
   const destinations = [
     join(home, "config", "skills", "skill-lock.json"),
     join(project, ".cursor", "skills", "reader"),
@@ -437,7 +555,7 @@ test("skill add previews dependencies without writing and activates each require
 test("manual MCP setup preserves local installation and reports a console link", async () => {
   const { run, project, state } = fixture();
   state.manifest = JSON.stringify({ manual: { serverCode: "manual" } });
-  const result = await run(["add", "--name", id, ...cursor]);
+  const result = await run(["add", "--code", id, ...cursor]);
   expect(result.exitCode, result.stderr).toBe(1);
   expect(JSON.parse(result.stdout)).toMatchObject({
     summary: { succeeded: 1 },
@@ -456,7 +574,7 @@ test("manual MCP setup preserves local installation and reports a console link",
 test("OSS fan-out reads the same manifest, supports explicit credentials and keeps installation available without a key", async () => {
   const { home, run, requests, state } = fixture();
   state.manifest = JSON.stringify({ finance: { serverCode: "market-finance" } });
-  const args = ["add", "--source", "oss", "--name", "reader"];
+  const args = ["add", "--name", "reader"];
   const offline = await run(args, { DASHSCOPE_API_KEY: "" });
   expect(offline.exitCode, offline.stderr).toBe(3);
   expect(JSON.parse(offline.stdout)).toMatchObject({
@@ -483,7 +601,7 @@ test("OSS fan-out reads the same manifest, supports explicit credentials and kee
 test("invalid manifests do not disclose their contents or issue MCP requests", async () => {
   const { run, requests, state } = fixture();
   state.manifest = '{"DASHSCOPE_API_KEY":"private-placeholder",';
-  const args = ["add", "--name", id, ...cursor];
+  const args = ["add", "--code", id, ...cursor];
   const invalid = await run(args);
   expect(invalid.exitCode, invalid.stderr).toBe(1);
   expect(invalid.stderr + invalid.stdout).not.toContain("private-placeholder");
@@ -494,7 +612,7 @@ test("invalid manifests do not disclose their contents or issue MCP requests", a
 
 test("skill get reads by default from the latest package without installing or contacting MCP; absent and empty declarations differ", async () => {
   const { run, state, requests, home } = fixture();
-  const get = ["get", "--name", id];
+  const get = ["get", "--code", id];
   const detail = await run([...get, "--with-mcp", "false"]);
   expect(detail.exitCode, detail.stderr).toBe(0);
   expect(requests.splice(0)).toEqual([`${collection}/${id}`]);
@@ -528,7 +646,7 @@ test("bulk OSS installation activates a shared dependency once and identifies bo
   const { state, run, requests } = fixture();
   state.manifest = JSON.stringify({ shared: { serverCode: "shared" } });
   state.ossNames = ["reader", "writer"];
-  const result = await run(["add", "--all", "--source", "oss"]);
+  const result = await run(["add", "--all"]);
   expect(result.exitCode, result.stderr).toBe(0);
   expect(JSON.parse(result.stdout)).toMatchObject({
     summary: { succeeded: 2 },
@@ -562,7 +680,7 @@ test("legacy OSS previews and repairs only missing agent links, then reports a n
       },
     }),
   );
-  const args = ["update", "--source", "oss", "--name", "reader"];
+  const args = ["update", "--name", "reader"];
   const before = readFileSync(lock);
   for (const preview of [true, false]) {
     const result = await run(preview ? [...args, "--dry-run"] : args);
@@ -622,7 +740,7 @@ test("legacy OSS removal restores the canonical package, symlink, fallback copy 
     ).toBe(true);
     throw new Error("fixture lock write failed");
   });
-  const args = ["remove", "--source", "oss", "--name", "reader"];
+  const args = ["remove", "--name", "reader"];
   const failed = await run(args);
   expect(failed.exitCode).toBe(1);
   expect(failed.stderr).toContain("fixture lock write failed");
@@ -649,11 +767,16 @@ test("OSS update checks use one catalog read, notify without modifying installs 
   const before = readFileSync(lock);
   const list = await run(["list", "--source", "oss"], { DASHSCOPE_API_KEY: "" });
   expect(list.exitCode, list.stderr).toBe(0);
-  expect(list.stderr).toContain("SKILL_UPDATE_AVAILABLE");
+  expect(JSON.parse(list.stderr)).toMatchObject({
+    warning: {
+      code: "SKILL_UPDATE_AVAILABLE",
+      details: { update_command: "bl skill update --all" },
+    },
+  });
   expect(readFileSync(lock)).toEqual(before);
   expect(readFileSync(join(root, "reader", "SKILL.md"), "utf8")).toBe("original");
   expect(requests.splice(0)).toEqual(["/index.json"]);
-  const removal = await run(["remove", "--source", "oss", "--name", "old"]);
+  const removal = await run(["remove", "--name", "old"]);
   expect(removal.exitCode, removal.stderr).toBe(0);
   expect(removal.stderr).toContain("SKILL_UPDATE_AVAILABLE");
   expect(requests).toEqual([]);

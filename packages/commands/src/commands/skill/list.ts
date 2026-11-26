@@ -6,17 +6,17 @@ import {
   fetchSkillsIndex,
   getSkillRegistryBaseUrl,
   installationRoots,
-  getSkillsDir,
   readCatalogInstalls,
   readSkillLock,
   type SkillStatus,
   type SkillStatusRow,
-  type SkillLockEntry,
 } from "bailian-cli-core";
 import { cloudCatalog } from "./packages.ts";
 import {
   needsCloud,
   selectedEntries,
+  selectedNames,
+  selectorFlags,
   skillSource,
   sourceFlag,
   targetFlags,
@@ -34,10 +34,12 @@ export default defineSkillCommand({
   auth: "apiKey",
   requiresApiKey: needsCloud,
   defaultOutput: "json",
-  usageArgs: "[--source oss|cloud] [--agent <agent|all>] [--scope user|project] [--status <s,...>]",
+  usageArgs:
+    "[--name <name,...> | --code <code,...> | --source oss|cloud] [--agent <agent|all>] [--scope user|project] [--status <s,...>]",
   flags: {
     ...WORKSPACE_FLAG,
     source: sourceFlag,
+    ...selectorFlags,
     ...targetFlags,
     status: {
       type: "string",
@@ -51,6 +53,8 @@ export default defineSkillCommand({
   exampleArgs: [
     "",
     "--source oss --status not-installed",
+    "--name spark-video",
+    "--code skill_example",
     "--agent cursor --scope project --status installed,outdated",
   ],
   notes: [
@@ -75,6 +79,7 @@ export default defineSkillCommand({
   async run(ctx) {
     const flags = ctx.flags;
     const source = skillSource(flags);
+    const selected = selectedNames(flags);
     const scope = flags.scope ?? "user";
     const lock = readSkillLock();
     const records = selectedEntries(flags, lock);
@@ -100,34 +105,31 @@ export default defineSkillCommand({
     const local = readCatalogInstalls(ctx.client.baseUrl, type, lock);
     type Item = {
       name: string;
+      code?: string;
       version?: string | null;
       hash?: string;
       description?: string;
       publishedAt?: string;
     };
     const items = new Map<string, Item>();
-    const byPath = new Map<string, SkillLockEntry>();
     for (const [key, entry] of records) {
       if (type === "openapi" && entry.sourceLocation && entry.sourceLocation !== ctx.client.baseUrl)
         continue;
       const name = entry.canonicalName ?? key;
-      items.set(entry.remoteId ?? name, {
+      items.set(source === "oss" ? name : (entry.remoteId ?? name), {
         name,
+        code: entry.remoteId,
         description: entry.description,
         publishedAt: entry.publishedAt,
       });
-      for (const path of [
-        entry.installedPath ?? join(getSkillsDir(), name),
-        ...(entry.links ?? []),
-      ])
-        byPath.set(path, entry);
     }
     if (source === "oss") {
       const index = observeRegistry(ctx, await fetchSkillsIndex());
       updatedAt = index.updatedAt;
       for (const [name, entry] of Object.entries(index.skills)) {
-        items.set(entry.remoteId ?? name, {
+        items.set(name, {
           name,
+          code: entry.remoteId,
           version: entry.version,
           hash: entry.contentHash,
           description: entry.description,
@@ -158,10 +160,12 @@ export default defineSkillCommand({
           items.set(entry.name, { name: entry.name });
       }
     }
-    for (const [id, item] of items) {
+    for (const [key, item] of items) {
+      if (selected !== "all" && !selected.includes(key)) continue;
+      const id = item.code ?? key;
       const version = item.version ?? null;
       const locations = local
-        .inspect(id, version, item.name)
+        .inspect(id, version, item.name, item.hash)
         .installations.filter(
           (row) =>
             row.scope === scope &&
@@ -179,14 +183,7 @@ export default defineSkillCommand({
             },
           ];
       for (const row of rows) {
-        const record = row.installed_path ? byPath.get(row.installed_path) : undefined;
-        const status =
-          row.install_state === "installed" &&
-          record &&
-          item.hash &&
-          record.contentHash !== item.hash
-            ? "outdated"
-            : row.install_state;
+        const status = row.install_state;
         if (!wanted.size || wanted.has(status))
           skills.push({
             name: item.name,

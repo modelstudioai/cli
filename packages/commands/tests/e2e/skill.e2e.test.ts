@@ -45,6 +45,7 @@ describe("e2e: skill", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--all/);
     expect(stderr).toMatch(/--name/);
+    expect(stderr).toContain("--code");
   });
 
   test("skill update --help exits successfully", async () => {
@@ -52,12 +53,14 @@ describe("e2e: skill", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--all/);
     expect(stderr).toMatch(/--name/);
+    expect(stderr).toContain("--code");
   });
 
   test("skill remove --help exits successfully", async () => {
     const { stderr, exitCode } = await runCommandHelp(SKILL_ROUTES, ["skill", "remove", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--name/);
+    expect(stderr).toContain("--code");
   });
 
   test("skill list --help exits successfully", async () => {
@@ -75,7 +78,7 @@ describe("e2e: skill", () => {
 
 // Local-only cases: no credentials; update uses a loopback registry fixture.
 describe("e2e: skill (local, no credentials)", () => {
-  test("skill add without --all or --name errors as usage error (2)", async () => {
+  test("skill add without a selector errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
       "skill",
       "add",
@@ -98,7 +101,7 @@ describe("e2e: skill (local, no credentials)", () => {
     expect(`${stdout}\n${stderr}`).toMatch(/--all|--name|either/i);
   });
 
-  test("skill remove without --name errors as usage error (2)", async () => {
+  test("skill remove without a selector errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
       "skill",
       "remove",
@@ -112,16 +115,7 @@ describe("e2e: skill (local, no credentials)", () => {
     const configDir = makeTempConfigDir();
     const { stdout, exitCode } = await runCommandE2e(
       SKILL_ROUTES,
-      [
-        "skill",
-        "remove",
-        "--source",
-        "oss",
-        "--name",
-        "definitely-not-installed",
-        "--output",
-        "json",
-      ],
+      ["skill", "remove", "--name", "definitely-not-installed", "--output", "json"],
       { BAILIAN_CONFIG_DIR: configDir },
     );
     expect(exitCode).toBe(1);
@@ -136,17 +130,7 @@ describe("e2e: skill (local, no credentials)", () => {
     const configDir = makeTempConfigDir();
     const { stdout, exitCode } = await runCommandE2e(
       SKILL_ROUTES,
-      [
-        "skill",
-        "remove",
-        "--source",
-        "oss",
-        "--name",
-        "definitely-not-installed",
-        "--dry-run",
-        "--output",
-        "json",
-      ],
+      ["skill", "remove", "--name", "definitely-not-installed", "--dry-run", "--output", "json"],
       { BAILIAN_CONFIG_DIR: configDir },
     );
     expect(exitCode).toBe(1);
@@ -173,17 +157,7 @@ describe("e2e: skill (local, no credentials)", () => {
 
     const { stdout, stderr, exitCode } = await runCommandE2e(
       SKILL_ROUTES,
-      [
-        "skill",
-        "remove",
-        "--source",
-        "oss",
-        "--name",
-        "seeded-skill",
-        "--dry-run",
-        "--output",
-        "json",
-      ],
+      ["skill", "remove", "--name", "seeded-skill", "--dry-run", "--output", "json"],
       { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
     );
     expect(exitCode, stderr).toBe(0);
@@ -232,17 +206,7 @@ describe("e2e: skill (local, no credentials)", () => {
       const registryUrl = `http://127.0.0.1:${address.port}`;
       const { stdout, stderr, exitCode } = await runCommandE2e(
         SKILL_ROUTES,
-        [
-          "skill",
-          "update",
-          "--source",
-          "oss",
-          "--name",
-          "definitely-not-installed",
-          "--dry-run",
-          "--output",
-          "json",
-        ],
+        ["skill", "update", "--name", "definitely-not-installed", "--dry-run", "--output", "json"],
         {
           BAILIAN_CONFIG_DIR: configDir,
           HOME: fakeHome,
@@ -295,7 +259,7 @@ describe.skipIf(!isBailianE2EEnabled())("e2e: skill (real registry)", () => {
 
     const { stdout, stderr, exitCode } = await runCommandE2e(
       SKILL_ROUTES,
-      ["skill", "add", "--source", "oss", "--name", WIKI_SKILL, "--dry-run", "--output", "json"],
+      ["skill", "add", "--name", WIKI_SKILL, "--dry-run", "--output", "json"],
       { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
     );
     expect(exitCode, stderr).toBe(0);
@@ -330,17 +294,7 @@ describe.skipIf(!isBailianE2EEnabled())("e2e: skill (real registry)", () => {
     const fakeHome = makeTempConfigDir();
     const { stdout, exitCode } = await runCommandE2e(
       SKILL_ROUTES,
-      [
-        "skill",
-        "add",
-        "--source",
-        "oss",
-        "--name",
-        "definitely-not-in-registry",
-        "--dry-run",
-        "--output",
-        "json",
-      ],
+      ["skill", "add", "--name", "definitely-not-in-registry", "--dry-run", "--output", "json"],
       { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
     );
     expect(exitCode).toBe(1);
@@ -388,7 +342,7 @@ describe.skipIf(!isBailianE2EEnabled())("e2e: skill (real registry)", () => {
 
     const added = await runCommandE2e(
       SKILL_ROUTES,
-      ["skill", "add", "--source", "oss", "--name", WIKI_SKILL, "--output", "json"],
+      ["skill", "add", "--name", WIKI_SKILL, "--output", "json"],
       env,
     );
     expect(added.exitCode, added.stderr).toBe(0);
@@ -400,7 +354,7 @@ describe.skipIf(!isBailianE2EEnabled())("e2e: skill (real registry)", () => {
 
     const removed = await runCommandE2e(
       SKILL_ROUTES,
-      ["skill", "remove", "--source", "oss", "--name", WIKI_SKILL, "--output", "json"],
+      ["skill", "remove", "--name", WIKI_SKILL, "--output", "json"],
       env,
     );
     expect(removed.exitCode, removed.stderr).toBe(0);

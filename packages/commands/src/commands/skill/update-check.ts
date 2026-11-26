@@ -132,7 +132,7 @@ async function checkInstalled(ctx: Context, source: Source, offline: boolean) {
     const names = [...new Set(outdated.map((entry) => entry.id))].join(", ");
     const command = formatCommand(
       ctx.identity,
-      `skill update --source ${source}${scope === "project" ? " --scope project" : ""}`,
+      `skill update${source === "oss" ? " --all" : ""}${scope === "project" ? " --scope project" : ""}`,
     );
     ctx.output.warning({
       code: "SKILL_UPDATE_AVAILABLE",
@@ -159,21 +159,21 @@ export function defineSkillCommand<F extends FlagsDef, Prepared = undefined>({
   updateCheck,
   localDryRun,
   ...command
-}: Command<F, Prepared> & { updateCheck?: "oss" | "offline"; localDryRun?: boolean }): Command<
-  F,
-  Prepared
-> {
+}: Command<F, Prepared> & {
+  updateCheck?: "oss" | "offline";
+  localDryRun?: boolean;
+}): Command<F, Prepared> {
   return defineCommand({
     ...command,
     defaultApiBaseUrl({ flags, settings, localize }) {
       const selection: Selection = flags as Selection;
       if (updateCheck || (localDryRun && settings.dryRun)) return;
       // Public packages only use the cloud when add checks their MCP dependencies.
-      if (skillSource(selection) === "oss" && (!command.prepare || selection.withMcp === false))
-        return;
+      const source = skillSource(selection);
+      if (source === "oss" && (!command.prepare || selection.withMcp === false)) return;
       const id = selection.workspaceId ?? settings.workspaceId;
       if (id) return skillBaseUrl(id);
-      if (skillSource(selection) === "oss") return;
+      if (source === "oss") return;
       throw new BailianError(
         localize({
           "en-US":

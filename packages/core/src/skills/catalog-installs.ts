@@ -63,7 +63,7 @@ export function readCatalogInstalls(
   for (const [key, entry] of Object.entries(lock.skills)) {
     if (!entry || typeof entry !== "object") continue;
     const name = entry.canonicalName ?? key;
-    const id = entry.remoteId ?? name;
+    const id = source === "oss" ? name : (entry.remoteId ?? name);
     if (
       typeof name !== "string" ||
       !isSafeSkillName(name) ||
@@ -94,19 +94,26 @@ export function readCatalogInstalls(
     idsByName.set(name, ids);
   }
 
-  function inspect(id: string, latestVersion: string | null, canonicalName?: string) {
+  function inspect(
+    id: string,
+    latestVersion: string | null,
+    canonicalName?: string,
+    latestContentHash?: string,
+  ) {
     const locations = new Map<string, SkillLocation>();
+    const lookupId = source === "oss" ? (canonicalName ?? id) : id;
     const names = new Set<string>();
     if (canonicalName) names.add(canonicalName);
-    if (!idsByName.has(id) || idsByName.get(id)?.has(id)) names.add(id);
-    for (const { name, entry, paths } of records.get(id) ?? []) {
+    if (!idsByName.has(lookupId) || idsByName.get(lookupId)?.has(lookupId)) names.add(lookupId);
+    for (const { name, entry, paths } of records.get(lookupId) ?? []) {
       names.add(name);
       for (const path of paths) {
         const root = roots.get(dirname(path));
         const lockedVersion = entry.installedVersion ?? null;
         const state = !hasSkillManifest(path)
           ? "missing"
-          : lockedVersion && latestVersion && lockedVersion !== latestVersion
+          : (lockedVersion && latestVersion && lockedVersion !== latestVersion) ||
+              (latestContentHash && latestContentHash !== entry.contentHash)
             ? "outdated"
             : "installed";
         locations.set(path, {

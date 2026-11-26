@@ -2,7 +2,13 @@ import { WORKSPACE_FLAG } from "../shared/workspace.ts";
 import { defineSkillCommand } from "./update-check.ts";
 import { runSkillLifecycle, useTargetRecords, withSkillMutation } from "./lifecycle.ts";
 import { runRegistryLifecycle } from "./registry-lifecycle.ts";
-import { needsCloud, sourceFlag, targetFlags, validateSelection } from "./targets.ts";
+import {
+  needsCloud,
+  selectorFlags,
+  sourceFlag,
+  targetFlags,
+  validateSelection,
+} from "./targets.ts";
 
 export default defineSkillCommand({
   description: {
@@ -13,7 +19,7 @@ export default defineSkillCommand({
   requiresApiKey: needsCloud,
   defaultOutput: "json",
   usageArgs:
-    "[--all | --name <code,...>] [--source oss|cloud] [--agent <agent|all>] [--scope user|project] [--diff]",
+    "[--name <name,...> | --code <code,...> | --all] [--agent <agent|all>] [--scope user|project] [--diff]",
   flags: {
     ...WORKSPACE_FLAG,
     source: sourceFlag,
@@ -28,20 +34,18 @@ export default defineSkillCommand({
     all: {
       type: "switch",
       description: {
-        "en-US": "Update all installed skills (default when neither --all nor --name is given)",
-        "zh-CN": "更新全部已安装 Skill（未指定 --all 或 --name 时的默认行为）",
+        "en-US": "Update all installed public OSS skills in the selected scope",
+        "zh-CN": "更新所选范围内全部已安装的公开 OSS Skill",
       },
     },
-    name: {
-      type: "string",
-      valueHint: "<name,...>",
-      description: {
-        "en-US": "Comma-separated skill names to update (must be already installed)",
-        "zh-CN": "要更新的 Skill 名称，以逗号分隔（必须已安装）",
-      },
-    },
+    ...selectorFlags,
   },
   notes: [
+    {
+      "en-US":
+        "--name all is an alias for --all. With no selector, update installed cloud skills in the selected scope.",
+      "zh-CN": "--name all 是 --all 的兼容写法。省略选择参数时，更新所选范围内已安装的云端 Skill。",
+    },
     {
       "en-US":
         "Other Skill commands check for updates to unpinned installations from the selected source. Available updates appear on stderr. Removal uses the cached check offline.",
@@ -55,8 +59,8 @@ export default defineSkillCommand({
   exampleArgs: [
     "",
     "--all",
-    "--source oss --name spark-video",
-    "--name pdf --agent cursor --scope project --diff --dry-run",
+    "--name spark-video",
+    "--code skill_example --agent cursor --scope project --diff --dry-run",
   ],
 
   async run(ctx) {

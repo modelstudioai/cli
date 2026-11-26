@@ -11,7 +11,6 @@ import {
   getSkillsDir,
   installationRoots,
   planUnlinkSkillFromAgents,
-  readCatalogInstalls,
   readSkillLock,
   validateSkillDir,
   writeSkillLock,
@@ -20,7 +19,7 @@ import {
   type SkillsIndex,
 } from "bailian-cli-core";
 import { withStateLock } from "../shared/state-lock.ts";
-import { cloudCatalog, cloudRevision, unpackRevision, type Revision } from "./packages.ts";
+import { cloudRevision, unpackRevision, type Revision } from "./packages.ts";
 import {
   cachedPackage,
   cacheKey,
@@ -32,6 +31,7 @@ import {
 import {
   checkContent,
   checkProjectRoot,
+  entrySelector,
   installTargets,
   otherSourcePaths,
   present,
@@ -54,18 +54,13 @@ export function withSkillMutation<T>(
   return ctx.settings.dryRun ? run() : withStateLock(getSkillLockPath(), ctx.localize, run);
 }
 export function useTargetRecords(flags: Selection) {
-  const names = selectedNames(flags);
   return !!(
     skillSource(flags) === "cloud" ||
     flags.scope ||
     flags.agent ||
     flags.skillVersion ||
     flags.diff ||
-    selectedEntries(flags).some(
-      ([, entry]) =>
-        entry.installedPath ||
-        (names !== "all" && !!entry.remoteId && names.includes(entry.remoteId)),
-    )
+    selectedEntries(flags).some(([, entry]) => entry.installedPath)
   );
 }
 type Context = Pick<CommandContext, "client" | "localize" | "output" | "settings">;
@@ -367,28 +362,14 @@ export async function runSkillLifecycle(
     const entries = selectedEntries(flags, lock);
     if (action === "add") {
       const source = skillSource(flags);
-      const names =
-        requested === "all"
-          ? source === "cloud"
-            ? [...(await (staged?.cloudCatalog(ctx) ?? cloudCatalog(ctx))).keys()]
-            : Object.keys((await ossIndex()).skills)
-          : requested;
+      const ids = requested === "all" ? Object.keys((await ossIndex()).skills) : requested;
       const targets = installTargets(flags);
-      for (const name of names) {
+      for (const id of ids) {
         try {
-          const ids =
-            source === "cloud"
-              ? readCatalogInstalls(ctx.client.baseUrl, "openapi", lock).resolveIds(name)
-              : [name];
-          if (ids.length !== 1)
-            throw new BailianError("Ambiguous installation name / 安装名不唯一");
-          const id = ids[0]!;
           const existing = Object.entries(lock.skills).filter(
             ([key, entry]) =>
               (entry.sourceType === "openapi" ? "cloud" : "oss") === source &&
-              (source === "cloud"
-                ? entry.remoteId === id
-                : (entry.canonicalName ?? key) === name) &&
+              entrySelector(key, entry) === id &&
               (!entry.projectRoot || entry.projectRoot === process.cwd()),
           );
           const locations = existing.flatMap(([key, entry]) => destinations(key, entry, flags));
@@ -401,12 +382,12 @@ export async function runSkillLifecycle(
             flags.skillVersion,
           );
         } catch (error) {
-          failure(name, error);
+          failure(id, error);
         }
       }
     } else {
       for (const [key, entry] of entries) {
-        const id = entry.sourceType === "openapi" ? entry.remoteId! : (entry.canonicalName ?? key);
+        const id = entrySelector(key, entry);
         try {
           await processSkill(
             id,
@@ -420,11 +401,7 @@ export async function runSkillLifecycle(
       }
       if (requested !== "all")
         for (const name of requested) {
-          if (
-            !entries.some(
-              ([key, entry]) => name === (entry.canonicalName ?? key) || name === entry.remoteId,
-            )
-          )
+          if (!entries.some(([key, entry]) => name === entrySelector(key, entry)))
             failure(name, new BailianError("NOT_INSTALLED: Skill not installed / Skill 未安装"));
         }
     }

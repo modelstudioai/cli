@@ -1,7 +1,7 @@
 import { defineSkillCommand } from "./update-check.ts";
 import { runSkillLifecycle, useTargetRecords, withSkillMutation } from "./lifecycle.ts";
 import { runRegistryLifecycle } from "./registry-lifecycle.ts";
-import { sourceFlag, targetFlags, validateSelection } from "./targets.ts";
+import { selectorFlags, sourceFlag, targetFlags, validateSelection } from "./targets.ts";
 
 export default defineSkillCommand({
   updateCheck: "offline",
@@ -12,25 +12,17 @@ export default defineSkillCommand({
   auth: "none",
   defaultOutput: "json",
   usageArgs:
-    "--name <all|code,...> [--source oss|cloud] [--agent <agent|all>] [--scope user|project]",
+    "(--name <all|name,...> | --code <code,...>) [--agent <agent|all>] [--scope user|project]",
   flags: {
     source: sourceFlag,
     ...targetFlags,
-    name: {
-      type: "string",
-      valueHint: "<all|name,...>",
-      description: {
-        "en-US": "Skills to remove: all or comma-separated skill names",
-        "zh-CN": "要移除的 Skill：all 或以逗号分隔的 Skill 名称",
-      },
-      required: true,
-    },
+    ...selectorFlags,
   },
-  validate: (flags) => validateSelection(flags, true),
+  validate: (flags) => validateSelection(flags, "remove"),
   exampleArgs: [
-    "--source oss --name spark-video",
+    "--name spark-video",
     "--name all",
-    "--name pdf --agent cursor --scope project --dry-run",
+    "--code skill_example --agent cursor --scope project --dry-run",
   ],
 
   async run(ctx) {

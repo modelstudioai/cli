@@ -74,7 +74,7 @@ description: >-
 
 个人绑定的业务调用显式传已核实的 `--workspace-id`，优先 `--output json`。使用真实返回的 ID；知识库 index ID 不能当作检索 agent ID。凭证与签名上传 URL 不进入回复、绑定或版本库。用户文本作为参数传递，不作为 shell 代码执行。
 
-整包安装：`bl skill init`；子集安装：`bl skill add --source oss --name bailian-protocol,bailian-knowledge`；更新：`bl skill update --source oss`（只更新已安装 Skill）。只有 `kscli` 时仍通过现有 `bl skill` 渠道安装，不编造 `kscli skill`。
+整包安装：`bl skill init`；子集安装：`bl skill add --name bailian-protocol,bailian-knowledge`；更新：`bl skill update --all`（只更新已安装 Skill）。只有 `kscli` 时仍通过现有 `bl skill` 渠道安装，不编造 `kscli skill`。
 
 - [资料绑定](references/bindings.md)：首次读取状态、建立绑定、暂停或恢复时读取。
 - [接入流程](references/setup.md)：首次接入、复用资源、补齐服务、续接初始化时读取。

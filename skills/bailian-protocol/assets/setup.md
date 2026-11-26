@@ -42,10 +42,10 @@ Unix `install.sh` prefers the `.tar.gz` asset and does not require `unzip`. Wind
 - **Advanced / subset** (include protocol when needed):
 
 ```bash
-# bl skill add --source oss --name bailian-protocol,bailian-gen
-# bl skill add --source oss --name bailian-protocol,bailian-finetune
-# bl skill add --source oss --name bailian-protocol,bailian-managed-agent
-# bl skill add --source oss --name bailian-protocol,bailian-cli
+# bl skill add --name bailian-protocol,bailian-gen
+# bl skill add --name bailian-protocol,bailian-finetune
+# bl skill add --name bailian-protocol,bailian-managed-agent
+# bl skill add --name bailian-protocol,bailian-cli
 ```
 
 Verify: `bl --version` (prints `bl X.Y.Z`).

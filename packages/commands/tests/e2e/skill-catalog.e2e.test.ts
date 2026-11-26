@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { buildSkillLockEntry, httpTransport } from "bailian-cli-core";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
+import { buildTarBr } from "../../../core/tests/helpers/skill-archive.ts";
 import {
   isDashScopeE2EReady,
   runCommandE2e,
@@ -88,11 +89,12 @@ afterEach(() => vi.restoreAllMocks());
 
 test.each([
   ["search", "--keyword"],
-  ["get", "--name"],
+  ["get", "--code"],
 ])("%s help exposes API key auth", async (command, flag) => {
   const result = await runCommandHelp(SKILL_ROUTES, ["skill", command, "--help"]);
   expect(result.exitCode).toBe(0);
   expect(result.stderr).toContain(flag);
+  if (command === "get") expect(result.stderr).toContain("--name");
   expect(result.stderr).toContain("--api-key");
   expect(result.stderr).toContain("--workspace-id");
   expect(result.stderr).not.toContain("--console-region");
@@ -150,6 +152,9 @@ test.each([
   ["get", "--quiet"],
   ["get", "--name", " "],
   ["get", "--name", ".."],
+  ["get", "--code", " "],
+  ["get", "--code", ".."],
+  ["get", "--name", "pdf", "--code", "pdf"],
   ["search", "--type", "other"],
   ["search", "--page", "0"],
   ["search", "--page-size", "101"],
@@ -173,7 +178,19 @@ test("dry-run previews encoded paths without credentials or requests", async () 
     path: collection + "?pageNo=1&pageSize=30&type=OFFICIAL",
     limit: 30,
   });
-  const detail = await run(["get", "--name", "a/b?#", "--dry-run"], env);
+  const registry = "https://skills-registry.example.test/skills";
+  const registryPreview = await run(["get", "--name", "sample", "--dry-run"], {
+    ...env,
+    BAILIAN_SKILL_REGISTRY_URL: registry,
+  });
+  expect(registryPreview.exitCode, registryPreview.stderr).toBe(0);
+  expect(JSON.parse(registryPreview.stdout)).toEqual({
+    method: "GET",
+    url: registry + "/index.json",
+    name: "sample",
+    inspect_latest_package_file: "mcp-config.json",
+  });
+  const detail = await run(["get", "--code", "a/b?#", "--dry-run"], env);
   expect(detail.exitCode, detail.stderr).toBe(0);
   expect(JSON.parse(detail.stdout)).toEqual({
     method: "GET",
@@ -221,7 +238,9 @@ test("filtered search checks other installed cloud revisions, reuses fresh check
   for (let attempt = 0; attempt < 2; attempt++) {
     const result = await run(args, env);
     expect(result.exitCode).toBe(0);
-    expect(result.stderr).toContain("SKILL_UPDATE_AVAILABLE");
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      warning: { code: "SKILL_UPDATE_AVAILABLE", details: { update_command: "bl skill update" } },
+    });
     expect(JSON.parse(result.stdout).skills).toEqual([]);
   }
   const cache = join(config, "skill-update-cache");
@@ -324,7 +343,7 @@ test("an inconsistent later page fails without emitting a partial search result"
   expect(requests.map((url) => url.searchParams.get("pageNo"))).toEqual(["1", "2"]);
 });
 
-test("both commands reconcile a canonical alias, locked versions, user links and project installations", async ({
+test("cloud search and get by code reconcile canonical installation names, user links and project installations", async ({
   onTestFinished,
 }) => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "bl-skill-catalog-")));
@@ -343,13 +362,16 @@ test("both commands reconcile a canonical alias, locked versions, user links and
   const lock = JSON.stringify({
     version: 1,
     skills: {
-      canonical: buildSkillLockEntry({ remoteId: remote.id, version: "1.0" }, [missingLink]),
+      canonical: {
+        ...buildSkillLockEntry({ remoteId: remote.id, version: "1.0" }, [missingLink]),
+        sourceType: "openapi",
+      },
     },
   });
   writeFileSync(lockPath, lock);
   const requests = gateway(success(remote), success(page(1, 30, 1, [remote])));
   const env = { HOME: directory, USERPROFILE: directory, BAILIAN_CONFIG_DIR: config };
-  const result = await run(["get", "--name", "canonical", "--with-mcp", "false"], env, project);
+  const result = await run(["get", "--code", remote.id, "--with-mcp", "false"], env, project);
   expect(result.exitCode, result.stderr).toBe(0);
   const detail = JSON.parse(result.stdout);
   expect(detail).toMatchObject({
@@ -387,7 +409,7 @@ test("both commands reconcile a canonical alias, locked versions, user links and
   expect(readFileSync(lockPath, "utf8")).toBe(lock);
 });
 
-test("legacy locks without remote IDs match the exact code and retain an unknown version", async ({
+test("get by name reads an unversioned OSS archive and distinguishes installations from same-code OpenAPI results", async ({
   onTestFinished,
 }) => {
   const config = mkdtempSync(join(tmpdir(), "bl-skill-legacy-"));
@@ -399,21 +421,72 @@ test("legacy locks without remote IDs match the exact code and retain an unknown
     join(dirname(canonical), "skill-lock.json"),
     JSON.stringify({ version: 1, skills: { pdf: { sourceType: "oss", contentHash: "old" } } }),
   );
-  const requests = gateway(
-    success(skill("pdf")),
-    success({ ...skill("other"), display_name: "pdf" }),
-  );
-  const env = { BAILIAN_CONFIG_DIR: config };
-  const first = await run(["get", "--name", "pdf", "--with-mcp", "false"], env);
+  const registry = "https://registry.example.test/skills";
+  const env = {
+    BAILIAN_CONFIG_DIR: config,
+    BAILIAN_SKILL_REGISTRY_URL: registry,
+    DASHSCOPE_API_KEY: "",
+    DASHSCOPE_BASE_URL: "",
+    BAILIAN_WORKSPACE_ID: "",
+  };
+  const archive = await buildTarBr({
+    "SKILL.md": "---\nname: pdf\ndescription: OSS sample\n---\n",
+    "mcp-config.json": JSON.stringify({ service: { serverCode: "declared-mcp" } }),
+  });
+  const requests: string[] = [];
+  vi.spyOn(httpTransport, "fetch").mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
+    requests.push(request.url);
+    expect(request.method).toBe("GET");
+    if (request.url.startsWith(origin + collection)) {
+      expect(request.headers.get("Authorization")).toBe("Bearer fixture-key");
+      return success(skill("pdf"));
+    }
+    expect(request.headers.get("Authorization")).toBeNull();
+    if (request.url === registry + "/index.json")
+      return Response.json({
+        skills: { pdf: { remoteId: "skill_pdf", description: "OSS sample", contentHash: "new" } },
+      });
+    if (request.url === registry + "/pdf/skill.tar.br") return new Response(Buffer.from(archive));
+    throw new Error("unexpected request");
+  });
+  const first = await run(["get", "--name", "pdf"], env);
   expect(first.exitCode, first.stderr).toBe(0);
   expect(JSON.parse(first.stdout)).toMatchObject({
-    install_state: "installed",
+    skill_name: "pdf",
+    skill_code: "skill_pdf",
+    source: "oss",
+    description: "OSS sample",
+    latest_version: null,
+    install_state: "outdated",
     locked_version: null,
+    depends_on_mcp: ["declared-mcp"],
+    installations: [{ installed_path: canonical, install_state: "outdated" }],
   });
-  const other = await run(["get", "--name", "other", "--with-mcp", "false"], env);
-  expect(other.exitCode, other.stderr).toBe(0);
-  expect(JSON.parse(other.stdout)).toMatchObject({ installed: false, installations: [] });
-  expect(requests.map((url) => url.pathname)).toEqual([collection + "/pdf", collection + "/other"]);
+  const metadata = await run(["get", "--name", "pdf", "--with-mcp", "false"], env);
+  expect(metadata.exitCode, metadata.stderr).toBe(0);
+  expect(JSON.parse(metadata.stdout)).not.toHaveProperty("depends_on_mcp");
+  const missing = await run(["get", "--name", "absent"], env);
+  expect(missing.exitCode, missing.stderr).toBe(1);
+  expect(missing.stderr).toContain("OSS");
+  const unauthenticated = await run(["get", "--code", "pdf", "--with-mcp", "false"], env);
+  expect(unauthenticated.exitCode, unauthenticated.stderr).toBe(3);
+  const cloud = await run(["get", "--code", "pdf", "--with-mcp", "false"], {
+    BAILIAN_CONFIG_DIR: config,
+  });
+  expect(cloud.exitCode, cloud.stderr).toBe(0);
+  expect(JSON.parse(cloud.stdout)).toMatchObject({
+    source: "official",
+    installed: false,
+    installations: [],
+  });
+  expect(requests).toEqual([
+    registry + "/index.json",
+    registry + "/pdf/skill.tar.br",
+    registry + "/index.json",
+    registry + "/index.json",
+    origin + collection + "/pdf",
+  ]);
 });
 
 test("get keeps distinct target versions and ignores records from another gateway or project", async ({
@@ -466,7 +539,7 @@ test("get keeps distinct target versions and ignores records from another gatewa
   );
   const requests = gateway(success(skill(user.remoteId)));
   const detail = await run(
-    ["get", "--name", "reader", "--with-mcp", "false"],
+    ["get", "--code", user.remoteId, "--with-mcp", "false"],
     { HOME: directory, USERPROFILE: directory, BAILIAN_CONFIG_DIR: config },
     project,
   );
@@ -495,7 +568,7 @@ test.each([200, 500])("get preserves a server error returned with HTTP %i", asyn
       { status },
     ),
   );
-  const result = await run(["get", "--name", "unknown"]);
+  const result = await run(["get", "--code", "unknown"]);
   expect(result.exitCode).toBe(1);
   expect(result.stdout).toBe("");
   expect(JSON.parse(result.stderr).error).toMatchObject({
@@ -524,7 +597,7 @@ describe.skipIf(!isDashScopeE2EReady())("cloud skill gateway", () => {
     const detail = await runCommandE2e(SKILL_ROUTES, [
       "skill",
       "get",
-      "--name",
+      "--code",
       code,
       "--output",
       "json",

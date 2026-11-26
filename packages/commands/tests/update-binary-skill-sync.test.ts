@@ -97,7 +97,7 @@ test.each([undefined, "aliyun bl"])(
           warning.code === "SKILL_UPDATE_SKIPPED",
       );
     expect(JSON.stringify(skipped)).toContain(
-      `Run manually: ${commandPrefix ?? "bl"} skill update --source oss`,
+      `Run manually: ${commandPrefix ?? "bl"} skill update --all`,
     );
     expectSkillUpdateNotInit();
   },
@@ -132,13 +132,10 @@ test.each([
 );
 
 function expectSkillUpdateNotInit(): void {
-  expect(childProcessMocks.spawnSync).toHaveBeenCalledWith(
-    "bl skill update --source oss --output json",
-    {
-      shell: true,
-      stdio: ["inherit", "pipe", "pipe"],
-    },
-  );
+  expect(childProcessMocks.spawnSync).toHaveBeenCalledWith("bl skill update --all --output json", {
+    shell: true,
+    stdio: ["inherit", "pipe", "pipe"],
+  });
   expect(
     childProcessMocks.spawnSync.mock.calls.some((call) => String(call[0]).includes("skill init")),
   ).toBe(false);

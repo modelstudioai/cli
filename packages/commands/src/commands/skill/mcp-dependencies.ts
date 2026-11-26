@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { BailianError, fetchSkillsIndex, type CommandContext } from "bailian-cli-core";
 import { prepareLifecycle, writeServer, type LifecyclePlan } from "../mcp/server-lifecycle.ts";
 import type { McpRequestContext } from "../mcp/server-response.ts";
-import { cloudCatalog, type Revision, type unpackRevision } from "./packages.ts";
+import type { Revision, unpackRevision } from "./packages.ts";
 
 /** Package values may include credentials. Only explicit serverCode fields leave this reader. */
 export function readMcpDependencies(
@@ -79,16 +79,12 @@ export class SkillAddPackages {
   private readonly manifests = new Map<string, string[] | undefined>();
   private readonly scratch: string[] = [];
   private index?: ReturnType<typeof fetchSkillsIndex>;
-  private catalog?: ReturnType<typeof cloudCatalog>;
   private steps: LifecyclePlan = [];
 
   constructor(private readonly localize: CommandContext["localize"]) {}
 
   ossIndex() {
     return (this.index ??= fetchSkillsIndex());
-  }
-  cloudCatalog(ctx: Parameters<typeof cloudCatalog>[0]) {
-    return (this.catalog ??= cloudCatalog(ctx));
   }
   temp() {
     const path = mkdtempSync(join(tmpdir(), "bl-skill-add-"));

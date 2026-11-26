@@ -29,7 +29,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - `openapi` — 阿里云 OpenAPI 签名域,用 AccessKey ID/Secret 调用 Token Plan 等 OpenAPI
 - `none` — 本地命令、登录/配置类命令、无需 credential 的命令
 
-同一命令同时支持公开来源和鉴权来源时，可通过 `requiresApiKey(flags)` 声明何时解析 API Key。例如 Skill 的 OSS Registry 可匿名读取，云端目录使用当前 Profile 的百炼 API Key。安装、更新和列表默认选择云端 OpenAPI，显式传入 `--source oss` 时读取公开 Registry。移除按相同的来源选择规则过滤本地记录，无需凭证。 `skill add --source oss` 检查包声明的 MCP 时返回 `"optional"`，由 runtime 注入已配置的 API Key；无声明时仍可匿名安装。
+同一命令同时支持公开来源和鉴权来源时，可通过 `requiresApiKey(flags)` 声明何时解析 API Key。例如 Skill 的 OSS Registry 可匿名读取，云端目录使用当前 Profile 的百炼 API Key。`skill get/add/update/remove` 的 `--name` 选择公开 OSS Registry，`--code` 选择云端 OpenAPI。移除按所选来源筛选本地记录，可离线执行。`skill list` 默认查询云端，`--source oss` 列出公开目录。`skill add --all` 从 OSS 安装，`skill update --all` 匿名更新已安装的 OSS Skill。不带选择器的 `skill update` 默认走云端。OSS 安装检查包声明的 MCP 时，`requiresApiKey` 返回 `"optional"`，由 runtime 注入已配置的 API Key；无 MCP 依赖的包可匿名安装。
 
 ### 可选 console 副凭证
 

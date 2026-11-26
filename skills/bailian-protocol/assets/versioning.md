@@ -18,7 +18,7 @@ Agents wrap middleware `bl` commands with [Call attribution](../SKILL.md#call-at
 3. Compare the two versions (ignore the `bl` prefix; compare only `X.Y.Z`):
    - If `metadata.version` ≠ `bl --version`, refresh already-installed skills before doing anything else:
      ```bash
-     bl skill update --source oss
+     bl skill update --all
      ```
    - If `bailian-protocol` or another needed skill is missing, stop and run `bl skill init` (same Call attribution, `bailian-protocol`). Do not use `bl skill init` only to refresh versions — it installs every `bailian-*` skill.
    - Do not trust a stale `reference/` when versions mismatch — flags may be wrong.
@@ -29,7 +29,7 @@ Agents wrap middleware `bl` commands with [Call attribution](../SKILL.md#call-at
 5. If the installed `bl` is **older** than the latest npm version, **STOP** the current task and **ask the user** (report skill version, installed CLI version, and npm latest):
    > A newer version of bl is available (current: X.Y.Z, latest: A.B.C). Upgrade before continuing?
    - **Do NOT auto-upgrade silently** — the user decides.
-   - If the user agrees: run `bl update` (same Call attribution), then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill update --source oss` to refresh already-installed skills; it does not install new skills. First-time install still uses `bl skill init`.)
+   - If the user agrees: run `bl update` (same Call attribution), then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill update --all` to refresh already-installed skills; it does not install new skills. First-time install still uses `bl skill init`.)
      ```bash
      bl update
      ```

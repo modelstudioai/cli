@@ -21,7 +21,7 @@ description: >-
 > bl skill init
 > ```
 >
-> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --source oss --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。Agents wrap with [Call attribution](#call-attribution-mandatory-for-every-agent-bl-command).
+> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。Agents wrap with [Call attribution](#call-attribution-mandatory-for-every-agent-bl-command).
 
 ## Provider selection and consent
 
