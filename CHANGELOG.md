@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.14.0] - 2026-11-27
+
+### Added
+
+- Inspect servers with `bl mcp get`, create, update or delete custom servers, and activate or deactivate official and custom servers in batches. Use `bl mcp tool search`, `list`, and `call` to find, list and invoke tools through OpenAPI.
+- Search official and private workspace skills with `bl skill search`. Select cloud skills by `--code` and public OSS skills by `--name`. Choose an agent and user or project scope at installation time. For cloud skills, you can pin a version, preview update differences, or remove an installation offline.
+
+### Changed
+
+- `bl mcp list` now requires a standard Bailian API key and reports local agent registrations. **(BREAKING)**
+- `bl skill list` and `bl skill update` now default to the cloud catalog. To keep using OSS, run `bl skill list --source oss` and `bl skill update --all`. **(BREAKING)**
+- `bl mcp connect` and `bl skill add` activate inactive MCP services they need by default, which can incur charges. Preview the operation with `--dry-run`. To skip activation, use `--and-activate=false` for connections or `--with-mcp false` for skill installations.
+
+### Fixed
+
+- `bl mcp tools` now follows pagination so servers with multiple pages return their full tool list.
+
 ## [2.13.0] - 2026-11-27
 
 ### Added
