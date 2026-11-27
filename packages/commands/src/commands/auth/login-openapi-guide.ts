@@ -1,7 +1,14 @@
 import { formatCommand, type Identity, type LocalizedText } from "bailian-cli-core";
 import { akskGuidePage } from "bailian-cli-runtime";
-import { openInBrowser } from "../shared/local-server.ts";
+import { isOpenPathTimeout, openInBrowser } from "../shared/local-server.ts";
 import { resolveConsoleOrigin, type LoginDeps } from "./login-console.ts";
+
+/**
+ * How long this guide may wait on the OS opener before calling the outcome
+ * unconfirmed. The command prints a paste-ready follow-up command and must hand the
+ * prompt back for it, so it opts into a cap that other `openPath` callers do not pay.
+ */
+const OPEN_WAIT_CAP_MS = 5_000;
 
 export interface OpenApiGuideOptions {
   site?: string;
@@ -47,6 +54,11 @@ export function openApiPasteCommand(identity: Identity, options: OpenApiPasteOpt
  * before awaiting the opener, so a slow or hanging `open` / `xdg-open` never withholds
  * what the user needs to act on — the same ordering rule `login-console.ts` follows by
  * registering the callback before opening the browser.
+ *
+ * The wait is capped via `openInBrowser(url, { timeoutMs })`: on desktops where
+ * `xdg-open` stays attached to the browser, an uncapped await would keep the prompt
+ * away and the user could not paste the follow-up command. An opener killed at that
+ * cap is an unconfirmed outcome — never reported as a failure, never as a success.
  */
 export async function runOpenApiGuide(
   deps: LoginDeps,
@@ -75,15 +87,27 @@ export async function runOpenApiGuide(
   let browserOpened = false;
   if (!options.noBrowser) {
     try {
-      await openInBrowser(url);
+      await openInBrowser(url, { timeoutMs: OPEN_WAIT_CAP_MS });
       browserOpened = true;
     } catch (error: unknown) {
-      deps.output.warning(
-        localizeGuide(deps, {
-          "en-US": `Could not open a browser automatically (${error instanceof Error ? error.message : String(error)}). Open the URL above manually.`,
-          "zh-CN": `无法自动打开浏览器（${error instanceof Error ? error.message : String(error)}）。请手动打开上方地址。`,
-        }),
-      );
+      if (isOpenPathTimeout(error)) {
+        deps.output.warning(
+          localizeGuide(deps, {
+            "en-US":
+              "Could not confirm the browser opened: the system open command did not return in time. Open the URL above manually if no tab appeared.",
+            "zh-CN":
+              "未能确认浏览器是否打开：系统打开命令超时未返回。若没有新标签页，请手动打开上方地址。",
+          }),
+        );
+      } else {
+        const reason = error instanceof Error ? error.message : String(error);
+        deps.output.warning(
+          localizeGuide(deps, {
+            "en-US": `Could not open a browser automatically (${reason}). Open the URL above manually.`,
+            "zh-CN": `无法自动打开浏览器（${reason}）。请手动打开上方地址。`,
+          }),
+        );
+      }
     }
   }
 

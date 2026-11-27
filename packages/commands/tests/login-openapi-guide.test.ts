@@ -1,17 +1,20 @@
 import { buildSettings, type AuthStore, type Identity, type LocalizedText } from "bailian-cli-core";
 import { expect, test, vi } from "vite-plus/test";
 
-const openInBrowser = vi.hoisted(() => vi.fn<(url: string) => Promise<void>>());
+const openInBrowser = vi.hoisted(() =>
+  vi.fn<(url: string, options?: OpenPathOptions) => Promise<void>>(),
+);
 
 vi.mock("../src/commands/shared/local-server.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/commands/shared/local-server.ts")>();
   return {
     ...actual,
-    openInBrowser: (url: string) => openInBrowser(url),
+    openInBrowser: (url: string, options?: OpenPathOptions) => openInBrowser(url, options),
   };
 });
 
 import { openApiPasteCommand, runOpenApiGuide } from "../src/commands/auth/login-openapi-guide.ts";
+import type { OpenPathOptions } from "../src/commands/shared/local-server.ts";
 import type { LoginDeps } from "../src/commands/auth/login-console.ts";
 
 const identity = { binName: "bl" } as Identity;
@@ -92,6 +95,8 @@ test("runOpenApiGuide marks browserOpened when open succeeds", async () => {
 
   expect(result.browserOpened).toBe(true);
   expect(openInBrowser).toHaveBeenCalledOnce();
+  // 上限是引导自己选的，不是共享默认：其他调用方仍不设 timeout。
+  expect(openInBrowser).toHaveBeenCalledWith(expect.any(String), { timeoutMs: 5_000 });
 });
 
 test("runOpenApiGuide prints the paste command before the opener resolves", async () => {
@@ -115,6 +120,26 @@ test("runOpenApiGuide prints the paste command before the opener resolves", asyn
 
   releaseOpen();
   expect((await pendingGuide).browserOpened).toBe(true);
+});
+
+test("runOpenApiGuide 在打开器被上限杀掉时报「未确认」而不是「失败」", async () => {
+  const warnings: string[] = [];
+  const infos: string[] = [];
+  openInBrowser.mockReset();
+  openInBrowser.mockRejectedValue(
+    Object.assign(new Error("Command failed: open https://example.com"), {
+      killed: true,
+      signal: "SIGTERM",
+    }),
+  );
+
+  const result = await runOpenApiGuide(makeDeps({ infos, warnings }), { site: "domestic" });
+
+  expect(result.browserOpened).toBe(false);
+  expect(warnings.join("\n")).toMatch(/Could not confirm the browser opened/);
+  expect(warnings.join("\n")).not.toMatch(/Could not open a browser automatically/);
+  // 超时同样不能影响可操作输出：粘贴命令在等待之前就已打印。
+  expect(infos.join("\n")).toMatch(/--access-key-id <id>/);
 });
 
 test("runOpenApiGuide with --no-browser skips openInBrowser", async () => {

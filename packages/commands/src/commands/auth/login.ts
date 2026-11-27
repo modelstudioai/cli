@@ -362,21 +362,32 @@ export default defineCommand({
         return;
       }
       const resolvedBaseUrl = store.resolveBaseUrl();
-      const target = resolveCLIAccessTokenTarget(settings, resolvedBaseUrl);
+      // `--console-site` is a command-own flag: create-cli routes only global and
+      // credential-domain flags into `sources`, so it never reaches `settings` for this
+      // command (auth: "none"). Reading `settings.consoleSite` alone silently ignored the
+      // flag — a new Profile asked for international saved domestic, and an international
+      // Profile asked for domestic saved international. Honour the flag exactly like the
+      // guide branch above already does, and reuse the same value for every hop:
+      // generateCLIAccessToken re-derives the target from `settings` internally.
+      const effectiveSettings = {
+        ...settings,
+        consoleSite: site as "domestic" | "international",
+      };
+      const target = resolveCLIAccessTokenTarget(effectiveSettings, resolvedBaseUrl);
       ctx.output.progress({
         "en-US": "Generating CLI access token...",
         "zh-CN": "正在生成 CLI access token...",
       });
       const resp = await generateCLIAccessToken({
         identity,
-        settings,
+        settings: effectiveSettings,
         debug: (record) => ctx.output.debug(record),
         baseUrl: resolvedBaseUrl,
         accessKeyId: flags.accessKeyId!,
         accessKeySecret: flags.accessKeySecret!,
       });
       const accessToken = resp.cliAccessToken;
-      await validateConsoleAccessToken({ ...target, token: accessToken }, settings, {
+      await validateConsoleAccessToken({ ...target, token: accessToken }, effectiveSettings, {
         debug: (record) => ctx.output.debug(record),
       });
       await store.login({
