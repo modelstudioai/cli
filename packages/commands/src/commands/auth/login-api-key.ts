@@ -1,7 +1,9 @@
 import {
   BailianError,
   getApiKeyLoginKind,
+  KNOWN_MODEL_BASE_URLS,
   normalizeModelBaseUrl,
+  ORDINARY_WORKSPACE_REGIONS,
   requestJson,
   type ApiKeyLoginKind,
   type AuthPersistPatch,
@@ -50,28 +52,6 @@ export interface ApiKeyValidationResult {
   baseUrl: string;
   kind: ApiKeyEndpointKind;
 }
-
-const ORDINARY_WORKSPACE_REGIONS = [
-  "cn-beijing",
-  "ap-southeast-1",
-  "cn-hongkong",
-  "ap-northeast-1",
-  "eu-central-1",
-  "us-east-1",
-] as const;
-
-const KNOWN_BASE_URLS: Readonly<Record<ApiKeyEndpointKind, readonly string[]>> = {
-  ordinary: [
-    "https://dashscope.aliyuncs.com",
-    "https://dashscope-intl.aliyuncs.com",
-    "https://dashscope-us.aliyuncs.com",
-    "https://cn-hongkong.dashscope.aliyuncs.com",
-  ],
-  "token-plan": [
-    "https://token-plan.cn-beijing.maas.aliyuncs.com",
-    "https://token-plan.ap-southeast-1.maas.aliyuncs.com",
-  ],
-};
 
 function usesCompatibleModelsApi(baseUrl: string, kind: ApiKeyEndpointKind): boolean {
   const hostname = new URL(normalizeModelBaseUrl(baseUrl)).hostname;
@@ -155,7 +135,7 @@ export function apiKeyValidationCandidates(
   }
 
   for (const kind of kinds) {
-    for (const baseUrl of KNOWN_BASE_URLS[kind]) {
+    for (const baseUrl of KNOWN_MODEL_BASE_URLS[kind]) {
       addCandidate(candidates, seenUrls, baseUrl, kind);
     }
   }

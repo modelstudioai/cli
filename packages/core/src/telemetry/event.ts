@@ -3,6 +3,7 @@ import type { InstallAttribution } from "../install/record.ts";
 import { formatCommand } from "../output/command.ts";
 import type { AuthRequirement } from "../types/command.ts";
 import type { CallerAttribution } from "./caller.ts";
+import type { TelemetrySite, TelemetrySiteReason } from "./site.ts";
 
 export interface TrackingEvent {
   command: string;
@@ -28,6 +29,27 @@ export interface TrackingEvent {
   installChannel?: InstallAttribution["installChannel"];
   /** Caller-declared call source (--biz-from), normalized; reported as AEM c6. */
   bizFrom?: string;
+  /** AEM reporting site (domestic vs international). */
+  site: TelemetrySite;
+  /** Coarse site resolution reason; never includes raw hosts. */
+  siteReason?: TelemetrySiteReason;
+  /**
+   * The run was a `--dry-run` preview: it must not create or mutate resources.
+   * Sparse — only reported when true.
+   *
+   * Preview is *not* "no network": commands with `prepare` read existing
+   * resources even under `--dry-run`, and any request a preview issues records
+   * its origin and service plane exactly like an executed call does. So this
+   * field coexists with a `product-*` `siteReason` for workspace-gateway
+   * previews such as `knowledge init`, while a model-domain preview such as
+   * `deploy router update` still reports `positive-*`. Being a preview never
+   * changes how a site is attributed — only the recorded exit decides that.
+   *
+   * Use this field to separate preview traffic from executed calls; use
+   * `siteReason` to tell whether the site came from the product or from the
+   * configured base URL.
+   */
+  dryRun?: true;
 }
 
 export function createTrackingEvent(opts: {
@@ -42,6 +64,9 @@ export function createTrackingEvent(opts: {
   /** Already-read install record. Callers must not create the file to fill this in. */
   install?: InstallAttribution;
   bizFrom?: string;
+  site?: TelemetrySite;
+  siteReason?: TelemetrySiteReason;
+  dryRun?: boolean;
 }): TrackingEvent {
   const event: TrackingEvent = {
     command: opts.command,
@@ -53,6 +78,7 @@ export function createTrackingEvent(opts: {
     nodeVersion: process.version,
     os: process.platform,
     callerType: opts.caller.callerType,
+    site: opts.site ?? "domestic",
   };
 
   if (opts.caller.callerType === "agent") {
@@ -84,6 +110,14 @@ export function createTrackingEvent(opts: {
 
   if (opts.install) {
     event.installChannel = opts.install.installChannel;
+  }
+
+  if (opts.siteReason) {
+    event.siteReason = opts.siteReason;
+  }
+
+  if (opts.dryRun) {
+    event.dryRun = true;
   }
 
   return event;

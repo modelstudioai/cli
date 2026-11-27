@@ -1,0 +1,308 @@
+import { expect, test } from "vite-plus/test";
+import { classifyModelHost, hostnameOf } from "../src/config/model-endpoints.ts";
+import { resolveTelemetrySite, telemetryRemoteTarget } from "../src/telemetry/site.ts";
+
+test.each([
+  ["https://dashscope.aliyuncs.com", "dashscope.aliyuncs.com"],
+  ["dashscope-intl.aliyuncs.com", "dashscope-intl.aliyuncs.com"],
+  ["  https://CN-HongKong.dashscope.aliyuncs.com/path  ", "cn-hongkong.dashscope.aliyuncs.com"],
+  ["", undefined],
+  [undefined, undefined],
+])("hostnameOf(%j) → %j", (input, expected) => {
+  expect(hostnameOf(input)).toBe(expected);
+});
+
+test.each([
+  ["dashscope.aliyuncs.com", "domestic"],
+  ["https://dashscope.aliyuncs.com/api/v1", "domestic"],
+  ["token-plan.cn-beijing.maas.aliyuncs.com", "domestic"],
+  ["ws-abc.cn-beijing.maas.aliyuncs.com", "domestic"],
+  ["dashscope-intl.aliyuncs.com", "international"],
+  ["dashscope-us.aliyuncs.com", "international"],
+  ["cn-hongkong.dashscope.aliyuncs.com", "international"],
+  ["token-plan.ap-southeast-1.maas.aliyuncs.com", "international"],
+  ["ws-abc.ap-southeast-1.maas.aliyuncs.com", "international"],
+  ["ws-abc.cn-hongkong.maas.aliyuncs.com", "international"],
+  ["ws-abc.eu-central-1.maas.aliyuncs.com", "international"],
+  ["ws-abc.us-east-1.maas.aliyuncs.com", "international"],
+  ["ws-abc.ap-northeast-1.maas.aliyuncs.com", "international"],
+  ["custom.proxy.example.com", "unknown"],
+  ["token-plan.unknown-region.maas.aliyuncs.com", "unknown"],
+  [undefined, "unknown"],
+  ["", "unknown"],
+])("classifyModelHost(%j) → %j", (host, expected) => {
+  expect(classifyModelHost(host)).toBe(expected);
+});
+
+test("console auth uses consoleSite only (D4=B)", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "console",
+      consoleSite: "international",
+      baseUrl: "https://dashscope.aliyuncs.com",
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "console",
+      consoleSite: "domestic",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+    }),
+  ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "console",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+});
+
+test("apiKey prefers lastResolvedOrigin over baseUrl", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      lastResolvedOrigin: "https://ws.ap-southeast-1.maas.aliyuncs.com",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: false,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
+});
+
+test("default model baseUrl is a fallback, not positive domestic", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "openapi",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "openapi",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+      baseUrlIsDefault: false,
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+});
+
+test("openapi classifies model-domain baseUrl, not ACS hosts", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "openapi",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+      baseUrlIsDefault: false,
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+
+  // ACS hosts must not be passed as baseUrl; if they were, they fall back as unknown→domestic
+  expect(
+    resolveTelemetrySite({
+      auth: "openapi",
+      baseUrl: "https://modelstudio.ap-southeast-1.aliyuncs.com",
+      baseUrlIsDefault: false,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "unknown-host" });
+});
+
+test("cn-hongkong is international", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      baseUrl: "https://cn-hongkong.dashscope.aliyuncs.com",
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+});
+
+test("unknown host falls back to domestic with unknown-host reason", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      baseUrl: "https://my-reverse-proxy.example.com",
+    }),
+  ).toEqual({ site: "domestic", siteReason: "unknown-host" });
+});
+
+test("auth none ORs consoleSite with model host", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      consoleSite: "international",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      consoleSite: "domestic",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+      baseUrlIsDefault: false,
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      consoleSite: "domestic",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      lastResolvedOrigin: "https://ws.ap-southeast-1.maas.aliyuncs.com",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: false,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+});
+
+test("mixed profile: console domestic does not force apiKey domestic", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      consoleSite: "domestic",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+});
+
+/**
+ * Every request now records its own origin, including plain relative paths, so
+ * an origin that is just the shared default base URL must not be mistaken for a
+ * user choice. A *different* origin is still a real per-command signal.
+ */
+test("an origin equal to the default base URL keeps default-fallback", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      lastResolvedOrigin: "https://dashscope.aliyuncs.com",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      lastResolvedOrigin: "https://ws-review.cn-beijing.maas.aliyuncs.com",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
+});
+
+test("missing baseUrl defaults domestic", () => {
+  expect(resolveTelemetrySite({ auth: "apiKey" })).toEqual({
+    site: "domestic",
+    siteReason: "default-fallback",
+  });
+});
+
+/**
+ * The reporting site follows the product, not the domain the user configured:
+ * a domestic-only service plane reports domestic even when every user-side
+ * signal points international (issue #349).
+ */
+test("product verdict outranks every user-side host signal", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      productSite: "domestic",
+      lastResolvedOrigin: "https://ws.ap-southeast-1.maas.aliyuncs.com",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+    }),
+  ).toEqual({ site: "domestic", siteReason: "product-domestic" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "openapi",
+      productSite: "international",
+      baseUrl: "https://dashscope.aliyuncs.com",
+    }),
+  ).toEqual({ site: "international", siteReason: "product-international" });
+});
+
+test("product verdict outranks consoleSite for auth none", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      productSite: "domestic",
+      consoleSite: "international",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "product-domestic" });
+});
+
+/** Console commands stay on the account-site axis: there the account site *is* the product site. */
+test("console auth keeps the account-site axis even with a product verdict", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "console",
+      productSite: "domestic",
+      consoleSite: "international",
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+});
+
+test("without a product verdict host classification is unchanged", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      productSite: undefined,
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+});
+
+test("telemetryRemoteTarget maps site to endpoint and pid", () => {
+  expect(telemetryRemoteTarget("domestic")).toEqual({
+    site: "domestic",
+    endpoint: "gm.mmstat.com",
+    pid: "bailian-cli-node",
+  });
+  expect(telemetryRemoteTarget("international")).toEqual({
+    site: "international",
+    endpoint: "sg.mmstat.com",
+    pid: "bailian-cli-node-intl",
+  });
+});

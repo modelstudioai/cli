@@ -14,8 +14,8 @@
 ```text
 命令进入 run
   ├─ telemetryStage
-  │    ├─ ~/.bailian/telemetry.jsonl
-  │    └─ AEM(pid=bailian-cli-node, event name=命令路径)
+  │    ├─ ~/.bailian/telemetry.jsonl（含 site / siteReason）
+  │    └─ AEM（按 site 分流 pid + endpoint；event name=命令路径）
   │
   └─ confirmationStage
        └─ versionCheckStage → authStage
@@ -27,12 +27,12 @@
 
 ### 1. 三套鉴权与埋点标识
 
-| 命令声明          | 凭证 / 请求域                                       | 主要请求出口                                                                                    | 后端埋点标识                                                                      | 前端埋点标识（AEM）                              |
-| ----------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `auth: "apiKey"`  | API Key；DashScope / OpenAI-compatible 模型域       | `Client.request/requestJson`、`McpClient`、Managed Agent / Advisor instrumented fetch、上传策略 | 有：`User-Agent`、`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli` | 有：`pid=bailian-cli-node`、`authMethod=apiKey`  |
-| `auth: "console"` | Console access token；Bailian Console Gateway       | `callConsoleGateway()` → `/cli/api.json`                                                        | 有：Console Gateway 后端直接标识                                                  | 有：`pid=bailian-cli-node`、`authMethod=console` |
-| `auth: "openapi"` | AccessKey ID/Secret，可选 STS token；阿里云 OpenAPI | `Client.openApiJson()`                                                                          | 有：`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli`               | 有：`pid=bailian-cli-node`、`authMethod=openapi` |
-| `auth: "none"`    | 无凭证域                                            | 本地逻辑或命令自行管理的登录/配置流程                                                           | 无                                                                                | 有：`pid=bailian-cli-node`、`authMethod=none`    |
+| 命令声明          | 凭证 / 请求域                                       | 主要请求出口                                                                                    | 后端埋点标识                                                                      | 前端埋点标识（AEM）                                                                                                     |
+| ----------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `auth: "apiKey"`  | API Key；DashScope / OpenAI-compatible 模型域       | `Client.request/requestJson`、`McpClient`、Managed Agent / Advisor instrumented fetch、上传策略 | 有：`User-Agent`、`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli` | 有：先按 service plane 产品归属、否则按模型 host 分流 `bailian-cli-node` / `bailian-cli-node-intl`、`authMethod=apiKey` |
+| `auth: "console"` | Console access token；Bailian Console Gateway       | `callConsoleGateway()` → `/cli/api.json`                                                        | 有：Console Gateway 后端直接标识                                                  | 有：按 `consoleSite` 分流 pid、`authMethod=console`                                                                     |
+| `auth: "openapi"` | AccessKey ID/Secret，可选 STS token；阿里云 OpenAPI | `Client.openApiJson()`                                                                          | 有：`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli`               | 有：按模型域 baseUrl 分流 pid、`authMethod=openapi`（不用 ACS host）                                                    |
+| `auth: "none"`    | 无凭证域                                            | 本地逻辑或命令自行管理的登录/配置流程                                                           | 无                                                                                | 有：service plane ∨ `consoleSite` ∨ 模型 host 分流、`authMethod=none`                                                   |
 
 `authMethod` 记录的是命令声明的鉴权域，不是凭证来源。它不会区分 API Key 来自 flag、env 还是 config。
 鉴权域是命令的准入门槛和主请求域，不保证命令内部只有一种网络出口；例如部分 `apiKey` 命令也可能读取匿名 Console 公共目录，Managed Agent 还可能访问其他 provider。
@@ -116,7 +116,7 @@ postinstall.js launchFirstInstallReport
          setupProxyFromEnv()（失败则直连，不让安装失败）
          tracker.ts reportFirstInstallNow
            event.ts createFirstInstallEvent
-           sink.ts remoteSink → remoteSendEvent("first_install", ...)
+           sink.ts remoteSink → 国内站 Tracker 的 sendEvent("first_install", ...)
            first-install.ts noteFirstInstallReportQueued
 ```
 
@@ -140,18 +140,60 @@ postinstall.js launchFirstInstallReport
 
 事件写入两处：
 
-1. 本地 `~/.bailian/telemetry.jsonl`：权限 `0600`，超过 5 MB 后重建；每行附带 `uid`（只读已有文件，不创建）
-2. AEM：`pid=bailian-cli-node`，源码运行自动使用 `env=dev`，npm 安装或编译二进制使用 `env=prod`
+1. 本地 `~/.bailian/telemetry.jsonl`：权限 `0600`，超过 5 MB 后重建；每行附带 `uid`（只读已有文件，不创建）以及 `site` / 可选 `siteReason`
+2. AEM：按 `site` 分流（见下节），源码运行自动使用 `env=dev`，npm 安装或编译二进制使用 `env=prod`
+
+#### 国内 / 国际 AEM 分流（best-effort）
+
+命令事件按声明口径分流到国内或新加坡采集集群；**不是**「国际相关数据绝不出境」的硬保证。后端渠道头（`x-dashscope-source-config` / `User-Agent`）**不**随本分流改动。
+
+| 站点          | AEM pid                 | 采集端点                        |
+| ------------- | ----------------------- | ------------------------------- |
+| domestic      | `bailian-cli-node`      | `https://gm.mmstat.com/aes.1.1` |
+| international | `bailian-cli-node-intl` | `https://sg.mmstat.com/aes.1.1` |
+
+端点已端到端实测（2026-11-24 手工上报，在 `bailian-cli-node-intl` 查到 4 条，`event_category` 分别是 `text chat` / `config show` / `usage free`，覆盖 `apiKey` / `console` / `none` 三个鉴权域，`ext` 里 `site=international`、`siteReason=positive-international`）：国际站**不需要** `sg.mmstat.com/alicloud/aes.1.1` 变体 —— `/alicloud` 是阿里云国际站**页面**经 A+ 上报的通道，Node 直连 POST 用裸 `sg.mmstat.com` 即可落库。
+
+mmstat 网关对任何 POST 都返回 `200` + GIF，端点或 pid 写错不会报错、不会重试，只会让看板永远为空。改端点 / 换 pid 后必须重新做一次落库验证，不能只看 HTTP 状态码。
+
+国际站数据在 [AEM 新加坡站](https://sg.aem.alibaba-inc.com/) 查看；用 `aem` CLI 取数必须带 `--region sg`（AK 按 region 隔离存储），否则查的是 cn 租户 —— "查不到数据"不等于"埋点坏了"。
+
+判定（D4=B + 产品归属优先：console=账号站；其余先 service plane 产品归属，再模型 host/region）：
+
+| `auth`                                     | 信号                                                          | 国际条件                                       | 缺省                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **任意（`console` 除外，优先于下面各行）** | `Client.productSite`（`service-planes.ts` 产品声明）          | 声明 `international` → `product-international` | 声明 `domestic` → `product-domestic`；无声明（`follow` 面、纯模型域）→ 落到下面各行          |
+| `console`                                  | `settings.consoleSite`（不看 `consoleRegion`）                | `international`                                | 未设置 → domestic + `default-fallback`；显式 `domestic` → `positive-domestic`                |
+| `apiKey` / `openapi`                       | `Client.lastResolvedOrigin` 优先，否则非默认 `client.baseUrl` | 已知国际 host/region（含 `cn-hongkong`）       | 无有效 host / `baseUrlIsDefault` → domestic + `default-fallback`；未知 host → `unknown-host` |
+| `none`                                     | consoleSite **或** 模型 host（OR）                            | 任一侧国际                                     | 同上两侧兜底                                                                                 |
+
+- `siteReason`：`positive-*` 仅表示有明确信号（显式 consoleSite / 非默认 model host / `lastResolvedOrigin`）；内置默认 `baseUrl`（`baseUrlIsDefault`）不计为 positive，走 `default-fallback`。
+- 模型 host 分类清单上收在 `packages/core/src/config/model-endpoints.ts`（与 API Key 登录候选共用）；`site.ts` 只调用 helper，禁止再写第四份。
+- `lastResolvedOrigin` 记录**每一次实际请求**的 origin：`Client.url()` / upload 的 `defaultBaseUrl` 回调，以及 `request` / `requestJson` 收到的绝对 URL 与相对 `path`（#349 的漏记点正是绝对 URL 没记）。origin 与 `baseUrl` 同 host 时不算额外信号，内置默认仍走 `default-fallback`。runtime **禁止**泛化读取各命令 `flags.region`。
+- 产品归属表在 `packages/core/src/client/service-planes.ts`，按请求 pathname 命名空间识别，且只覆盖 CLI 自己构造的绝对 URL：`domestic` = 出口固定在国内、用户无法覆盖的面（RAG admin 面 / knowledge search+chat / memory / 公共 DashScope 定制模型导入）；`follow` = 允许 `--base-url` 或 region 覆盖的面（ParseX / AgentStudio sandbox+security / 模型域），由实际 host 判定。**新增绝对 URL 出口必须同步该表**，漂移守卫见 `packages/core/tests/telemetry-service-planes.test.ts`。
+- `siteReason` 新增 `product-domestic` / `product-international`：归属来自产品声明，不是用户配置；`positive-*` 继续只表示用户侧信号。
+- 记录对象 `RequestSignals` 每次命令运行创建一份，由 `authStage` 注入 `ClientDeps`；`Client.withConsoleSwitchAgent()` 派生的新 Client 继承同一份，否则内层请求对外层 telemetry 不可见。
+- **`dryRun` 只标记预览，不标记「零请求」**：`--dry-run` 的含义是本次不创建、不修改资源，**不代表没有网络**。带 `prepare` 的命令在预览阶段照常发只读请求，请求一经发出就记录 origin 与 service plane，所以 `dryRun=true` 与 `siteReason=product-*` **可以共存**：实测 `bl knowledge init --dry-run` → `domestic / product-domestic / dryRun=true`，该命令自己的 help 也写明 dry-run 会读取已有资源。
+  - 预览事件的归属口径和真实执行**完全一致**，都由实际触碰的出口决定，不因预览而特殊：`knowledge init` / `knowledge doc sync` 的 prepare 读 workspace 网关 → `product-*`；`deploy router update` 的 prepare 读模型域（`/api/v1/deployments/...`，不在 plane 表里）→ 照样是 `positive-*`（实测国际 baseUrl 下 `bl deploy router update … --dry-run` → `international / positive-international / dryRun=true`，服务端 401 也照样记录出口——失败的请求同样是发出去的请求）。
+  - 两个信号各答一个问题，不要互换：**算真实执行调用量** → 按 `dryRun` 把预览剔掉；**判断站点归属来自产品还是用户配置** → 按 `siteReason` 是否 `product-*`。
+  - 真正缺产品归属信号的只有「预览且一个请求都没发」：命令拼出 endpoint 后在 dry-run 分支直接 `output.result` 返回（如 `bl knowledge list --dry-run`），`RequestSignals` 为空，站点退到用户配置的 `baseUrl`——国际 baseUrl 下会报 `international`，尽管它预览的是北京 workspace 出口。这类事件在看板上不能读成「国际站对该产品有需求」，判据是 `siteReason` 非 `product-*`，**不是** `dryRun`。
+  - `follow` 面（ParseX / Sandbox / Security / 模型域）的 dry-run 按 baseUrl 判本来就是正确口径，不在此列。
+  - **执行前提**：`siteReason` 与 `dryRun` 目前只存在于 `ext`（和本地 JSONL），两站都还没给它们建自定义维度（见下方「看板元数据还没跟上」）。维度补齐前，上面的判据只能在 `~/.bailian/telemetry.jsonl` 或 ext 原始导出里用；要在看板上筛预览、筛归属，必须先补这两个维度，否则规则落不了地。
+- openapi **禁止**用 ACS `opts.host` 分类。
+- `remoteSink` 按 site 使用 keyed `Map` 持有 Tracker；同进程可同时存在国内与国际实例。`uid` / tracker `device_id` **跨站同值**。
+- vendored tracker 仅保留本仓对 `send` 的本地改造（登记于此）；国际 path 与国内同为 `/aes.1.1`，**不加** `endpointPath` patch。升级 SDK 时必须保留 `send` 改造。
+- 看板元数据还没跟上：`site` / `siteReason` 两站都未建自定义维度；`callerType` / `callerName` / `cliVersion` / `cliVersionCode` / `commandPrefix` 国内项目有、国际项目一个都没有。数据已经在 `ext` 里，但国际站要做筛选/聚合（含 Agent 调用率、入口区分）必须先补这些维度。
+- 已知残留：未知/反代 host、残缺配置、登录写盘前首条 `none`、managed-agent 外部拼 host、旧版 CLI、账号站与模型地域混维拆站、`first_install` 固定报国内站（安装阶段没有 auth / Client 上下文）、pipeline 步骤的 Client 未注入 `RequestSignals`（`packages/runtime/src/pipeline/bl-config.ts`，步骤请求不进命令事件）、`mcp --url` 覆盖时记录的是默认 httpUrl 而非实际目标、**国内-only family 中「预览且未发请求」的事件按用户 baseUrl 归站**（见上条；圈出来用 `siteReason` 非 `product-*`，不是用 `dryRun`）。
 
 编译二进制的 `env=prod` 由 `BAILIAN_COMPILED=1` 决定，并且必须先于 `NODE_ENV`。`bun build --compile`（当前 pin 1.3.14）会把点访问 `process.env.NODE_ENV` 内联成构建机的值，未设置时是 `"development"`；`tools/release/lib/binary-compile.mjs` 同时 `--define process.env.NODE_ENV="production"`。这两处读取必须写成 `process.env.*`，包进别的变量后 `--define` 匹配不到。
 
 旁路状态：`~/.bailian/telemetry-uid`（遵循 `BAILIAN_CONFIG_DIR`）由 `ensureUid` 在首次远端上报时生成，不是事件落盘目标。
 
-底层 Node tracker 还会附加公共设备字段：OS 类型/版本、Node 应用名与版本、平台，以及内置的 `device_id`（本机网卡 MAC 的 MD5，保持不变）。稳定匿名 install id 写入 AEM 的 `uid`：来自 `~/.bailian/telemetry-uid`，首次远端上报时生成随机 UUID v4，以 0600 权限原子发布；生成失败时不上报 `uid`。遥测关闭时不生成该文件。本地 `telemetry.jsonl` 每行附带同名 `uid`。注意：这不是账号用户 ID，只是上报到 AEM `uid` 字段的匿名标识；与 Tracker 内置 `device_id` 无关。
+底层 Node tracker 还会附加公共设备字段：OS 类型/版本、Node 应用名与版本、平台，以及内置的 `device_id`（本机网卡 MAC 的 MD5，保持不变）。稳定匿名 install id 写入 AEM 的 `uid`：来自 `~/.bailian/telemetry-uid`，首次远端上报时生成随机 UUID v4，以 0600 权限原子发布；生成失败时不上报 `uid`。遥测关闭时不生成该文件。本地 `telemetry.jsonl` 每行附带同名 `uid`。注意：这不是账号用户 ID，只是上报到 AEM `uid` 字段的匿名标识；与 Tracker 内置 `device_id` 无关。国内/国际两站共用同一 `uid` / `device_id`。
 
 `ensureUid` 无锁：稳态只读；缺失或损坏时同目录 temp 写满后 `rename` 发布（内容原子替换；并发首次创建时后写覆盖先写，磁盘最终为一个 UUID）。失败则省略 `uid`，不阻塞业务退出。
 
-从 2.8.2 起，每条命令事件通过 `commandPrefix` 显式记录调用入口，三种入口仍共用 `pid=bailian-cli-node`：
+从 2.8.2 起，每条命令事件通过 `commandPrefix` 显式记录调用入口；pid 按上表 `site` 分流，三种入口仍靠 `commandPrefix` 区分：
 
 | 调用入口    | `commandPrefix` |
 | ----------- | --------------- |
@@ -167,17 +209,19 @@ postinstall.js launchFirstInstallReport
 
 AEM 映射：
 
-| AEM 字段   | 内容                                                                                                                                                |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| event name | 命令路径                                                                                                                                            |
-| `et`       | `EXP`                                                                                                                                               |
-| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType`、失败时的 `exitCode`，以及读到的 `installChannel`。安装日不在命令事件里 |
-| `c1`       | allowlist 参数                                                                                                                                      |
-| `c2`       | `success` / `failure`                                                                                                                               |
-| `c3`       | HTTP status                                                                                                                                         |
-| `c4`       | 错误文案，最多 500 字符                                                                                                                             |
-| `c5`       | request ID                                                                                                                                          |
-| `c6`       | `bizFrom` 业务来源（全局 `--biz-from`，归一化标量；专用扁平列，直接筛选/分组）                                                                      |
+| AEM 字段   | 内容                                                                                                                                                                                                                        |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| event name | 命令路径                                                                                                                                                                                                                    |
+| `et`       | `EXP`                                                                                                                                                                                                                       |
+| `ext`      | 除 `command`、`params` 外的结构化事件字段，含 `commandPrefix`、`callerType`、`site`、可选 `siteReason`、可选 `dryRun`（仅 `--dry-run` 时为 `true`）、失败时的 `exitCode`，以及读到的 `installChannel`。安装日不在命令事件里 |
+| `c1`       | allowlist 参数                                                                                                                                                                                                              |
+| `c2`       | `success` / `failure`                                                                                                                                                                                                       |
+| `c3`       | HTTP status                                                                                                                                                                                                                 |
+| `c4`       | 错误文案，最多 500 字符                                                                                                                                                                                                     |
+| `c5`       | request ID                                                                                                                                                                                                                  |
+| `c6`       | `bizFrom` 业务来源（全局 `--biz-from`，归一化标量；专用扁平列，直接筛选/分组）                                                                                                                                              |
+
+`siteReason` 为粗粒度枚举（`product-domestic` / `product-international` / `positive-domestic` / `positive-international` / `default-fallback` / `unknown-host`），**禁止**带原始 host。`product-*` 表示归属来自产品声明，`positive-*` 表示来自用户配置信号，两者不能混算。漏判量化用国内站 `siteReason` 兜底类占比；不要用「国内 pid 出现 `site=international`」做告警（国际事件不会进国内 pid）。
 
 远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。`flushTelemetry` 同时等待在途本地 JSONL 落盘与远端发送，共享同一超时预算；超时只取消远端，本地写不可取消但仍不得无限阻塞退出。
 
@@ -210,7 +254,7 @@ AEM 映射：
 - [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
 - [ ] 安装日只在新用户安装成功写盘后，由 `BAILIAN_FIRST_INSTALL_REPORT=1` 且参数 `--bailian-first-install-report` 进入 `reportFirstInstallNow`，事件名 `first_install`。只剩环境变量时普通命令照常执行。拉起最多等 8 秒。这条入口先 `setupProxyFromEnv()`，代理无效则直连且安装继续；并遵守 `DO_NOT_TRACK=1` 与 `telemetry: false`。命令事件只带 `installChannel`。缺失或无法识别时不创建 `install.json`，不把当前时间补进 `firstInstalledAt`。每个安装日只入队一次；入队失败不记次数，也不改由后续命令补发。`kscli` 和 bootstrap 都不发这条事件
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口
-- [ ] `remoteSink` 从调用到 `remoteSendEvent` 入队之间不得出现 `await`（flush 只排空已入队事件）
+- [ ] `remoteSink` 从调用到对应站点 Tracker 的 `sendEvent` 入队之间不得出现 `await`（flush 只排空已入队事件）
 - [ ] 测试中调用 `remoteSink` 的用例必须使用 `enterIsolatedHome()`，避免写入真实配置目录
 - [ ] 遥测发送的 DNS/HTTP/响应体必须受可取消预算控制；flush 超时必须取消在途操作，不能只停止等待，也不能修改全局 DNS/dispatcher 或强制退出宿主
 - [ ] `localSink` 在途写入须登记并由 `flushTelemetry` 等待（即使无远端 in-flight）；命令路径仍可 fire-and-forget，不得因本地写失败改退出码；用 `telemetry-sink` 单测覆盖「无远端也落盘」和「本地卡住仍按时返回」，并用 `telemetry-exit` e2e 的 `fast-run-to-exit` 子进程用例守住「远端立即响应 + `runToExit` 强制退出仍落盘」
@@ -221,9 +265,10 @@ AEM 映射：
 
 ```sh
 rg -n "trackingHeaders|x-dashscope-source-config|User-Agent" packages --glob '*.ts'
-rg -n "trackCommandExecution|PARAM_ALLOWLIST|buildRemoteAemOptions|readCaller" packages/core packages/runtime --glob '*.ts'
+rg -n "trackCommandExecution|PARAM_ALLOWLIST|buildRemoteAemOptions|readCaller|resolveTelemetrySite|classifyModelHost" packages/core packages/runtime --glob '*.ts'
+rg -n "classifyServicePlane|productSiteOf|createRequestSignals|requestSignals" packages/core packages/runtime --glob '*.ts'
 vp check
-vp test packages/core/tests/telemetry-uid.test.ts packages/core/tests/telemetry-sink.test.ts packages/core/tests/telemetry-tracker.test.ts packages/core/tests/telemetry-send.test.ts packages/runtime/tests/telemetry-stage.test.ts packages/commands/tests/e2e/auth.e2e.test.ts
+vp test packages/core/tests/telemetry-uid.test.ts packages/core/tests/telemetry-sink.test.ts packages/core/tests/telemetry-tracker.test.ts packages/core/tests/telemetry-send.test.ts packages/core/tests/telemetry-site.test.ts packages/core/tests/telemetry-service-planes.test.ts packages/core/tests/client-last-resolved-origin.test.ts packages/runtime/tests/telemetry-stage.test.ts packages/commands/tests/e2e/auth.e2e.test.ts
 ```
 
 ## 常见漏点
@@ -236,3 +281,12 @@ vp test packages/core/tests/telemetry-uid.test.ts packages/core/tests/telemetry-
 - ✗ 只改 `bl` 入口，导致 `kscli` 的产品名或版本标签错误
 - ✗ 把帮助、版本或参数校验失败算进“全部命令”；这些路径当前没有进入 telemetry middleware
 - ✗ 把 `NODE_ENV` 判断放在 `BAILIAN_COMPILED` 前面。Bun 编译会把 `process.env.NODE_ENV` 折成 `"development"`，二进制流量全部进 `env=dev`，生产看板为空
+- ✗ 在 runtime 里泛化读取 `flags.region` 做站点判定；必须用 `baseUrl` / `lastResolvedOrigin` / `consoleSite`
+- ✗ 新增绝对 URL 出口（workspace 网关、硬编码公共 host）却没登记 `service-planes.ts`，产品归属静默丢失——#349 的 bug 类
+- ✗ 把国内-only 产品的站点归到用户配置的模型域名上；判定顺序是产品声明 → 实际 host → baseUrl
+- ✗ 把允许 `--base-url` / region 覆盖的面声明成 `domestic`，等于替用户否认他显式选择的海外站点
+- ✗ 用 openapi ACS host 或「非 cn- 前缀」推断国际站（`cn-hongkong` 是国际）
+- ✗ 把 AEM 分流叙事写成「国际数据绝不出境」硬保证；实际是 best-effort 声明口径
+- ✗ 用 `dryRun` 反推「有没有发请求」：带 `prepare` 的命令预览时照样读远端，事件同时带 `dryRun=true` 和 `product-*`
+- ✗ 把国内-only family 里 `siteReason` 非 `product-*` 的预览事件算进真实调用量，进而误判国际站产品需求
+- ✗ 升级 vendored AEM tracker 时丢掉本仓 `send` 改造
