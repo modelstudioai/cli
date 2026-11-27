@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import files, { mkdir, readFile, readdir, utimes, writeFile } from "node:fs/promises";
+import files, { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -1033,16 +1033,129 @@ describe("Console cache and endpoint isolation", () => {
   );
 });
 
-describe("credential and configuration lock recovery", () => {
-  test.each(["", '{"pid":'])("recovers a stale incomplete lock record %j", async (record) => {
-    const path = join(isolation.configDir, "config.json.lock");
-    await writeFile(path, record);
-    await writeFile(`${path}.recovery`, "");
-    const stale = new Date(Date.now() - 5_000);
-    await utimes(path, stale, stale);
-    await expect(withFileLock(path, async () => true, 500)).resolves.toBe(true);
-    await expect(readFile(path)).rejects.toMatchObject({ code: "ENOENT" });
+describe("Console retry identity pinning", () => {
+  const expired = () =>
+    json({ data: { success: false, errorCode: "BailianGateway.Login.NotLogined" } });
+  const success = { data: { success: true } };
+
+  async function setupConsoleRetry() {
+    const current = profile();
+    const key = consoleCredentialKey({ ...TARGET, gateway: current.console_gateway });
+    const instance = await setup({
+      oauthSession: session({
+        sts: sts(),
+        consoleTokens: { [key]: { token: "fixture-console-token" } },
+      }),
+    });
+    const client = new Client({
+      identity: deps.identity,
+      settings: buildSettings(instance.sources),
+      baseUrl: "https://dashscope.aliyuncs.com",
+      openApiProvider: instance.provider,
+      resolveConsoleOpenApiCredential: () => instance.provider.getCredential("console"),
+    });
+    return { ...instance, client, key };
+  }
+
+  test.each(["new OAuth session", "static credentials"] as const)(
+    "does not exchange or replay under %s after the original token expires",
+    async (replacement) => {
+      const instance = await setupConsoleRetry();
+      transport.mockImplementationOnce(async () => {
+        if (replacement === "new OAuth session")
+          await instance.auth.loginAliyun(profile(), session({ sts: sts() }));
+        else
+          await instance.auth.login({
+            access_token: "fixture-static-console",
+            access_key_id: "fixture-static-id",
+            access_key_secret: "fixture-static-secret",
+          });
+        return expired();
+      });
+      await expect(instance.client.console("fixture.readOnly", {})).rejects.toBeInstanceOf(
+        CredentialError,
+      );
+      expect(transport).toHaveBeenCalledTimes(1);
+      expect(instance.store.read.mock.calls).toEqual([[REFERENCE]]);
+    },
+  );
+
+  test("checks the fingerprint again before replay when OAuth endpoints change during issuance", async () => {
+    const instance = await setupConsoleRetry();
+    transport.mockResolvedValueOnce(expired()).mockImplementationOnce(async () => {
+      await writeConfigFile({
+        aliyun_oauth: profile({ modelstudio_host: "changed-modelstudio.example.test" }),
+      });
+      return json({ cliAccessToken: "fixture-unused-token" });
+    });
+    await expect(instance.client.console("fixture.readOnly", {})).rejects.toBeInstanceOf(
+      CredentialError,
+    );
+    expect(transport).toHaveBeenCalledTimes(2);
+    expect(instance.store.write).not.toHaveBeenCalled();
   });
+
+  test("a late expiry cannot replay through a replacement token loaded by another request", async () => {
+    const instance = await setupConsoleRetry();
+    const firstStarted = deferred<void>();
+    const firstResponse = deferred<Response>();
+    transport
+      .mockImplementationOnce(() => {
+        firstStarted.resolve();
+        return firstResponse.promise;
+      })
+      .mockResolvedValueOnce(json(success));
+    const pending = expect(instance.client.console("fixture.firstRead", {})).rejects.toMatchObject({
+      reason: "changed-openapi-identity",
+    });
+    await firstStarted.promise;
+    try {
+      await instance.auth.loginAliyun(
+        profile(),
+        session({
+          sts: sts(),
+          consoleTokens: { [instance.key]: { token: "fixture-replacement-console" } },
+        }),
+      );
+      await expect(instance.client.console("fixture.nextRead", {})).resolves.toEqual(success);
+    } finally {
+      firstResponse.resolve(expired());
+      await pending;
+    }
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
+
+  test("exchanges once and replays normally within the same OAuth session", async () => {
+    const instance = await setupConsoleRetry();
+    transport
+      .mockResolvedValueOnce(expired())
+      .mockResolvedValueOnce(json({ cliAccessToken: "fixture-refreshed-console" }))
+      .mockResolvedValueOnce(json(success));
+    await expect(instance.client.console("fixture.readOnly", {})).resolves.toEqual(success);
+    expect(transport).toHaveBeenCalledTimes(3);
+    expect(transport.mock.calls[2]?.[0]).toBe(transport.mock.calls[0]?.[0]);
+    expect(instance.saved().consoleTokens?.[instance.key]?.token).toBe("fixture-refreshed-console");
+  });
+});
+
+describe("credential and configuration lock recovery", () => {
+  test.each(["", '{"pid":', JSON.stringify({ pid: process.pid, id: REFERENCE })])(
+    "does not remove or bypass a legacy lock file %j",
+    async (record) => {
+      const path = join(isolation.configDir, "config.json.lock");
+      await writeFile(path, record);
+      await writeFile(`${path}.recovery`, "");
+      const operation = vi.fn(async () => true);
+      const entries = (await readdir(isolation.configDir)).sort();
+      await expect(withFileLock(path, operation, 500)).rejects.toMatchObject({
+        message: expect.stringContaining(path),
+        hint: expect.stringContaining("Stop older CLI processes"),
+      });
+      expect(operation).not.toHaveBeenCalled();
+      expect(await readFile(path, "utf8")).toBe(record);
+      expect((await readdir(isolation.configDir)).sort()).toEqual(entries);
+    },
+  );
 
   test.each(["empty", "dead owner"] as const)(
     "recovers a lock directory left with %s",

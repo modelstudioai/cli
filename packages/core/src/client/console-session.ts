@@ -37,6 +37,24 @@ interface ConsoleTokenRefresh {
   commit?: Promise<void>;
 }
 
+function assertSameConsoleIdentity(
+  previous?: ConsoleCredential,
+  next?: Pick<OpenApiCredential, "method" | "sessionRef" | "configurationFingerprint">,
+): void {
+  if (!previous || (previous.method !== "aliyun-oauth" && next?.method !== "aliyun-oauth")) return;
+  if (
+    previous.method !== next?.method ||
+    !previous.sessionRef ||
+    previous.sessionRef !== next?.sessionRef ||
+    !previous.configurationFingerprint ||
+    previous.configurationFingerprint !== next?.configurationFingerprint
+  )
+    throw new CredentialError(
+      "changed-openapi-identity",
+      "The Console identity changed during the request. / 请求期间控制台身份已变更。",
+    );
+}
+
 /** Internal Console credential lifecycle; each instance owns its cache and in-flight exchange. */
 export class ConsoleSession {
   private consoleTokenPersisted: boolean;
@@ -127,8 +145,14 @@ export class ConsoleSession {
     failure: BailianError,
     previous?: ConsoleCredential,
   ): Promise<T> {
+    const retry = (credential: ConsoleCredential) => {
+      assertSameConsoleIdentity(previous, credential);
+      if (credential.method === "aliyun-oauth")
+        this.deps.openApiProvider?.resolveConsoleTarget(credential);
+      return invoke(credential);
+    };
     if (this.deps.consoleCred && this.deps.consoleCred !== previous)
-      return invoke(this.deps.consoleCred);
+      return retry(this.deps.consoleCred);
 
     let refresh = this.consoleRefresh;
     if (!refresh || refresh.previous !== previous) {
@@ -143,7 +167,7 @@ export class ConsoleSession {
         throw error;
       });
       if (!exchange) throw failure;
-      const result = await invoke(exchange.credential);
+      const result = await retry(exchange.credential);
       refresh.commit ??= (async () => {
         if (this.deps.consoleCred !== previous) return;
         if (exchange.persist) {
@@ -171,7 +195,10 @@ export class ConsoleSession {
   private async exchangeConsoleToken(
     previous?: ConsoleCredential,
   ): Promise<ConsoleTokenExchange | null> {
+    if (previous?.method === "aliyun-oauth")
+      this.deps.openApiProvider?.resolveConsoleTarget(previous);
     const credential = await this.deps.resolveConsoleOpenApiCredential?.();
+    assertSameConsoleIdentity(previous, credential);
     const unresolvedTarget = previous
       ? {
           region: previous.region,

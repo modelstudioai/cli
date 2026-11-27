@@ -4,7 +4,6 @@ import {
   mkdir,
   mkdtemp,
   readdir,
-  readFile,
   rename,
   rm,
   rmdir,
@@ -19,9 +18,8 @@ import { ExitCode } from "../errors/codes.ts";
 const OWNER_NAME = /^owner-([1-9]\d*)-[a-f0-9-]{36}$/u;
 const CONTENTION_CODES = new Set(["EEXIST", "ENOTEMPTY", "ENOTDIR", "EISDIR"]);
 
-function ownerAlive(pid: unknown): boolean {
-  if (typeof pid !== "number" || !Number.isInteger(pid) || pid <= 0 || pid > 0x7fff_ffff)
-    return false;
+function ownerAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0 || pid > 0x7fff_ffff) return false;
   try {
     process.kill(pid, 0);
     return true;
@@ -41,17 +39,12 @@ async function recoverLock(path: string): Promise<void> {
     if (error.code !== "ENOENT") throw error;
   });
   if (status?.isFile()) {
-    const previous = await readFile(path, "utf8").catch(() => undefined);
-    if (previous === undefined) return;
-    let pid: unknown;
-    try {
-      pid = (JSON.parse(previous) as { pid?: unknown } | null)?.pid;
-    } catch {
-      // Leave a grace period for an older process still publishing its ownership record.
-      if (Date.now() - status.mtimeMs < 1_000) return;
-    }
-    if (!ownerAlive(pid)) await unlink(path).catch(() => {});
-    return;
+    // An older writer can replace this file between any ownership check and unlink.
+    throw new BailianError(
+      `Legacy lock file at ${path}. / 检测到旧版锁文件：${path}。`,
+      ExitCode.GENERAL,
+      "Stop older CLI processes and retry. If the file remains after confirming that nothing is using it, move it aside. / 请退出旧版 CLI 进程后重试；若确认锁文件已无人使用但仍存在，请将其移走。",
+    );
   }
   if (!status?.isDirectory()) return;
   const entries = await readdir(path).catch((error: NodeJS.ErrnoException) => {

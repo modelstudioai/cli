@@ -53,6 +53,22 @@ export function assertOAuthConfiguration(
     );
 }
 
+function assertOAuthRouteBinding(
+  profile: AliyunOAuthProfile | undefined,
+  credential?: Pick<OpenApiCredential, "method" | "sessionRef" | "configurationFingerprint">,
+): void {
+  if (
+    credential?.method === "aliyun-oauth" &&
+    (!profile ||
+      profile.session_ref !== credential.sessionRef ||
+      credential.configurationFingerprint !== oauthConfigurationFingerprint(profile))
+  )
+    throw new CredentialError(
+      "missing-aliyun-session",
+      "The OAuth login changed or was removed. / OAuth 登录已变更或被移除。",
+    );
+}
+
 export function oauthSessionLockPath(directory: string, reference: string): string {
   return join(directory, "oauth", `${reference}.lock`);
 }
@@ -285,6 +301,7 @@ export function createOpenApiCredentialProvider(
     },
     resolveConsoleTarget(target, purpose = "console") {
       const profile = selectedOAuth(currentSources(), purpose);
+      assertOAuthRouteBinding(profile, target);
       if (profile) validateTarget(profile, target);
       const gateway = pre
         ? requirePreConsoleGateway(pre, target)
@@ -298,16 +315,7 @@ export function createOpenApiCredentialProvider(
     },
     resolveHost(host, credential, purpose = "openapi") {
       const profile = selectedOAuth(currentSources(), purpose);
-      if (
-        credential?.method === "aliyun-oauth" &&
-        (!profile ||
-          profile.session_ref !== credential.sessionRef ||
-          credential.configurationFingerprint !== oauthConfigurationFingerprint(profile))
-      )
-        throw new CredentialError(
-          "missing-aliyun-session",
-          "The OAuth login changed or was removed. / OAuth 登录已变更或被移除。",
-        );
+      assertOAuthRouteBinding(profile, credential);
       if (pre) return resolvePreOpenApiHost(host);
       if (!profile || (credential && credential.method !== "aliyun-oauth")) return host;
       if (
