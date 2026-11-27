@@ -744,7 +744,7 @@
     "requests": []
   },
   "text training create preview": {
-    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"qwen2.5-7b-instruct\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"batch_size\": 4\n    }\n  }\n}\n",
+    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"qwen2.5-7b-instruct\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"batch_size\": 4,\n      \"n_epochs\": 3\n    }\n  }\n}\n",
     "data": {
       "action": "finetune.create",
       "body": {
@@ -752,7 +752,8 @@
         "training_file_ids": ["file-fixture"],
         "training_type": "efficient_sft",
         "hyper_parameters": {
-          "batch_size": 4
+          "batch_size": 4,
+          "n_epochs": 3
         }
       }
     },
