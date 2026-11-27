@@ -8,6 +8,27 @@ test.each(["tools", "schema", "call"])("connector %s exposes workspace scope", a
   expect(result.stderr).toContain("--workspace-id");
 });
 
+test("connector call reaches argument validation without confirmation", async () => {
+  const result = await runCommandInProcess(CONNECTOR_ROUTES, [
+    "connector",
+    "call",
+    "--tool",
+    "calendar.list",
+    "--instance",
+    "account",
+    "--json",
+    "[]",
+    "--workspace-id",
+    "ws-test",
+    "--api-key",
+    "sk-test",
+    "--output",
+    "json",
+  ]);
+  expect(result.exitCode, result.stderr).toBe(2);
+  expect(JSON.parse(result.stderr).error.message).toContain("--json");
+});
+
 test("connector call previews the selected account and one execution offline", async () => {
   const result = await runCommandInProcess(CONNECTOR_ROUTES, [
     "connector",

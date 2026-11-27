@@ -9,13 +9,6 @@ export default defineCommand({
     "zh-CN": "校验入参并在所选账号执行一个连接器工具",
   },
   auth: "apiKey",
-  risk: {
-    level: "high",
-    message: {
-      "en-US": "The selected tool may change data in the connected account.",
-      "zh-CN": "所选工具可能修改连接账号中的数据。",
-    },
-  },
   usageArgs: "--tool <toolRef> --instance <instanceId> --json '<object>' [--trace-id <id>]",
   flags: {
     ...selectionFlags,

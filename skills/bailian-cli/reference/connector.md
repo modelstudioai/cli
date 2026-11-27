@@ -23,10 +23,6 @@ Index: [index.md](index.md)
 | **Description**    | Validate arguments and execute one connector tool on the selected account                        |
 | **Authentication** | API Key                                                                                          |
 | **Usage**          | `bl connector call --tool <toolRef> --instance <instanceId> --json '<object>' [--trace-id <id>]` |
-| **Risk**           | `high`                                                                                           |
-| **Risk message**   | The selected tool may change data in the connected account.                                      |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -37,7 +33,6 @@ Index: [index.md](index.md)
 | `--instance <instanceId>` | string | yes      | Selected authorized connector instance                          |
 | `--trace-id <id>`         | string | no       | Trace ID from connector discovery                               |
 | `--json <object>`         | string | yes      | JSON object matching the selected tool schema                   |
-| `--yes`                   | switch | no       | Confirm this high-risk operation                                |
 | `--api-key <key>`         | string | no       | API key                                                         |
 | `--base-url <url>`        | string | no       | API base URL                                                    |
 
