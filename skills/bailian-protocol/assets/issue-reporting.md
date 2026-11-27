@@ -115,7 +115,7 @@ Offer reporting when **none** of EXCLUDE applies **and** any of the following ho
 
 ### Before offering to report
 
-1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command) — run `bl update` and `bl skill update` if mismatched. If needed skills are missing, run `bl skill init`.
+1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command) — run `bl update` and `bl skill update --all` if mismatched. If needed skills are missing, run `bl skill init`.
 2. Confirm `bl auth status` is healthy (for commands that need auth).
 3. Preserve existing output. If stderr was thin, use the safe diagnostic procedure below; retry is optional and is never a prerequisite for reporting an uncertain write.
 

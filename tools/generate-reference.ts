@@ -94,6 +94,10 @@ const AUTH_LABELS = {
   none: "No Auth",
 } satisfies Record<AuthRequirement, string>;
 
+function authLabel(command: AnyCommand): string {
+  return command.requiresApiKey ? "API Key when required by source" : AUTH_LABELS[command.auth];
+}
+
 function escCell(s: string): string {
   return s.replace(/\|/g, "\\|").replace(/\n/g, " ").trim();
 }
@@ -172,7 +176,7 @@ function commandSection(path: string, cmd: AnyCommand): string {
   lines.push(`| Field | Value |`, `| --- | --- |`);
   lines.push(`| **Name** | \`${escCell(path)}\` |`);
   lines.push(`| **Description** | ${escCell(referenceText(cmd.description))} |`);
-  lines.push(`| **Authentication** | ${AUTH_LABELS[cmd.auth]} |`);
+  lines.push(`| **Authentication** | ${authLabel(cmd)} |`);
   // Commands store argument-only usage; the `bl <path>` prefix is added here.
   const usage = `bl ${path}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}`;
   lines.push(`| **Usage** | \`${escCell(usage)}\` |`);
@@ -247,7 +251,7 @@ function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): st
 
   for (const [path, cmd] of groupEntries) {
     lines.push(
-      `| \`bl ${path}\` | ${AUTH_LABELS[cmd.auth]} | ${escCell(referenceText(cmd.description))} |`,
+      `| \`bl ${path}\` | ${authLabel(cmd)} | ${escCell(referenceText(cmd.description))} |`,
     );
   }
 
@@ -282,7 +286,7 @@ function buildIndex(
   for (const [path, cmd] of entries) {
     const group = topLevel(path);
     lines.push(
-      `| \`bl ${path}\` | ${AUTH_LABELS[cmd.auth]} | ${escCell(referenceText(cmd.description))} | [${group}.md](${group}.md) |`,
+      `| \`bl ${path}\` | ${authLabel(cmd)} | ${escCell(referenceText(cmd.description))} | [${group}.md](${group}.md) |`,
     );
   }
 

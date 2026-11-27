@@ -454,6 +454,8 @@ async function main() {
   // 5. skill-lock.json record: wiki shares the same ledger as bl skill
   upsertSkillLock(WIKI_SKILL_NAME, {
     contentHash: entry.contentHash,
+    remoteId: entry.remoteId,
+    installedVersion: entry.version,
     ...(entry.publishedAt ? { publishedAt: entry.publishedAt } : {}),
     installedAt: new Date().toISOString(),
     sourceType: "oss",

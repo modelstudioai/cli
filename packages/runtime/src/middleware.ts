@@ -42,7 +42,7 @@ import {
   shouldAutoUpdate,
 } from "./utils/update-checker.ts";
 import { ConfirmationRequiredError, confirmationHint } from "./confirm.ts";
-import { prepareCommand } from "./preparation.ts";
+import { runPreparedCommand } from "./preparation.ts";
 
 /**
  * What each middleware stage gets for the invocation in flight: the matched
@@ -208,7 +208,8 @@ export const authStage: Middleware = async (ctx, next) => {
     debug: (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic),
     ...resolveModelBaseUrlState(sources),
   };
-  if (command.auth === "apiKey") {
+  const apiKeyRequirement = command.requiresApiKey?.(ctx.flags) ?? true;
+  if (command.auth === "apiKey" && apiKeyRequirement) {
     // Commands whose network target switches with a flag declare authCapability
     // so Profile selection follows the actual connection; others key off path.
     const capability = command.authCapability
@@ -234,7 +235,11 @@ export const authStage: Middleware = async (ctx, next) => {
     try {
       cred = resolveApiKey(apiSources);
     } catch (err) {
-      if (!settings.dryRun || command.prepare) throw err;
+      const optionalMissing =
+        apiKeyRequirement === "optional" &&
+        err instanceof CredentialError &&
+        err.reason === "missing-api-key";
+      if (!optionalMissing && (!settings.dryRun || command.prepare)) throw err;
     }
     ctx.client = new Client({
       ...base,
@@ -290,6 +295,8 @@ export const authStage: Middleware = async (ctx, next) => {
     }
     ctx.client = new Client({ ...base, openApiCred: cred });
   }
+  const defaultOrigin = command.defaultApiBaseUrl;
+  if (defaultOrigin) ctx.client = ctx.client.withDefaultBaseUrl(() => defaultOrigin(ctx));
   await next();
 };
 
@@ -392,5 +399,5 @@ export const confirmationStage: Middleware = async (ctx, next) => {
 
 /** Innermost stage: hand control to the command with its full context. */
 export const runCommandStage: Middleware = async (ctx) => {
-  if (await prepareCommand(ctx)) await ctx.command.run(ctx);
+  await runPreparedCommand(ctx);
 };

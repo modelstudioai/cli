@@ -31,7 +31,7 @@ export interface ServicePlane {
   /** Stable identifier; consumed by the coverage guard test and the telemetry docs. */
   key: string;
   site: PlaneSite;
-  /** Request pathname prefixes, matched longest-first. */
+  /** Path-segment prefixes, matched longest-first. A trailing slash matches descendants. */
   prefixes: readonly string[];
 }
 
@@ -68,6 +68,16 @@ export const SERVICE_PLANES: readonly ServicePlane[] = [
     prefixes: ["/api/v1/agentstudio/"],
   },
   {
+    key: "mcp",
+    site: "follow",
+    prefixes: ["/api/v1/mcp/servers", "/api/v1/mcps/"],
+  },
+  {
+    key: "cloud-skill",
+    site: "follow",
+    prefixes: ["/api/v1/skills"],
+  },
+  {
     key: "custom-model-import",
     // `CUSTOM_MODEL_IMPORT_ENDPOINT` hardcodes the public mainland DashScope
     // host because workspace hosts answer HTTP 404 for this API family. The
@@ -80,7 +90,11 @@ export const SERVICE_PLANES: readonly ServicePlane[] = [
 
 // Longest prefix first so a specific namespace wins over a broader one.
 const PREFIX_ENTRIES = SERVICE_PLANES.flatMap((plane) =>
-  plane.prefixes.map((prefix) => ({ prefix, plane })),
+  plane.prefixes.map((prefix) => ({
+    prefix,
+    descendants: prefix.endsWith("/") ? prefix : prefix + "/",
+    plane,
+  })),
 ).sort((left, right) => right.prefix.length - left.prefix.length);
 
 /**
@@ -96,7 +110,9 @@ export function classifyServicePlane(requestUrl: string): ServicePlane | undefin
   } catch {
     return undefined;
   }
-  return PREFIX_ENTRIES.find((entry) => pathname.startsWith(entry.prefix))?.plane;
+  return PREFIX_ENTRIES.find(
+    ({ prefix, descendants }) => pathname === prefix || pathname.startsWith(descendants),
+  )?.plane;
 }
 
 /**

@@ -1,162 +1,37 @@
-import {
-  formatCommand,
-  BailianError,
-  ExitCode,
-  defineCommand,
-  getSkillsDir,
-  listSkillDirsOnDisk,
-  parseSkillNames,
-  planUnlinkSkillFromAgents,
-  readSkillLock,
-  removeSkillDir,
-  unlinkSkillFromAgents,
-  writeSkillLock,
-} from "bailian-cli-core";
-import { formatTable } from "bailian-cli-runtime";
-import { join } from "node:path";
+import { defineSkillCommand } from "./update-check.ts";
+import { runSkillLifecycle, useTargetRecords, withSkillMutation } from "./lifecycle.ts";
+import { runRegistryLifecycle } from "./registry-lifecycle.ts";
+import { selectorFlags, sourceFlag, targetFlags, validateSelection } from "./targets.ts";
 
-interface RemoveOutcome {
-  name: string;
-  status: "removed" | "failed";
-  removedLinks?: number;
-  reason?: string;
-}
-
-interface RemovePlanItem {
-  name: string;
-  status: "remove" | "failed";
-  canonical?: string;
-  links?: string[];
-  reason?: string;
-}
-
-export default defineCommand({
+export default defineSkillCommand({
+  updateCheck: "offline",
   description: {
     "en-US": "Remove locally installed skills (registry is untouched)",
     "zh-CN": "移除本地已安装的 Skill（不修改 Registry）",
   },
   auth: "none",
   defaultOutput: "json",
-  usageArgs: "--name <all|name,...>",
+  usageArgs:
+    "(--name <all|name,...> | --code <code,...>) [--agent <agent|all>] [--scope user|project]",
   flags: {
-    name: {
-      type: "string",
-      valueHint: "<all|name,...>",
-      description: {
-        "en-US": "Skills to remove: all or comma-separated skill names",
-        "zh-CN": "要移除的 Skill：all 或以逗号分隔的 Skill 名称",
-      },
-      required: true,
-    },
+    source: sourceFlag,
+    ...targetFlags,
+    ...selectorFlags,
   },
-  exampleArgs: ["--name spark-video", "--name all"],
+  validate: (flags) => validateSelection(flags, "remove"),
+  exampleArgs: [
+    "--name spark-video",
+    "--name all",
+    "--code skill_example --agent cursor --scope project --dry-run",
+  ],
+
   async run(ctx) {
-    // Purely local operation: no remote access, works offline
-    const requested = parseSkillNames(ctx.flags.name, false);
-    const lock = readSkillLock();
-    const names = requested === "all" ? Object.keys(lock.skills) : requested;
-
-    if (names.length === 0) {
-      ctx.output.result(
-        { skills: [] },
-        {
-          text: ctx.localize({
-            "en-US": "No skills installed locally; nothing to remove.",
-            "zh-CN": "本地未安装 Skill，无需移除。",
-          }),
-        },
-      );
-      return;
-    }
-
-    const diskDirs = new Set(listSkillDirsOnDisk());
-    const skillsDir = getSkillsDir();
-
-    if (ctx.settings.dryRun) {
-      const results: RemovePlanItem[] = names.map((name) => {
-        const locked = lock.skills[name];
-        if (!locked) {
-          return {
-            name,
-            status: "failed",
-            reason: diskDirs.has(name)
-              ? "directory not managed by bl skill (untracked); remove manually if needed"
-              : "not installed",
-          };
-        }
-        return {
-          name,
-          status: "remove",
-          canonical: join(skillsDir, name),
-          // 与真实 unlink 同一候选集：含 lock 外的历史托管 symlink
-          links: planUnlinkSkillFromAgents(name, locked.links ?? []),
-        };
-      });
-
-      ctx.output.result({ action: "skill.remove", skills: results });
-
-      const failed = results.filter((result) => result.status === "failed");
-      if (failed.length > 0) {
-        throw new BailianError(
-          `${failed.length}/${results.length} skill(s) failed to remove`,
-          ExitCode.GENERAL,
-          `Check the reason for failed skills in the output; use ${formatCommand(ctx.identity, "skill list")} to verify local install status`,
-        );
-      }
-      return;
-    }
-
-    const results: RemoveOutcome[] = [];
-    for (const name of names) {
-      const locked = lock.skills[name];
-      if (!locked) {
-        results.push({
-          name,
-          status: "failed",
-          reason: diskDirs.has(name)
-            ? "directory not managed by bl skill (untracked); remove manually if needed"
-            : "not installed",
-        });
-        continue;
-      }
-      try {
-        // Reclaim agent fan-out first, then delete canonical, finally clear the lock entry
-        const removedLinks = unlinkSkillFromAgents(name, locked.links ?? []);
-        removeSkillDir(name);
-        delete lock.skills[name];
-        results.push({ name, status: "removed", removedLinks: removedLinks.length });
-      } catch (err) {
-        results.push({
-          name,
-          status: "failed",
-          reason: err instanceof Error ? err.message : String(err),
-        });
-      }
-    }
-    writeSkillLock(lock);
-
-    const rows = results.map((result) => [
-      result.name,
-      result.status,
-      result.status === "removed"
-        ? ctx.localize({
-            "en-US": `reclaimed ${result.removedLinks} agent link(s)`,
-            "zh-CN": `已回收 ${result.removedLinks} 个 Agent 链接`,
-          })
-        : (result.reason ?? "-"),
-    ]);
-    ctx.output.result(
-      { skills: results },
-      { text: formatTable(["NAME", "STATUS", "DETAIL"], rows).join("\n") },
+    const report = await withSkillMutation(ctx, async () =>
+      useTargetRecords(ctx.flags)
+        ? runSkillLifecycle("remove", ctx, ctx.flags)
+        : runRegistryLifecycle("remove", ctx, ctx.flags),
     );
-
-    const failed = results.filter((result) => result.status === "failed");
-    if (failed.length > 0) {
-      throw new BailianError(
-        `${failed.length}/${results.length} skill(s) failed to remove`,
-        ExitCode.GENERAL,
-        `Check the reason for failed skills in the output; use ${formatCommand(ctx.identity, "skill list")} to verify local install status`,
-      );
-    }
+    ctx.output.result(report.data, "text" in report ? { text: report.text } : undefined);
+    if (report.firstError) throw report.firstError;
   },
 });

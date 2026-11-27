@@ -15,7 +15,7 @@ const textChat = defineCommand({
 });
 
 /** console 域 stub：用于跨域 flag 拒绝测试 */
-const mcpList = defineCommand({
+const workspaceList = defineCommand({
   description: "runtime e2e stub",
   auth: "console",
   flags: {},
@@ -32,7 +32,7 @@ const cmodelImport = defineCommand({
 });
 
 void createCli(
-  { "text chat": textChat, "mcp list": mcpList, "cmodel import": cmodelImport },
+  { "text chat": textChat, "workspace list": workspaceList, "cmodel import": cmodelImport },
   {
     binName: "bl",
     version: pkg.version,

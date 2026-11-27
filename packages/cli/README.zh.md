@@ -191,7 +191,7 @@ bl text chat --batch --model qwen-plus --message "你好" --timeout 3600
 
 ### 控制台登录（OAuth，推荐）
 
-控制台能力命令（模型列表、应用列表、MCP 列表、工作空间、用量查询、限流提额、控制台直调）需要使用此登录方式，并可在需要时创建普通 API Key。Token Plan 等订阅计划不能使用 `--console`，请使用下面的 API Key 登录方式。
+控制台能力命令（模型列表、应用列表、工作空间、用量查询、限流提额、控制台直调）需要使用此登录方式，并可在需要时创建普通 API Key。Token Plan 等订阅计划不能使用 `--console`，请使用下面的 API Key 登录方式。
 
 ```bash
 bl auth login --console
@@ -216,6 +216,28 @@ bl auth login --console --token-stdin --console-site international --console-reg
 输入只能是一个原始 token（不超过 64 KiB），不接受 JSON 或 `Bearer ...`；为避免凭证回显，不接受终端交互输入。请使用受保护的文件或可信管道，不要把 token 放进命令参数或 shell 历史，使用后清理临时凭证文件。CLI 校验通过才保存；失败时保留原凭证和激活的 Profile。加上 `--config <name>` 可在成功后写入并激活指定 Profile。此方式仅导入控制台会话，不创建模型 API Key。
 
 ### API Key
+
+MCP 管理命令和云端 Skill 命令会用工作空间 ID 自动拼接北京地域的专属域名。可用 `bl config set workspace_id <id>` 配置一次，也可通过 `BAILIAN_WORKSPACE_ID` 或 `--workspace-id` 指定。若已通过参数、环境变量或 Profile 设置模型 Base URL，则优先使用该地址。
+
+使用百炼 API Key 查询云端 Skill，例如 `bl skill search --keyword pdf --type official`。用结果中的 `skill_code` 执行 `bl skill get --code <skill_code>`，可查看最新版本及本地安装路径。省略 `--type` 会同时检索官方 Skill 和当前工作空间的私有 Skill。`skill get` 默认读取最新版本包中 `mcp-config.json` 声明的 MCP 服务编码。只需元数据时，加 `--with-mcp false` 可跳过下载。
+
+用 `bl skill add --code <skill_code> --agent cursor --scope project` 安装搜索到的 Skill。加 `--skill-version 1.0` 可固定版本。`bl skill list --scope project` 显示安装位置和状态。`bl skill update --code <skill_code> --scope project --diff --dry-run` 预览更新，去掉 `--dry-run` 后应用。`bl skill remove --code <skill_code> --agent cursor --scope project` 只移除该 Agent 的本地安装，可离线执行。
+
+对指定 Skill 执行 `get`、`add`、`update`、`remove` 时，使用 `--code` 传入云端 OpenAPI 编码，或用 `--name` 传入公开 OSS Registry 名称，二者互斥。例如，`bl skill add --name spark-video` 安装一个公开 Skill，`bl skill add --all` 安装公开 OSS Registry 中的全部 Skill。用 `bl skill list --source oss` 查看公开目录。
+
+运行 Skill 命令时，CLI 会检查当前来源中未固定版本的已安装项，并在 stderr 提示可用更新。检查会复用本次目录查询，版本信息缓存 24 小时；卸载时只读有效缓存。运行 `bl skill update` 更新已安装的云端 Skill，或用 `bl skill update --all` 更新已安装的 OSS Skill。原有写法 `bl skill update --name all` 与 `bl skill update --all` 等效。
+
+安装时默认开通包内声明且尚未启用的 MCP 依赖，可能产生费用。使用 `--dry-run` 可预览开通计划。仅安装 Skill 可加 `--with-mcp false`。
+
+使用百炼普通 API Key 即可列出已启用的 MCP 服务（`bl mcp list`）、查看服务详情和工具（`bl mcp get --server <code>`），以及管理自定义服务（`bl mcp create`、`update`、`delete`）。可用 `--dry-run` 预览变更。删除自定义服务须执行 `bl mcp delete --server <code> --yes`。
+
+可用自然语言查找工具，例如 `bl mcp tool search --query "查询订单" --limit 5`。推荐请求可能触发 OneKey 服务开通。已知服务编码时，可用 `bl mcp tool list --server <code>` 通过 OpenAPI 查看工具和入参定义。查询工具也可能触发 OneKey 服务开通。两个命令都支持用 `--dry-run` 在本地预览。要通过真实 MCP 会话查看工具，可用 `bl mcp tools --server <code>`，也可用 `--url <endpoint>` 指定端点。
+
+通过 OpenAPI 调用工具可用 `bl mcp tool call --server <code> --tool getOrder --arg orderId=A123`。用 `--dry-run` 可预览参数。调用工具可能触发 OneKey 服务开通。通过 MCP 会话调用同一工具可用 `bl mcp call --target <code>.getOrder --arg orderId=A123`。两个命令都先取 `--json`，再按顺序应用 `--arg`，最后用 `--query` 的文本覆盖同名参数。
+
+使用 `bl mcp activate --server <code,...>` 或 `bl mcp deactivate --server <code,...>` 可批量开通或停用官方和自定义服务，去重后最多 30 个。用 `--dry-run` 可预览变更。开通 OneKey 服务可能下单。停用自定义服务会保留已保存的配置。
+
+用 `bl mcp connect --server <code> --transport streamable-http --agent cursor` 注册工作空间端点。接入时默认开通尚未启用的服务。用 `--and-activate=false` 可仅接入已启用的服务。项目级注册需在项目根目录加 `--scope project`。Agent 配置和备份可能含有 API Key。用 `bl mcp disconnect --server <code> --agent cursor` 可离线移除相同作用域的本地托管注册。
 
 使用已有的普通 API Key 或 Token Plan 订阅 Key，都执行同一条命令：
 

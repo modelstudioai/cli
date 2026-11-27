@@ -190,6 +190,20 @@ export class Client {
     return requestUrl;
   }
 
+  /** Bind a service default for the whole command, including delegated requests. */
+  withDefaultBaseUrl(resolveDefault: () => string | undefined): Client {
+    if (!this.deps.baseUrlIsDefault) return this;
+    const baseUrl = resolveDefault();
+    if (!baseUrl || baseUrl === this.baseUrl) return this;
+    return new Client({
+      ...this.deps,
+      requestSignals: this.requestSignals,
+      baseUrl,
+      baseUrlIsDefault: false,
+      apiCred: this.deps.apiCred && { ...this.deps.apiCred, baseUrl },
+    });
+  }
+
   private toOpts({ path, ...rest }: ClientRequestOpts): RequestOpts {
     const cred = this.requireApi();
     const requestUrl = /^https?:\/\//.test(path) ? path : cred.baseUrl + path;
@@ -288,13 +302,20 @@ export class Client {
     serverCode: string,
     urlOverride?: string,
     serviceSource?: string,
-  ): Promise<{ client: McpConnectedClient; url: string }> {
-    this.requireApi();
+  ): ReturnType<typeof connectBailianMcpWithFallback> {
+    const { baseUrl, token } = this.requireApi();
+    const httpUrl = baseUrl + bailianMcpPath(serverCode);
+    if (urlOverride) {
+      // A user-supplied path can resemble a different Bailian product's API.
+      if (URL.canParse(urlOverride)) this.recordRequest(new URL(urlOverride).origin);
+    } else {
+      this.recordRequest(httpUrl);
+    }
     return connectBailianMcpWithFallback({
       deps: this.http,
-      authToken: this.deps.apiCred?.token,
-      httpUrl: this.url(bailianMcpPath(serverCode)),
-      sseUrl: this.url(bailianMcpSsePath(serverCode)),
+      authToken: token,
+      httpUrl,
+      sseUrl: baseUrl + bailianMcpSsePath(serverCode),
       serverCode,
       urlOverride,
       serviceSource,

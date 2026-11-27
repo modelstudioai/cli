@@ -15,7 +15,7 @@
 2. **`bailian-protocol` 是共享协议 skill**，业务 skill 执行前应 Read 它
 3. **不要**在 frontmatter 写 `companions`，也不要对外说「companions = 安装器硬依赖」
 4. 子集安装：`bl skill add --name bailian-protocol,<skill>`；漏装 protocol 会导致相对路径 Read 失败
-5. **`bl skill add --all`：** 安装 registry 全量（含 `spark-video` 等非 bailian 技能）；不要用 `--all` 做升级同步。首次 / 整包用 `bl skill init`。升级后自动同步以及 `bl update` 成功后用 `bl skill update`（只更新已安装，不装新 skill）。
+5. **OSS 批量安装与更新**：首次安装百炼整包用 `bl skill init`。`bl skill add --all` 安装公开 Registry 全量 Skill（含 `spark-video` 等非百炼 Skill）。升级后自动同步及 `bl update` 使用 `bl skill update --all` 更新已安装的 OSS Skill。
 
 ## 概念图
 
@@ -38,7 +38,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 
 ### A. 分层边界
 
-- [ ] **整包装齐**：安装 / 缺 skill 文案主推 `bl skill init`；升级同步用 `bl skill update`（只更新已安装，不装新 skill）；业务 skill **不**声明 `companions`
+- [ ] **整包装齐**：安装 / 缺 skill 文案主推 `bl skill init`；升级同步用 `bl skill update --all`（只更新已安装，不装新 skill）；业务 skill **不**声明 `companions`
 - [ ] **协议读取**：CRITICAL / references 可链 `../bailian-protocol/…`；若读不到 → 停止执行 `bl`，提示 `bl skill init`
 - [ ] **调用归因**：协议 `SKILL.md` 放 bash + PowerShell 的 agent / script 模板与协议样例；每个业务 skill **只留一条**填好的 agent 样例并链回协议；其余示例 / `assets/` / `reference/` 保持裸 `bl …`。Agent 当面 inline 套 agent 四变量；**抄进可复用脚本时改用 protocol `script` 模板**，并写明「样例仅当面 inline」。禁止为冒充 agent 而设变量，也禁止写入 shell profile / direnv / CI 全局环境
 - [ ] **高风险确认**：统一由 `bailian-protocol` 定义；reference / leaf help 以 `risk: high` 明示风险，业务 skill 不得引导 Agent 自动补 `--yes`。遇到 exit code 7 / `requires_confirmation` 时停止执行并请求确认；目标或范围变化后重新确认

@@ -3,6 +3,8 @@ import {
   RAG_PATHS,
   SANDBOX_PATHS,
   agentStudioHost,
+  bailianMcpPath,
+  bailianMcpSsePath,
   chatPath,
   classifyServicePlane,
   classifyModelHost,
@@ -10,6 +12,8 @@ import {
   httpTransport,
   knowledgeChatEndpoint,
   knowledgeSearchEndpoint,
+  mcpBaseUrl,
+  mcpServersPath,
   memoryAddAsyncPath,
   memoryEndpoint,
   memoryEventPath,
@@ -25,6 +29,8 @@ import {
   sandboxEndpoint,
   securityOverviewEndpoint,
   SERVICE_PLANES,
+  skillBaseUrl,
+  skillsPath,
   userProfilePath,
   Client,
   type Identity,
@@ -38,6 +44,7 @@ import {
   customModelImportJobEndpoint,
 } from "../src/client/endpoints.ts";
 import { resolveTelemetrySite } from "../src/telemetry/site.ts";
+import { SdkMcpAdapter } from "../src/client/mcp-sdk.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -118,7 +125,21 @@ test("overridable planes carry no product verdict", () => {
   expect(classifyServicePlane(securityOverviewEndpoint(agentStudioHost(workspaceId)))?.key).toBe(
     "agentstudio",
   );
-  for (const key of ["parsex", "agentstudio"]) {
+  const mcpOrigin = mcpBaseUrl(workspaceId);
+  for (const path of [
+    mcpServersPath(),
+    mcpServersPath("example"),
+    bailianMcpPath("example"),
+    bailianMcpSsePath("example"),
+  ]) {
+    expect(classifyServicePlane(mcpOrigin + path)?.key, path).toBe("mcp");
+  }
+  const skillOrigin = skillBaseUrl(workspaceId);
+  for (const path of [skillsPath(), skillsPath("example")]) {
+    expect(classifyServicePlane(skillOrigin + path)?.key, path).toBe("cloud-skill");
+  }
+  expect(classifyServicePlane(skillOrigin + skillsPath() + "-other")).toBeUndefined();
+  for (const key of ["parsex", "agentstudio", "mcp", "cloud-skill"]) {
     expect(SERVICE_PLANES.find((plane) => plane.key === key)?.site).toBe("follow");
   }
 });
@@ -272,4 +293,31 @@ test("a run-level record is shared with derived Clients", () => {
   // The outer Client — the one the telemetry stage reads — sees the request the
   // derived Client made instead of falling back to the shared base URL.
   expect(client.lastResolvedOrigin).toBe(`https://${workspaceId}.cn-beijing.maas.aliyuncs.com`);
+});
+
+test("a workspace client shares its parent's private request record", () => {
+  const client = new Client({
+    identity,
+    settings: { telemetry: true, timeout: 30 } as Settings,
+    baseUrl: "https://dashscope.aliyuncs.com",
+    baseUrlIsDefault: true,
+  });
+  const workspaceOrigin = `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+  const workspaceClient = client.withDefaultBaseUrl(() => workspaceOrigin);
+
+  workspaceClient.url("/api/v1/indices/rag/index/list");
+
+  expect(client.lastResolvedOrigin).toBe(workspaceOrigin);
+  expect(client.productSite).toBe("domestic");
+});
+
+test("an explicit MCP URL records the actual host even if its path resembles another service", async () => {
+  const client = makeClient("https://dashscope.aliyuncs.com");
+  const overrideOrigin = "https://dashscope-intl.aliyuncs.com";
+  vi.spyOn(SdkMcpAdapter.prototype, "initialize").mockResolvedValue(undefined);
+
+  await client.connectBailianMcp("example", overrideOrigin + "/api/v1/indices/custom");
+
+  expect(client.lastResolvedOrigin).toBe(overrideOrigin);
+  expect(client.productSite).toBeUndefined();
 });

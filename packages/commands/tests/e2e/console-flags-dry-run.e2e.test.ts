@@ -98,7 +98,7 @@ describe("e2e: console global flags (dry-run)", () => {
     expect(stderr).toMatch(/(?:Unknown flag|未知参数).*--region/);
   });
 
-  test("mcp list --dry-run --console-region 透传", async () => {
+  test("mcp list uses API-key authentication and rejects --console-region", async () => {
     const { stdout, stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "mcp",
       "list",
@@ -108,9 +108,9 @@ describe("e2e: console global flags (dry-run)", () => {
       "--console-region",
       "cn-hangzhou",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<ConsoleDryRunMeta>(stdout);
-    expect(data.consoleRegion).toBe("cn-hangzhou");
+    expect(exitCode, stderr).toBe(2);
+    expect(stdout).toBe("");
+    expect(stderr).toContain("--console-region");
   });
 
   test("quota check --dry-run --console-region 透传", async () => {

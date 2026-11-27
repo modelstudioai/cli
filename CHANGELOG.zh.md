@@ -6,6 +6,23 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.14.0] - 2026-11-27
+
+### 新增
+
+- `bl mcp get` 可查看 MCP 服务详情。自定义服务支持创建、更新和删除，官方及自定义服务支持批量启停。使用 `bl mcp tool search`、`list` 和 `call` 可通过 OpenAPI 搜索、列出和调用工具。
+- `bl skill search` 可搜索官方 Skill 和工作空间的私有 Skill。用 `--code` 指定云端 Skill，用 `--name` 指定公共 OSS Skill。安装时可选择 Agent 和用户或项目范围。云端 Skill 支持固定版本、预览更新差异和离线移除本地安装。
+
+### 变更
+
+- `bl mcp list` 改用普通百炼 API Key，结果包含本地 Agent 注册信息。**(BREAKING)**
+- `bl skill list` 和 `bl skill update` 默认使用云端目录。原有 OSS 脚本请分别改用 `bl skill list --source oss` 和 `bl skill update --all`。**(BREAKING)**
+- `bl mcp connect` 和 `bl skill add` 默认会开通所需的未启用 MCP 服务，可能产生费用。可用 `--dry-run` 预览。跳过自动开通时，连接 MCP 服务用 `--and-activate=false`，安装 Skill 用 `--with-mcp false`。
+
+### 修复
+
+- `bl mcp tools` 现在会读取后续分页，工具较多时也能列出完整清单。
+
 ## [2.13.0] - 2026-11-27
 
 ### 新增

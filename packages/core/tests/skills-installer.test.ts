@@ -12,8 +12,7 @@ import {
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { brotliCompressSync } from "node:zlib";
-import tar from "tar-stream";
+import { buildTarBr } from "./helpers/skill-archive.ts";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { BailianError } from "../src/errors/base.ts";
 import type { AgentTarget } from "../src/skills/agents.ts";
@@ -47,23 +46,6 @@ async function inTempConfigDir(fn: () => Promise<void>): Promise<void> {
     else process.env.BAILIAN_CONFIG_DIR = saved;
     rmSync(dir, { recursive: true, force: true });
   }
-}
-
-/** Build a skill archive the same way as the publisher (tar.pack + brotli) */
-async function buildTarBr(files: Record<string, string>): Promise<Buffer> {
-  const pack = tar.pack();
-  const chunks: Buffer[] = [];
-  pack.on("data", (chunk: Buffer) => chunks.push(chunk));
-  const done = new Promise<void>((resolvePromise, reject) => {
-    pack.on("end", resolvePromise);
-    pack.on("error", reject);
-  });
-  for (const [rel, content] of Object.entries(files)) {
-    pack.entry({ name: rel }, content);
-  }
-  pack.finalize();
-  await done;
-  return brotliCompressSync(Buffer.concat(chunks));
 }
 
 const VALID_SKILL_MD = "---\nname: demo\ndescription: demo skill\n---\n\n# Demo v1\n";
