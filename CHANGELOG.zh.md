@@ -17,7 +17,8 @@
 
 ### 变更
 
-- **`bl finetune train-options` 的 status**：结果新增 `status` 字段，说明 `training_options` 为 null 的原因：`configured`（返回了选项）、`not_configured`（模型已在可训练目录中确认存在但没有动态选项）、`unverified`（未返回选项且目录查询失败）。模型 ID 不在目录中时改为报用法错误，不再返回 null；无法识别的响应结构也会报错。
+- **`bl finetune train-options` 未知模型（BREAKING）**：目录中找不到且无动态选项的模型，原先会成功返回 `training_options: null`；现在以用法退出码 `2` 结束，stdout 为空。
+- **`bl finetune train-options` 的 status**：成功结果新增 `status`，说明 `training_options` 为 null 的原因：`configured`、`not_configured`（已在目录中确认、无动态选项）、`unverified`（目录查询失败）。
 
 ### 修复
 

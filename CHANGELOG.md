@@ -17,7 +17,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- **`bl finetune train-options` status**: the result carries a `status` that explains a null `training_options`: `configured`, `not_configured` (the model is confirmed in the trainable catalog and has no dynamic options) or `unverified` (no options were returned and the catalog lookup failed). A model id that is not in the catalog now fails with a usage error instead of returning null, and an unrecognized response shape is reported as an error.
+- **`bl finetune train-options` unknown model (BREAKING)**: a model id that is not in the trainable catalog and has no dynamic options previously succeeded with `training_options: null`; it now exits with usage exit code `2` and empty stdout.
+- **`bl finetune train-options` status**: successful results carry a `status` for a null `training_options`: `configured`, `not_configured` (confirmed in the catalog, no dynamic options), or `unverified` (catalog lookup failed).
 
 ### Fixed
 
