@@ -173,12 +173,17 @@ mmstat 网关对任何 POST 都返回 `200` + GIF，端点或 pid 写错不会�
 - 产品归属表在 `packages/core/src/client/service-planes.ts`，按请求 pathname 命名空间识别，且只覆盖 CLI 自己构造的绝对 URL：`domestic` = 出口固定在国内、用户无法覆盖的面（RAG admin 面 / knowledge search+chat / memory / 公共 DashScope 定制模型导入）；`follow` = 允许 `--base-url` 或 region 覆盖的面（ParseX / AgentStudio sandbox+security / 模型域），由实际 host 判定。**新增绝对 URL 出口必须同步该表**，漂移守卫见 `packages/core/tests/telemetry-service-planes.test.ts`。
 - `siteReason` 新增 `product-domestic` / `product-international`：归属来自产品声明，不是用户配置；`positive-*` 继续只表示用户侧信号。
 - 记录对象 `RequestSignals` 每次命令运行创建一份，由 `authStage` 注入 `ClientDeps`；`Client.withConsoleSwitchAgent()` 派生的新 Client 继承同一份，否则内层请求对外层 telemetry 不可见。
-- **dry-run 没有产品归属信号**：`--dry-run` 在拼出 endpoint 后就 `output.result` 返回，不经过 `request` / `requestJson` / `url()`，`RequestSignals` 为空，站点只能由用户配置的 `baseUrl` 决定。所以国际 baseUrl 下 `bl knowledge list --dry-run` 报 `international`，尽管它预览的是北京 workspace 出口。这类事件由 `dryRun=true` 标出：在国内-only 的 family（knowledge / memory / cmodel）里，`dryRun=true`、或 `siteReason` 不是 `product-*`，都说明**这条不是真实调用量**，不能读成「国际站对该产品有需求」。`follow` 面（ParseX / Sandbox / Security / 模型域）的 dry-run 按 baseUrl 判本来就是正确口径，不在此列。
+- **`dryRun` 只标记预览，不标记「零请求」**：`--dry-run` 的含义是本次不创建、不修改资源，**不代表没有网络**。带 `prepare` 的命令在预览阶段照常发只读请求，请求一经发出就记录 origin 与 service plane，所以 `dryRun=true` 与 `siteReason=product-*` **可以共存**：实测 `bl knowledge init --dry-run` → `domestic / product-domestic / dryRun=true`，该命令自己的 help 也写明 dry-run 会读取已有资源。
+  - 预览事件的归属口径和真实执行**完全一致**，都由实际触碰的出口决定，不因预览而特殊：`knowledge init` / `knowledge doc sync` 的 prepare 读 workspace 网关 → `product-*`；`deploy router update` 的 prepare 读模型域（`/api/v1/deployments/...`，不在 plane 表里）→ 照样是 `positive-*`（实测国际 baseUrl 下 `bl deploy router update … --dry-run` → `international / positive-international / dryRun=true`，服务端 401 也照样记录出口——失败的请求同样是发出去的请求）。
+  - 两个信号各答一个问题，不要互换：**算真实执行调用量** → 按 `dryRun` 把预览剔掉；**判断站点归属来自产品还是用户配置** → 按 `siteReason` 是否 `product-*`。
+  - 真正缺产品归属信号的只有「预览且一个请求都没发」：命令拼出 endpoint 后在 dry-run 分支直接 `output.result` 返回（如 `bl knowledge list --dry-run`），`RequestSignals` 为空，站点退到用户配置的 `baseUrl`——国际 baseUrl 下会报 `international`，尽管它预览的是北京 workspace 出口。这类事件在看板上不能读成「国际站对该产品有需求」，判据是 `siteReason` 非 `product-*`，**不是** `dryRun`。
+  - `follow` 面（ParseX / Sandbox / Security / 模型域）的 dry-run 按 baseUrl 判本来就是正确口径，不在此列。
+  - **执行前提**：`siteReason` 与 `dryRun` 目前只存在于 `ext`（和本地 JSONL），两站都还没给它们建自定义维度（见下方「看板元数据还没跟上」）。维度补齐前，上面的判据只能在 `~/.bailian/telemetry.jsonl` 或 ext 原始导出里用；要在看板上筛预览、筛归属，必须先补这两个维度，否则规则落不了地。
 - openapi **禁止**用 ACS `opts.host` 分类。
 - `remoteSink` 按 site 使用 keyed `Map` 持有 Tracker；同进程可同时存在国内与国际实例。`uid` / tracker `device_id` **跨站同值**。
 - vendored tracker 仅保留本仓对 `send` 的本地改造（登记于此）；国际 path 与国内同为 `/aes.1.1`，**不加** `endpointPath` patch。升级 SDK 时必须保留 `send` 改造。
 - 看板元数据还没跟上：`site` / `siteReason` 两站都未建自定义维度；`callerType` / `callerName` / `cliVersion` / `cliVersionCode` / `commandPrefix` 国内项目有、国际项目一个都没有。数据已经在 `ext` 里，但国际站要做筛选/聚合（含 Agent 调用率、入口区分）必须先补这些维度。
-- 已知残留：未知/反代 host、残缺配置、登录写盘前首条 `none`、managed-agent 外部拼 host、旧版 CLI、账号站与模型地域混维拆站、`first_install` 固定报国内站（安装阶段没有 auth / Client 上下文）、pipeline 步骤的 Client 未注入 `RequestSignals`（`packages/runtime/src/pipeline/bl-config.ts`，步骤请求不进命令事件）、`mcp --url` 覆盖时记录的是默认 httpUrl 而非实际目标、**国内-only family 的 dry-run 事件按用户 baseUrl 归站**（见上条，用 `dryRun` 字段剔除）。
+- 已知残留：未知/反代 host、残缺配置、登录写盘前首条 `none`、managed-agent 外部拼 host、旧版 CLI、账号站与模型地域混维拆站、`first_install` 固定报国内站（安装阶段没有 auth / Client 上下文）、pipeline 步骤的 Client 未注入 `RequestSignals`（`packages/runtime/src/pipeline/bl-config.ts`，步骤请求不进命令事件）、`mcp --url` 覆盖时记录的是默认 httpUrl 而非实际目标、**国内-only family 中「预览且未发请求」的事件按用户 baseUrl 归站**（见上条；圈出来用 `siteReason` 非 `product-*`，不是用 `dryRun`）。
 
 编译二进制的 `env=prod` 由 `BAILIAN_COMPILED=1` 决定，并且必须先于 `NODE_ENV`。`bun build --compile`（当前 pin 1.3.14）会把点访问 `process.env.NODE_ENV` 内联成构建机的值，未设置时是 `"development"`；`tools/release/lib/binary-compile.mjs` 同时 `--define process.env.NODE_ENV="production"`。这两处读取必须写成 `process.env.*`，包进别的变量后 `--define` 匹配不到。
 
@@ -281,5 +286,6 @@ vp test packages/core/tests/telemetry-uid.test.ts packages/core/tests/telemetry-
 - ✗ 把允许 `--base-url` / region 覆盖的面声明成 `domestic`，等于替用户否认他显式选择的海外站点
 - ✗ 用 openapi ACS host 或「非 cn- 前缀」推断国际站（`cn-hongkong` 是国际）
 - ✗ 把 AEM 分流叙事写成「国际数据绝不出境」硬保证；实际是 best-effort 声明口径
-- ✗ 把国内-only family 里 `dryRun=true`（或 `siteReason` 非 `product-*`）的事件算进真实调用量，进而误判国际站产品需求
+- ✗ 用 `dryRun` 反推「有没有发请求」：带 `prepare` 的命令预览时照样读远端，事件同时带 `dryRun=true` 和 `product-*`
+- ✗ 把国内-only family 里 `siteReason` 非 `product-*` 的预览事件算进真实调用量，进而误判国际站产品需求
 - ✗ 升级 vendored AEM tracker 时丢掉本仓 `send` 改造

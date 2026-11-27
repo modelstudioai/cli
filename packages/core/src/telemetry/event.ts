@@ -34,10 +34,19 @@ export interface TrackingEvent {
   /** Coarse site resolution reason; never includes raw hosts. */
   siteReason?: TelemetrySiteReason;
   /**
-   * The run was a `--dry-run` preview, so it sent no business request and
-   * recorded no request origin or service plane. Sparse — only reported when
-   * true. This is what separates preview events from real calls: a real call's
-   * site comes from the product it touched, a preview's can only come from the
+   * The run was a `--dry-run` preview: it must not create or mutate resources.
+   * Sparse — only reported when true.
+   *
+   * Preview is *not* "no network": commands with `prepare` read existing
+   * resources even under `--dry-run`, and any request a preview issues records
+   * its origin and service plane exactly like an executed call does. So this
+   * field coexists with a `product-*` `siteReason` for workspace-gateway
+   * previews such as `knowledge init`, while a model-domain preview such as
+   * `deploy router update` still reports `positive-*`. Being a preview never
+   * changes how a site is attributed — only the recorded exit decides that.
+   *
+   * Use this field to separate preview traffic from executed calls; use
+   * `siteReason` to tell whether the site came from the product or from the
    * configured base URL.
    */
   dryRun?: true;
