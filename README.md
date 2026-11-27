@@ -228,11 +228,15 @@ Get an ordinary key from the [DashScope Console](https://bailian.console.aliyun.
 
 ### Alibaba Cloud OpenAPI AK/SK
 
-Token Plan seat and member management requires an Alibaba Cloud AccessKey. Get yours from the [RAM Console](https://ram.console.aliyun.com/manage/ak).
+Token Plan seat/member management and console token refresh need an Alibaba Cloud AccessKey. Run the setup guide, or get keys from the [RAM Console](https://ram.console.aliyun.com/manage/ak) and paste them.
 
 > Recommended: create a RAM sub-account with minimum privileges instead of using the root account's AK/SK.
 
 ```bash
+# Open the setup guide (when finished, paste your AccessKey back in the terminal)
+bl auth login --open-api
+
+# If you already have an AccessKey, configure it directly
 bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
 ```
 

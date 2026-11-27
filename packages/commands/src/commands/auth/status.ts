@@ -40,12 +40,20 @@ export default defineCommand({
     const authenticated = !!(apiKey || consoleCred || openapi);
     const configName = settings.configName ?? "default";
     const configFile = ctx.authStore.path;
+    const openApiGuide = formatCommand(identity, "auth login --open-api");
     const modelKeyHint = apiKey
       ? undefined
       : localize({
           "en-US": `No model API key is configured. Model commands need: ${formatCommand(identity, "auth login --console")}, or ${formatCommand(identity, "auth login --api-key <key>")}`,
           "zh-CN": `尚未配置模型 API Key。模型命令需要：${formatCommand(identity, "auth login --console")}，或 ${formatCommand(identity, "auth login --api-key <key>")}`,
         });
+    const openApiHint = openapi
+      ? undefined
+      : localize({
+          "en-US": `OpenAPI (AK/SK) is not configured. To use AK/SK capabilities, run the browser guide: ${openApiGuide}`,
+          "zh-CN": `OpenAPI（AK/SK）未配置。如需使用 AK/SK 相关能力，可运行浏览器引导完成配置：${openApiGuide}`,
+        });
+    const statusHint = [modelKeyHint, openApiHint].filter(Boolean).join("\n") || undefined;
 
     if (!authenticated) {
       ctx.output.result({
@@ -56,7 +64,7 @@ export default defineCommand({
         hint: [
           `API key (model):   ${formatCommand(identity, "auth login --api-key <key>")} or DASHSCOPE_API_KEY`,
           `Console gateway:   ${formatCommand(identity, "auth login --console")}`,
-          `OpenAPI (AK/SK):   ${formatCommand(identity, "auth login --open-api --access-key-id <id> --access-key-secret <secret>")}`,
+          `OpenAPI (AK/SK):   ${openApiGuide} (browser guide; or paste --access-key-id / --access-key-secret)`,
           `Get API Key: ${API_KEY_PAGE}`,
         ].join("\n"),
       });
@@ -71,7 +79,7 @@ export default defineCommand({
         api_key: apiKey,
         console: consoleCred,
         openapi,
-        ...(modelKeyHint ? { hint: modelKeyHint } : {}),
+        ...(statusHint ? { hint: statusHint } : {}),
       });
       return;
     }
@@ -97,9 +105,8 @@ export default defineCommand({
     if (openapi) {
       lines.push(`  OpenAPI (AK/SK):  ${openapi.source}  ${openapi.access_key_id}`);
     } else {
-      lines.push(
-        `  OpenAPI (AK/SK):  not configured (run ${formatCommand(identity, "auth login --open-api")})`,
-      );
+      lines.push("  OpenAPI (AK/SK):  not configured");
+      if (openApiHint) lines.push(`  ${openApiHint}`);
     }
     ctx.output.result(
       {
@@ -109,7 +116,7 @@ export default defineCommand({
         api_key: apiKey,
         console: consoleCred,
         openapi,
-        ...(modelKeyHint ? { hint: modelKeyHint } : {}),
+        ...(statusHint ? { hint: statusHint } : {}),
       },
       { text: lines.join("\n") },
     );

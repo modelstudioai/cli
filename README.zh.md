@@ -227,11 +227,15 @@ bl auth login --api-key <API_KEY>
 
 ### 阿里云 OpenAPI AK/SK
 
-Token Plan 的席位与成员管理需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
+Token Plan 的席位与成员管理、以及控制台会话换票需要阿里云 AccessKey。可先运行引导获取，或前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取后粘贴。
 
 > 建议：创建 RAM 子账号并授予最小权限，避免使用主账号 AK/SK。
 
 ```bash
+# 打开引导页（按照引导完成操作后，回到命令行粘贴 AccessKey）
+bl auth login --open-api
+
+# 若已有 AccessKey，直接配置
 bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
 ```
 

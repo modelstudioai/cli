@@ -125,9 +125,9 @@ export function errorHint(
       case "expired-console-session":
         return consoleRecoveryHint(commandPrefix, configName);
       case "missing-openapi-pair":
-        return `Set BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET), pass --access-key-id and --access-key-secret, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\`.`;
+        return `Set BAILIAN_ACCESS_KEY_ID / BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_*), pass --access-key-id / --access-key-secret, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\` then paste your AccessKey.`;
       case "incomplete-openapi-config":
-        return `Run \`${recoveryCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>", configName)}\` again to save a complete pair.`;
+        return `Save a complete pair with \`${recoveryCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>", configName)}\`, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\` for the setup guide.`;
       case "incomplete-openapi-flag":
       case "incomplete-openapi-env":
         return hint;
