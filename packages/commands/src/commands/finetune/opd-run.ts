@@ -11,6 +11,7 @@ import {
   validateFineTuneHyperParameterOverrides,
   type CreateFineTuneRequest,
   type FineTuneDatasetDescriptor,
+  type FineTuneDatasetSlot,
   type FineTuneHyperParameters,
   type FineTuneParamHyperParam,
   type FineTuneResourceConfig,
@@ -188,7 +189,7 @@ function readOpdJsonObject(filePath: string, flagName: string): Record<string, u
 
 function toDatasetDescriptors(
   fileIds: string[],
-  type: FineTuneDatasetDescriptor["type"],
+  type: FineTuneDatasetSlot,
 ): FineTuneDatasetDescriptor[] {
   return fileIds.map((fileId) => ({ type, data_source_type: "file_id", file_id: fileId }));
 }

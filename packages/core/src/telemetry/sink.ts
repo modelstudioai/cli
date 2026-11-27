@@ -30,6 +30,8 @@ interface PendingSend {
   promise: Promise<void>;
 }
 const inflightSends = new Set<PendingSend>();
+/** In-flight local JSONL writes; flush must wait so process.exit cannot drop them. */
+const inflightLocalWrites = new Set<Promise<void>>();
 
 interface RemoteSiteClient {
   client: {
@@ -99,11 +101,12 @@ function initRemoteForSite(site: TelemetrySite): RemoteSiteClient | undefined {
 }
 
 /**
- * Best-effort wait for all in-flight telemetry sends.
+ * Best-effort wait for in-flight local JSONL writes and remote sends.
  *
  * 1. Call `_sendAll` on every site tracker to drain the debounce queue so events
  *    still in the 500ms merge window are pushed to the network immediately.
- * 2. Wait for sends within the budget; on timeout, cancel DNS/HTTP/body work.
+ * 2. Wait for local writes and remote sends within the budget; on timeout,
+ *    cancel DNS/HTTP/body work (local writes are not cancellable).
  *
  * Telemetry must never block the CLI: callers should pass a short timeout
  * (e.g. 1000ms) and always race against it. Errors and timeouts are swallowed.
@@ -120,9 +123,11 @@ export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
         // flush itself must never throw
       }
     }
-    if (inflightSends.size === 0) return;
+    const localWrites = [...inflightLocalWrites];
+    const remotePromises = [...inflightSends].map((pending) => pending.promise);
+    if (localWrites.length === 0 && remotePromises.length === 0) return;
     await Promise.race([
-      Promise.allSettled([...inflightSends].map((pending) => pending.promise)),
+      Promise.allSettled([...localWrites, ...remotePromises]),
       new Promise<void>((resolve) => {
         deadline = setTimeout(() => {
           for (const pending of inflightSends) pending.controller.abort();
@@ -139,6 +144,15 @@ export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
 }
 
 export async function localSink(event: TrackingEvent | FirstInstallEvent): Promise<void> {
+  let pending!: Promise<void>;
+  pending = writeLocalEvent(event).finally(() => {
+    inflightLocalWrites.delete(pending);
+  });
+  inflightLocalWrites.add(pending);
+  await pending;
+}
+
+async function writeLocalEvent(event: TrackingEvent | FirstInstallEvent): Promise<void> {
   try {
     await ensureConfigDir();
     const path = TELEMETRY_FILE();

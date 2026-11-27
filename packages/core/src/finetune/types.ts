@@ -20,16 +20,32 @@ export interface FineTuneHyperParameters {
   [k: string]: unknown;
 }
 
-/**
- * Dataset descriptor used by OPD (pg_opd) jobs. The server also accepts the
- * flat `training_file_ids` form, but OPD submissions and readbacks use these
- * descriptors, so the CLI sends the same shape.
- */
-export interface FineTuneDatasetDescriptor {
-  type: "training" | "validation";
-  data_source_type: "file_id";
-  file_id: string;
+/** Dataset read in place from an OSS bucket (`data_source_type: "oss_mount"`). */
+export interface FineTuneOssMountStorage {
+  /** Region ID of the bucket; whether it can be mounted from is judged by the server. */
+  region: string;
+  bucket: string;
+  /** Object key; for a multi-file dataset, the path of its data.jsonl. */
+  file_path: string;
 }
+
+/** One dataset source: an uploaded file, or an OSS bucket mounted in place. */
+export type FineTuneDatasetSource =
+  | { data_source_type: "file_id"; file_id: string }
+  | { data_source_type: "oss_mount"; mount_storage: FineTuneOssMountStorage };
+
+/** Which dataset list an entry belongs to. */
+export type FineTuneDatasetSlot = "training" | "validation";
+
+/**
+ * Entry of `training_datasets` / `validation_datasets`. OPD (pg_opd) submits
+ * and reads back entries with their slot; the create API takes no slot, so the
+ * CLI omits it there. The server also accepts the flat `training_file_ids`
+ * form, but it cannot carry a mount.
+ */
+export type FineTuneDatasetDescriptor = FineTuneDatasetSource & {
+  type?: FineTuneDatasetSlot;
+};
 
 /** MTU resource configuration for OPD jobs (kept separate from hyper_parameters). */
 export interface FineTuneResourceConfig {
@@ -43,7 +59,10 @@ export interface FineTuneResourceConfig {
 export interface CreateFineTuneRequest {
   /** Base model ID, or a previously fine-tuned model ID for continued training. */
   model: string;
-  /** Flat file-id form (sft/dpo/cpt). OPD uses training_datasets instead. */
+  /**
+   * Flat file-id form, sent unless a dataset is mounted from OSS. A request
+   * with a mount sends `training_datasets` instead, which can carry both kinds.
+   */
   training_file_ids?: string[];
   /**
    * Server-supported values: `cpt | sft | efficient_sft | dpo_full | dpo_lora | pg_opd`.
@@ -67,9 +86,9 @@ export interface CreateFineTuneRequest {
   finetuned_output_suffix?: string;
   /** OPD (pg_opd): platform-registered teacher model ID. */
   teacher_model?: string;
-  /** OPD (pg_opd): training dataset descriptors. */
+  /** Dataset entries: OPD jobs, or any job that mounts a dataset from OSS. */
   training_datasets?: FineTuneDatasetDescriptor[];
-  /** OPD (pg_opd): validation dataset descriptors. */
+  /** Validation dataset entries, in the same shape as training_datasets. */
   validation_datasets?: FineTuneDatasetDescriptor[];
   /** OPD (pg_opd): MTU charge type / spec / capacity. */
   resource_config?: FineTuneResourceConfig;
@@ -270,6 +289,27 @@ export interface GetFineTuneParamsResponse {
     resume_from_checkpoint?: boolean;
     [k: string]: unknown;
   };
+  [k: string]: unknown;
+}
+
+/**
+ * GET /api/v1/fine-tunes/preset-datasets 的 `output[]` 元素。
+ * `dataset_code` 区分大小写，是后续使用预置数据集时的标识，原样保留。
+ */
+export interface PresetDataset {
+  dataset_code?: string;
+  dataset_title?: string;
+  dataset_desc?: string;
+  [k: string]: unknown;
+}
+
+/**
+ * GET /api/v1/fine-tunes/preset-datasets response。
+ * 空 `output` 表示当前条件下没有可混入的预置数据集，属于正常结果。
+ */
+export interface ListPresetDatasetsResponse {
+  request_id?: string;
+  output?: PresetDataset[];
   [k: string]: unknown;
 }
 

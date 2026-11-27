@@ -1,5 +1,7 @@
 import type { ConsoleCall } from "../console/gateway.ts";
 import { unwrapResponse } from "../console/models.ts";
+import { BailianError } from "../errors/base.ts";
+import { ExitCode } from "../errors/codes.ts";
 
 /**
  * Console (zelda) API listing the dynamic train options configured per model.
@@ -42,10 +44,29 @@ export async function fetchModelTrainOptions(
   });
   const unwrapped = unwrapResponse(result as Record<string, unknown>);
   // unwrapResponse returns the inner `data`, which is the per-model entries
-  // array for this API; tolerate an object wrapper as well.
-  const entries = Array.isArray(unwrapped)
-    ? (unwrapped as Array<Record<string, unknown>>)
-    : ((unwrapped.data as Array<Record<string, unknown>> | undefined) ?? []);
+  // array for this API (its `data` explicitly null when nothing is configured);
+  // tolerate an object wrapper as well. Any other shape is reported rather than
+  // read as "no dynamic options".
+  const unexpectedShape = () =>
+    new BailianError(
+      `Console API ${MODEL_TRAIN_OPTIONS_API} returned an unexpected response shape.`,
+      ExitCode.GENERAL,
+      undefined,
+      { rawResponse: JSON.stringify(result).slice(0, 500) },
+    );
+  let entries: Array<Record<string, unknown>>;
+  if (Array.isArray(unwrapped)) {
+    entries = unwrapped as Array<Record<string, unknown>>;
+  } else if (
+    unwrapped &&
+    typeof unwrapped === "object" &&
+    "data" in unwrapped &&
+    (unwrapped.data === null || Array.isArray(unwrapped.data))
+  ) {
+    entries = (unwrapped.data ?? []) as Array<Record<string, unknown>>;
+  } else {
+    throw unexpectedShape();
+  }
   const match = entries.find((entry) => entry.model === model);
   const options = match?.trainingOptions as ModelTrainOptions | undefined;
   return options?.enabled === true ? options : null;

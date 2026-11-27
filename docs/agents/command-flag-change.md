@@ -63,3 +63,4 @@ pnpm -F bailian-cli exec tsx src/main.ts <command> --new-flag x   # 实测一遍
 - ✗ 改默认值忘记更新 description 里的 "(default: xxx)" 文案
 - ✗ 在 `usageArgs` / `exampleArgs` 里写死 `bl <path>`,导致其它产品入口复用时 help 错
 - ✗ required flag 缺失又在 `run()` 里重复手写校验,与 parser/`validate` 的错误文案不一致
+- ✗ 给 `finetune <modality> create` 加 `hyper_parameters` flag 时,把它登记进 `explicitHyperParameterOverrides` 就会对照模型参数 schema 校验;API 文档有、但 `finetune params` 实测 schema 不返回的参数(如混合训练的 `data_augmentation` / `augmentation_types` / `augmentation_ratio`)必须绕过该校验交给服务端裁决,否则 flag 一用就报 unsupported。加这类 flag 前先用真实模型查一次 `--param-type hyper`

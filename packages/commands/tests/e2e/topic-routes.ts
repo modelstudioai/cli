@@ -402,6 +402,7 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune capability": "finetuneCapability",
   "finetune params": "finetuneParams",
   "finetune train-options": "finetuneTrainOptions",
+  "finetune preset-datasets": "finetunePresetDatasets",
   "finetune metrics": "finetuneMetrics",
   "finetune compress templates": "finetuneCompressTemplates",
   "finetune compress create": "finetuneCompressCreate",

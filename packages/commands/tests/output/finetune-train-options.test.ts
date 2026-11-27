@@ -6,6 +6,7 @@ import {
   buildSettings,
   Client,
   httpTransport,
+  MODEL_LIST_API,
   MODEL_TRAIN_OPTIONS_API,
   type AnyCommand,
   type LocalizedText,
@@ -35,16 +36,30 @@ const dynamicOptions = {
   supportedCombinations: [{ modality: "vision", reasoning_mode: "instruct" }],
 };
 
+// Trainable-catalog entries. qwen3-8b reports cpt=false here while the training
+// API accepts cpt for it, which is why only model existence is ever taken from
+// the catalog.
+const CATALOG_MODELS = [
+  { model: "qwen3-8b", supports: { sft: true, dpo: true, cpt: false } },
+  { model: DYNAMIC_MODEL, supports: { sft: true, dpo: true, cpt: true } },
+];
+
 let isolated: ReturnType<typeof enterIsolatedHome>;
 let schemaQueries: URLSearchParams[];
 let consoleApis: string[];
 let consoleFailure: Error | undefined;
+let catalogQueries: string[];
+let catalogAuth: Array<string | null>;
+let catalogFailure: Error | undefined;
 
 beforeEach(() => {
   isolated = enterIsolatedHome();
   schemaQueries = [];
   consoleApis = [];
   consoleFailure = undefined;
+  catalogQueries = [];
+  catalogAuth = [];
+  catalogFailure = undefined;
   vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected unmocked HTTP"));
   vi.spyOn(httpTransport, "fetch").mockImplementation(async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
@@ -53,13 +68,29 @@ beforeEach(() => {
       const form = new URLSearchParams(init.body);
       const params = JSON.parse(form.get("params")!) as {
         Api: string;
-        Data: { input?: { models?: string[] } };
+        Data: { input?: { models?: string[]; name?: string } };
       };
-      consoleApis.push(params.Api);
       if (consoleFailure) throw consoleFailure;
+      // Public trainable catalog, queried without a console token.
+      if (params.Api === MODEL_LIST_API) {
+        const name = params.Data.input?.name ?? "";
+        catalogQueries.push(name);
+        catalogAuth.push(new Headers(init.headers).get("Authorization"));
+        if (catalogFailure) throw catalogFailure;
+        const list = CATALOG_MODELS.filter((entry) => entry.model === name);
+        return Response.json({
+          code: "200",
+          successResponse: true,
+          data: {
+            success: true,
+            DataV2: { ret: ["SUCCESS::ok"], data: { total: list.length, list, success: true } },
+          },
+        });
+      }
       if (params.Api !== MODEL_TRAIN_OPTIONS_API) {
         throw new Error(`Unexpected console API: ${params.Api}`);
       }
+      consoleApis.push(params.Api);
       const model = params.Data.input?.models?.[0] ?? "";
       const entries = model === DYNAMIC_MODEL ? [{ model, trainingOptions: dynamicOptions }] : [];
       return Response.json({
@@ -112,11 +143,11 @@ afterEach(() => {
 async function invoke(
   command: AnyCommand,
   flags: Record<string, unknown>,
-  options: { dryRun?: boolean; withConsole?: boolean } = {},
+  options: { dryRun?: boolean; withConsole?: boolean; language?: "en-US" | "zh-CN" } = {},
 ) {
   let stdout = "";
   let stderr = "";
-  const language = "en-US";
+  const language = options.language ?? "en-US";
   const settings = buildSettings({
     flags: { output: "json", dryRun: options.dryRun, ...flags },
     file: { language, telemetry: false },
@@ -305,20 +336,94 @@ test("train-options command returns the console configuration verbatim", async (
   const parsed = JSON.parse(stdout) as {
     model: string;
     training_type: string;
+    status: string;
     training_options: { defaults: Record<string, string>; supportedCombinations: unknown[] };
   };
   expect(parsed.model).toBe(DYNAMIC_MODEL);
   expect(parsed.training_type).toBe("cpt");
+  expect(parsed.status).toBe("configured");
   expect(parsed.training_options.defaults).toEqual({
     modality: "vision",
     reasoning_mode: "instruct",
   });
   expect(parsed.training_options.supportedCombinations).toHaveLength(1);
+  expect(catalogQueries).toEqual([]);
 });
 
-test("train-options command returns null for models without dynamic options", async () => {
-  const { stdout, exitCode } = await invoke(finetuneTrainOptions, { baseModel: "qwen3-8b" });
-  expect(exitCode).toBe(0);
-  const parsed = JSON.parse(stdout) as { training_options: unknown };
-  expect(parsed.training_options).toBeNull();
+test.each(["sft", "cpt"])(
+  "train-options command reports not_configured once the catalog confirms the model (%s)",
+  async (trainingType) => {
+    const { stdout, exitCode } = await invoke(finetuneTrainOptions, {
+      baseModel: "qwen3-8b",
+      trainingType,
+    });
+    expect(exitCode).toBe(0);
+    expect(consoleApis).toEqual([MODEL_TRAIN_OPTIONS_API]);
+    // The catalog check runs after the console call and stays anonymous.
+    expect(catalogQueries).toEqual(["qwen3-8b"]);
+    expect(catalogAuth).toEqual([null]);
+    const parsed = JSON.parse(stdout) as { status: string; training_options: unknown };
+    expect(parsed.status).toBe("not_configured");
+    expect(parsed.training_options).toBeNull();
+  },
+);
+
+test("train-options command fails with a usage error for a model missing from the catalog", async () => {
+  const { stdout, stderr, exitCode } = await invoke(finetuneTrainOptions, {
+    baseModel: "qwen3-8b-typo",
+  });
+  expect(exitCode).toBe(2);
+  expect(stdout).toBe("");
+  const parsed = JSON.parse(stderr) as { error: { code: number; message: string; hint: string } };
+  expect(parsed.error.code).toBe(2);
+  expect(parsed.error.message).toBe(
+    'No trainable base model named "qwen3-8b-typo" was found in the model catalog, and it has no dynamic train options.',
+  );
+  expect(parsed.error.hint).toBe(
+    "Check the model id with finetune capability --base-model qwen3-8b-typo.",
+  );
 });
+
+test("train-options command degrades to unverified when the catalog lookup fails", async () => {
+  catalogFailure = new Error("Console CLI gateway failed: HTTP 503 Service Unavailable");
+  const { stdout, stderr, exitCode } = await invoke(finetuneTrainOptions, {
+    baseModel: "qwen3-8b",
+  });
+  expect(exitCode).toBe(0);
+  expect(stderr).toMatch(/TRAINING_CAPABILITY_LOOKUP_FAILED/);
+  expect(stderr).toMatch(/HTTP 503/);
+  const parsed = JSON.parse(stdout) as { status: string; training_options: unknown };
+  expect(parsed.status).toBe("unverified");
+  expect(parsed.training_options).toBeNull();
+
+  const localized = await invoke(
+    finetuneTrainOptions,
+    { baseModel: "qwen3-8b", output: "text" },
+    { language: "zh-CN" },
+  );
+  expect(localized.exitCode).toBe(0);
+  expect(localized.stderr).toMatch(/模型目录查询失败/);
+  expect(localized.stdout).toMatch(/无法在模型目录中确认该模型存在/);
+});
+
+test.each([
+  { label: "not_configured", baseModel: "qwen3-8b", exitCode: 0, pattern: /未配置动态训练选项/ },
+  {
+    label: "an unknown model",
+    baseModel: "qwen3-8b-typo",
+    exitCode: 2,
+    pattern: /模型目录中未找到名为 "qwen3-8b-typo"/,
+  },
+])(
+  "train-options command localizes the $label text output",
+  async ({ baseModel, exitCode, pattern }) => {
+    const {
+      stdout,
+      stderr,
+      exitCode: actual,
+    } = await invoke(finetuneTrainOptions, { baseModel, output: "text" }, { language: "zh-CN" });
+    expect(actual).toBe(exitCode);
+    // Results go to stdout, errors to stderr.
+    expect(exitCode === 0 ? stdout : stderr).toMatch(pattern);
+  },
+);

@@ -1,7 +1,7 @@
 ---
 name: bailian-opd
 metadata:
-  version: "2.12.0"
+  version: "2.12.1"
   requires:
     bins: ["bl", "node"]
 description: >-

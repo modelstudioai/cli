@@ -1,4 +1,5 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import type { TrackingEvent } from "../src/telemetry/event.ts";
 import { enterIsolatedHome, type IsolatedHomeHandle } from "./helpers/isolation.ts";
@@ -43,6 +44,7 @@ afterEach(() => {
   iso.restore();
   vi.clearAllTimers();
   vi.useRealTimers();
+  vi.doUnmock("../src/config/paths.ts");
   vi.resetModules();
   fixture.signals = [];
   fixture.complete = false;
@@ -129,4 +131,41 @@ test("importing sink without reporting does not create the uid file", async () =
   await import("../src/telemetry/sink.ts");
   const { getUidPath } = await import("../src/telemetry/uid.ts");
   expect(existsSync(getUidPath())).toBe(false);
+});
+
+test("flush waits for in-flight local writes even when no remote send is pending", async () => {
+  const { localSink, flushTelemetry } = await import("../src/telemetry/sink.ts");
+  // Fire-and-forget as trackCommandExecution does; flush must still persist the line.
+  void localSink({ command: "local-only" } as TrackingEvent);
+  await flushTelemetry(1000);
+  const path = join(iso.configDir, "telemetry.jsonl");
+  expect(existsSync(path)).toBe(true);
+  expect(readFileSync(path, "utf8")).toContain('"command":"local-only"');
+});
+
+test("flush returns within its budget when a local write stalls", async () => {
+  vi.useFakeTimers();
+  vi.doMock("../src/config/paths.ts", async () => {
+    const actual =
+      await vi.importActual<typeof import("../src/config/paths.ts")>("../src/config/paths.ts");
+    return {
+      ...actual,
+      ensureConfigDir: () => new Promise<void>(() => {}),
+    };
+  });
+  const { localSink, flushTelemetry } = await import("../src/telemetry/sink.ts");
+  void localSink({ command: "stalled-local" } as TrackingEvent);
+  const pending = flushTelemetry(50);
+  await vi.advanceTimersByTimeAsync(49);
+  // Still within budget: flush must not have resolved by hanging on local I/O alone.
+  let settled = false;
+  void pending.then(() => {
+    settled = true;
+  });
+  await Promise.resolve();
+  expect(settled).toBe(false);
+  await vi.advanceTimersByTimeAsync(1);
+  await pending;
+  expect(settled).toBe(true);
+  expect(vi.getTimerCount()).toBe(0);
 });

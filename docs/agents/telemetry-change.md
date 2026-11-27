@@ -223,7 +223,7 @@ AEM 映射：
 
 `siteReason` 为粗粒度枚举（`product-domestic` / `product-international` / `positive-domestic` / `positive-international` / `default-fallback` / `unknown-host`），**禁止**带原始 host。`product-*` 表示归属来自产品声明，`positive-*` 表示来自用户配置信号，两者不能混算。漏判量化用国内站 `siteReason` 兜底类占比；不要用「国内 pid 出现 `site=international`」做告警（国际事件不会进国内 pid）。
 
-远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。
+远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。`flushTelemetry` 同时等待在途本地 JSONL 落盘与远端发送，共享同一超时预算；超时只取消远端，本地写不可取消但仍不得无限阻塞退出。
 
 ## 必查清单
 
@@ -257,6 +257,7 @@ AEM 映射：
 - [ ] `remoteSink` 从调用到 `remoteSendEvent` 入队之间不得出现 `await`（flush 只排空已入队事件）
 - [ ] 测试中调用 `remoteSink` 的用例必须使用 `enterIsolatedHome()`，避免写入真实配置目录
 - [ ] 遥测发送的 DNS/HTTP/响应体必须受可取消预算控制；flush 超时必须取消在途操作，不能只停止等待，也不能修改全局 DNS/dispatcher 或强制退出宿主
+- [ ] `localSink` 在途写入须登记并由 `flushTelemetry` 等待（即使无远端 in-flight）；命令路径仍可 fire-and-forget，不得因本地写失败改退出码；用 `telemetry-sink` 单测覆盖「无远端也落盘」和「本地卡住仍按时返回」，并用 `telemetry-exit` e2e 的 `fast-run-to-exit` 子进程用例守住「远端立即响应 + `runToExit` 强制退出仍落盘」
 - [ ] 退出生命周期变更保留真实子进程回归：挂起响应头/响应体、DNS 预查询和关闭遥测；检查实际退出及进程仍存活时的连接释放，不以 flush Promise 返回代替验收
 - [ ] 错误字段不得额外拼接 token、请求体、prompt 或本地路径
 

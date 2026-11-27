@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.12.1] - 2026-11-27
+
+### Added
+
+- **`bl finetune preset-datasets`**: New command listing the preset datasets that can be mixed into a fine-tuning job for a base model and training type (`--base-model`, `--training-type`, optional `--model-version`). Entries keep the server fields verbatim (`dataset_code`, `dataset_title`, `dataset_desc`); an empty result is a success.
+- **Mixed training**: `bl finetune text create` accepts `--augmentation-types` (preset dataset codes, sent lowercased) and `--augmentation-ratio` (one ratio per type, `0.0`–`2.0`; the two flags must be given together). Passing types turns on data augmentation.
+- **OSS-mounted datasets**: `--datasets` / `--validations` of `bl finetune text create` accept `oss://<bucket>/<object key>` entries that the service reads in place, skipping local validation, upload and the sample-count pre-check. `--oss-region` sets the bucket region (default `cn-beijing`) and is sent as given.
+
+### Changed
+
+- **`bl finetune train-options` status**: the result carries a `status` that explains a null `training_options`: `configured`, `not_configured` (the model is confirmed in the trainable catalog and has no dynamic options) or `unverified` (no options were returned and the catalog lookup failed). A model id that is not in the catalog now fails with a usage error instead of returning null, and an unrecognized response shape is reported as an error.
+
+### Fixed
+
+- **Required hyper-parameters**: `bl finetune text create` fills an omitted `n_epochs`, `batch_size` or `max_length` from the model's parameter schema defaults; the create API rejects a job when one of them is missing.
+
 ## [2.12.0] - 2026-11-25
 
 ### Added

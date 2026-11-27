@@ -1,31 +1,18 @@
 import {
   defineCommand,
   getFineTuneParams,
-  isTrainingTypeCli,
-  TRAINING_TYPES_CLI,
   DEFAULT_TRAINING_TYPE,
   TRAINING_TYPE_MAP,
-  BailianError,
-  ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { preflightTrainOptions } from "./train-options-shared.ts";
-
-/**
- * Build the training-option context from the dedicated flags. The OpenAPI
- * expects it as one `hyper_parameters` query parameter holding a JSON string
- * (e.g. {"modality":"vision","reasoning_mode":"thinking"}); models without
- * dynamic train options simply omit it.
- */
-function buildTrainOptions(
-  modality: string | undefined,
-  reasoningMode: string | undefined,
-): Record<string, string> {
-  const options: Record<string, string> = {};
-  if (modality) options.modality = modality;
-  if (reasoningMode) options.reasoning_mode = reasoningMode;
-  return options;
-}
+import {
+  TRAIN_OPTIONS_PRECHECK_NOTE,
+  buildTrainOptions,
+  preflightTrainOptions,
+  resolveTrainingTypeCli,
+  trainOptionFlags,
+  trainingTypeFlag,
+} from "./train-options-shared.ts";
 
 const PARAMS_FLAGS = {
   baseModel: {
@@ -37,14 +24,7 @@ const PARAMS_FLAGS = {
     },
     required: true,
   },
-  trainingType: {
-    type: "string",
-    valueHint: "<t>",
-    description: {
-      "en-US": `Training type: ${TRAINING_TYPES_CLI.join(" | ")} (default: ${DEFAULT_TRAINING_TYPE}). Mapped to the server's training_type (e.g. sft-lora -> efficient_sft).`,
-      "zh-CN": `训练类型：${TRAINING_TYPES_CLI.join(" | ")}（默认：${DEFAULT_TRAINING_TYPE}）。会映射为服务端 training_type（例如 sft-lora -> efficient_sft）。`,
-    },
-  },
+  trainingType: trainingTypeFlag(DEFAULT_TRAINING_TYPE),
   mtuSpecCode: {
     type: "string",
     valueHint: "<code>",
@@ -62,28 +42,7 @@ const PARAMS_FLAGS = {
     },
     choices: ["hyper", "resource"] as const,
   },
-  modality: {
-    type: "string",
-    valueHint: "<text|vision>",
-    description: {
-      "en-US":
-        "Training modality: text | vision. Only meaningful for models with dynamic train options; sent as modality inside hyper_parameters.",
-      "zh-CN":
-        "训练模态：text | vision。仅对配置了动态训练选项的模型有意义；作为 hyper_parameters 中的 modality 发送。",
-    },
-    choices: ["text", "vision"] as const,
-  },
-  reasoningMode: {
-    type: "string",
-    valueHint: "<instruct|thinking>",
-    description: {
-      "en-US":
-        "Reasoning mode: instruct (non-thinking) | thinking. Only meaningful for models with dynamic train options; sent as reasoning_mode inside hyper_parameters.",
-      "zh-CN":
-        "思考模式：instruct（非思考）| thinking（思考）。仅对配置了动态训练选项的模型有意义；作为 hyper_parameters 中的 reasoning_mode 发送。",
-    },
-    choices: ["instruct", "thinking"] as const,
-  },
+  ...trainOptionFlags(),
   lang: {
     type: "string",
     valueHint: "<locale>",
@@ -121,12 +80,7 @@ export default defineCommand({
       "zh-CN":
         "调用 GET /api/v1/fine-tunes/fine-tunes-params。每条 hyper_params 原样保留服务端字段名（recommend_value、defaultValue、is_advanced_parameter 等）。",
     },
-    {
-      "en-US":
-        "--modality / --reasoning-mode travel as one hyper_parameters query parameter (JSON). When a console session is available, the combination is prechecked against the model's supported combinations and omitted options are completed from its defaults; invalid combinations fail with a usage error. Without a console session the check is skipped with a warning and the server result is authoritative.",
-      "zh-CN":
-        "--modality / --reasoning-mode 会合并为单个 hyper_parameters query 参数（JSON）发送。控制台会话可用时，会按模型支持的组合预检，并从默认值补齐未传的选项；非法组合报用法错误。无控制台会话时跳过预检并输出警告，以服务端结果为准。",
-    },
+    TRAIN_OPTIONS_PRECHECK_NOTE,
     {
       "en-US":
         "resume_from_checkpoint in the output reports whether the training type supports resuming training.",
@@ -136,14 +90,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const trainingTypeCli = flags.trainingType || DEFAULT_TRAINING_TYPE;
-    if (!isTrainingTypeCli(trainingTypeCli)) {
-      throw new BailianError(
-        `--training-type "${trainingTypeCli}" is not supported.`,
-        ExitCode.USAGE,
-        `Supported values: ${TRAINING_TYPES_CLI.join(", ")} (default: ${DEFAULT_TRAINING_TYPE}).`,
-      );
-    }
+    const trainingTypeCli = resolveTrainingTypeCli(flags.trainingType, DEFAULT_TRAINING_TYPE);
     const trainingType = TRAINING_TYPE_MAP[trainingTypeCli].server;
     let trainOptions = buildTrainOptions(flags.modality, flags.reasoningMode);
 
