@@ -7,12 +7,19 @@ import {
   type LocalizedText,
 } from "bailian-cli-core";
 import type { OutputReporter } from "./output/reporter.ts";
+import { flushOutput } from "./output/flush.ts";
 import { sanitizeDiagnosticDetails } from "./output/diagnostics.ts";
 import { API_KEY_PAGE } from "./urls.ts";
 
-/** The invocation owns rendering; this boundary owns process termination. */
-export function handleError(error: unknown, reporter: Pick<OutputReporter, "error">): never {
-  process.exit(reporter.error(error));
+/** Render the error, flush tracked stderr/stdout, then terminate. */
+export async function handleError(
+  error: unknown,
+  reporter: Pick<OutputReporter, "error">,
+): Promise<never> {
+  const code = reporter.error(error);
+  // Wait until writes complete; no timeout, so format-based warnings do not apply.
+  await flushOutput(null);
+  process.exit(code);
 }
 
 export function normalizeError(
