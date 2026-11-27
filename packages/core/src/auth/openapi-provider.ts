@@ -284,14 +284,11 @@ export function createOpenApiCredentialProvider(
       if (!selectedOAuth(boundSources, purpose)) staticCredential(boundSources);
     },
     resolveConsoleTarget(target, purpose = "console") {
-      const profile = currentSources().file.aliyun_oauth;
-      const active = profile?.[purpose === "console" ? "console_enabled" : "openapi_enabled"];
-      if (profile && active) validateTarget(profile, target);
+      const profile = selectedOAuth(currentSources(), purpose);
+      if (profile) validateTarget(profile, target);
       const gateway = pre
         ? requirePreConsoleGateway(pre, target)
-        : profile && active
-          ? profile.console_gateway
-          : target.gateway;
+        : (profile?.console_gateway ?? target.gateway);
       return {
         region: target.region,
         site: target.site,
@@ -300,11 +297,10 @@ export function createOpenApiCredentialProvider(
       };
     },
     resolveHost(host, credential, purpose = "openapi") {
-      const profile = currentSources().file.aliyun_oauth;
+      const profile = selectedOAuth(currentSources(), purpose);
       if (
         credential?.method === "aliyun-oauth" &&
         (!profile ||
-          !profile[purpose === "console" ? "console_enabled" : "openapi_enabled"] ||
           profile.session_ref !== credential.sessionRef ||
           credential.configurationFingerprint !== oauthConfigurationFingerprint(profile))
       )
@@ -313,7 +309,7 @@ export function createOpenApiCredentialProvider(
           "The OAuth login changed or was removed. / OAuth 登录已变更或被移除。",
         );
       if (pre) return resolvePreOpenApiHost(host);
-      if (!profile?.[purpose === "console" ? "console_enabled" : "openapi_enabled"]) return host;
+      if (!profile || (credential && credential.method !== "aliyun-oauth")) return host;
       if (
         /^modelstudio(?:\.[a-z0-9-]+)?\.aliyuncs\.com$/u.test(host) ||
         host === profile.modelstudio_host

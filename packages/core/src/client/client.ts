@@ -60,6 +60,7 @@ export interface ClientOpenApiQueryOpts {
   version: string;
   method: "GET" | "POST";
   queryParams: AcsQueryParams;
+  signal?: AbortSignal;
 }
 
 export interface ClientOpenApiJsonOpts {
@@ -71,6 +72,7 @@ export interface ClientOpenApiJsonOpts {
   /** JSON request body; omit for query-only calls (signed as an empty body). */
   body?: unknown;
   queryParams?: AcsQueryParams;
+  signal?: AbortSignal;
 }
 
 export interface OpenApiResponse {
@@ -395,13 +397,13 @@ export class Client {
     this.recordRequest(endpoint);
     debugRequest(this.http, opts.method, endpoint, { action: opts.action, version: opts.version });
 
-    const timeoutMs = this.deps.settings.timeout * 1000;
+    const timeout = AbortSignal.timeout(this.deps.settings.timeout * 1000);
     const res = await httpTransport.fetch(endpoint, {
       method: opts.method,
       headers: { ...headers, ...trackingHeaders(this.deps.identity) },
       body: bodyStr || undefined,
       redirect: "error",
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout,
     });
 
     const rawText = await res.text();

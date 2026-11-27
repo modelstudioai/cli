@@ -27,6 +27,8 @@ export interface OutputReporterOptions {
   hasCommand?: (path: string) => boolean;
   /** Profile pinned in recovery hints (via resolveRecoveryConfigName). */
   configName?: string;
+  /** Read the invocation's pre-release mode, which may be resolved after reporter creation. */
+  isPreControlPlane?: () => boolean;
 }
 
 export interface OutputReporter {
@@ -114,6 +116,7 @@ export function createOutputReporter(options: OutputReporterOptions): OutputRepo
       const hint = errorHint(failure, options.commandPrefix ?? "cli", localize, {
         hasCommand: options.hasCommand,
         configName: recoveryConfigName,
+        preControlPlane: options.isPreControlPlane?.(),
       });
       if (verbose && error instanceof Error && !(error instanceof BailianError)) {
         diagnostic("debug", {

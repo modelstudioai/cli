@@ -1,16 +1,4 @@
-import { defineCommand, type AuthStore } from "bailian-cli-core";
-
-type LogoutScope = Parameters<AuthStore["logout"]>[0];
-
-export async function logoutStoredAuth(store: AuthStore, scope: LogoutScope, pre: boolean) {
-  if (!pre || scope !== "all") return store.logout(scope);
-
-  // Use only the bound control-plane store and leave all model settings intact.
-  const clearedOAuth = await store.logout("aliyun");
-  const clearedConsole = await store.logout("console");
-  const clearedOpenApi = await store.logout("openapi");
-  return clearedOAuth || clearedConsole || clearedOpenApi;
-}
+import { defineCommand } from "bailian-cli-core";
 
 export default defineCommand({
   description: {
@@ -155,7 +143,7 @@ export default defineCommand({
       );
       return;
     }
-    const cleared = await logoutStoredAuth(store, scope, pre);
+    const cleared = await store.logout(scope);
     const lines = [
       ...environmentLine,
       ctx.localize(

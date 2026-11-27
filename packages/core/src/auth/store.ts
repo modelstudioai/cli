@@ -217,15 +217,23 @@ export function makeAuthStore(
     },
     async logout(scope) {
       const profile = readBoundConfig().aliyun_oauth;
-      const clearConfig = async (reference?: string, removeOAuth = false) => {
-        let cleared = false;
-        await mutateConfigFile(
+      const reference = profile?.session_ref;
+      const removeOAuth = scope === "all" || scope === "aliyun";
+      const keys =
+        pre && scope === "all"
+          ? [...LOGOUT_KEYS.console, ...LOGOUT_KEYS.openapi]
+          : LOGOUT_KEYS[scope];
+      const changedSession = () =>
+        new CredentialError(
+          "changed-openapi-identity",
+          "The OAuth login changed during logout. / 退出期间 OAuth 登录已变更。",
+        );
+      const clearConfig = () =>
+        mutateConfigFile(
           (current) => {
-            if (reference && current.aliyun_oauth?.session_ref !== reference) return undefined;
+            if (current.aliyun_oauth?.session_ref !== reference) throw changedSession();
+            if (!reference && !keys.some((key) => current[key] !== undefined)) return undefined;
             const existing = { ...current };
-            const keys = LOGOUT_KEYS[scope];
-            cleared = keys.some((key) => existing[key] !== undefined) || Boolean(reference);
-            if (!cleared) return undefined;
             for (const key of keys) delete existing[key];
             if (removeOAuth) delete existing.aliyun_oauth;
             else if (existing.aliyun_oauth)
@@ -239,39 +247,34 @@ export function makeAuthStore(
           configName,
           { path: configurationPath },
         );
-        return cleared;
-      };
-      if (!profile) return clearConfig();
+      if (!profile || scope === "openapi") return clearConfig();
       return withFileLock(oauthSessionLockPath(directory, profile.session_ref), async () => {
         const current = readBoundConfig().aliyun_oauth;
-        if (current?.session_ref !== profile.session_ref) return false;
+        if (current?.session_ref !== profile.session_ref) throw changedSession();
         if (pre) validatePreAliyunProfile(current);
-        const removeOAuth = scope === "all" || scope === "aliyun";
         const raw = await getSecretStore().read(profile.session_ref);
         if (removeOAuth) {
           if (raw) {
             const session = parseOAuthSession(raw);
-            assertOAuthConfiguration(profile, session);
+            assertOAuthConfiguration(current, session);
             if (session.refreshToken) {
               if (!oauthDeps)
                 throw new CredentialError(
                   "missing-aliyun-session",
                   "OAuth logout requires OAuth transport dependencies. / OAuth 退出需要 OAuth 传输配置。",
                 );
-              await revokeAliyunTokens(profile, session.refreshToken, oauthDeps);
+              await revokeAliyunTokens(current, session.refreshToken, oauthDeps);
             }
           }
           await getSecretStore().remove(profile.session_ref);
-          return clearConfig(profile.session_ref, true);
-        }
-        if (scope === "console" && raw) {
+        } else if (raw) {
           const session = parseOAuthSession(raw);
           await getSecretStore().write(
             profile.session_ref,
             JSON.stringify({ ...session, consoleTokens: {} }),
           );
         }
-        return clearConfig(profile.session_ref);
+        return clearConfig();
       });
     },
     get path() {

@@ -67,13 +67,13 @@ export function resolveCLIAccessTokenTarget(
 export async function validateConsoleAccessToken(
   target: ConsoleGatewayTarget,
   settings: Settings,
-  diagnostics: Pick<HttpDeps, "debug"> = {},
+  options: Pick<HttpDeps, "debug"> & { signal?: AbortSignal } = {},
 ): Promise<void> {
   const response = (await callConsoleGateway(
     target,
     settings.timeout,
     { api: "zeldaEasy.cornerstone-portal.cs-console.loginInfo", data: {} },
-    { ...diagnostics, preControlPlane: settings.preControlPlane },
+    { ...options, preControlPlane: settings.preControlPlane },
   )) as { data?: { success?: boolean } } | null;
   if (response?.data?.success !== true) {
     throw new BailianError(
@@ -91,6 +91,7 @@ export type GenerateCLIAccessTokenOptions = {
   debug?: HttpDeps["debug"];
   baseUrl: string;
   modelStudioHost?: string;
+  signal?: AbortSignal;
 } & (
   | { client: Client; accessKeyId?: never; accessKeySecret?: never; securityToken?: never }
   | {
@@ -129,6 +130,7 @@ export async function generateCLIAccessToken(opts: GenerateCLIAccessTokenOptions
     version: API_VERSION,
     method: "POST",
     queryParams: {},
+    signal: opts.signal,
   });
   if (typeof response.cliAccessToken !== "string" || !response.cliAccessToken.trim()) {
     throw new BailianError(

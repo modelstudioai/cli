@@ -91,6 +91,8 @@ export interface ErrorHintOptions {
    * Implicit default is undefined; explicit `--config default` is `"default"`.
    */
   configName?: string;
+  /** Pre-release mode resolved by the hosting CLI for this invocation. */
+  preControlPlane?: boolean;
 }
 
 /** Detect AllocationQuota.FreeTierOnly without matching TPS/TPM insufficient_quota. */
@@ -158,9 +160,29 @@ export function errorHint(
       case "expired-console-session":
         return consoleRecoveryHint(commandPrefix, configName);
       case "missing-openapi-pair":
-        return `Set BAILIAN_ACCESS_KEY_ID / BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_*), pass --access-key-id / --access-key-secret, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\` then paste your AccessKey.`;
-      case "incomplete-openapi-config":
-        return `Save a complete pair with \`${recoveryCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>", configName)}\`, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\` for the setup guide.`;
+      case "incomplete-openapi-config": {
+        const loginWithPair =
+          "auth login --open-api --access-key-id <id> --access-key-secret <secret>";
+        if (options.preControlPlane) {
+          const passPair = localize({
+            "en-US":
+              "Keep pre-release mode enabled. If the command accepts AccessKey flags, pass both `--access-key-id` and `--access-key-secret`.",
+            "zh-CN":
+              "请保持预发模式开启。如果命令支持 AccessKey 参数，请同时传入 `--access-key-id` 和 `--access-key-secret`。",
+          });
+          if (!options.hasCommand?.("auth login")) return passPair;
+          const login = recoveryCommand(commandPrefix, loginWithPair, configName);
+          return `${passPair} ${localize({
+            "en-US": `To save the pair, run \`${login}\`.`,
+            "zh-CN": `如需保存这对凭据，请运行 \`${login}\`。`,
+          })}`;
+        }
+        const guide = recoveryCommand(commandPrefix, "auth login --open-api", configName);
+        if (error.reason === "missing-openapi-pair") {
+          return `Set BAILIAN_ACCESS_KEY_ID / BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_*), pass --access-key-id / --access-key-secret, or run \`${guide}\` then paste your AccessKey.`;
+        }
+        return `Save a complete pair with \`${recoveryCommand(commandPrefix, loginWithPair, configName)}\`, or run \`${guide}\` for the setup guide.`;
+      }
       case "incomplete-openapi-flag":
       case "incomplete-openapi-env":
         return hint;

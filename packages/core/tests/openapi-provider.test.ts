@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import files, { mkdir, readFile, readdir, utimes, writeFile } from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -14,6 +15,7 @@ import {
 import type { AliyunOAuthDeps } from "../src/auth/aliyun-oauth.ts";
 import type { AliyunOAuthProfile, AliyunOAuthSession } from "../src/auth/aliyun-types.ts";
 import {
+  bindOpenApiConsoleCredentials,
   consoleCredentialKey,
   createOpenApiCredentialProvider,
   oauthConfigurationFingerprint,
@@ -39,6 +41,7 @@ import {
 import type { ConfigFile } from "../src/config/schema.ts";
 import { BailianError, UsageError } from "../src/errors/base.ts";
 import { CredentialError } from "../src/errors/credential.ts";
+import { withFileLock } from "../src/utils/file-lock.ts";
 import { enterIsolatedHome, type IsolatedHomeHandle } from "./helpers/isolation.ts";
 
 const NOW = Date.UTC(2026, 0, 1);
@@ -252,7 +255,12 @@ describe("pre-release control-plane isolation", () => {
       CredentialError,
     );
     const auth = makeAuthStore(sources, deps);
-    await auth.login({ access_key_id: "pre-ak", access_key_secret: "pre-sk" });
+    await auth.login({
+      access_key_id: "pre-ak",
+      access_key_secret: "pre-sk",
+      api_key: MODEL_KEY,
+      base_url: "https://model.example.test",
+    });
     const preFile = JSON.parse(await readFile(auth.path, "utf8"));
     expect(preFile).toMatchObject({ control_environment: "pre", active_config: "team" });
     const markerCopy = join(isolation.configDir, "copied-online.json");
@@ -263,6 +271,9 @@ describe("pre-release control-plane isolation", () => {
     expect(selected.file.access_key_id).toBe("pre-ak");
     expect(buildSources({ config: "default" }, undefined, pre).file.access_key_id).toBeUndefined();
     expect(await auth.logout("all")).toBe(true);
+    const remaining = readConfigFile("team", auth.path);
+    expect(remaining).toMatchObject({ api_key: MODEL_KEY, base_url: "https://model.example.test" });
+    expect(remaining.access_key_id).toBeUndefined();
     expect(readConfigFile("team", onlinePath).access_key_id).toBe("online-ak");
     expect(transport).not.toHaveBeenCalled();
   });
@@ -976,6 +987,82 @@ describe("Console cache and endpoint isolation", () => {
     expect(() => instance.provider.resolveHost("bailiancontrol.aliyuncs.com")).toThrow(UsageError);
     expect(transport).not.toHaveBeenCalled();
   });
+
+  test.each([
+    { flags: { accessKeyId: "fixture-override-id", accessKeySecret: "fixture-override-secret" } },
+    {
+      env: {
+        BAILIAN_ACCESS_KEY_ID: "fixture-override-id",
+        BAILIAN_ACCESS_KEY_SECRET: "fixture-override-secret",
+      },
+    },
+  ])(
+    "static overrides use ordinary OpenAPI and Console routes for an OAuth Profile (%#)",
+    async (overrides) => {
+      const instance = await setup({
+        ...overrides,
+        file: { aliyun_oauth: profile({ bailiancontrol_host: undefined }) },
+      });
+      const provider = bindOpenApiConsoleCredentials(instance.provider);
+      const host = "bailiancontrol.cn-beijing.aliyuncs.com";
+      const client = new Client({
+        identity: deps.identity,
+        settings: buildSettings(instance.sources),
+        baseUrl: "https://dashscope.aliyuncs.com",
+        openApiProvider: provider,
+      });
+      expect(client.resolveOpenApiHost(host)).toBe(host);
+      expect(provider.resolveConsoleTarget(TARGET)).toEqual(TARGET);
+      expect(provider.resolveHost("modelstudio.aliyuncs.com")).toBe("modelstudio.aliyuncs.com");
+      expect(transport).not.toHaveBeenCalled();
+      transport.mockResolvedValueOnce(json({ Success: true }));
+      await client.openApiJson({
+        host,
+        path: "/readonly",
+        action: "ListFixture",
+        version: "2026-01-01",
+        method: "GET",
+      });
+      const [endpoint, options] = transport.mock.calls[0]!;
+      expect(endpoint).toBe(`https://${host}/readonly`);
+      expect(new Headers(options?.headers).get("authorization")).toContain(
+        "Credential=fixture-override-id",
+      );
+      expect(instance.store.read).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("credential and configuration lock recovery", () => {
+  test.each(["", '{"pid":'])("recovers a stale incomplete lock record %j", async (record) => {
+    const path = join(isolation.configDir, "config.json.lock");
+    await writeFile(path, record);
+    await writeFile(`${path}.recovery`, "");
+    const stale = new Date(Date.now() - 5_000);
+    await utimes(path, stale, stale);
+    await expect(withFileLock(path, async () => true, 500)).resolves.toBe(true);
+    await expect(readFile(path)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test.each(["empty", "dead owner"] as const)(
+    "recovers a lock directory left with %s",
+    async (state) => {
+      const path = join(isolation.configDir, "config.json.lock");
+      await mkdir(path);
+      if (state === "dead owner") {
+        const pid = 987654;
+        await writeFile(join(path, `owner-${pid}-${REFERENCE}`), "");
+        const kill = process.kill.bind(process);
+        vi.spyOn(process, "kill").mockImplementation((target, signal) => {
+          if (target === pid && signal === 0)
+            throw Object.assign(new Error("No such process"), { code: "ESRCH" });
+          return kill(target, signal);
+        });
+      }
+      await expect(withFileLock(path, async () => true, 500)).resolves.toBe(true);
+      await expect(readdir(path)).rejects.toMatchObject({ code: "ENOENT" });
+    },
+  );
 });
 
 describe("Profile references, login and domain-specific logout", () => {
@@ -1051,6 +1138,29 @@ describe("Profile references, login and domain-specific logout", () => {
     expect(await configText()).toBe(before);
     expect(instance.saved()).toEqual(session());
     expect(instance.store.remove).not.toHaveBeenCalled();
+  });
+
+  test("a config lock cleanup failure after login does not delete the committed session", async () => {
+    const instance = await setup();
+    const lockPath = `${instance.sources.configPath!}.lock`;
+    const removeDirectory = files.rmdir;
+    const cleanup = vi.spyOn(files, "rmdir").mockImplementation(async (...args) => {
+      if (args[0] === lockPath)
+        throw Object.assign(new Error("Cannot remove lock directory"), { code: "EACCES" });
+      return removeDirectory(...args);
+    });
+    syncBuiltinESMExports();
+    try {
+      await instance.auth.loginAliyun(profile(), session());
+      expect(cleanup).toHaveBeenCalledWith(lockPath);
+      const reference = readConfigFile().aliyun_oauth!.session_ref;
+      expect(reference).not.toBe(REFERENCE);
+      expect(instance.values.has(reference)).toBe(true);
+    } finally {
+      cleanup.mockRestore();
+      syncBuiltinESMExports();
+    }
+    expect(await instance.auth.logout("openapi")).toBe(true);
   });
 
   test("relogin uses a new reference and invalidates credentials held by the old provider", async () => {
@@ -1218,6 +1328,52 @@ describe("Profile references, login and domain-specific logout", () => {
     },
   );
 
+  test("OpenAPI logout clears static keys and disables only OpenAPI without reading a damaged OAuth file", async () => {
+    const instance = await setup({
+      file: {
+        aliyun_oauth: profile(),
+        access_key_id: "fixture-static-id",
+        access_key_secret: "fixture-static-secret",
+      },
+    });
+    instance.store.read.mockRejectedValue(new Error("OAuth file is unreadable"));
+    expect(await instance.auth.logout("openapi")).toBe(true);
+    const file = readConfigFile();
+    expect(file.access_key_id).toBeUndefined();
+    expect(file.access_key_secret).toBeUndefined();
+    expect(file.aliyun_oauth).toMatchObject({
+      session_ref: REFERENCE,
+      openapi_enabled: false,
+      console_enabled: true,
+    });
+    expect(instance.store.read).not.toHaveBeenCalled();
+    expect(instance.store.remove).not.toHaveBeenCalled();
+  });
+
+  test("full logout rejects a concurrently created OAuth session instead of deleting its reference", async () => {
+    const instance = await setup({ file: { access_token: "fixture-static-console" } });
+    const configPath = instance.sources.configPath!;
+    const ready = deferred<void>();
+    const publish = deferred<void>();
+    const writing = withFileLock(`${configPath}.lock`, async () => {
+      ready.resolve();
+      await publish.promise;
+      instance.values.set(REFERENCE, JSON.stringify(session()));
+      await writeFile(configPath, JSON.stringify({ aliyun_oauth: profile() }));
+    });
+    await ready.promise;
+    const logout = expect(instance.auth.logout("all")).rejects.toMatchObject({
+      reason: "changed-openapi-identity",
+    });
+    publish.resolve();
+    await writing;
+    await logout;
+    expect(readConfigFile().aliyun_oauth?.session_ref).toBe(REFERENCE);
+    expect(instance.values.has(REFERENCE)).toBe(true);
+    expect(instance.store.remove).not.toHaveBeenCalled();
+    expect(transport).not.toHaveBeenCalled();
+  });
+
   test("all logout clears every credential, while preserving unrelated settings and other profiles", async () => {
     const instance = await setup({
       file: {
@@ -1275,13 +1431,11 @@ function startLockContender(sources: ResolutionSources, fakeFile: string): Fixtu
     const directory = ${JSON.stringify(isolation.configDir)};
     const fakeFile = ${JSON.stringify(fakeFile)};
     const lockPath = oauthSessionLockPath(directory, sources.file.aliyun_oauth.session_ref);
-    const actualOpen = files.open;
-    files.open = async (...args) => {
-      try { return await actualOpen(...args); }
-      catch (error) {
-        if (String(args[0]) === lockPath && error.code === 'EEXIST') process.send({ type: 'contended' });
-        throw error;
-      }
+    const actualReadDir = files.readdir;
+    files.readdir = async (...args) => {
+      const entries = await actualReadDir(...args);
+      if (String(args[0]) === lockPath && entries.length) process.send({ type: 'contended' });
+      return entries;
     };
     syncBuiltinESMExports();
     httpTransport.fetch = async () => { throw new Error('A second process must reuse durable STS, not replay RT'); };
@@ -1438,7 +1592,7 @@ describe("OAuth credential binding regressions", () => {
 describe("cross-process OAuth session serialization", () => {
   test("a real child waits on the shared session lock and reuses the parent's rotated session without RT replay", async () => {
     // Necessary process boundary: a per-provider single-flight Map cannot protect a second CLI process.
-    // One parent/child pair exercises the actual EEXIST lock path and durable refresh recovery;
+    // One parent/child pair exercises the real lock contention and reuse of durable refresh results;
     // the on-disk store contains only synthetic fixture JSON, never an OS key or real credentials.
     const instance = await setup({ oauthSession: session({ accessTokenExpiresAt: NOW }) });
     const fakeFile = join(isolation.configDir, "fixture-session.json");

@@ -477,12 +477,14 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       const localize = (text: LocalizedText) => translator.localize(text);
       const initialSettings = buildOutputSettings({ flags, env: process.env });
       let outputFormat: "text" | "json" = initialSettings.output;
-      let reporter = createOutputReporter({
-        settings: initialSettings,
+      let preControlPlane: PreControlPlane | undefined;
+      const reporterOptions = {
         localize,
         commandPrefix,
         hasCommand,
-      });
+        isPreControlPlane: () => preControlPlane !== undefined,
+      };
+      let reporter = createOutputReporter({ ...reporterOptions, settings: initialSettings });
       const warnings: OutputDiagnostic[] = [];
       const cleanup = installProcessHandlers(
         () => reporter,
@@ -490,7 +492,6 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         () => outputFormat,
       );
       try {
-        let preControlPlane: PreControlPlane | undefined;
         let controlPlaneError: UsageError | undefined;
         try {
           preControlPlane = opts.preControlPlane?.();
@@ -536,10 +537,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         const sourceSettings = buildOutputSettings(sources);
         outputFormat = sourceSettings.output;
         reporter = createOutputReporter({
+          ...reporterOptions,
           settings: sourceSettings,
-          localize,
-          commandPrefix,
-          hasCommand,
           configName: recoveryConfigName,
         });
         setupProxyFromEnv();
@@ -556,10 +555,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           (settings) => {
             outputFormat = settings.output;
             reporter = createOutputReporter({
+              ...reporterOptions,
               settings,
-              localize,
-              commandPrefix,
-              hasCommand,
               configName: recoveryConfigName,
             });
             for (const warning of warnings.splice(0)) reporter.output.warning(warning);

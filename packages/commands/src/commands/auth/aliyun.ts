@@ -495,7 +495,7 @@ export async function runAliyunOAuthLogin(
   const onSignal = () => cancellation.abort();
   const releaseInterrupt = registerInterruptHandler(onSignal);
   process.once("SIGTERM", onSignal);
-  const oauthDeps = { identity: deps.identity, timeout: deps.settings.timeout };
+  const oauthDeps = { identity: deps.identity, timeout: deps.settings.timeout, signal };
   const secrets: string[] = [];
   let session: AliyunOAuthSession | undefined;
   let saved = false;
@@ -526,6 +526,7 @@ export async function runAliyunOAuthLogin(
       accessKeyId: session.sts.accessKeyId,
       accessKeySecret: session.sts.accessKeySecret,
       securityToken: session.sts.securityToken,
+      signal,
     });
     secrets.push(cliAccessToken);
     assertActive(signal, deps);
@@ -534,7 +535,7 @@ export async function runAliyunOAuthLogin(
       site: "domestic" as const,
       gateway: profile.console_gateway,
     };
-    await validateConsoleAccessToken({ ...target, token: cliAccessToken }, settings);
+    await validateConsoleAccessToken({ ...target, token: cliAccessToken }, settings, { signal });
     assertActive(signal, deps);
     // Console TTL is intentionally absent: GenerateCLIAccessToken has no confirmed TTL field.
     session.consoleTokens = { [consoleCredentialKey(target)]: { token: cliAccessToken } };
@@ -552,14 +553,16 @@ export async function runAliyunOAuthLogin(
       },
     );
   } catch (error) {
+    const cancelled = !saved && signal.aborted;
     if (!saved && session?.refreshToken) {
-      // Cleanup failure must not replace the exchange/validation/persistence error.
+      // Revoke only a known RT, with its own deadline. Never replay an uncertain code exchange.
       await revokeAliyunTokens(profile, session.refreshToken, {
-        ...oauthDeps,
+        identity: oauthDeps.identity,
         timeout: Math.min(oauthDeps.timeout, 5),
       }).catch(() => {});
     }
-    throw safeLoginError(error, secrets);
+    // Cleanup must not replace the primary failure or expose the abort reason.
+    throw cancelled ? interrupted(deps) : safeLoginError(error, secrets);
   } finally {
     releaseInterrupt();
     process.off("SIGTERM", onSignal);

@@ -165,6 +165,7 @@ export async function callConsoleGateway(
   options: Pick<HttpDeps, "debug"> & {
     recoveryHint?: string;
     preControlPlane?: PreControlPlane;
+    signal?: AbortSignal;
   } = {},
 ): Promise<unknown> {
   const resolved = resolveGateway(target.region, target.site);
@@ -181,7 +182,6 @@ export async function callConsoleGateway(
 
   const params = buildGatewayParams(api, data, target.switchAgent);
   const body = new URLSearchParams({ params, region: target.region });
-  const timeoutMs = timeoutSec * 1000;
 
   const headers: Record<string, string> = {
     Accept: "*/*",
@@ -192,12 +192,13 @@ export async function callConsoleGateway(
   const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
   debugRequest(options, "POST", endpoint, { api, region: target.region });
 
+  const timeout = AbortSignal.timeout(timeoutSec * 1000);
   const res = await httpTransport.fetch(endpoint, {
     method: "POST",
     headers,
     body: body.toString(),
     ...(pre || target.gateway ? { redirect: "error" as const } : {}),
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
   });
 
   debugResponse(options, res);

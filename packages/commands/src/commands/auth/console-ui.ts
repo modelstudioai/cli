@@ -7,7 +7,6 @@ import {
   type Settings,
 } from "bailian-cli-core";
 import { runConsoleLogin, resolveConsoleOrigin } from "./login-console.ts";
-import { logoutStoredAuth } from "./logout.ts";
 
 /** Read-only auth snapshot the config UI account widget renders. bl stores no
  * user profile (name/avatar), so this exposes only which credential domains
@@ -105,7 +104,7 @@ export function makeAuthUiBridge(ctx: {
       }
     },
     logout() {
-      return logoutStoredAuth(authStore, "all", pre);
+      return authStore.logout("all");
     },
   };
 }

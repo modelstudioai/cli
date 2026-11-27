@@ -49,7 +49,14 @@ const SECRETS = {
   securityToken: "test-sts-security-token-secret",
   cliAccessToken: "test-cli-access-token-secret",
 };
-type Stage = "token" | "sts" | "generate" | "gateway";
+const STAGES = ["token", "sts", "generate", "gateway"] as const;
+type Stage = (typeof STAGES)[number];
+const STAGE_PATHS: Record<Stage, string> = {
+  token: "/v1/token",
+  sts: "/v1/exchange",
+  generate: "/modelstudio/cli/generateAccessToken",
+  gateway: "/cli/api.json",
+};
 interface RecordedRequest {
   url: URL;
   init: RequestInit;
@@ -57,6 +64,9 @@ interface RecordedRequest {
 let isolation: IsolatedHomeHandle;
 let requests: RecordedRequest[];
 let failStage: Stage | undefined;
+let pauseStage:
+  | { stage: Stage; hold: (signal: RequestInit["signal"]) => Promise<Response> }
+  | undefined;
 let revokeFails: boolean;
 let stsExpiresAt: number;
 let accessTokenIssuedAt: number;
@@ -90,6 +100,7 @@ beforeEach(() => {
   requests = [];
   activeProbes = [];
   failStage = undefined;
+  pauseStage = undefined;
   revokeFails = false;
   stsExpiresAt = Date.now() + 3600_000;
   accessTokenIssuedAt = 0;
@@ -121,6 +132,7 @@ beforeEach(() => {
     )
       stage = "gateway";
     else throw new Error(`Unexpected mocked endpoint: ${url.origin}${url.pathname}`);
+    if (pauseStage?.stage === stage) return pauseStage.hold(init.signal);
     if (stage === failStage) {
       if (stage === "gateway")
         return jsonResponse({
@@ -672,45 +684,99 @@ test("预先取消的信号在 proof/监听/浏览器/网络之前失败", async
   assertSignalCleanup(probe);
 });
 
-test.each(["token", "sts", "generate", "gateway"] as const)(
-  "%s下游失败不保存 Profile；已获得 RT 时尽力撤销且不泄漏凭据",
-  async (stage) => {
-    failStage = stage;
-    const probe = launch();
+test.each(STAGES)("%s 请求在途时 Ctrl+C 中止换票，仅撤销已获得的 RT", async (stage) => {
+  const started = deferred<RequestInit["signal"]>();
+  const released = deferred<void>();
+  const timeout = vi.spyOn(AbortSignal, "timeout");
+  revokeFails = stage === "gateway";
+  pauseStage = {
+    stage,
+    async hold(signal) {
+      const onAbort = () => released.resolve(undefined);
+      signal?.addEventListener("abort", onAbort, { once: true });
+      started.resolve(signal);
+      try {
+        await released.promise;
+        throw new DOMException(SECRETS.accessToken, "AbortError");
+      } finally {
+        signal?.removeEventListener("abort", onAbort);
+      }
+    },
+  };
+  const probe = launch({ noBrowser: true });
+  try {
     expect((await localRequest(callbackUrl(await probe.authUrl))).status).toBe(200);
+    const requestSignal = await Promise.race([
+      started.promise,
+      probe.outcome.then(() => {
+        throw new Error("Login ended before the target request started");
+      }),
+    ]);
+    expect(requestSignal?.aborted).toBe(false);
+    expect(timeout).toHaveBeenLastCalledWith(probe.deps.settings.timeout * 1000);
+    // Invoke the registered Ctrl+C handler without delivering an OS signal to the test worker.
+    Reflect.apply(process.listeners("SIGINT").at(-1)!, process, []);
+    expect(requestSignal?.aborted).toBe(true);
+
     const error = await probe.outcome;
-    expect(error).toBeInstanceOf(BailianError);
-    expect(error).toMatchObject({ exitCode: ExitCode.GENERAL });
+    expect(error).toMatchObject({ exitCode: ExitCode.INTERRUPTED });
+    expect(probe.reporter.error(error)).toBe(130);
     expect(probe.save).not.toHaveBeenCalled();
     expect(probe.stdout).toEqual([]);
-    const revocations = requests.filter((request) => request.url.pathname === "/v1/revoke");
-    expect(revocations).toHaveLength(stage === "token" ? 0 : 1);
+    const expectedPaths = STAGES.slice(0, STAGES.indexOf(stage) + 1).map(
+      (requestStage) => STAGE_PATHS[requestStage],
+    );
     if (stage !== "token") {
-      expect(
-        Object.fromEntries(new URLSearchParams(stringBody(revocations[0]!.init.body))),
-      ).toEqual({ client_id: ALIYUN_CLI_CLIENT_ID, token: SECRETS.refreshToken });
-      expect(revocations[0]!.init.redirect).toBe("error");
+      expectedPaths.push("/v1/revoke");
+      const revoke = requests.at(-1)!;
+      expect(revoke.init.signal?.aborted).toBe(false);
+      expect(timeout).toHaveBeenLastCalledWith(5000);
+      expect(new URLSearchParams(stringBody(revoke.init.body)).get("token")).toBe(
+        SECRETS.refreshToken,
+      );
     }
-    if (stage === "gateway")
-      expect(error).toMatchObject({
-        api: { apiCode: "ValidationDenied", requestId: "mock-request-id" },
-      });
-    probe.reporter.error(error);
-    const requestPaths = [
-      "/v1/token",
-      "/v1/exchange",
-      "/modelstudio/cli/generateAccessToken",
-      "/cli/api.json",
-    ];
-    expect(
-      requests
-        .filter((request) => request.url.pathname !== "/v1/revoke")
-        .map((request) => request.url.pathname),
-    ).toEqual(requestPaths.slice(0, ["token", "sts", "generate", "gateway"].indexOf(stage) + 1));
+    expect(requests.map(({ url }) => url.pathname)).toEqual(expectedPaths);
     assertNoSecrets(probe);
     assertSignalCleanup(probe);
-  },
-);
+  } finally {
+    // Unblock after a failed assertion even if a regression dropped cancellation from fetch.
+    released.resolve(undefined);
+  }
+});
+
+test.each(STAGES)("%s下游失败不保存 Profile；已获得 RT 时尽力撤销且不泄漏凭据", async (stage) => {
+  failStage = stage;
+  const probe = launch();
+  expect((await localRequest(callbackUrl(await probe.authUrl))).status).toBe(200);
+  const error = await probe.outcome;
+  expect(error).toBeInstanceOf(BailianError);
+  expect(error).toMatchObject({ exitCode: ExitCode.GENERAL });
+  expect(probe.save).not.toHaveBeenCalled();
+  expect(probe.stdout).toEqual([]);
+  const revocations = requests.filter((request) => request.url.pathname === "/v1/revoke");
+  expect(revocations).toHaveLength(stage === "token" ? 0 : 1);
+  if (stage !== "token") {
+    expect(Object.fromEntries(new URLSearchParams(stringBody(revocations[0]!.init.body)))).toEqual({
+      client_id: ALIYUN_CLI_CLIENT_ID,
+      token: SECRETS.refreshToken,
+    });
+    expect(revocations[0]!.init.redirect).toBe("error");
+  }
+  if (stage === "gateway")
+    expect(error).toMatchObject({
+      api: { apiCode: "ValidationDenied", requestId: "mock-request-id" },
+    });
+  probe.reporter.error(error);
+  expect(
+    requests
+      .filter((request) => request.url.pathname !== "/v1/revoke")
+      .map((request) => request.url.pathname),
+  ).toEqual(
+    STAGES.slice(0, STAGES.indexOf(stage) + 1).map((requestStage) => STAGE_PATHS[requestStage]),
+  );
+  assertNoSecrets(probe);
+  assertSignalCleanup(probe);
+});
 
 test.each(["network", "timeout"] as const)(
   "传输%s错误保留 runtime 分类且脱敏 cause",
@@ -772,6 +838,17 @@ test("下游阶段取消不保存，并撤销已经获得的 RT", async () => {
   expect(await probe.outcome).toMatchObject({ exitCode: ExitCode.INTERRUPTED });
   expect(probe.save).not.toHaveBeenCalled();
   expect(requests.map((request) => request.url.pathname)).toEqual(["/v1/revoke"]);
+  assertSignalCleanup(probe);
+});
+
+test("已开始持久化时取消，不撤销成功保存的会话", async () => {
+  const probe = launch({ noBrowser: true });
+  probe.save.mockImplementation(async () => probe.controller.abort());
+  await finish(probe);
+  expect(probe.save).toHaveBeenCalledTimes(1);
+  expect(requests.map(({ url }) => url.pathname)).not.toContain("/v1/revoke");
+  expect(JSON.parse(probe.stdout.join(""))).toMatchObject({ authenticated: true });
+  assertNoSecrets(probe);
   assertSignalCleanup(probe);
 });
 

@@ -9,6 +9,8 @@ import type { AliyunOAuthProfile, AliyunOAuthTokens, AliyunOAuthSession } from "
 
 export interface AliyunOAuthDeps extends Pick<HttpDeps, "identity" | "debug"> {
   timeout: number;
+  /** Optional cancellation for token and STS exchanges. */
+  signal?: AbortSignal;
   now?: () => number;
   warning?: HttpDeps["debug"];
   recoveryHint?: string;
@@ -68,12 +70,13 @@ async function postOAuth(
 ): Promise<Record<string, unknown>> {
   const endpoint = `${profile.oauth_base_url}${path}`;
   debugRequest(deps, "POST", endpoint);
+  const timeout = AbortSignal.timeout(deps.timeout * 1000);
   const response = await httpTransport.fetch(endpoint, {
     method: "POST",
     headers: { ...trackingHeaders(deps.identity), ...headers },
     body,
     redirect: "error",
-    signal: AbortSignal.timeout(deps.timeout * 1000),
+    signal: deps.signal ? AbortSignal.any([deps.signal, timeout]) : timeout,
   });
   debugResponse(deps, response);
   const raw = await response.text();
