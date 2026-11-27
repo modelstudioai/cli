@@ -4,7 +4,7 @@ import {
   readConfigFile,
   readConfigProfiles,
   validateConfigProfileActivation,
-  writeConfigFile,
+  mutateConfigFile,
   type ConfigProfiles,
 } from "./loader.ts";
 import { getConfigPath } from "./paths.ts";
@@ -29,27 +29,43 @@ export interface ConfigStore {
   path: string;
 }
 
-export function makeConfigStore(configName?: string): ConfigStore {
+export function makeConfigStore(
+  configName?: string,
+  configurationPath = getConfigPath(),
+): ConfigStore {
   return {
-    read: () => readConfigFile(configName),
+    read: () => readConfigFile(configName, configurationPath),
     async write(patch) {
-      const existing = readConfigFile(configName) as Record<string, unknown>;
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === undefined) delete existing[key];
-        else existing[key] = key === "base_url" ? normalizeModelBaseUrl(String(value)) : value;
-      }
-      await writeConfigFile(existing, configName);
+      await mutateConfigFile(
+        (current) => {
+          const existing = { ...current } as Record<string, unknown>;
+          for (const [key, value] of Object.entries(patch)) {
+            if (value === undefined) delete existing[key];
+            else
+              existing[key] = key === "base_url" ? normalizeModelBaseUrl(value as string) : value;
+          }
+          return existing as ConfigFile;
+        },
+        configName,
+        { path: configurationPath },
+      );
     },
     async unset(keys) {
-      const existing = readConfigFile(configName) as Record<string, unknown>;
-      for (const key of keys) delete existing[key];
-      await writeConfigFile(existing, configName);
+      await mutateConfigFile(
+        (current) => {
+          const existing = { ...current };
+          for (const key of keys) delete existing[key];
+          return existing;
+        },
+        configName,
+        { path: configurationPath },
+      );
     },
-    profiles: () => readConfigProfiles(),
-    activate: (name) => activateConfigProfile(name),
-    validateActivation: (name) => validateConfigProfileActivation(name),
+    profiles: () => readConfigProfiles(configurationPath),
+    activate: (name) => activateConfigProfile(name, configurationPath),
+    validateActivation: (name) => validateConfigProfileActivation(name, configurationPath),
     get path() {
-      return getConfigPath();
+      return configurationPath;
     },
   };
 }

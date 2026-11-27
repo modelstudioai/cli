@@ -3,6 +3,7 @@
 // entrypoint (bl / rag / …) builds its own `{ "<path>": command }` map, so the
 // command paths a product exposes are a product decision, not baked in here.
 
+export { default as authRoot } from "./commands/auth/aliyun.ts";
 export { default as authLogin } from "./commands/auth/login.ts";
 export { default as authStatus } from "./commands/auth/status.ts";
 export { default as authLogout } from "./commands/auth/logout.ts";

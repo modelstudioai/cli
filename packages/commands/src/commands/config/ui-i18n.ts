@@ -30,8 +30,8 @@ const ZH_CN_REPLACEMENTS: ReadonlyArray<readonly [string, string]> = [
   ],
   [" was started.", " 的目录中执行。"],
   [
-    "Credentials and default models. The active profile (marked with a star) is used by every bl command. Click a profile to edit its settings.",
-    "管理凭证和默认模型。所有 bl 命令都会使用带星标的已激活 Profile。点击 Profile 可编辑其设置。",
+    "Credentials and default models. Commands that read this configuration file use the active profile (marked with a star). Click a profile to edit its settings.",
+    "管理凭证和默认模型。读取此配置文件的命令会使用带星标的已激活 Profile。点击 Profile 可编辑其设置。",
   ],
   [
     'Agent skills discovered across every local agent module (~/.agents/skills plus each agent\'s skills folder). Installed via <code style="font-family:var(--mono)">npx skills add</code>.',

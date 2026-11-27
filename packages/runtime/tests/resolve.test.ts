@@ -94,6 +94,28 @@ test("bare leaf commands with required flags show help, while supplied flags enf
   });
 });
 
+test("hybrid commands show help with only global flags, but enforce required command flags", () => {
+  const hybrid = new CommandRegistry({ text: command, "text chat": command }, "bl");
+  expect(resolve(["--config=work", "text", "--quiet"], hybrid)).toMatchObject({
+    kind: "help",
+    path: ["text"],
+    parsedFlags: { config: "work", quiet: true },
+  });
+  expect(resolve(["--timeout=0", "text"], hybrid)).toMatchObject({
+    kind: "usageError",
+    error: { exitCode: ExitCode.USAGE, message: expect.stringMatching(/timeout/i) },
+  });
+  expect(resolve(["text", "--api-key", "fake-key"], hybrid)).toMatchObject({
+    kind: "usageError",
+    error: { exitCode: ExitCode.USAGE, message: "Missing required flag: --prompt" },
+  });
+  expect(resolve(["--config=work", "text", "--prompt", "hi"], hybrid)).toMatchObject({
+    kind: "run",
+    path: ["text"],
+    parsedFlags: { config: "work", prompt: "hi" },
+  });
+});
+
 test("global flags between command path segments are rejected", () => {
   expect(resolve(["text", "--config=work", "chat"], registry)).toMatchObject({
     kind: "usageError",

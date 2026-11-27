@@ -10,7 +10,7 @@ import {
   ExitCode,
   normalizeConfigName,
   readConfigFile,
-  writeConfigFile,
+  mutateConfigFile,
   deleteConfigProfile,
   DEFAULT_LANGUAGE,
   REGIONS,
@@ -183,7 +183,7 @@ export function createConfigUiServer(
   const uiLanguage = (): Language => {
     if (activatedUiProfile === null) return configUiLanguage(configStore);
     const configName = activatedUiProfile === "default" ? undefined : activatedUiProfile;
-    return readConfigFile(configName).language ?? DEFAULT_LANGUAGE;
+    return readConfigFile(configName, configStore.path).language ?? DEFAULT_LANGUAGE;
   };
 
   return http.createServer(async (req, res) => {
@@ -428,8 +428,12 @@ export function createConfigUiServer(
           sendJson(res, 400, { error: "login unavailable" });
           return;
         }
-        authBridge.startConsoleLogin();
-        sendJson(res, 200, { started: true });
+        try {
+          authBridge.startConsoleLogin();
+          sendJson(res, 200, { started: true });
+        } catch (err) {
+          sendJson(res, 400, { error: errMessage(err) });
+        }
         return;
       }
 
@@ -646,16 +650,25 @@ export function createConfigUiServer(
           sendJson(res, 400, { error: errMessage(err) });
           return;
         }
-        const existing = readConfigFile(normalized) as Record<string, unknown>;
-        const saved = mergeUnmanagedProfileFields(existing, cleaned);
-        await writeConfigFile(saved, normalized);
+        let saved: Record<string, unknown> = {};
+        await mutateConfigFile(
+          (current) => {
+            saved = mergeUnmanagedProfileFields(current as Record<string, unknown>, cleaned);
+            return saved;
+          },
+          normalized,
+          { path: configStore.path },
+        );
         sendJson(res, 200, { saved, uiLanguage: uiLanguage() });
         return;
       }
 
       if (path === "/api/profile" && method === "DELETE") {
         try {
-          const deleted = await deleteConfigProfile(u.searchParams.get("name") ?? undefined);
+          const deleted = await deleteConfigProfile(
+            u.searchParams.get("name") ?? undefined,
+            configStore.path,
+          );
           sendJson(res, 200, { deleted, activeProfile: configStore.profiles().active });
         } catch (err) {
           sendJson(res, 400, { error: errMessage(err) });

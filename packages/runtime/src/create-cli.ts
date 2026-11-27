@@ -1,5 +1,5 @@
 import { CommandRegistry } from "./registry.ts";
-import { resolve } from "./resolve.ts";
+import { resolve, type Resolution } from "./resolve.ts";
 import { buildCommandSchema, serializeCommandSchema } from "./introspect.ts";
 import {
   compose,
@@ -20,6 +20,7 @@ import type {
   Settings,
   ResolutionSources,
   OutputDiagnostic,
+  PreControlPlane,
 } from "bailian-cli-core";
 import {
   formatCommand,
@@ -68,6 +69,9 @@ export interface CliOptions {
   quickStartTasks?: readonly string[];
   /** Command Packs accepted by this product. Omit when the product supports none. */
   commandPacks?: CommandPackPolicy;
+  /** Resolve pre-release routing once per invocation; omitted by hosts without a control-plane switch. */
+  preControlPlane?: () => PreControlPlane | undefined;
+  validatePreControlPlaneCommand?: (path: string) => void;
 }
 
 export interface Cli {
@@ -117,6 +121,31 @@ function presentationFlags(argv: string[]): Partial<SourceFlags> {
     }
   }
   return flags;
+}
+
+function isPresentationOnly(resolution?: Resolution): boolean {
+  return (
+    resolution?.kind === "help" ||
+    resolution?.kind === "version" ||
+    resolution?.kind === "introspect"
+  );
+}
+
+function usesModelConfig(resolution: Resolution, registry: CommandRegistry): boolean {
+  if (resolution.kind === "usageError") return resolution.command?.auth === "apiKey";
+  if (resolution.kind !== "run" && resolution.kind !== "help") return false;
+  const target = resolution.kind === "run" ? resolution : registry.locate(resolution.path);
+  if (target.kind !== "run" && target.kind !== "leaf") return false;
+  const { apiKey, console, openApi } = resolution.parsedFlags;
+  return (
+    target.command.auth === "apiKey" ||
+    // Login itself is auth-free, so only the model login mode uses the model file.
+    (resolution.path.join(" ") === "auth login" &&
+      typeof apiKey === "string" &&
+      Boolean(apiKey.trim()) &&
+      !console &&
+      !openApi)
+  );
 }
 
 interface ProcessOutputContext {
@@ -271,12 +300,12 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
   async function dispatch(
     registry: CommandRegistry,
-    argv: string[],
+    res: Resolution,
     localize: (text: LocalizedText) => string,
     initialSources: ResolutionSources,
     configureOutput: (settings: Pick<Settings, "output" | "quiet" | "verbose">) => OutputReporter,
+    preControlPlane?: PreControlPlane,
   ): Promise<void> {
-    const res = resolve(argv, registry, localize);
     const command = res.kind === "run" || res.kind === "usageError" ? res.command : undefined;
     const outputSettings = buildOutputSettings({
       ...initialSources,
@@ -350,7 +379,39 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
           const sources = { ...initialSources, flags: globalFlags };
           const settings = { ...buildSettings(sources), ...outputSettings };
+          let controlSources: ResolutionSources | undefined;
+          if (preControlPlane && !sources.preControlPlane) {
+            // Keep model options (including workspace and output), but never use
+            // a production Profile's Console scope on the pre-release gateway.
+            settings.preControlPlane = preControlPlane;
+            settings.consoleRegion = globalFlags.consoleRegion || undefined;
+            settings.consoleSite =
+              (globalFlags.consoleSite as Settings["consoleSite"]) || undefined;
+            settings.consoleSwitchAgent = globalFlags.consoleSwitchAgent || undefined;
+            if (res.command.optionalConsole) {
+              try {
+                const selected = buildSources(
+                  globalFlags,
+                  (warning) => reporter.output.warning(warning),
+                  preControlPlane,
+                );
+                const { consoleRegion, consoleSite, consoleSwitchAgent } = buildSettings(selected);
+                Object.assign(settings, { consoleRegion, consoleSite, consoleSwitchAgent });
+                controlSources = selected;
+              } catch {
+                reporter.output.warning({
+                  code: "PRE_CONSOLE_CONFIG_UNAVAILABLE",
+                  message: {
+                    "en-US":
+                      "Pre-release Console configuration is unavailable; continuing without its credentials.",
+                    "zh-CN": "预发控制台配置不可用；将不使用控制台凭据继续执行。",
+                  },
+                });
+              }
+            }
+          }
           const ctx: RunContext = {
+            hasCommand,
             commandPath: (command) => registry.commandPath(command),
             identity,
             output: reporter.output,
@@ -361,8 +422,14 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             localize,
             settings,
             sources,
-            configStore: makeConfigStore(sources.configName),
-            authStore: makeAuthStore(sources),
+            controlSources,
+            configStore: makeConfigStore(sources.configName, sources.configPath),
+            authStore: makeAuthStore(sources, {
+              identity,
+              timeout: settings.timeout,
+              debug: (diagnostic) => reporter.output.debug(diagnostic),
+              warning: (diagnostic) => reporter.output.warning(diagnostic),
+            }),
             commandPacks: createCommandPackManager(identity, commandPackPolicy, reporter.output),
             setRecoveryConfigName: (name) => reporter.setRecoveryConfigName(name),
             client: new Client({
@@ -381,7 +448,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         } catch (err) {
           // 裸调用（命令后什么都没写）下的 UsageError → 当"还没写完"，打 help、exit 0；
           // 写了 flag 却无效、或执行时报错 → 报错、exit 2。
-          if (err instanceof UsageError && res.rest.length === 0) {
+          if (err instanceof UsageError && res.rest.length === 0 && !preControlPlane) {
             registry.printHelp(res.path, process.stderr);
             return;
           }
@@ -410,12 +477,14 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       const localize = (text: LocalizedText) => translator.localize(text);
       const initialSettings = buildOutputSettings({ flags, env: process.env });
       let outputFormat: "text" | "json" = initialSettings.output;
-      let reporter = createOutputReporter({
-        settings: initialSettings,
+      let preControlPlane: PreControlPlane | undefined;
+      const reporterOptions = {
         localize,
         commandPrefix,
         hasCommand,
-      });
+        isPreControlPlane: () => preControlPlane !== undefined,
+      };
+      let reporter = createOutputReporter({ ...reporterOptions, settings: initialSettings });
       const warnings: OutputDiagnostic[] = [];
       const cleanup = installProcessHandlers(
         () => reporter,
@@ -423,32 +492,78 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         () => outputFormat,
       );
       try {
-        const sources = buildSources(flags, (warning) => warnings.push(warning));
+        let controlPlaneError: UsageError | undefined;
+        try {
+          preControlPlane = opts.preControlPlane?.();
+        } catch (error) {
+          if (!(error instanceof UsageError)) throw error;
+          controlPlaneError = error;
+        }
+
+        let registry: CommandRegistry | undefined;
+        let resolution: Resolution | undefined;
+        let sourcePlane = preControlPlane;
+        if (preControlPlane || controlPlaneError) {
+          // Only the pre-release switch needs to identify the command before
+          // loading preferences. The registry localizes lazily after selection.
+          registry = await getRegistry({
+            get language() {
+              return translator.language;
+            },
+            localize,
+          });
+          resolution = resolve(argv, registry, localize);
+          if (controlPlaneError && !isPresentationOnly(resolution)) throw controlPlaneError;
+          if (preControlPlane && resolution.kind === "run") {
+            opts.validatePreControlPlaneCommand?.(
+              (registry.commandPath(resolution.command) ?? resolution.path).join(" "),
+            );
+          }
+          if (usesModelConfig(resolution, registry)) sourcePlane = undefined;
+        }
+
+        let sources: ResolutionSources = { flags, env: process.env, file: {} };
+        if (!controlPlaneError) {
+          try {
+            sources = buildSources(flags, (warning) => warnings.push(warning), sourcePlane);
+          } catch (error) {
+            // Help/version must remain usable to recover from bad pre-release
+            // configuration. Never read another environment as a fallback.
+            if (!preControlPlane || !isPresentationOnly(resolution)) throw error;
+          }
+        }
         const recoveryConfigName = resolveRecoveryConfigName(sources);
         translator = createTranslator(sources.file.language ?? DEFAULT_LANGUAGE);
         const sourceSettings = buildOutputSettings(sources);
         outputFormat = sourceSettings.output;
         reporter = createOutputReporter({
+          ...reporterOptions,
           settings: sourceSettings,
-          localize,
-          commandPrefix,
-          hasCommand,
           configName: recoveryConfigName,
         });
         setupProxyFromEnv();
-        const registry = await getRegistry(translator);
-        await dispatch(registry, argv, localize, sources, (settings) => {
-          outputFormat = settings.output;
-          reporter = createOutputReporter({
-            settings,
-            localize,
-            commandPrefix,
-            hasCommand,
-            configName: recoveryConfigName,
-          });
-          for (const warning of warnings.splice(0)) reporter.output.warning(warning);
-          return reporter;
-        });
+        registry ??= await getRegistry(translator);
+        // On parser failures, render the diagnostic in the selected language.
+        if (!resolution || resolution.kind === "usageError") {
+          resolution = resolve(argv, registry, localize);
+        }
+        await dispatch(
+          registry,
+          resolution,
+          localize,
+          sources,
+          (settings) => {
+            outputFormat = settings.output;
+            reporter = createOutputReporter({
+              ...reporterOptions,
+              settings,
+              configName: recoveryConfigName,
+            });
+            for (const warning of warnings.splice(0)) reporter.output.warning(warning);
+            return reporter;
+          },
+          preControlPlane,
+        );
       } catch (error) {
         for (const warning of warnings.splice(0)) reporter.output.warning(warning);
         await flushTelemetry(1000);

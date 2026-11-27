@@ -238,6 +238,15 @@ async function invoke(
       settings,
       baseUrl: "https://fixture.invalid",
       apiCred: { source: "flag", token: "sk-fixture", baseUrl: "https://fixture.invalid" },
+      ...(scenario.command.auth === "openapi"
+        ? {
+            openApiCred: {
+              source: "flag" as const,
+              accessKeyId: "fixture-ak",
+              accessKeySecret: "fixture-secret",
+            },
+          }
+        : {}),
     });
     if (scenario.command === mcpList) {
       vi.spyOn(client, "requestJson").mockResolvedValue({

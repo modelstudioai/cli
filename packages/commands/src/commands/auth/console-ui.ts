@@ -15,6 +15,7 @@ export interface AuthUiStatus {
   authenticated: boolean;
   methods: { apiKey: boolean; console: boolean; openapi: boolean };
   primary: "console" | "apiKey" | "openapi" | null;
+  environment?: "pre";
   region?: string;
   site?: "domestic" | "international";
   masked?: string;
@@ -30,7 +31,7 @@ export interface AuthUiBridge {
   status(): AuthUiStatus;
   /** Start browser-based console login (fire-and-forget; UI polls status). */
   startConsoleLogin(): void;
-  /** Clear all stored credentials. Returns whether anything changed. */
+  /** Log out of the bound profile; pre-release leaves model credentials intact. */
   logout(): Promise<boolean>;
 }
 
@@ -43,46 +44,64 @@ export function makeAuthUiBridge(ctx: {
   localize?: (text: LocalizedText) => string;
 }): AuthUiBridge {
   const { identity, settings, authStore, localize, output } = ctx;
+  const pre = settings.preControlPlane !== undefined;
+  const warnLoginFailure = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    output.warning({
+      message: {
+        "en-US": `Console login failed: ${message}`,
+        "zh-CN": `控制台登录失败：${message}`,
+      },
+      code: "CONSOLE_LOGIN_FAILED",
+    });
+  };
   return {
     status() {
       const a = authStore.describe();
-      const methods = { apiKey: !!a.apiKey, console: !!a.console, openapi: !!a.openapi };
+      const methods = {
+        apiKey: !!a.apiKey,
+        console: !!(a.console || a.aliyunOAuth?.console_enabled),
+        openapi: !!(a.openapi || a.aliyunOAuth?.openapi_enabled),
+      };
       let masked: string | undefined;
       if (a.console) masked = maskToken(a.console.token);
       else if (a.apiKey) masked = maskToken(a.apiKey.token);
       else if (a.openapi) masked = maskToken(a.openapi.accessKeyId);
-      const primary = a.console ? "console" : a.apiKey ? "apiKey" : a.openapi ? "openapi" : null;
+      const primary = methods.console
+        ? "console"
+        : methods.apiKey
+          ? "apiKey"
+          : methods.openapi
+            ? "openapi"
+            : null;
       return {
         authenticated: methods.apiKey || methods.console || methods.openapi,
         methods,
         primary,
-        region: a.console?.region,
-        site: a.console?.site,
+        ...(pre ? { environment: "pre" as const } : {}),
+        region:
+          a.console?.region ??
+          (a.aliyunOAuth?.console_enabled ? a.aliyunOAuth.console_region : undefined),
+        site: a.console?.site ?? (a.aliyunOAuth?.console_enabled ? "domestic" : undefined),
         masked,
       };
     },
     startConsoleLogin() {
-      const origin = resolveConsoleOrigin(authStore.describe().console?.site);
-      // Mirror the CLI (`bl auth login --console`): request an api_key from the
-      // console only when one isn't already stored, so a first console login in
-      // the config UI also provisions the model api_key (not just access_token).
-      const hasApiKey = !!authStore.stored().apiKey;
-      // runConsoleLogin opens the browser and runs its own callback server
-      // (up to 15 min). We don't await it — the config UI polls the status
-      // endpoint to detect completion. Errors are logged, not surfaced.
-      void runConsoleLogin(
-        origin,
-        { identity, settings, authStore, localize, output },
-        {
-          needApiKey: !hasApiKey,
-        },
-      ).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        output.warning({
-          message: { "en-US": `Console login failed: ${msg}`, "zh-CN": `控制台登录失败：${msg}` },
-          code: "CONSOLE_LOGIN_FAILED",
-        });
-      });
+      const origin = pre ? undefined : resolveConsoleOrigin(authStore.describe().console?.site);
+      // Keep launch Profile and environment bound for the entire callback. The UI only polls for completion.
+      try {
+        void runConsoleLogin(
+          origin,
+          { identity, settings, authStore, localize, output },
+          {
+            needApiKey: !pre && !authStore.stored().apiKey,
+          },
+        ).catch(warnLoginFailure);
+      } catch (error) {
+        // Endpoint preflight failures are synchronous; never tell the UI login was started.
+        warnLoginFailure(error);
+        throw error;
+      }
     },
     logout() {
       return authStore.logout("all");

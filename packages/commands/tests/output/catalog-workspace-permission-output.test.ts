@@ -332,17 +332,31 @@ async function invoke(scenario: Scenario, display: Display, flags = scenario.fla
       },
     },
   });
+  const mixedOpenApi = scenario.command.auth === "openapi";
+  const openApiCredential = {
+    source: "flag" as const,
+    accessKeyId: "fixture-access-key",
+    accessKeySecret: "fixture-access-secret",
+    securityToken: "fixture-security-token",
+  };
   const client = new Client({
     identity,
-    settings,
+    settings: mixedOpenApi
+      ? { ...settings, consoleRegion: "cn-beijing", consoleSite: "domestic" }
+      : settings,
     baseUrl: "https://fixture.invalid",
+    ...(mixedOpenApi
+      ? { openApiCred: openApiCredential, resolveConsoleOpenApiCredential: () => openApiCredential }
+      : {}),
     apiCred: { token: "fixture-api-token", source: "flag", baseUrl: "https://fixture.invalid" },
-    consoleCred: {
-      token: "fixture-console-token",
-      region: "cn-beijing",
-      site: "domestic",
-      source: "flag",
-    },
+    consoleCred: mixedOpenApi
+      ? undefined
+      : {
+          token: "fixture-console-token",
+          region: "cn-beijing",
+          site: "domestic",
+          source: "flag",
+        },
     debug: (record) => reporter.output.debug(record),
   });
   let exitCode = 0;

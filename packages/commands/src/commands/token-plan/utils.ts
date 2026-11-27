@@ -94,27 +94,25 @@ export function appendCommonQueryParams(
 }
 
 export function prepareTokenPlanRequest(
-  baseUrl: string,
+  client: Client,
   path: string,
   queryParams: TokenPlanQueryParams,
 ): { host: string; endpoint: string; queryString: string; queryParams: TokenPlanQueryParams } {
   const queryString = buildAcsCanonicalQuery(queryParams);
-  const host = modelStudioHost(baseUrl);
+  const host = client.resolveOpenApiHost(modelStudioHost(client.baseUrl));
   const endpoint = `https://${host}${path}${queryString ? `?${queryString}` : ""}`;
   return { host, endpoint, queryString, queryParams };
 }
 
 export async function callTokenPlanApi<T extends TokenPlanApiResponse>(opts: {
   client: Client;
-  /** Model-domain base URL (from ctx.client.baseUrl) — only used to pick the OpenAPI host region. */
-  baseUrl: string;
   action: string;
   path: string;
   method: "GET" | "POST";
   queryParams: TokenPlanQueryParams;
 }): Promise<T> {
-  const { client, baseUrl, action, path, method, queryParams } = opts;
-  const { host } = prepareTokenPlanRequest(baseUrl, path, queryParams);
+  const { client, action, path, method, queryParams } = opts;
+  const host = modelStudioHost(client.baseUrl);
   return client.openApiQueryJson<T>({
     host,
     path,

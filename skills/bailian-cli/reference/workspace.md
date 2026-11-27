@@ -9,29 +9,33 @@ Index: [index.md](index.md)
 
 | Command             | Authentication | Description                                                 |
 | ------------------- | -------------- | ----------------------------------------------------------- |
-| `bl workspace init` | No Auth        | Initialize Bailian workspace and activate postpaid services |
+| `bl workspace init` | AK/SK          | Initialize Bailian workspace and activate postpaid services |
 | `bl workspace list` | Console        | List all workspaces                                         |
 
 ## Command details
 
 ### `bl workspace init`
 
-| Field              | Value                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------ |
-| **Name**           | `workspace init`                                                                                 |
-| **Description**    | Initialize Bailian workspace and activate postpaid services                                      |
-| **Authentication** | No Auth                                                                                          |
-| **Usage**          | `bl workspace init --access-key-id <id> --access-key-secret <secret> [--security-token <token>]` |
+| Field              | Value                                                       |
+| ------------------ | ----------------------------------------------------------- |
+| **Name**           | `workspace init`                                            |
+| **Description**    | Initialize Bailian workspace and activate postpaid services |
+| **Authentication** | AK/SK                                                       |
+| **Usage**          | `bl workspace init [flags]`                                 |
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                 |
-| ------------------------------ | ------ | -------- | ------------------------------------------- |
-| `--access-key-id <id>`         | string | no       | Alibaba Cloud Access Key ID                 |
-| `--access-key-secret <secret>` | string | no       | Alibaba Cloud Access Key Secret             |
-| `--security-token <token>`     | string | no       | Alibaba Cloud STS Security Token (optional) |
+| Flag                        | Type   | Required | Description                                                            |
+| --------------------------- | ------ | -------- | ---------------------------------------------------------------------- |
+| `--access-key-id <key>`     | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
+| `--access-key-secret <key>` | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
+| `--security-token <token>`  | string | no       | Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)   |
 
 #### Examples
+
+```bash
+bl workspace init
+```
 
 ```bash
 bl workspace init --access-key-id LTAIxxxxx --access-key-secret xxxxx

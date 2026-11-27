@@ -1,5 +1,6 @@
 import { createCli, runToExit } from "bailian-cli-runtime";
-import { commandAliases, commands } from "./commands.ts";
+import { resolvePreControlPlane, UsageError } from "bailian-cli-core";
+import { commandAliases, commands, hasUnverifiedPreControlPlaneRoute } from "./commands.ts";
 import { commandPackPolicy } from "./command-pack-policy.ts";
 import pkg from "../package.json" with { type: "json" };
 import { resolveAliyunIntegration } from "./integrations/aliyun.ts";
@@ -23,6 +24,14 @@ void runToExit(
       npmPackage: "bailian-cli",
       quickStartTasks,
       commandPacks: commandPackPolicy,
+      preControlPlane: () => resolvePreControlPlane(process.env),
+      validatePreControlPlaneCommand: (path) => {
+        if (hasUnverifiedPreControlPlaneRoute(path)) {
+          throw new UsageError(
+            "This command has no verified pre-release control-plane route. / 此命令没有已确认的预发控制面路由。",
+          );
+        }
+      },
     },
   ),
 );

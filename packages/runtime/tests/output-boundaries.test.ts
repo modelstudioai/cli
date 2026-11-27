@@ -23,6 +23,7 @@ async function sources(directory: string): Promise<string[]> {
 // Adding a raw writer requires reviewing its format guard and documenting the exception.
 const nativeWrites = {
   "commands/app/call.ts": 1,
+  "commands/auth/aliyun.ts": 1,
   "commands/auth/login-console.ts": 1,
   "commands/knowledge/chat.ts": 3,
   "commands/managed-agent/_engine/playground-launcher.ts": 1,

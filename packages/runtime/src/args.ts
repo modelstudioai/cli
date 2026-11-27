@@ -250,14 +250,19 @@ export function parseFlags<F extends FlagsDef>(
     }
   }
 
-  // Required enforcement — declarative, driven by the schema.
+  if (options.enforceRequired !== false) assertRequiredFlags(defs, flags, localize);
+  return flags as unknown as ParsedFlags<F>;
+}
+
+export function assertRequiredFlags(
+  defs: FlagsDef,
+  flags: Record<string, unknown>,
+  localize: Translator["localize"],
+): void {
   const missing = Object.entries(defs)
     .filter(
       ([key, definition]) =>
-        options.enforceRequired !== false &&
-        definition.type !== "switch" &&
-        definition.required === true &&
-        flags[key] === undefined,
+        definition.type !== "switch" && definition.required === true && flags[key] === undefined,
     )
     .map(([key]) => `--${camelToKebab(key)}`);
   if (missing.length > 0) {
@@ -266,6 +271,4 @@ export function parseFlags<F extends FlagsDef>(
       "zh-CN": `缺少必填参数：${missing.join(", ")}`,
     });
   }
-
-  return flags as unknown as ParsedFlags<F>;
 }

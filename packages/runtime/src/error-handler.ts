@@ -55,7 +55,25 @@ function recoveryCommand(commandPrefix: string, args: string, configName?: strin
 }
 
 /** Complete recovery text supplied before Console errors can be wrapped by commands. */
-export function consoleRecoveryHint(commandPrefix: string, configName?: string): string {
+export function aliyunRecoveryHint(
+  commandPrefix: string,
+  configName?: string,
+  localize: Localize = english,
+): string {
+  const command = recoveryCommand(commandPrefix, "auth --login aliyun", configName);
+  return localize({
+    "en-US": `Run \`${command}\` to sign in to Aliyun again.`,
+    "zh-CN": `请运行 \`${command}\` 重新登录阿里云。`,
+  });
+}
+
+export function consoleRecoveryHint(
+  commandPrefix: string,
+  configName?: string,
+  aliyun = false,
+  localize: Localize = english,
+): string {
+  if (aliyun) return aliyunRecoveryHint(commandPrefix, configName, localize);
   return `Run \`${recoveryCommand(commandPrefix, "auth login --console", configName)}\` to sign in or refresh your console session.`;
 }
 
@@ -73,6 +91,8 @@ export interface ErrorHintOptions {
    * Implicit default is undefined; explicit `--config default` is `"default"`.
    */
   configName?: string;
+  /** Pre-release mode resolved by the hosting CLI for this invocation. */
+  preControlPlane?: boolean;
 }
 
 /** Detect AllocationQuota.FreeTierOnly without matching TPS/TPM insufficient_quota. */
@@ -117,6 +137,21 @@ export function errorHint(
   let hint = error.hint;
   if (error instanceof CredentialError) {
     switch (error.reason) {
+      case "changed-openapi-identity":
+        return localize({
+          "en-US":
+            "Credentials or endpoints changed during this command; rerun it using the intended profile.",
+          "zh-CN": "命令执行期间凭据或端点已变更，请使用目标配置重新执行。",
+        });
+      case "aliyun-oauth-session":
+      case "missing-aliyun-session":
+      case "aliyun-refresh-uncertain":
+        return options.hasCommand?.("auth")
+          ? aliyunRecoveryHint(commandPrefix, configName, localize)
+          : localize({
+              "en-US": "Use the CLI that manages this profile to sign in to Aliyun again.",
+              "zh-CN": "请使用管理此配置的 CLI 重新登录阿里云。",
+            });
       case "missing-api-key":
         hint = `Set DASHSCOPE_API_KEY, pass --api-key, or run \`${recoveryCommand(commandPrefix, "auth login", configName)}\`.`;
         break;
@@ -125,9 +160,29 @@ export function errorHint(
       case "expired-console-session":
         return consoleRecoveryHint(commandPrefix, configName);
       case "missing-openapi-pair":
-        return `Set BAILIAN_ACCESS_KEY_ID / BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_*), pass --access-key-id / --access-key-secret, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\` then paste your AccessKey.`;
-      case "incomplete-openapi-config":
-        return `Save a complete pair with \`${recoveryCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>", configName)}\`, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\` for the setup guide.`;
+      case "incomplete-openapi-config": {
+        const loginWithPair =
+          "auth login --open-api --access-key-id <id> --access-key-secret <secret>";
+        if (options.preControlPlane) {
+          const passPair = localize({
+            "en-US":
+              "Keep pre-release mode enabled. If the command accepts AccessKey flags, pass both `--access-key-id` and `--access-key-secret`.",
+            "zh-CN":
+              "请保持预发模式开启。如果命令支持 AccessKey 参数，请同时传入 `--access-key-id` 和 `--access-key-secret`。",
+          });
+          if (!options.hasCommand?.("auth login")) return passPair;
+          const login = recoveryCommand(commandPrefix, loginWithPair, configName);
+          return `${passPair} ${localize({
+            "en-US": `To save the pair, run \`${login}\`.`,
+            "zh-CN": `如需保存这对凭据，请运行 \`${login}\`。`,
+          })}`;
+        }
+        const guide = recoveryCommand(commandPrefix, "auth login --open-api", configName);
+        if (error.reason === "missing-openapi-pair") {
+          return `Set BAILIAN_ACCESS_KEY_ID / BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_*), pass --access-key-id / --access-key-secret, or run \`${guide}\` then paste your AccessKey.`;
+        }
+        return `Save a complete pair with \`${recoveryCommand(commandPrefix, loginWithPair, configName)}\`, or run \`${guide}\` for the setup guide.`;
+      }
       case "incomplete-openapi-flag":
       case "incomplete-openapi-env":
         return hint;

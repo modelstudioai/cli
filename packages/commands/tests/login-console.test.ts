@@ -372,10 +372,13 @@ test.each(["tty", "json", "bearer", "multiple"])(
     const fetchSpy = vi.spyOn(httpTransport, "fetch");
     try {
       await expect(
-        runConsoleTokenLogin({} as LoginDeps, {
-          site: "international",
-          region: "ap-southeast-1",
-        }),
+        runConsoleTokenLogin(
+          { settings: buildSettings({ flags: {}, file: {}, env: {} }) } as LoginDeps,
+          {
+            site: "international",
+            region: "ap-southeast-1",
+          },
+        ),
       ).rejects.toMatchObject({ exitCode: ExitCode.USAGE });
       expect(fetchSpy).not.toHaveBeenCalled();
     } finally {

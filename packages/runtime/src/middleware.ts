@@ -1,4 +1,4 @@
-import { consoleRecoveryHint } from "./error-handler.ts";
+import { consoleRecoveryHint, aliyunRecoveryHint } from "./error-handler.ts";
 import type {
   AnyCommand,
   CommandOutput,
@@ -10,7 +10,6 @@ import type {
   CredentialSource,
   FlagsDef,
   Identity,
-  OpenApiCredential,
   ParsedFlags,
   ResolutionSources,
   Settings,
@@ -25,10 +24,13 @@ import {
   isModelConnectionSourceMismatch,
   resolveApiKey,
   resolveConsole,
-  resolveOpenApi,
+  createOpenApiCredentialProvider,
+  bindOpenApiConsoleCredentials,
   readCaller,
+  requirePreConsoleGateway,
   resolveModelBaseUrlState,
   resolveModelConnectionProvenance,
+  resolveRecoveryConfigName,
   resolveTelemetrySite,
   selectApiKeyResolutionSources,
   trackCommandExecution,
@@ -50,6 +52,7 @@ import { runPreparedCommand } from "./preparation.ts";
  * {@link authStage}). A stage reads these and may augment them before `next()`.
  */
 export interface RunContext {
+  hasCommand?: (path: string) => boolean;
   commandPath?: (command: AnyCommand) => string[] | undefined;
   prepared?: unknown;
   /** 静态产品身份(binName/version/npmPackage/clientName)。 */
@@ -68,6 +71,8 @@ export interface RunContext {
   settings: Settings;
   /** 解析源:provider/访问器用;业务命令不可见(窄视图类型不含此字段)。 */
   sources: ResolutionSources;
+  /** Optional pre-release Console sources for a model command. Missing means no Console auth. */
+  controlSources?: ResolutionSources;
   /** 配置持久化能力；lint 限定 commands/config/** 使用。 */
   configStore: ConfigStore;
   /** 鉴权持久化能力；lint 限定 commands/auth/** 使用。 */
@@ -191,21 +196,44 @@ export function compose(stack: Middleware[]): (ctx: RunContext) => Promise<void>
  */
 export const authStage: Middleware = async (ctx, next) => {
   const { command, settings, sources } = ctx;
+  const debug = (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic);
+  const controlRecoveryConfigName = (controlSources: ResolutionSources) =>
+    controlSources === sources
+      ? settings.recoveryConfigName
+      : resolveRecoveryConfigName(controlSources);
+  const createProvider = (controlSources: ResolutionSources) =>
+    createOpenApiCredentialProvider(controlSources, {
+      identity: ctx.identity,
+      timeout: settings.timeout,
+      debug,
+      recoveryHint: ctx.hasCommand?.("auth")
+        ? aliyunRecoveryHint(
+            formatCommand(ctx.identity),
+            controlRecoveryConfigName(controlSources),
+            ctx.localize,
+          )
+        : ctx.localize({
+            "en-US": "Use the CLI that manages this profile to sign in to Aliyun again.",
+            "zh-CN": "请使用管理此配置的 CLI 重新登录阿里云。",
+          }),
+    });
+  // Console credentials do not fall back; keep the selected control profile pin.
+  const controlRecoveryHint = (controlSources: ResolutionSources) =>
+    consoleRecoveryHint(
+      formatCommand(ctx.identity),
+      controlRecoveryConfigName(controlSources),
+      Boolean(controlSources.file.aliyun_oauth?.console_enabled && ctx.hasCommand?.("auth")),
+      ctx.localize,
+    );
   const base = {
     identity: ctx.identity,
     settings,
-    // One record per command run. Every Client built from `base` — including
-    // the derived one from `withConsoleSwitchAgent()` — shares it, so the
-    // origins and service planes a command touched stay visible to
-    // `telemetryStage`, which sits outside this stage and reads the Client
-    // attached to the run context.
     requestSignals: createRequestSignals(),
-    // Console credentials do not fall back; keep the selected profile pin.
-    consoleRecoveryHint: consoleRecoveryHint(
-      formatCommand(ctx.identity),
-      settings.recoveryConfigName,
-    ),
-    debug: (diagnostic: Parameters<CommandOutput["debug"]>[0]) => ctx.output.debug(diagnostic),
+    consoleRecoveryHint:
+      settings.preControlPlane && command.auth === "apiKey"
+        ? undefined
+        : controlRecoveryHint(sources),
+    debug,
     ...resolveModelBaseUrlState(sources),
   };
   const apiKeyRequirement = command.requiresApiKey?.(ctx.flags) ?? true;
@@ -241,37 +269,81 @@ export const authStage: Middleware = async (ctx, next) => {
         err.reason === "missing-api-key";
       if (!optionalMissing && (!settings.dryRun || command.prepare)) throw err;
     }
-    ctx.client = new Client({
-      ...base,
-      ...resolveModelBaseUrlState(apiSources),
-      apiCred: cred,
-    });
-    // Optional console precheck surface: inject the console credential when it
-    // resolves, but never fail an apiKey command because the console session is
-    // missing or expired. Commands must treat `client.console` calls as
-    // best-effort and catch AUTH errors themselves.
-    if (command.optionalConsole) {
+    const apiClientDeps = { ...base, ...resolveModelBaseUrlState(apiSources), apiCred: cred };
+    ctx.client = new Client(apiClientDeps);
+    // In pre-release mode never fall back from an unavailable Console source to
+    // the model Profile, even when that Profile has valid Console credentials.
+    const controlSources = settings.preControlPlane ? ctx.controlSources : sources;
+    if (command.optionalConsole && controlSources) {
       try {
-        const consoleCred = resolveConsole(sources);
-        ctx.client = new Client({
-          ...base,
-          ...resolveModelBaseUrlState(apiSources),
-          apiCred: cred,
-          consoleCred,
-        });
+        if (settings.preControlPlane) {
+          requirePreConsoleGateway(settings.preControlPlane, {
+            region: settings.consoleRegion,
+            site: settings.consoleSite,
+          });
+        }
+        let consoleCred: ConsoleCredential | undefined;
+        try {
+          consoleCred = resolveConsole(controlSources);
+        } catch {
+          /* An OAuth profile or static AK/SK may still supply a Console session. */
+        }
+        const provider =
+          settings.preControlPlane ||
+          (!consoleCred && controlSources.file.aliyun_oauth?.console_enabled)
+            ? createProvider(controlSources)
+            : undefined;
+        if (!consoleCred) provider?.assertAvailable("console");
+        if (consoleCred || provider) {
+          ctx.client = new Client({
+            ...apiClientDeps,
+            settings:
+              controlSources === sources
+                ? settings
+                : {
+                    ...settings,
+                    // Console refresh must persist only to the selected pre-release Profile.
+                    configPath: controlSources.configPath,
+                    configName: controlSources.configName,
+                    recoveryConfigName: controlRecoveryConfigName(controlSources),
+                  },
+            consoleRecoveryHint: controlRecoveryHint(controlSources),
+            consoleCred,
+            ...(provider
+              ? {
+                  openApiProvider: provider,
+                  resolveConsoleOpenApiCredential: () => provider.getCredential("console"),
+                }
+              : {}),
+          });
+        }
       } catch {
-        // Best-effort only — the command's apiKey flow continues.
+        if (settings.preControlPlane) {
+          ctx.output.warning({
+            code: "PRE_CONSOLE_UNAVAILABLE",
+            message: {
+              "en-US": "Pre-release Console is unavailable; continuing with the model API only.",
+              "zh-CN": "预发控制台不可用，将仅通过模型 API 继续执行。",
+            },
+          });
+        }
       }
     }
     if (cred && !command.prepare) maybeShowStatusBar(settings, cred.token, cred, ctx.output);
   } else if (command.auth === "console") {
+    if (settings.preControlPlane && (!settings.dryRun || command.prepare)) {
+      requirePreConsoleGateway(settings.preControlPlane, {
+        region: settings.consoleRegion,
+        site: settings.consoleSite,
+      });
+    }
+    const provider = createProvider(sources);
     let cred: ConsoleCredential | undefined;
-    let exchangeCredential: OpenApiCredential | undefined;
     try {
       cred = resolveConsole(sources);
     } catch (error) {
       try {
-        exchangeCredential = resolveOpenApi(sources);
+        provider.assertAvailable("console");
       } catch (credentialError) {
         if (!settings.dryRun || command.prepare) {
           throw credentialError instanceof CredentialError &&
@@ -284,16 +356,27 @@ export const authStage: Middleware = async (ctx, next) => {
     ctx.client = new Client({
       ...base,
       consoleCred: cred,
-      resolveConsoleOpenApiCredential: () => exchangeCredential ?? resolveOpenApi(sources),
+      openApiProvider: provider,
+      resolveConsoleOpenApiCredential: () => provider.getCredential("console"),
     });
   } else if (command.auth === "openapi") {
-    let cred: OpenApiCredential | undefined;
+    const provider = createProvider(sources);
     try {
-      cred = resolveOpenApi(sources);
-    } catch (err) {
-      if (!settings.dryRun || command.prepare) throw err;
+      provider.assertAvailable();
+    } catch (error) {
+      if (!settings.dryRun || command.prepare) throw error;
     }
-    ctx.client = new Client({ ...base, openApiCred: cred });
+    const boundProvider = bindOpenApiConsoleCredentials(provider);
+    ctx.client = new Client({
+      ...base,
+      settings: {
+        ...settings,
+        consoleRegion: settings.consoleRegion ?? "cn-beijing",
+        consoleSite: settings.consoleSite ?? "domestic",
+      },
+      openApiProvider: boundProvider,
+      resolveConsoleOpenApiCredential: () => boundProvider.getCredential(),
+    });
   }
   const defaultOrigin = command.defaultApiBaseUrl;
   if (defaultOrigin) ctx.client = ctx.client.withDefaultBaseUrl(() => defaultOrigin(ctx));

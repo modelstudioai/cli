@@ -97,7 +97,7 @@ const HELP_TEXT = {
  *             tokens (no positionals); `error` carries the message + hint.
  */
 export type LocateResult =
-  | { kind: "leaf"; command: AnyCommand; matched: string[] }
+  | { kind: "leaf"; command: AnyCommand; matched: string[]; hasChildren: boolean }
   | { kind: "group"; matched: string[] }
   | { kind: "unknown"; error: UsageError };
 
@@ -217,7 +217,12 @@ export class CommandRegistry {
     if (node.command) {
       const leftover = commandPath.slice(matched.length);
       if (leftover.length === 0) {
-        return { kind: "leaf", command: node.command, matched };
+        return {
+          kind: "leaf",
+          command: node.command,
+          matched,
+          hasChildren: node.children.size > 0,
+        };
       }
       return {
         kind: "unknown",
@@ -353,6 +358,9 @@ export class CommandRegistry {
       // Hybrid leaf+group (e.g. `omni` + `omni translate`): append child commands.
       if (node.children.size > 0) {
         const prefix = commandPath.join(" ");
+        out.write(
+          `\n${this.bold(this.localize(HELP_TEXT.usage), out)} ${this.cliName} ${prefix} <command> [flags]\n`,
+        );
         out.write(`\n${this.bold(this.localize(HELP_TEXT.subcommands), out)}\n`);
         this.printChildren(node, prefix, out);
       }

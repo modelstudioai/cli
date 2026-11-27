@@ -11,7 +11,12 @@ export {
   normalizeApiKeyCapabilities,
   parseConfigFile,
 } from "./schema.ts";
-export { normalizeConfigName, readConfigFile, writeConfigFile } from "./loader.ts";
+export {
+  normalizeConfigName,
+  readConfigFile,
+  writeConfigFile,
+  mutateConfigFile,
+} from "./loader.ts";
 export {
   activateConfigProfile,
   validateConfigProfileActivation,
@@ -49,3 +54,15 @@ export {
   type ModelHostClass,
 } from "./model-endpoints.ts";
 export { validateTimeout } from "./validation.ts";
+export {
+  PRE_ALIYUN_AUTHORIZATION_URL,
+  PRE_ALIYUN_OAUTH_BASE_URL,
+  PRE_MODEL_STUDIO_HOST,
+  PRE_BAILIAN_CONTROL_HOST,
+  requirePreConsoleGateway,
+  requirePreConsoleOrigin,
+  resolvePreControlPlane,
+  resolvePreOpenApiHost,
+  validatePreConsoleScope,
+  type PreControlPlane,
+} from "./control-plane.ts";

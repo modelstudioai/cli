@@ -1,6 +1,7 @@
 import type { AnyCommand } from "bailian-cli-core";
 import { deprecatedCommand } from "./deprecated.ts";
 import {
+  authRoot,
   authLogin,
   authStatus,
   authLogout,
@@ -412,6 +413,7 @@ import {
 // (no side effects) so tools like generate-reference.ts can import it without
 // starting the CLI.
 export const commands: Record<string, AnyCommand> = {
+  auth: authRoot,
   "auth login": authLogin,
   "auth status": authStatus,
   "auth logout": authLogout,
@@ -832,3 +834,50 @@ export const commandAliases: Record<string, AnyCommand> = {
   // Pre-migration name of "quota update".
   "quota request": quotaUpdate,
 };
+
+const unsupportedPreGroups = new Set([
+  "agents",
+  "batch",
+  "cmodel",
+  "dataset",
+  "deploy",
+  "finetune",
+  "knowledge",
+  "managed-agent",
+  "memory",
+  "permission",
+  "quota",
+  "sandbox",
+]);
+const preModelOrLocalCommands = new Set([
+  "batch convert",
+  "cmodel base-models",
+  "dataset generate",
+  "dataset split",
+  "dataset validate",
+  "finetune capability",
+  "finetune params",
+  "finetune price",
+  "finetune train-options",
+  "knowledge chat",
+  "knowledge search",
+  "managed-agent init",
+  "managed-agent validate",
+  "managed-agent project init",
+  "managed-agent project validate",
+  "managed-agent state list",
+  "managed-agent state rm",
+  "managed-agent state show",
+]);
+
+export function hasUnverifiedPreControlPlaneRoute(path: string): boolean {
+  const command = commands[path] ?? commandAliases[path];
+  if (!command || preModelOrLocalCommands.has(path)) return false;
+  const [group, subgroup, operation] = path.split(" ");
+  if (group === "managed-agent") return true;
+  if (command.auth === "console" || command.auth === "openapi") return false;
+  if (group === "speech") {
+    return subgroup === "vocabulary" || (subgroup === "voice" && operation !== "preview");
+  }
+  return unsupportedPreGroups.has(group!);
+}
