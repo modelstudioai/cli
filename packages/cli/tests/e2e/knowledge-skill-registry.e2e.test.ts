@@ -131,7 +131,7 @@ test("local registry delivers knowledge through init and subset add; update stay
     expect(initialized.skills.sort()).toEqual(["bailian-knowledge", "bailian-protocol"]);
     await run("subset", ["add", "--name", "bailian-protocol"]);
     const beforeUpdate = requests.length;
-    await run("subset", ["update"]);
+    await run("subset", ["update", "--all"]);
     expect(requests.slice(beforeUpdate)).toEqual(["/index.json"]);
     const updatedFiles = await skillFiles(join(root, "skills/bailian-protocol"));
     updatedFiles["revision.txt"] = Buffer.from("local registry updated revision\n");
@@ -140,7 +140,7 @@ test("local registry delivers knowledge through init and subset add; update stay
     resources.set("/bailian-protocol/skill.tar.br", updatedAsset.body);
     resources.set("/index.json", Buffer.from(JSON.stringify({ skills: entries })));
     const beforeChangedUpdate = requests.length;
-    await run("subset", ["update"]);
+    await run("subset", ["update", "--all"]);
     expect(requests.slice(beforeChangedUpdate)).toEqual([
       "/index.json",
       "/bailian-protocol/skill.tar.br",

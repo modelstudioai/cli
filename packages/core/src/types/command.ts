@@ -263,6 +263,8 @@ export function credentialFlagDefs(cmd: {
  * for parsed arguments. Never handle tokens or baseUrl.
  */
 export interface CommandContext<F extends FlagsDef = FlagsDef, Prepared = undefined> {
+  /** Explicit runtime confirmation. A read-only planner may skip lookups used solely to classify risk. */
+  readonly confirmed?: boolean;
   /** Resolve a unique registered product path; older hosts may omit this capability. */
   commandPath?: (command: AnyCommand) => string[] | undefined;
   /** Read-only preparation result, supplied only after the runtime confirmation gate. */
@@ -316,6 +318,10 @@ export interface CommandNotice {
 export interface CommandPreparation<Prepared> {
   data: Prepared;
   preview: unknown;
+  /** Existing commands may render their established preview format and partial-failure exit status. */
+  renderDryRun?: () => void;
+  /** Release temporary artifacts on preview, declined confirmation, success and failure. */
+  dispose?: () => void;
   risk: CommandRisk | null;
   notices: readonly CommandNotice[];
 }
@@ -330,6 +336,10 @@ export interface Command<F extends FlagsDef = FlagsDef, Prepared = undefined> {
   /** Apply defaultOutput over a Profile preference; flag/env still take precedence. */
   defaultOutputOverridesProfile?: boolean;
   description: LocalizedText;
+  /** Service origin when flags, environment and the active API profile supply no base URL. */
+  defaultApiBaseUrl?: (
+    ctx: Pick<CommandContext<F>, "flags" | "settings" | "localize">,
+  ) => string | undefined;
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;
   /**
@@ -341,6 +351,8 @@ export interface Command<F extends FlagsDef = FlagsDef, Prepared = undefined> {
    * `--mode mcp` keeps the MCP-only `search.web` capability.
    */
   authCapability?: (flags: ParsedFlags<F>) => string;
+  /** A public source can optionally use an available key to resolve authenticated dependencies. */
+  requiresApiKey?: (flags: ParsedFlags<F>) => boolean | "optional";
   /**
    * Best-effort secondary console credential for `auth: "apiKey"` commands.
    * When true, the runtime additionally resolves the console credential and
@@ -356,7 +368,7 @@ export interface Command<F extends FlagsDef = FlagsDef, Prepared = undefined> {
    * remote request or local write; runtime only owns the confirmation gate.
    */
   risk?: CommandRisk;
-  /** Authenticated, read-only planning. Never write files, request leases, or mutate resources. */
+  /** Read-only planning. Temporary package inspection must be cleaned up via dispose; do not change installed files or remote resources. */
   prepare?: (ctx: CommandContext<F>) => Promise<CommandPreparation<Prepared>>;
   /** Usage line arg portion, e.g. "--prompt <text> [flags]". Manually written. */
   usageArgs?: string;

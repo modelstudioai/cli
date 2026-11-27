@@ -23,7 +23,7 @@ import {
   performBinaryUpdate,
 } from "bailian-cli-runtime";
 
-const SKILL_UPDATE_CMD = "bl skill update";
+const SKILL_UPDATE_CMD = "bl skill update --all";
 
 /** Own nested output so installer and skill subprocesses cannot corrupt stdout. */
 function runUpdateCommand(command: string, output: CommandOutput, jsonDiagnostics = false): Buffer {
@@ -119,8 +119,8 @@ function updateAgentSkill(
         : undefined;
     output.warning({
       message: {
-        "en-US": `Agent skill update skipped. Run manually: ${formatCommand(invocation, "skill update")}`,
-        "zh-CN": `已跳过 Agent Skill 更新。请手动运行：${formatCommand(invocation, "skill update")}`,
+        "en-US": `Agent skill update skipped. Run manually: ${formatCommand(invocation, "skill update --all")}`,
+        "zh-CN": `已跳过 Agent Skill 更新。请手动运行：${formatCommand(invocation, "skill update --all")}`,
       },
       code: "SKILL_UPDATE_SKIPPED",
       details: { exit_code: failure?.status, signal: failure?.signal, error: failure?.diagnostic },

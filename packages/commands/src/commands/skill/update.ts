@@ -1,242 +1,75 @@
+import { WORKSPACE_FLAG } from "../shared/workspace.ts";
+import { defineSkillCommand } from "./update-check.ts";
+import { runSkillLifecycle, useTargetRecords, withSkillMutation } from "./lifecycle.ts";
+import { runRegistryLifecycle } from "./registry-lifecycle.ts";
 import {
-  formatCommand,
-  BailianError,
-  ExitCode,
-  defineCommand,
-  detectInstalledAgents,
-  fanOutSkillToAgents,
-  fetchSkillsIndex,
-  getSkillRegistryBaseUrl,
-  installSkillWithFanout,
-  listSkillDirsOnDisk,
-  parseSkillNames,
-  readSkillLock,
-  runWithConcurrency,
-  writeSkillLock,
-} from "bailian-cli-core";
-import { formatTable } from "bailian-cli-runtime";
-import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
+  needsCloud,
+  selectorFlags,
+  sourceFlag,
+  targetFlags,
+  validateSelection,
+} from "./targets.ts";
 
-interface UpdateOutcome {
-  name: string;
-  status: "updated" | "up-to-date" | "skipped" | "failed";
-  publishedAt?: string;
-  reason?: string;
-}
-
-interface UpdatePlanItem {
-  name: string;
-  status: "update" | "up-to-date" | "skipped" | "failed";
-  publishedAt?: string;
-  reason?: string;
-  links?: ReturnType<typeof planFanoutLinks>;
-}
-
-/** Max number of skills downloading/installing at the same time. */
-const UPDATE_CONCURRENCY = 3;
-
-export default defineCommand({
+export default defineSkillCommand({
   description: {
     "en-US": "Update installed skills to the latest registry versions",
     "zh-CN": "将已安装的 Skill 更新到 Registry 最新版本",
   },
-  auth: "none",
+  auth: "apiKey",
+  requiresApiKey: needsCloud,
   defaultOutput: "json",
-  usageArgs: "[--all] [--name <name,...>]",
+  usageArgs:
+    "[--name <name,...> | --code <code,...> | --all] [--agent <agent|all>] [--scope user|project] [--diff]",
   flags: {
+    ...WORKSPACE_FLAG,
+    source: sourceFlag,
+    ...targetFlags,
+    diff: {
+      type: "switch",
+      description: {
+        "en-US": "Show changed files, or the required download in a preview",
+        "zh-CN": "显示文件差异，预览时标明所需下载",
+      },
+    },
     all: {
       type: "switch",
       description: {
-        "en-US": "Update all installed skills (default when neither --all nor --name is given)",
-        "zh-CN": "更新全部已安装 Skill（未指定 --all 或 --name 时的默认行为）",
+        "en-US": "Update all installed public OSS skills in the selected scope",
+        "zh-CN": "更新所选范围内全部已安装的公开 OSS Skill",
       },
     },
-    name: {
-      type: "string",
-      valueHint: "<name,...>",
-      description: {
-        "en-US": "Comma-separated skill names to update (must be already installed)",
-        "zh-CN": "要更新的 Skill 名称，以逗号分隔（必须已安装）",
-      },
-    },
+    ...selectorFlags,
   },
+  notes: [
+    {
+      "en-US":
+        "--name all is an alias for --all. With no selector, update installed cloud skills in the selected scope.",
+      "zh-CN": "--name all 是 --all 的兼容写法。省略选择参数时，更新所选范围内已安装的云端 Skill。",
+    },
+    {
+      "en-US":
+        "Other Skill commands check for updates to unpinned installations from the selected source. Available updates appear on stderr. Removal uses the cached check offline.",
+      "zh-CN":
+        "其他 Skill 命令会检查所选来源中未固定版本的安装项，有更新时在 stderr 提示。卸载时仅读取有效缓存。",
+    },
+  ],
   validate(flags) {
-    if (flags.all && flags.name) return "Use either --all or --name, not both";
-    return undefined;
+    return validateSelection(flags);
   },
-  exampleArgs: ["", "--all", "--name spark-video"],
+  exampleArgs: [
+    "",
+    "--all",
+    "--name spark-video",
+    "--code skill_example --agent cursor --scope project --diff --dry-run",
+  ],
+
   async run(ctx) {
-    const updateAll = ctx.flags.all || !ctx.flags.name;
-    const requested = updateAll ? "all" : parseSkillNames(ctx.flags.name, false);
-    const index = await fetchSkillsIndex();
-    const lock = readSkillLock();
-    const disk = new Set(listSkillDirsOnDisk());
-    const agents = detectInstalledAgents();
-
-    const results: UpdateOutcome[] = [];
-    const targets: string[] = [];
-
-    if (requested === "all") {
-      // Default: only process skills already installed in lock; reinstall only if version changed or local dir is missing
-      for (const [name, locked] of Object.entries(lock.skills)) {
-        const entry = index.skills[name];
-        if (!entry) {
-          results.push({
-            name,
-            status: "skipped",
-            reason: "delisted from remote; local copy retained",
-          });
-          continue;
-        }
-        if (entry.contentHash === locked.contentHash && disk.has(name)) {
-          if (ctx.settings.dryRun) {
-            // 真实路径仍会 fan-out 自愈；dry-run 只展示目标路径与存在性，不写盘
-            results.push({ name, status: "up-to-date", publishedAt: locked.publishedAt });
-            continue;
-          }
-          // Self-healing: content unchanged, but still fill fan-out links for agents
-          // detected since the last install (and refresh recorded copies); the merged
-          // ledger keeps paths of unvisited agents reclaimable by bl skill remove
-          const fanout = fanOutSkillToAgents(name, agents, locked.links ?? []);
-          lock.skills[name] = { ...locked, links: fanout.links };
-          results.push({ name, status: "up-to-date", publishedAt: locked.publishedAt });
-          continue;
-        }
-        targets.push(name);
-      }
-    } else {
-      // Explicit names: only update skills that are already installed; reject uninstalled ones
-      for (const name of requested) {
-        if (!lock.skills[name]) {
-          results.push({
-            name,
-            status: "failed",
-            reason:
-              `not installed; run ${formatCommand(ctx.identity, "skill add")} --name ` +
-              name +
-              " first",
-          });
-          continue;
-        }
-        targets.push(name);
-      }
-    }
-
-    if (ctx.settings.dryRun) {
-      const plan: UpdatePlanItem[] = results.map((result) => {
-        if (result.status === "up-to-date") {
-          return {
-            name: result.name,
-            status: "up-to-date" as const,
-            publishedAt: result.publishedAt,
-            links: planFanoutLinks(result.name, agents),
-          };
-        }
-        if (result.status === "skipped") {
-          return {
-            name: result.name,
-            status: "skipped" as const,
-            publishedAt: result.publishedAt,
-            reason: result.reason,
-          };
-        }
-        return {
-          name: result.name,
-          status: "failed" as const,
-          publishedAt: result.publishedAt,
-          reason: result.reason,
-        };
-      });
-
-      for (const name of targets) {
-        const entry = index.skills[name];
-        if (!entry) {
-          plan.push({ name, status: "failed", reason: "skill not found in registry" });
-          continue;
-        }
-        plan.push({
-          name,
-          status: "update",
-          publishedAt: entry.publishedAt,
-          links: planFanoutLinks(name, agents),
-        });
-      }
-
-      ctx.output.result({
-        action: "skill.update",
-        registry: getSkillRegistryBaseUrl(),
-        agents: summarizeAgents(agents),
-        skills: plan,
-      });
-
-      const failed = plan.filter((item) => item.status === "failed");
-      if (failed.length > 0) {
-        throw new BailianError(
-          `${failed.length} skill(s) failed to update`,
-          ExitCode.GENERAL,
-          `Check the reason for failed skills in the output; network failures can be retried with ${formatCommand(ctx.identity, "skill update")}`,
-        );
-      }
-      return;
-    }
-
-    const tasks = targets.map((name) => async (): Promise<UpdateOutcome> => {
-      const entry = index.skills[name];
-      if (!entry) {
-        return { name, status: "failed", reason: "skill not found in registry" };
-      }
-      try {
-        const record = await installSkillWithFanout(
-          name,
-          entry,
-          agents,
-          lock.skills[name]?.links ?? [],
-        );
-        lock.skills[name] = record.lockEntry;
-        return { name, status: "updated", publishedAt: entry.publishedAt };
-      } catch (err) {
-        return {
-          name,
-          status: "failed",
-          reason: err instanceof Error ? err.message : String(err),
-        };
-      }
-    });
-    const updateResults = await runWithConcurrency(tasks, UPDATE_CONCURRENCY);
-    results.push(...updateResults);
-    writeSkillLock(lock);
-
-    const rows = results.map((result) => [
-      result.name,
-      result.status,
-      result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
-    ]);
-    const lines =
-      results.length === 0
-        ? [
-            ctx.localize({
-              "en-US": `No skills installed locally; run ${formatCommand(ctx.identity, "skill add")} first.`,
-              "zh-CN": `本地未安装 Skill，请先运行 ${formatCommand(ctx.identity, "skill add")}。`,
-            }),
-          ]
-        : formatTable(["NAME", "STATUS", "PUBLISHED"], rows);
-    const annotated = results.filter(
-      (result) => (result.status === "skipped" || result.status === "failed") && result.reason,
+    const report = await withSkillMutation(ctx, async () =>
+      useTargetRecords(ctx.flags)
+        ? runSkillLifecycle("update", ctx, ctx.flags)
+        : runRegistryLifecycle("update", ctx, ctx.flags),
     );
-    if (annotated.length > 0)
-      lines.push("", ...annotated.map((result) => `  ${result.name}: ${result.reason}`));
-    ctx.output.result(
-      { registry: getSkillRegistryBaseUrl(), skills: results },
-      { text: lines.join("\n") },
-    );
-
-    const failed = results.filter((result) => result.status === "failed");
-    if (failed.length > 0) {
-      throw new BailianError(
-        `${failed.length} skill(s) failed to update`,
-        ExitCode.GENERAL,
-        `Check the reason for failed skills in the output; network failures can be retried with ${formatCommand(ctx.identity, "skill update")}`,
-      );
-    }
+    ctx.output.result(report.data, "text" in report ? { text: report.text } : undefined);
+    if (report.firstError) throw report.firstError;
   },
 });

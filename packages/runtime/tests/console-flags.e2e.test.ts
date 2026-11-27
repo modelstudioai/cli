@@ -43,7 +43,7 @@ describe.each([
 
     test("跨域 flag 拒绝:console 命令传 --api-key 报未知参数", async () => {
       const { stdout, stderr, exitCode } = await runRuntimeHarness(
-        ["mcp", "list", "--api-key", "sk-test", "--dry-run"],
+        ["workspace", "list", "--api-key", "sk-test", "--dry-run"],
         language,
       );
       expect(exitCode, stderr).toBe(2);

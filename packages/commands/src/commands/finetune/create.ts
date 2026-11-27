@@ -9,28 +9,60 @@ import {
   preflightBatchSizeGate,
   validateFineTuneHyperParameterOverrides,
   getFineTuneHyperParameterDefaultNumber,
-  isTrainingTypeCli,
-  TRAINING_TYPES_CLI,
   DEFAULT_TRAINING_TYPE,
   preflightDecisionSampleGate,
   readDecisionQuestionSignature,
   compareDecisionQuestionTables,
   BailianError,
   ExitCode,
+  buildOssMountDataset,
+  DEFAULT_OSS_MOUNT_REGION,
+  isOssMountToken,
+  parseOssMountUri,
   type HttpDeps,
   type CommandContext,
   type CreateFineTuneRequest,
+  type FineTuneDatasetDescriptor,
   type FineTuneHyperParameters,
   type FineTuneHyperParameterIssue,
   type DataModality,
+  type FineTuneParamHyperParam,
   type FlagsDef,
+  type LocalizedText,
+  type ParsedFlags,
 } from "bailian-cli-core";
-import { analyzeDatasetTokens, isLocalPath, uploadResolvedLocal } from "./dataset-input.ts";
-import { preflightTrainOptions } from "./train-options-shared.ts";
+import {
+  analyzeDatasetTokens,
+  isLocalPath,
+  splitDatasetEntries,
+  uploadResolvedLocal,
+  type AnalyzeDatasetOptions,
+  type ResolvedDataset,
+} from "./dataset-input.ts";
+import {
+  preflightTrainOptions,
+  resolveTrainingTypeCli,
+  trainOptionFlags,
+  trainingTypeFlag,
+  type HelpClause,
+} from "./train-options-shared.ts";
+
+/** How `finetune text create` phrases the CLI-to-server training-type mapping. */
+const CREATE_TRAINING_TYPE_MAPPING: HelpClause = {
+  "en-US":
+    "Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full)",
+  "zh-CN": "在接口边界转换为服务端值（例如 sft-lora -> efficient_sft、dpo -> dpo_full）",
+};
 
 /** The modality a `finetune <modality> create` subcommand is bound to. */
 type CommandModality = "text" | "audio" | "image" | "video" | "decision";
 
+/**
+ * Explicit hyper-parameter overrides to check against the model's parameter
+ * schema. Mixed-training parameters (data_augmentation / augmentation_types /
+ * augmentation_ratio) are deliberately absent: they are documented on the
+ * create API but missing from the schema, so the server stays the authority.
+ */
 function explicitHyperParameterOverrides(
   commandModality: CommandModality,
   flags: Record<string, unknown>,
@@ -53,7 +85,6 @@ function explicitHyperParameterOverrides(
       saveSteps: "save_steps",
       split: "split",
       maxSplitValDatasetSample: "max_split_val_dataset_sample",
-      dataAugmentation: "data_augmentation",
     },
     image: { learningRate: "learning_rate" },
     video: {
@@ -73,10 +104,145 @@ function explicitHyperParameterOverrides(
   for (const [flagName, parameterName] of Object.entries(mappings[commandModality])) {
     const value = flags[flagName];
     if (value !== undefined) {
-      overrides[parameterName] = flagName === "dataAugmentation" ? value === "true" : value;
+      overrides[parameterName] = value;
     }
   }
   return overrides;
+}
+
+/**
+ * Cross-flag rules for mixed training. Runs in `validate`, before auth and
+ * dataset analysis, so an invalid pair never reaches the network.
+ */
+function validateMixedTrainingFlags(
+  flags: ParsedFlags<typeof TEXT_FLAGS>,
+): LocalizedText | undefined {
+  if (flags.augmentationTypes === undefined && flags.augmentationRatio === undefined) {
+    return undefined;
+  }
+  if (flags.augmentationTypes === undefined || flags.augmentationRatio === undefined) {
+    return {
+      "en-US": "--augmentation-types and --augmentation-ratio must be provided together.",
+      "zh-CN": "--augmentation-types 与 --augmentation-ratio 必须同时提供。",
+    };
+  }
+  if (flags.dataAugmentation === "false") {
+    return {
+      "en-US": "--augmentation-types cannot be combined with --data-augmentation false.",
+      "zh-CN": "--augmentation-types 不能与 --data-augmentation false 同时使用。",
+    };
+  }
+  const codes = splitCsv(flags.augmentationTypes);
+  const ratios = splitCsv(flags.augmentationRatio);
+  if (codes.includes("") || ratios.includes("")) {
+    return {
+      "en-US": "--augmentation-types / --augmentation-ratio must not contain empty items.",
+      "zh-CN": "--augmentation-types / --augmentation-ratio 不能包含空项。",
+    };
+  }
+  if (codes.length !== ratios.length) {
+    return {
+      "en-US": `--augmentation-ratio must give one ratio per --augmentation-types entry (${codes.length} types, ${ratios.length} ratios).`,
+      "zh-CN": `--augmentation-ratio 须与 --augmentation-types 逐项对应（${codes.length} 项，${ratios.length} 个倍率）。`,
+    };
+  }
+  for (const ratio of ratios) {
+    const numeric = Number(ratio);
+    if (!Number.isFinite(numeric) || numeric < 0 || numeric > 2) {
+      return {
+        "en-US": `--augmentation-ratio "${ratio}" must be within [0, 2].`,
+        "zh-CN": `--augmentation-ratio "${ratio}" 必须在 0.0~2.0 之间。`,
+      };
+    }
+  }
+  return undefined;
+}
+
+function splitCsv(raw: string): string[] {
+  return raw.split(",").map((item) => item.trim());
+}
+
+/**
+ * `oss://` entries of --datasets / --validations, checked in `validate` before
+ * auth: the data is not on disk, so this shape check is the only local check a
+ * mount gets. The bucket and key themselves are judged by the server.
+ */
+function validateOssMountEntries(flags: ParsedFlags<typeof TEXT_FLAGS>): LocalizedText | undefined {
+  for (const flagName of ["datasets", "validations"] as const) {
+    const raw = flags[flagName];
+    if (raw === undefined) continue;
+    for (const entry of splitDatasetEntries(raw)) {
+      if (!isOssMountToken(entry)) continue;
+      const mount = parseOssMountUri(entry);
+      if (!mount.valid) {
+        return {
+          "en-US": `--${flagName} entry "${entry}" ${mount.reason["en-US"]}`,
+          "zh-CN": `--${flagName} 条目 "${entry}" ${mount.reason["zh-CN"]}`,
+        };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Dataset entries of one field: file-ids first, then mounts. The order across
+ * the two kinds carries no meaning.
+ */
+function datasetEntries(resolved: ResolvedDataset, region: string): FineTuneDatasetDescriptor[] {
+  return [
+    ...resolved.fileIds.map((fileId) => ({
+      data_source_type: "file_id" as const,
+      file_id: fileId,
+    })),
+    ...resolved.ossMounts.map((location) => buildOssMountDataset(location, region)),
+  ];
+}
+
+/**
+ * Mixed training. `augmentation_types` names the preset datasets to mix in
+ * and `augmentation_ratio` gives one ratio per type; the server is the
+ * authority for both. Codes are sent lowercased: the preset-datasets API
+ * returns e.g. `mix_V2` while the documented API values are lowercase.
+ * Cross-flag rules were already enforced by `validateMixedTrainingFlags`.
+ */
+function applyDataAugmentation(hp: FineTuneHyperParameters, flags: Record<string, unknown>): void {
+  const typesRaw =
+    typeof flags.augmentationTypes === "string" ? flags.augmentationTypes : undefined;
+  const ratiosRaw =
+    typeof flags.augmentationRatio === "string" ? flags.augmentationRatio : undefined;
+  if (typesRaw === undefined || ratiosRaw === undefined) {
+    if (flags.dataAugmentation !== undefined)
+      hp.data_augmentation = flags.dataAugmentation === "true";
+    return;
+  }
+  hp.data_augmentation = true;
+  hp.augmentation_types = splitCsv(typesRaw)
+    .map((code) => code.toLowerCase())
+    .join(",");
+  hp.augmentation_ratio = splitCsv(ratiosRaw).join(",");
+}
+
+/**
+ * The create API requires these (they drive the training cost) and rejects the
+ * job when one is missing.
+ */
+const COST_REQUIRED_HYPER_PARAMETERS = ["n_epochs", "batch_size", "max_length"] as const;
+
+/**
+ * Fill a cost-driving parameter the user omitted with the model's schema
+ * default. A parameter the schema lists without a usable default, or omits
+ * entirely, is left alone for the server to judge; no value is invented here.
+ */
+function applySchemaDefaultHyperParameters(
+  hp: FineTuneHyperParameters,
+  parameterSchema: FineTuneParamHyperParam[],
+): void {
+  for (const parameterName of COST_REQUIRED_HYPER_PARAMETERS) {
+    if (hp[parameterName] !== undefined) continue;
+    const defaultValue = getFineTuneHyperParameterDefaultNumber(parameterSchema, parameterName);
+    if (defaultValue !== undefined) hp[parameterName] = defaultValue;
+  }
 }
 
 export function formatHyperParameterIssue(
@@ -179,6 +345,37 @@ const COMMON_FLAGS = {
  */
 const TEXT_FLAGS = {
   ...COMMON_FLAGS,
+  // Text alone can mount a dataset from OSS, so its data flags say so.
+  datasets: {
+    ...COMMON_FLAGS.datasets,
+    valueHint: "<ids|paths|oss://...>",
+    description: {
+      "en-US":
+        "Comma-separated dataset file IDs, local paths (.jsonl) or OSS mounts (oss://<bucket>/<object key>). Local paths are uploaded (validated) first, then their file-ids are used. An OSS mount is read in place by the service, so it is not validated or uploaded here",
+      "zh-CN":
+        "数据集文件 ID、本地路径（.jsonl）或 OSS 挂载（oss://<bucket>/<object key>），以逗号分隔。本地路径会先验证并上传，再使用对应的 file-id。OSS 挂载由服务端原地读取，CLI 不做本地校验和上传",
+    },
+  },
+  validations: {
+    ...COMMON_FLAGS.validations,
+    valueHint: "<ids|paths|oss://...>",
+    description: {
+      "en-US":
+        "Comma-separated validation dataset file IDs, local paths or OSS mounts (oss://<bucket>/<object key>), handled like --datasets",
+      "zh-CN":
+        "验证数据集文件 ID、本地路径或 OSS 挂载（oss://<bucket>/<object key>），以逗号分隔，处理方式与 --datasets 相同",
+    },
+  },
+  ossRegion: {
+    type: "string",
+    valueHint: "<region>",
+    description: {
+      "en-US":
+        "Region ID of the OSS buckets mounted by the oss:// entries of --datasets / --validations (default: cn-beijing); sent as given, whether the service can mount from it is judged by the service",
+      "zh-CN":
+        "--datasets / --validations 中 oss:// 条目所在 OSS Bucket 的地域 ID（默认：cn-beijing）；原样下发，能否挂载由服务端判断",
+    },
+  },
   jobName: {
     type: "string",
     valueHint: "<value>",
@@ -264,21 +461,36 @@ const TEXT_FLAGS = {
   },
   dataAugmentation: {
     type: "string",
-    valueHint: "<value>",
+    valueHint: "<true|false>",
     description: {
-      "en-US": "Mix platform training data (true or false)",
-      "zh-CN": "是否混入平台训练数据（true 或 false）",
+      "en-US":
+        "Mix platform preset training data into the job (true or false). Only honored for sft and sft-lora; turned on automatically by --augmentation-types",
+      "zh-CN":
+        "是否混入平台预置训练数据（true 或 false）。仅 sft 与 sft-lora 生效；传 --augmentation-types 时自动开启",
     },
     choices: ["true", "false"] as const,
   },
-  trainingType: {
+  augmentationTypes: {
     type: "string",
-    valueHint: "<t>",
+    valueHint: "<code,...>",
     description: {
-      "en-US": `Training type: ${TRAINING_TYPES_CLI.join(" | ")} (default: ${DEFAULT_TRAINING_TYPE}). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full).`,
-      "zh-CN": `训练类型：${TRAINING_TYPES_CLI.join(" | ")}（默认：${DEFAULT_TRAINING_TYPE}）。在接口边界转换为服务端值（例如 sft-lora -> efficient_sft、dpo -> dpo_full）。`,
+      "en-US":
+        "Preset datasets to mix in, comma-separated. Codes come from finetune preset-datasets and are sent lowercased (e.g. mix_V2 -> mix_v2). Requires --augmentation-ratio",
+      "zh-CN":
+        "要混入的预置数据集，以逗号分隔。编码来自 finetune preset-datasets，按小写下发（例如 mix_V2 -> mix_v2）。需与 --augmentation-ratio 同时使用",
     },
   },
+  augmentationRatio: {
+    type: "string",
+    valueHint: "<r,...>",
+    description: {
+      "en-US":
+        "Mix ratio per preset dataset, comma-separated and positionally matching --augmentation-types; each is 0.0~2.0 of the training data volume",
+      "zh-CN":
+        "每种预置数据集的混合倍率，以逗号分隔并与 --augmentation-types 按位置对应；每项为训练数据量的 0.0~2.0 倍",
+    },
+  },
+  trainingType: trainingTypeFlag(DEFAULT_TRAINING_TYPE, CREATE_TRAINING_TYPE_MAPPING),
   nEpochs: {
     type: "number",
     valueHint: "<n>",
@@ -308,28 +520,20 @@ const TEXT_FLAGS = {
     valueHint: "<n>",
     description: { "en-US": "Max sequence length", "zh-CN": "最大序列长度" },
   },
-  modality: {
-    type: "string",
-    valueHint: "<text|vision>",
-    description: {
+  ...trainOptionFlags({
+    modality: {
       "en-US":
         "Training-option modality sent as hyper_parameters.modality (not the dataset format fixed by this subcommand). Only for models with dynamic train options; valid values come from the model's parameter schema.",
       "zh-CN":
         "训练选项模态，作为 hyper_parameters.modality 发送（与本子命令固定的数据格式无关）。仅适用于配置了动态训练选项的模型；合法值以该模型的参数配置为准。",
     },
-    choices: ["text", "vision"] as const,
-  },
-  reasoningMode: {
-    type: "string",
-    valueHint: "<instruct|thinking>",
-    description: {
+    reasoningMode: {
       "en-US":
         "Reasoning mode sent as hyper_parameters.reasoning_mode. Only for models with dynamic train options; valid values come from the model's parameter schema.",
       "zh-CN":
         "思考模式，作为 hyper_parameters.reasoning_mode 发送。仅适用于配置了动态训练选项的模型；合法值以该模型的参数配置为准。",
     },
-    choices: ["instruct", "thinking"] as const,
-  },
+  }),
 } satisfies FlagsDef;
 
 /**
@@ -373,7 +577,7 @@ const IMAGE_FLAGS = {
 } satisfies FlagsDef;
 
 const TEXT_USAGE =
-  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--job-name <name>] [--priority <L0|L1|L2|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>] [--modality <text|vision>] [--reasoning-mode <instruct|thinking>]";
+  "--base-model <model> --datasets <id|path|oss://...,...> [--validations <id|path|oss://...,...>] [--oss-region <region>] [--job-name <name>] [--priority <L0|L1|L2|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>] [--data-augmentation <true|false>] [--augmentation-types <code,...>] [--augmentation-ratio <r,...>] [--modality <text|vision>] [--reasoning-mode <instruct|thinking>]";
 
 const AUDIO_USAGE =
   "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
@@ -493,9 +697,9 @@ const TEXT_NOTES = [
   },
   {
     "en-US":
-      "Before upload, the command queries the selected model and training type's parameter schema. Explicit overrides must satisfy its editability, type, enum, range, and step constraints; omitted values use platform defaults.",
+      "Before upload, the command queries the selected model and training type's parameter schema. Explicit overrides must satisfy its editability, type, enum, range, and step constraints. The create API requires n_epochs, batch_size and max_length: an omitted one is filled from the schema's default (query it with the finetune params command); every other omitted value uses the platform default.",
     "zh-CN":
-      "上传前会查询所选模型和训练类型的参数配置。显式覆盖值必须满足可编辑性、类型、枚举、范围和步长约束；未指定项使用平台默认值。",
+      "上传前会查询所选模型和训练类型的参数配置。显式覆盖值必须满足可编辑性、类型、枚举、范围和步长约束。创建任务 API 要求 n_epochs、batch_size、max_length 必填：未指定时按参数配置中的默认值补齐（可用 finetune params 命令查询）；其余未指定项使用平台默认值。",
   },
   {
     "en-US": "Learning rate is forwarded as a string to avoid JSON-number precision loss.",
@@ -512,6 +716,18 @@ const TEXT_NOTES = [
       "--modality / --reasoning-mode are training options forwarded as hyper_parameters entries, independent of the dataset format fixed by the subcommand. Models with dynamic train options require them to resolve the parameter schema (e.g. a vision-only CPT base needs --modality vision); models without dynamic options reject them. Invalid combinations are rejected by the server and surfaced as-is.",
     "zh-CN":
       "--modality / --reasoning-mode 是训练选项，作为 hyper_parameters 条目发送，与子命令固定的数据格式无关。配置了动态训练选项的模型需要它们才能解析参数配置（例如仅支持视觉训练的 CPT 基座需要 --modality vision）；未配置动态选项的模型会拒绝这两个 flag。非法组合由服务端拒绝并原样透传错误。",
+  },
+  {
+    "en-US":
+      "Mixed training: --data-augmentation turns it on; --augmentation-types selects preset datasets (list them with finetune preset-datasets; codes are sent lowercased, e.g. mix_V2 -> mix_v2) and --augmentation-ratio gives one ratio (0.0~2.0) per type, positionally. Passing types turns data_augmentation on. These three are documented on the create API but absent from the model's parameter schema, so they are not part of the schema check; whether the selected model and training type honors them is decided by the server (documented for sft and sft-lora), and mixed data is billed as training tokens.",
+    "zh-CN":
+      "混合训练：--data-augmentation 开启；--augmentation-types 选择预置数据集（用 finetune preset-datasets 查询，编码按小写下发，例如 mix_V2 -> mix_v2），--augmentation-ratio 按位置给出每种数据集的混合倍率（0.0~2.0）。传 --augmentation-types 时自动开启 data_augmentation。这三个参数在创建任务的 API 文档中有说明，但不在模型返回的参数配置里，因此不参与参数配置校验；是否对所选模型和训练类型生效以服务端为准（文档为 sft 与 sft-lora），混入的数据按训练 Token 计费。",
+  },
+  {
+    "en-US":
+      "OSS mount: an oss://<bucket>/<object key> entry of --datasets / --validations is read in place, so it skips local validation, upload and the sample-count pre-check. Upload the uncompressed dataset folder to OSS as-is (a zip cannot be mounted) and, for a multi-file dataset, point at its data.jsonl. Every oss:// entry shares --oss-region. A request with an OSS mount sends training_datasets / validation_datasets instead of training_file_ids / validation_file_ids.",
+    "zh-CN":
+      "OSS 挂载：--datasets / --validations 中的 oss://<bucket>/<object key> 条目由服务端原地读取，因此不做本地校验、不上传，也跳过样本数预检。请将未压缩的数据集文件夹原样上传到 OSS（zip 无法挂载）；多文件数据集指向其 data.jsonl。所有 oss:// 条目共用 --oss-region。含 OSS 挂载的请求以 training_datasets / validation_datasets 下发，不再使用 training_file_ids / validation_file_ids。",
   },
 ];
 
@@ -581,14 +797,10 @@ async function runCreate<F extends FlagsDef>(
   // enforce the right record schema (DPO jobs require chosen/rejected on
   // every record). Whitelist is the single source of truth in core
   // (TRAINING_TYPES_CLI); any other value is rejected up-front.
-  const trainingType = (flags.trainingType as string | undefined) || DEFAULT_TRAINING_TYPE;
-  if (!isTrainingTypeCli(trainingType)) {
-    throw new BailianError(
-      `--training-type "${trainingType}" is not supported.`,
-      ExitCode.USAGE,
-      `Supported values: ${TRAINING_TYPES_CLI.join(", ")} (default: ${DEFAULT_TRAINING_TYPE}).`,
-    );
-  }
+  const trainingType = resolveTrainingTypeCli(
+    flags.trainingType as string | undefined,
+    DEFAULT_TRAINING_TYPE,
+  );
 
   // Profile: single source of truth for how this training type behaves
   // (validation rules, hyper-parameters, gates, capability check).
@@ -619,6 +831,10 @@ async function runCreate<F extends FlagsDef>(
     if (detected === "video-kf2v") modality = "video-kf2v";
   }
 
+  // Only text can carry a mount: its request switches to the dataset entries
+  // that hold one. Other modalities keep the flat file-id fields, so analyze
+  // rejects an oss:// entry there before any request is made.
+  const datasetOptions: AnalyzeDatasetOptions = { ossMount: commandModality === "text" };
   const training = await analyzeDatasetTokens(
     ctx,
     datasetsRaw,
@@ -627,6 +843,7 @@ async function runCreate<F extends FlagsDef>(
     modality,
     model,
     firstLocalPath ? { path: firstLocalPath, modality } : undefined,
+    datasetOptions,
   );
   const trainingFileIds = training.fileIds;
 
@@ -638,6 +855,8 @@ async function runCreate<F extends FlagsDef>(
         profile,
         modality,
         model,
+        undefined,
+        datasetOptions,
       )
     : undefined;
   const validationFileIds = validation?.fileIds;
@@ -715,8 +934,7 @@ async function runCreate<F extends FlagsDef>(
         ExitCode.USAGE,
       );
     }
-    if (flags.dataAugmentation !== undefined)
-      hp.data_augmentation = flags.dataAugmentation === "true";
+    applyDataAugmentation(hp, flags);
     if (hp.save_strategy === "steps" && hp.save_steps === undefined) {
       throw new BailianError(
         "save_strategy=steps requires --save-steps. / 按步保存时必须指定 --save-steps。",
@@ -788,6 +1006,12 @@ async function runCreate<F extends FlagsDef>(
       ExitCode.USAGE,
       overrideIssues.map((issue) => formatHyperParameterIssue(ctx, issue)).join("\n"),
     );
+  }
+
+  // Runs after override validation so an invalid explicit value still fails
+  // first, and before the dry-run snapshot so the preview shows what is sent.
+  if (commandModality === "text") {
+    applySchemaDefaultHyperParameters(hp, parameterSchema);
   }
 
   if (
@@ -896,14 +1120,23 @@ async function runCreate<F extends FlagsDef>(
     }
   }
 
+  // A mount cannot travel in the flat file-id fields, so a request with one
+  // uses the dataset entries for both fields. Every other request keeps the
+  // flat form it has always sent.
+  const ossRegion = (flags.ossRegion as string | undefined) ?? DEFAULT_OSS_MOUNT_REGION;
+  const mountsOss = training.ossMounts.length > 0 || (validation?.ossMounts.length ?? 0) > 0;
   const body: CreateFineTuneRequest = {
     model,
-    training_file_ids: trainingFileIds,
+    ...(mountsOss
+      ? { training_datasets: datasetEntries(training, ossRegion) }
+      : { training_file_ids: trainingFileIds }),
     // Profile maps the CLI training type to the server value at the boundary.
     training_type: profile.serverTrainingType,
     hyper_parameters: hp,
   };
-  if (validationFileIds && validationFileIds.length > 0) {
+  if (mountsOss) {
+    if (validation) body.validation_datasets = datasetEntries(validation, ossRegion);
+  } else if (validationFileIds && validationFileIds.length > 0) {
     body.validation_file_ids = validationFileIds;
   }
   if (typeof flags.jobName === "string") body.job_name = flags.jobName;
@@ -953,12 +1186,15 @@ export const finetuneTextCreate = defineCommand({
     "--base-model qwen3-8b --datasets file-aaa,./extra.jsonl",
     "--base-model qwen3-8b --datasets ./train.jsonl --training-type sft",
     "--base-model qwen3-8b --datasets ./jev-train.jsonl --job-name jev-train-v1 --priority L0 --lora-rank 8 --lora-alpha 16 --lora-dropout 0.1 --lr-scheduler-type linear --eval-steps 50 --save-strategy epoch --save-total-limit 3 --split 0.9 --max-split-val-dataset-sample 1000 --data-augmentation false --dry-run",
+    "--base-model qwen3-8b --datasets ./train.jsonl --training-type sft-lora --augmentation-types mix_V2 --augmentation-ratio 0.5",
     '--base-model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
     "--base-model qwen3.6-plus-base-2026-04-02 --datasets file-xxx --training-type cpt --modality vision --reasoning-mode instruct",
     "--base-model qwen3-8b --datasets file-xxx --output json",
+    "--base-model qwen3-8b --datasets oss://my-bucket/datasets/train/data.jsonl --oss-region cn-beijing",
     "--base-model qwen3-8b --datasets file-xxx --dry-run",
   ],
   notes: TEXT_NOTES,
+  validate: (flags) => validateOssMountEntries(flags) ?? validateMixedTrainingFlags(flags),
   run: (ctx) => runCreate("text", ctx),
 });
 

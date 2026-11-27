@@ -2,7 +2,8 @@
  * Shared dataset-input pipeline for `finetune <modality> create` and
  * `finetune opd run`: resolve comma-separated file-id / local-path tokens,
  * validate local files through the training profile, and defer upload until
- * pre-flight checks pass.
+ * pre-flight checks pass. An `oss://` token names a dataset the service reads
+ * in place; it is accepted only where the request can carry a mount.
  */
 import { existsSync, statSync } from "fs";
 import { basename } from "path";
@@ -11,10 +12,13 @@ import {
   ExitCode,
   formatCommand,
   formatIssue,
+  isOssMountToken,
+  parseOssMountUri,
   uploadDataset,
   type CommandContext,
   type DataModality,
   type DatasetFile,
+  type OssMountLocation,
   type TrainingProfile,
 } from "bailian-cli-core";
 
@@ -31,7 +35,8 @@ export function isLocalPath(token: string): boolean {
 
 export interface ResolvedDataset {
   /**
-   * Tokens in input order. Local paths are kept as-is here (a placeholder
+   * File-id and local-path tokens in input order (OSS mounts are kept apart in
+   * `ossMounts`). Local paths are kept as-is here (a placeholder
    * until `uploadResolvedLocal` swaps them for real file-ids); bare file-ids
    * pass through untouched. In dry-run the paths stay (the previewed body
    * reflects exactly what the user typed).
@@ -49,6 +54,27 @@ export interface ResolvedDataset {
    * fall through to the platform rather than risk a false positive.
    */
   recordCount?: number;
+  /**
+   * OSS mounts in input order. The data is not on disk, so it is neither
+   * validated nor uploaded, and it does not count towards `recordCount`.
+   */
+  ossMounts: OssMountLocation[];
+}
+
+export interface AnalyzeDatasetOptions {
+  /**
+   * Accept `oss://` entries. Only a command whose request carries mounts may
+   * turn this on; elsewhere an `oss://` entry is rejected instead of being
+   * forwarded as a file-id it is not.
+   */
+  ossMount?: boolean;
+}
+
+export function splitDatasetEntries(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((token) => token.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -64,7 +90,7 @@ export interface ResolvedDataset {
  * validated (the preview never touches the network or the disk beyond stat).
  */
 export async function analyzeDatasetTokens(
-  context: Pick<CommandContext, "settings" | "identity" | "output">,
+  context: Pick<CommandContext, "settings" | "identity" | "output" | "localize">,
   raw: string,
   label: string,
   profile: TrainingProfile,
@@ -72,12 +98,10 @@ export async function analyzeDatasetTokens(
   model: string,
   /** Pre-detected modality for a known path (avoids re-opening the file). */
   knownModality?: { path: string; modality: DataModality },
+  options: AnalyzeDatasetOptions = {},
 ): Promise<ResolvedDataset> {
   const { settings } = context;
-  const tokens = raw
-    .split(",")
-    .map((token) => token.trim())
-    .filter(Boolean);
+  const tokens = splitDatasetEntries(raw);
   if (tokens.length === 0) {
     throw new BailianError(`--${label} must contain at least one entry.`, ExitCode.USAGE);
   }
@@ -91,8 +115,27 @@ export async function analyzeDatasetTokens(
   // flip to unknown and stop accumulating to avoid an undercount that could
   // trip the batch-size gate falsely.
   let recordCountKnown = true;
+  const ossMounts: OssMountLocation[] = [];
 
   for (const token of tokens) {
+    if (isOssMountToken(token)) {
+      if (!options.ossMount) {
+        throw new BailianError(
+          context.localize({
+            "en-US": `OSS mount (${token}) is only supported by finetune text create.`,
+            "zh-CN": `OSS 挂载（${token}）仅 finetune text create 支持。`,
+          }),
+          ExitCode.USAGE,
+        );
+      }
+      const mount = parseOssMountUri(token);
+      if (!mount.valid) {
+        throw new BailianError(context.localize(mount.reason), ExitCode.USAGE);
+      }
+      ossMounts.push(mount.location);
+      recordCountKnown = false;
+      continue;
+    }
     if (!isLocalPath(token)) {
       fileIds.push(token);
       recordCountKnown = false;
@@ -158,6 +201,7 @@ export async function analyzeDatasetTokens(
     localPaths,
     firstSize,
     recordCount: recordCountKnown ? recordCount : undefined,
+    ossMounts,
   };
 }
 

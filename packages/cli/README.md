@@ -213,13 +213,13 @@ BAILIAN_PRE=1 bl auth --login aliyun --dry-run
 BAILIAN_PRE=1 bl auth status
 ```
 
-Supported OAuth and OpenAPI routes are selected automatically. Confirm the pre-release CLI gateway protocol before supplying `BAILIAN_PRE_CONSOLE_GATEWAY`. Native Console browser login also requires a confirmed login and callback origin via `BAILIAN_PRE_CONSOLE_ORIGIN`. The CLI does not change hosts or proxy configuration. Unsupported regions and management services do not fall back to online endpoints.
+Supported OAuth and OpenAPI routes are selected automatically. Confirm the pre-release CLI gateway protocol before supplying `BAILIAN_PRE_CONSOLE_GATEWAY`. Native Console browser login also requires a confirmed login and callback origin via `BAILIAN_PRE_CONSOLE_ORIGIN`. The CLI does not change hosts or proxy configuration. Unsupported regions and management services do not fall back to online endpoints. MCP management and cloud Skill commands are an exception: they stay on the existing API key and workspace routes and do not switch to pre-release.
 
 Aliyun OAuth credentials are stored as **plaintext** in a separate `oauth/<session_ref>.json` file under the CLI config directory, not in the main config. Writes are atomic; the cache directory and files use `0700` and `0600` on Unix, and Windows requires private ACLs. No Keychain or system credential service is used. Keep this directory private and out of shared backups. Sign in again if you used the previous encrypted format; it is not migrated. OAuth refresh and STS renewal are shared across Console and OpenAPI calls. `auth status` only describes configured credentials; it does not validate or refresh them. Full `auth logout` or `auth logout --aliyun` revokes the RT; partial `--console`/`--open-api` logout disables only that domain. OAuth login preserves existing API keys and does not provision inference keys, initialize workspaces, modify hosts/proxies, or activate paid services.
 
 ### Console Browser Login (Recommended)
 
-Console capability commands (model list, flow-agent list, MCP list, workspace, usage queries, rate-limit increases, direct console calls) can use this browser login or Aliyun OAuth above. Browser login can create an ordinary API key when needed. Token Plan and other subscription plans cannot use `--console` for inference; use the API Key login below.
+Console capability commands (model list, flow-agent list, workspace, usage queries, rate-limit increases, direct console calls) can use this browser login or Aliyun OAuth above. Browser login can create an ordinary API key when needed outside pre-release. Token Plan and other subscription plans cannot use `--console` for inference; use the API Key login below.
 
 ```bash
 bl auth login --console
@@ -245,6 +245,28 @@ Input must be one raw token (up to 64 KiB), not JSON or `Bearer ...`; interactiv
 
 ### API Key
 
+MCP management and cloud Skill commands use the configured workspace ID to build the Beijing workspace endpoint. Set it once with `bl config set workspace_id <id>`, or use `BAILIAN_WORKSPACE_ID` or `--workspace-id`. An explicit model base URL (flag, environment or profile) takes precedence.
+
+Search the cloud Skill catalog with a Bailian API key, for example `bl skill search --keyword pdf --type official`. Pass a returned `skill_code` to `bl skill get --code <skill_code>` to see the latest version and local installation paths. Omit `--type` to include private skills in your workspace. `skill get` also reads MCP server codes from the latest package’s `mcp-config.json` by default. Use `--with-mcp false` to skip the package download.
+
+Install a search result with `bl skill add --code <skill_code> --agent cursor --scope project`. Add `--skill-version 1.0` to pin a version. `bl skill list --scope project` shows installation paths and states. Preview updates with `bl skill update --code <skill_code> --scope project --diff --dry-run` and omit `--dry-run` to apply. `bl skill remove --code <skill_code> --agent cursor --scope project` removes that local installation offline.
+
+When targeting a skill with `get`, `add`, `update` or `remove`, use either `--code` with its cloud OpenAPI code or `--name` with its public OSS registry name. For example, `bl skill add --name spark-video` installs one OSS skill. `bl skill add --all` installs the entire public OSS registry. Browse that registry with `bl skill list --source oss`.
+
+Skill commands check unpinned installations from the selected source and report available updates on stderr. The check reuses catalog reads and caches revisions for 24 hours. Removal uses the cache offline. Run `bl skill update` to update installed cloud skills, or `bl skill update --all` to update installed OSS skills. `bl skill update --name all` remains an alias for `bl skill update --all`.
+
+Installation activates inactive MCP dependencies by default, which may incur charges. Use `--dry-run` to preview the activation plan. To install only the Skill, pass `--with-mcp false`.
+
+Use an ordinary Bailian API key to list activated MCP servers (`bl mcp list`), inspect server details and tools (`bl mcp get --server <code>`), and manage custom servers (`bl mcp create`, `update`, `delete`). Use `--dry-run` to preview changes. Deleting a custom server requires `bl mcp delete --server <code> --yes`.
+
+Search for tools with a natural-language query, for example `bl mcp tool search --query "look up an order" --limit 5`. Recommendations can trigger OneKey activation. For a known server, use `bl mcp tool list --server <code>` to read its tools and input schemas through OpenAPI. Listing tools can also trigger OneKey activation. Both commands support a local `--dry-run` preview. To inspect tools through an MCP session, use `bl mcp tools --server <code>` with an optional `--url <endpoint>`.
+
+To call a tool through OpenAPI, run `bl mcp tool call --server <code> --tool getOrder --arg orderId=A123`. Use `--dry-run` to preview the arguments. Calling a tool may activate a OneKey service. To call through an MCP session, use `bl mcp call --target <code>.getOrder --arg orderId=A123`. Both commands apply `--json` first, then repeated `--arg` values, and finally `--query` as text.
+
+Use `bl mcp activate --server <code,...>` or `bl mcp deactivate --server <code,...>` for up to 30 distinct official or custom servers. Preview changes with `--dry-run`. OneKey activation may place an order. Stopping a custom server keeps its saved configuration.
+
+Use `bl mcp connect --server <code> --transport streamable-http --agent cursor` to register the workspace endpoint. Connecting activates an inactive service by default. Use `--and-activate=false` to connect only to active services. Add `--scope project` from the project root for project-level registration. Agent config files and backups can contain your API key. `bl mcp disconnect --server <code> --agent cursor` removes the matching local registration offline. Use the same scope for both commands.
+
 To use an existing ordinary API key or a Token Plan subscription key, run the same command:
 
 ```bash
@@ -255,11 +277,15 @@ Get an ordinary key from the [DashScope Console](https://bailian.console.aliyun.
 
 ### Alibaba Cloud OpenAPI AK/SK
 
-Token Plan seat and member management requires OpenAPI credentials: an Alibaba Cloud AccessKey/STS pair or an Aliyun OAuth session. Get yours from the [RAM Console](https://ram.console.aliyun.com/manage/ak).
+Token Plan seat and member management and Console token refresh require OpenAPI credentials: Alibaba Cloud AccessKey/STS credentials or an Aliyun OAuth session. Online, run the AccessKey setup guide or get keys from the [RAM Console](https://ram.console.aliyun.com/manage/ak). The browser guide is not available in pre-release; use explicit pre-release AccessKey credentials or Aliyun OAuth instead.
 
 > Recommended: create a RAM sub-account with minimum privileges instead of using the root account's AK/SK.
 
 ```bash
+# Open the setup guide (when finished, paste your AccessKey back in the terminal)
+bl auth login --open-api
+
+# If you already have an AccessKey, configure it directly
 bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
 ```
 

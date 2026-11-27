@@ -4,8 +4,10 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import { parseStdoutJson, runCommandE2e, runCommandHelp } from "./helpers.ts";
 import { CONFIG_ROUTES, MCP_ROUTES } from "./topic-routes.ts";
+import { activeMcpFixture } from "./fixtures/mcp-detail.ts";
 
 const PLACEHOLDER_KEY = "sk-pi-e2e-placeholder-secret";
+const activeServer = activeMcpFixture("TextGenerateImage");
 let probeRoot: string;
 let agentDir: string;
 let probeEnv: NodeJS.ProcessEnv;
@@ -13,7 +15,11 @@ let probeEnv: NodeJS.ProcessEnv;
 beforeEach(() => {
   probeRoot = mkdtempSync(join(tmpdir(), "bl-pi-e2e-"));
   agentDir = join(probeRoot, "pi-agent");
-  probeEnv = { PI_CODING_AGENT_DIR: agentDir, BAILIAN_CONFIG_DIR: join(probeRoot, "bailian") };
+  probeEnv = {
+    PI_CODING_AGENT_DIR: agentDir,
+    BAILIAN_CONFIG_DIR: join(probeRoot, "bailian"),
+    DASHSCOPE_BASE_URL: activeServer.baseUrl,
+  };
 });
 
 afterEach(() => rmSync(probeRoot, { recursive: true, force: true }));
@@ -98,11 +104,11 @@ describe("e2e: Pi Agent integration", () => {
   test("MCP dry-run reports only non-secret metadata without writing configuration", async () => {
     const result = await runCommandE2e(MCP_ROUTES, [...mcpArgs, "--dry-run"], probeEnv);
     expect(result.exitCode, result.stderr).toBe(0);
-    const plan = parseStdoutJson<{ agents: string[]; endpoint: string; header_names: string[] }>(
-      result.stdout,
-    );
+    const { plan } = parseStdoutJson<{
+      plan: { agents: string[]; endpoint: string; header_names: string[] };
+    }>(result.stdout);
     expect(plan.agents).toEqual(["pi"]);
-    expect(plan.endpoint).toBe("https://dashscope.aliyuncs.com/api/v1/mcps/TextGenerateImage/mcp");
+    expect(plan.endpoint).toBe(activeServer.endpoint);
     expect(plan.header_names).toContain("Authorization");
     expect(result.stdout + result.stderr).not.toContain(PLACEHOLDER_KEY);
     expect(existsSync(agentDir)).toBe(false);
@@ -113,13 +119,13 @@ describe("e2e: Pi Agent integration", () => {
     expect(first.exitCode, first.stderr).toBe(0);
     expect(first.stdout + first.stderr).not.toContain(PLACEHOLDER_KEY);
     expect(parseStdoutJson<{ results: { status: string }[] }>(first.stdout).results[0].status).toBe(
-      "added",
+      "succeeded",
     );
     const repeated = await runCommandE2e(MCP_ROUTES, mcpArgs, probeEnv);
     expect(repeated.exitCode, repeated.stderr).toBe(0);
     expect(
       parseStdoutJson<{ results: { status: string }[] }>(repeated.stdout).results[0].status,
-    ).toBe("unchanged");
+    ).toBe("noop");
     const disconnected = await runCommandE2e(
       MCP_ROUTES,
       ["mcp", "disconnect", "--agent", "pi", "--server", "TextGenerateImage", "--output", "json"],
@@ -128,7 +134,7 @@ describe("e2e: Pi Agent integration", () => {
     expect(disconnected.exitCode, disconnected.stderr).toBe(0);
     expect(
       parseStdoutJson<{ results: { status: string }[] }>(disconnected.stdout).results[0].status,
-    ).toBe("removed");
+    ).toBe("succeeded");
     expect(JSON.parse(readFileSync(join(agentDir, "mcp.json"), "utf8")).mcpServers).toEqual({});
   });
 

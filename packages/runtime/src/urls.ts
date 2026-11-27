@@ -15,6 +15,14 @@ export const BAILIAN_CONSOLE = `${BAILIAN_CONSOLE_ROOT}/cn-beijing`;
 /** Direct deep link to API key management page. */
 export const API_KEY_PAGE = `${BAILIAN_CONSOLE}/?tab=app#/api-key`;
 
+/** OpenAPI AK/SK browser guide path on the Bailian / Model Studio console. */
+export const AKSK_GUIDE_PATH = "/aksk-guide";
+
+/** Build the OpenAPI AK/SK browser guide URL for a console origin. */
+export function akskGuidePage(consoleOrigin: string): string {
+  return `${consoleOrigin.replace(/\/$/, "")}${AKSK_GUIDE_PATH}`;
+}
+
 /** Running-time billing, shared trial allowance and model-call charges for RAG. */
 export const KNOWLEDGE_BILLING_PAGE =
   "https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base";

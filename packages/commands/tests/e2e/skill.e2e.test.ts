@@ -45,6 +45,7 @@ describe("e2e: skill", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--all/);
     expect(stderr).toMatch(/--name/);
+    expect(stderr).toContain("--code");
   });
 
   test("skill update --help exits successfully", async () => {
@@ -52,12 +53,14 @@ describe("e2e: skill", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--all/);
     expect(stderr).toMatch(/--name/);
+    expect(stderr).toContain("--code");
   });
 
   test("skill remove --help exits successfully", async () => {
     const { stderr, exitCode } = await runCommandHelp(SKILL_ROUTES, ["skill", "remove", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--name/);
+    expect(stderr).toContain("--code");
   });
 
   test("skill list --help exits successfully", async () => {
@@ -75,7 +78,7 @@ describe("e2e: skill", () => {
 
 // Local-only cases: no credentials; update uses a loopback registry fixture.
 describe("e2e: skill (local, no credentials)", () => {
-  test("skill add without --all or --name errors as usage error (2)", async () => {
+  test("skill add without a selector errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
       "skill",
       "add",
@@ -98,7 +101,7 @@ describe("e2e: skill (local, no credentials)", () => {
     expect(`${stdout}\n${stderr}`).toMatch(/--all|--name|either/i);
   });
 
-  test("skill remove without --name errors as usage error (2)", async () => {
+  test("skill remove without a selector errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
       "skill",
       "remove",
@@ -236,7 +239,7 @@ describe.skipIf(!isBailianE2EEnabled())("e2e: skill (real registry)", () => {
     const configDir = makeTempConfigDir();
     const { stdout, stderr, exitCode } = await runCommandE2e(
       SKILL_ROUTES,
-      ["skill", "list", "--output", "json"],
+      ["skill", "list", "--source", "oss", "--output", "json"],
       { BAILIAN_CONFIG_DIR: configDir },
     );
     expect(exitCode, stderr).toBe(0);

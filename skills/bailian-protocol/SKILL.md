@@ -1,7 +1,7 @@
 ---
 name: bailian-protocol
 metadata:
-  version: "2.12.0"
+  version: "2.14.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -173,9 +173,12 @@ Install, API key / console login, endpoint override, and config keys:
 
 **API Key login:** Token Plan and other subscription plans cannot use `--console`. For them, or when the user already has an ordinary API Key, run `bl auth login --api-key <key>`.
 
+**OpenAPI AK/SK:** When the user asks to configure AccessKey / AK/SK, run `bl auth login --open-api` (browser guide). If they already have keys, pass `--access-key-id` / `--access-key-secret`.
+
 ```bash
 bl auth status                                      # check current auth
 bl auth login --console --console-site international  # example: international console
+bl auth login --open-api                            # OpenAPI AK/SK browser guide
 bl text chat --message "Write a poem about spring"  # explicit text-model smoke test
 ```
 

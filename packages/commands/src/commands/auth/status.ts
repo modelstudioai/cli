@@ -71,6 +71,8 @@ export default defineCommand({
       : undefined;
     const apiKeyLogin = formatCommand(identity, "auth login --api-key <key>");
     const consoleLogin = formatCommand(identity, "auth login --console");
+    const openApiGuide = formatCommand(identity, "auth login --open-api");
+    const openApiLogin = `${openApiGuide} --access-key-id <id> --access-key-secret <secret>`;
     const modelKeyHint = apiKey
       ? undefined
       : localize(
@@ -84,6 +86,20 @@ export default defineCommand({
                 "zh-CN": `尚未配置模型 API Key。模型命令需要：${consoleLogin}，或 ${apiKeyLogin}`,
               },
         );
+    const openApiHint = openapi
+      ? undefined
+      : localize(
+          pre
+            ? {
+                "en-US": `OpenAPI (AK/SK) is not configured. To save pre-release AccessKey credentials, run: ${openApiLogin}`,
+                "zh-CN": `OpenAPI（AK/SK）未配置。要保存预发 AccessKey 凭证，请运行：${openApiLogin}`,
+              }
+            : {
+                "en-US": `OpenAPI (AK/SK) is not configured. To use AK/SK capabilities, run the browser guide: ${openApiGuide}`,
+                "zh-CN": `OpenAPI（AK/SK）未配置。如需使用 AK/SK 相关能力，可运行浏览器引导完成配置：${openApiGuide}`,
+              },
+        );
+    const statusHint = [modelKeyHint, openApiHint].filter(Boolean).join("\n") || undefined;
 
     if (!authenticated) {
       const result = {
@@ -95,7 +111,7 @@ export default defineCommand({
         hint: [
           `API key (model):   ${apiKeyLogin} or DASHSCOPE_API_KEY`,
           `Console gateway:   ${consoleLogin}`,
-          `OpenAPI (AK/SK):   ${formatCommand(identity, "auth login --open-api --access-key-id <id> --access-key-secret <secret>")}`,
+          `OpenAPI (AK/SK):   ${pre ? openApiLogin : `${openApiGuide} (browser guide; or paste --access-key-id / --access-key-secret)`}`,
           `Get API Key: ${API_KEY_PAGE}`,
         ].join("\n"),
       };
@@ -120,7 +136,7 @@ export default defineCommand({
         console: consoleCred,
         openapi,
         ...(aliyunOAuth ? { aliyun_oauth: aliyunOAuth } : {}),
-        ...(modelKeyHint ? { hint: modelKeyHint } : {}),
+        ...(statusHint ? { hint: statusHint } : {}),
       });
       return;
     }
@@ -157,9 +173,8 @@ export default defineCommand({
         `  OpenAPI (AK/SK):  ${openapi.source}  ${openapi.access_key_id ?? localize({ "en-US": "OAuth managed", "zh-CN": "OAuth 托管" })}`,
       );
     } else {
-      lines.push(
-        `  OpenAPI (AK/SK):  not configured (run ${formatCommand(identity, "auth login --open-api")})`,
-      );
+      lines.push("  OpenAPI (AK/SK):  not configured");
+      if (openApiHint) lines.push(`  ${openApiHint}`);
     }
     ctx.output.result(
       {
@@ -171,7 +186,7 @@ export default defineCommand({
         console: consoleCred,
         openapi,
         ...(aliyunOAuth ? { aliyun_oauth: aliyunOAuth } : {}),
-        ...(modelKeyHint ? { hint: modelKeyHint } : {}),
+        ...(statusHint ? { hint: statusHint } : {}),
       },
       { text: lines.join("\n") },
     );

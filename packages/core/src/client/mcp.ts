@@ -73,12 +73,12 @@ export interface McpToolResult {
  * verbatim from `bl mcp list` (e.g. `WebSearch`, `market-cmapi00073529`).
  */
 export function bailianMcpPath(serverCode: string): string {
-  return `/api/v1/mcps/${serverCode}/mcp`;
+  return `/api/v1/mcps/${encodeURIComponent(serverCode)}/mcp`;
 }
 
 /** Classic SSE path: `/api/v1/mcps/<serverCode>/sse`. */
 export function bailianMcpSsePath(serverCode: string): string {
-  return `/api/v1/mcps/${serverCode}/sse`;
+  return `/api/v1/mcps/${encodeURIComponent(serverCode)}/sse`;
 }
 
 /**
@@ -132,7 +132,7 @@ export type ConnectBailianMcpOptions = {
  */
 export async function connectBailianMcpWithFallback(
   options: ConnectBailianMcpOptions,
-): Promise<{ client: McpConnectedClient; url: string }> {
+): Promise<{ client: McpConnectedClient & Pick<SdkMcpAdapter, "listToolsPage">; url: string }> {
   const { deps, authToken, httpUrl, sseUrl, serverCode, urlOverride, serviceSource } = options;
 
   if (urlOverride) {

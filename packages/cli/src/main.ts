@@ -1,4 +1,4 @@
-import { createCli } from "bailian-cli-runtime";
+import { createCli, runToExit } from "bailian-cli-runtime";
 import { resolvePreControlPlane, UsageError } from "bailian-cli-core";
 import { commandAliases, commands, hasUnverifiedPreControlPlaneRoute } from "./commands.ts";
 import { commandPackPolicy } from "./command-pack-policy.ts";
@@ -13,23 +13,25 @@ const quickStartTasks = [
   "介绍一下 Bailian CLI 能帮我完成哪些任务，并根据我的需求推荐使用方式。\n   Explain what Bailian CLI can help me accomplish, and recommend how to use it based on my needs.",
 ] as const;
 
-void createCli(
-  { ...commands, ...commandAliases },
-  {
-    binName: "bl",
-    ...resolveAliyunIntegration(process.env),
-    version: pkg.version,
-    clientName: "bailian-cli",
-    npmPackage: "bailian-cli",
-    quickStartTasks,
-    commandPacks: commandPackPolicy,
-    preControlPlane: () => resolvePreControlPlane(process.env),
-    validatePreControlPlaneCommand: (path) => {
-      if (hasUnverifiedPreControlPlaneRoute(path)) {
-        throw new UsageError(
-          "This command has no verified pre-release control-plane route. / 此命令没有已确认的预发控制面路由。",
-        );
-      }
+void runToExit(
+  createCli(
+    { ...commands, ...commandAliases },
+    {
+      binName: "bl",
+      ...resolveAliyunIntegration(process.env),
+      version: pkg.version,
+      clientName: "bailian-cli",
+      npmPackage: "bailian-cli",
+      quickStartTasks,
+      commandPacks: commandPackPolicy,
+      preControlPlane: () => resolvePreControlPlane(process.env),
+      validatePreControlPlaneCommand: (path) => {
+        if (hasUnverifiedPreControlPlaneRoute(path)) {
+          throw new UsageError(
+            "This command has no verified pre-release control-plane route. / 此命令没有已确认的预发控制面路由。",
+          );
+        }
+      },
     },
-  },
-).run();
+  ),
+);

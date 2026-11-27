@@ -6,6 +6,43 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.14.0] - 2026-11-27
+
+### Added
+
+- Inspect servers with `bl mcp get`, create, update or delete custom servers, and activate or deactivate official and custom servers in batches. Use `bl mcp tool search`, `list`, and `call` to find, list and invoke tools through OpenAPI.
+- Search official and private workspace skills with `bl skill search`. Select cloud skills by `--code` and public OSS skills by `--name`. Choose an agent and user or project scope at installation time. For cloud skills, you can pin a version, preview update differences, or remove an installation offline.
+
+### Changed
+
+- `bl mcp list` now requires a standard Bailian API key and reports local agent registrations. **(BREAKING)**
+- `bl skill list` and `bl skill update` now default to the cloud catalog. To keep using OSS, run `bl skill list --source oss` and `bl skill update --all`. **(BREAKING)**
+- `bl mcp connect` and `bl skill add` activate inactive MCP services they need by default, which can incur charges. Preview the operation with `--dry-run`. To skip activation, use `--and-activate=false` for connections or `--with-mcp false` for skill installations.
+
+### Fixed
+
+- `bl mcp tools` now follows pagination so servers with multiple pages return their full tool list.
+
+## [2.13.0] - 2026-11-27
+
+### Added
+
+- **`bl finetune preset-datasets`**: New command listing the preset datasets that can be mixed into a fine-tuning job for a base model and training type (`--base-model`, `--training-type`, optional `--model-version`). Entries keep the server fields verbatim (`dataset_code`, `dataset_title`, `dataset_desc`); an empty result is a success.
+- **Mixed training**: `bl finetune text create` accepts `--augmentation-types` (preset dataset codes, sent lowercased) and `--augmentation-ratio` (one ratio per type, `0.0`–`2.0`; the two flags must be given together). Passing types turns on data augmentation.
+- **OSS-mounted datasets**: `--datasets` / `--validations` of `bl finetune text create` accept `oss://<bucket>/<object key>` entries that the service reads in place, skipping local validation, upload and the sample-count pre-check. `--oss-region` sets the bucket region (default `cn-beijing`) and is sent as given.
+- **OpenAPI AccessKey browser guide**: `bl auth login --open-api` without `--access-key-id` / `--access-key-secret` opens the console AccessKey setup page (or prints the URL with `--no-browser`) and shows a paste-ready follow-up command; passing both key flags still validates and saves as before. `bl auth status` points to the same guide when OpenAPI credentials are missing.
+
+### Changed
+
+- **`bl finetune train-options` unknown model (BREAKING)**: a model id that is not in the trainable catalog and has no dynamic options previously succeeded with `training_options: null`; it now exits with usage exit code `2` and empty stdout.
+- **`bl finetune train-options` status**: successful results carry a `status` for a null `training_options`: `configured`, `not_configured` (confirmed in the catalog, no dynamic options), or `unverified` (catalog lookup failed).
+
+### Fixed
+
+- **Required hyper-parameters**: `bl finetune text create` fills an omitted `n_epochs`, `batch_size` or `max_length` from the model's parameter schema defaults; the create API rejects a job when one of them is missing.
+- **Command output flush**: stdout/stderr are fully flushed before process exit, so piped or redirected output is no longer truncated when a reader is slow.
+- **OpenAPI guide follow-up**: the paste-ready `bl auth login --open-api ...` command keeps the chosen `--console-site` and `--config`, and a slow system browser opener is reported as unconfirmed instead of as a hard failure.
+
 ## [2.12.0] - 2026-11-25
 
 ### Added

@@ -6,6 +6,43 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.14.0] - 2026-11-27
+
+### 新增
+
+- `bl mcp get` 可查看 MCP 服务详情。自定义服务支持创建、更新和删除，官方及自定义服务支持批量启停。使用 `bl mcp tool search`、`list` 和 `call` 可通过 OpenAPI 搜索、列出和调用工具。
+- `bl skill search` 可搜索官方 Skill 和工作空间的私有 Skill。用 `--code` 指定云端 Skill，用 `--name` 指定公共 OSS Skill。安装时可选择 Agent 和用户或项目范围。云端 Skill 支持固定版本、预览更新差异和离线移除本地安装。
+
+### 变更
+
+- `bl mcp list` 改用普通百炼 API Key，结果包含本地 Agent 注册信息。**(BREAKING)**
+- `bl skill list` 和 `bl skill update` 默认使用云端目录。原有 OSS 脚本请分别改用 `bl skill list --source oss` 和 `bl skill update --all`。**(BREAKING)**
+- `bl mcp connect` 和 `bl skill add` 默认会开通所需的未启用 MCP 服务，可能产生费用。可用 `--dry-run` 预览。跳过自动开通时，连接 MCP 服务用 `--and-activate=false`，安装 Skill 用 `--with-mcp false`。
+
+### 修复
+
+- `bl mcp tools` 现在会读取后续分页，工具较多时也能列出完整清单。
+
+## [2.13.0] - 2026-11-27
+
+### 新增
+
+- **`bl finetune preset-datasets`**：新增命令，查询指定基础模型与训练类型下可混入训练的预置数据集（`--base-model`、`--training-type`、可选 `--model-version`）。结果原样保留服务端字段（`dataset_code`、`dataset_title`、`dataset_desc`）；结果为空属于成功。
+- **混合训练**：`bl finetune text create` 新增 `--augmentation-types`（预置数据集编码，按小写下发）与 `--augmentation-ratio`（按位置对应每种数据集的混合倍率，范围 0.0～2.0，两者必须同时提供）。传入 `--augmentation-types` 即开启数据增强。
+- **OSS 挂数据集**：`bl finetune text create` 的 `--datasets` / `--validations` 支持 `oss://<bucket>/<object key>` 条目，由服务端原地读取，不做本地校验、不上传，并跳过样本数预检。`--oss-region` 指定 Bucket 所在地域（默认 `cn-beijing`），原样下发。
+- **OpenAPI AccessKey 浏览器引导**：`bl auth login --open-api` 在未提供 `--access-key-id` / `--access-key-secret` 时打开控制台 AccessKey 配置页（或配合 `--no-browser` 只打印地址），并给出可粘贴的后续命令；同时提供两个 key 参数时仍按原逻辑校验并保存。`bl auth status` 在缺少 OpenAPI 凭证时会指向同一引导入口。
+
+### 变更
+
+- **`bl finetune train-options` 未知模型（BREAKING）**：目录中找不到且无动态选项的模型，原先会成功返回 `training_options: null`；现在以用法退出码 `2` 结束，stdout 为空。
+- **`bl finetune train-options` 的 status**：成功结果新增 `status`，说明 `training_options` 为 null 的原因：`configured`、`not_configured`（已在目录中确认、无动态选项）、`unverified`（目录查询失败）。
+
+### 修复
+
+- **必填超参数**：`bl finetune text create` 未指定 `n_epochs`、`batch_size` 或 `max_length` 时，按模型参数配置中的默认值补齐；创建任务接口在缺少这三项时会拒绝任务。
+- **命令输出刷盘**：进程退出前会完整刷完 stdout/stderr，管道或重定向读取较慢时不再截断输出。
+- **OpenAPI 引导后续命令**：粘贴用的 `bl auth login --open-api ...` 会保留所选 `--console-site` 与 `--config`；系统打开浏览器过慢时改为报告未能确认，而不再误报为失败。
+
 ## [2.12.0] - 2026-11-25
 
 ### 新增

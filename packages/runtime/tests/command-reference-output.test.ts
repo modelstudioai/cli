@@ -11,6 +11,7 @@ import {
   commandRef,
   formatCommand,
   resolveConsole,
+  type LocalizedText,
 } from "bailian-cli-core";
 import { createOutputReporter } from "../src/output/reporter.ts";
 
@@ -118,7 +119,9 @@ test.each(["bl", "aliyun bl"])(
     expect(hints[0]).toContain(`or run \`${commandPrefix} auth login\`.`);
     expect(hints[0]).toContain(`${commandPrefix} auth status`);
     expect(hints[0]).toContain("Get API Key:");
-    expect(hints[1]).toContain(`or run \`${commandPrefix} auth login --open-api\`.`);
+    expect(hints[1]).toContain(
+      `or run \`${commandPrefix} auth login --open-api\` then paste your AccessKey.`,
+    );
     expect(hints[1]).not.toMatch(/[\u4e00-\u9fff]/u);
     expect(hints[2]).toBe(
       "Pass both --access-key-id and --access-key-secret, or remove the partial flags to use env/config credentials.",
@@ -126,9 +129,10 @@ test.each(["bl", "aliyun bl"])(
     expect(hints[3]).toBe(
       "Set both ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or unset the partial env vars.",
     );
-    expect(hints[4]).toBe(
-      `Run \`${commandPrefix} auth login --open-api --access-key-id <id> --access-key-secret <secret>\` again to save a complete pair.`,
+    expect(hints[4]).toContain(
+      `Save a complete pair with \`${commandPrefix} auth login --open-api --access-key-id <id> --access-key-secret <secret>\``,
     );
+    expect(hints[4]).toContain(`\`${commandPrefix} auth login --open-api\` for the setup guide`);
     expect(hints.slice(1).join("\n")).not.toContain("auth status");
   },
 );
@@ -150,6 +154,7 @@ test("Console errors carry complete hints before ordinary business wrapping", as
       settings: { timeout: 30, dryRun: false, output: "json", quiet: true, verbose: false },
       sources: { flags: {}, env: {}, file: { access_token: "expired" } },
       command: { auth: "console" },
+      localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
       output: createOutputReporter({ settings: { output: "json", quiet: true, verbose: false } })
         .output,
     } as unknown as RunContext;

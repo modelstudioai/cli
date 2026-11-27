@@ -42,9 +42,11 @@ import {
   reportFirstInstallNow,
   isFirstInstallReportLaunch,
   Client,
+  createRequestSignals,
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
+import { flushOutput, INTERRUPT_FLUSH_TIMEOUT_MS, trackStreamWrites } from "./output/flush.ts";
 import { type OutputReporter, createOutputReporter } from "./output/reporter.ts";
 import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
@@ -149,10 +151,13 @@ function usesModelConfig(resolution: Resolution, registry: CommandRegistry): boo
 interface ProcessOutputContext {
   getReporter: () => OutputReporter;
   localize: (text: LocalizedText) => string;
+  getOutputFormat: () => "text" | "json";
 }
 
 const activeProcessOutputs = new Set<ProcessOutputContext>();
 const managedInterruptHandlers = new Set<() => void>();
+/** True while the default SIGINT path is flushing before exit(130). */
+let interruptExiting = false;
 
 /** Let a command cancel asynchronous work and finish cleanup before the runtime exits. */
 export function registerInterruptHandler(handler: () => void): () => void {
@@ -168,8 +173,14 @@ export function registerInterruptHandler(handler: () => void): () => void {
 /** One process event produces one error, using the first still-active invocation. */
 function handleInterrupt(): void {
   if (managedInterruptHandlers.size > 0) return;
+  // Second Ctrl-C during flush: exit immediately instead of waiting out the short timeout.
+  if (interruptExiting) {
+    process.exit(130);
+    return;
+  }
   const active = activeProcessOutputs.values().next().value;
   if (!active) return;
+  interruptExiting = true;
   active
     .getReporter()
     .error(
@@ -178,14 +189,30 @@ function handleInterrupt(): void {
         130 as ExitCode,
       ),
     );
-  void flushTelemetry(500).finally(() => process.exit(130));
+  void flushTelemetry(500)
+    .catch(() => undefined)
+    .then(() =>
+      flushOutput(INTERRUPT_FLUSH_TIMEOUT_MS, {
+        mode: "deadline",
+        format: active.getOutputFormat(),
+      }),
+    )
+    .finally(() => process.exit(130));
 }
 
 /** Keep EPIPE protection after run() returns, without retaining completed invocations. */
 function handleStdoutPipeError(error: NodeJS.ErrnoException): void {
+  // Broken pipe: further flush cannot deliver data and may wait out the timeout.
   if (error.code === "EPIPE") process.exit(0);
   const active = activeProcessOutputs.values().next().value;
-  if (active) process.exit(active.getReporter().error(error));
+  if (active) {
+    const code = active.getReporter().error(error);
+    void flushOutput(INTERRUPT_FLUSH_TIMEOUT_MS, {
+      mode: "deadline",
+      format: active.getOutputFormat(),
+    }).finally(() => process.exit(code));
+    return;
+  }
   // Outside an invocation, let other listeners handle errors or retain Node's failure behavior.
   if (process.stdout.listenerCount("error") === 1) throw error;
 }
@@ -193,12 +220,16 @@ function handleStdoutPipeError(error: NodeJS.ErrnoException): void {
 function installProcessHandlers(
   getReporter: () => OutputReporter,
   localize: (text: LocalizedText) => string,
+  getOutputFormat: () => "text" | "json",
 ): () => void {
   if (!process.stdout.listeners("error").includes(handleStdoutPipeError)) {
     process.stdout.on("error", handleStdoutPipeError);
   }
-  if (activeProcessOutputs.size === 0) process.on("SIGINT", handleInterrupt);
-  const context = { getReporter, localize };
+  if (activeProcessOutputs.size === 0) {
+    interruptExiting = false;
+    process.on("SIGINT", handleInterrupt);
+  }
+  const context = { getReporter, localize, getOutputFormat };
   activeProcessOutputs.add(context);
   return () => {
     activeProcessOutputs.delete(context);
@@ -406,6 +437,10 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
               settings,
               debug: (diagnostic) => reporter.output.debug(diagnostic),
               ...resolveModelBaseUrlState(sources),
+              // `auth: "none"` commands keep this Client, so it needs its own
+              // per-run record; the other auth domains get a fresh one from
+              // authStage.
+              requestSignals: createRequestSignals(),
             }),
           };
           await runMiddleware(ctx);
@@ -441,6 +476,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       let translator = createTranslator(DEFAULT_LANGUAGE);
       const localize = (text: LocalizedText) => translator.localize(text);
       const initialSettings = buildOutputSettings({ flags, env: process.env });
+      let outputFormat: "text" | "json" = initialSettings.output;
       let reporter = createOutputReporter({
         settings: initialSettings,
         localize,
@@ -448,7 +484,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         hasCommand,
       });
       const warnings: OutputDiagnostic[] = [];
-      const cleanup = installProcessHandlers(() => reporter, localize);
+      const cleanup = installProcessHandlers(
+        () => reporter,
+        localize,
+        () => outputFormat,
+      );
       try {
         let preControlPlane: PreControlPlane | undefined;
         let controlPlaneError: UsageError | undefined;
@@ -493,8 +533,10 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         }
         const recoveryConfigName = resolveRecoveryConfigName(sources);
         translator = createTranslator(sources.file.language ?? DEFAULT_LANGUAGE);
+        const sourceSettings = buildOutputSettings(sources);
+        outputFormat = sourceSettings.output;
         reporter = createOutputReporter({
-          settings: buildOutputSettings(sources),
+          settings: sourceSettings,
           localize,
           commandPrefix,
           hasCommand,
@@ -512,6 +554,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           localize,
           sources,
           (settings) => {
+            outputFormat = settings.output;
             reporter = createOutputReporter({
               settings,
               localize,
@@ -527,10 +570,30 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       } catch (error) {
         for (const warning of warnings.splice(0)) reporter.output.warning(warning);
         await flushTelemetry(1000);
-        handleError(error, reporter);
+        await handleError(error, reporter);
       } finally {
         cleanup();
       }
     },
   };
+}
+
+/**
+ * Product entry helper: await the invocation, flush tracked stdout/stderr, then
+ * exit. Forces the process to leave after a successful run so Bun keep-alive
+ * sockets cannot linger (~50 s on Windows release binaries).
+ *
+ * `run()` itself stays unchanged for in-process harnesses. Install write
+ * tracking before `run()` so every real write's callback is awaited; an empty
+ * `write("")` flush is not reliable on Bun when stdout is a pipe.
+ *
+ * Success-path flush waits until writes complete (no hard timeout) so slow
+ * readers such as `| less` are not truncated.
+ */
+export async function runToExit(cli: Cli, argv?: string[]): Promise<void> {
+  trackStreamWrites(process.stdout);
+  trackStreamWrites(process.stderr);
+  await cli.run(argv);
+  await flushOutput(null);
+  process.exit(process.exitCode ?? 0);
 }

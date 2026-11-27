@@ -56,11 +56,11 @@ Verify: `bl --version` (prints `bl X.Y.Z`).
 
 For the exact command-to-auth mapping, read the owning skill's `reference/index.md` or run `bl <command> --help`.
 
-| Auth          | How                                                                                              | Used by                                         |
-| ------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| Console       | `bl auth login --console` or `... --console-site international`                                  | Recommended; may create an ordinary API Key     |
-| API key       | `bl auth login --api-key <key>`                                                                  | Existing keys, including Token Plan consumption |
-| OpenAPI AK/SK | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`)   |
+| Auth          | How                                                                                                                                                                  | Used by                                         |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Console       | `bl auth login --console` or `... --console-site international`                                                                                                      | Recommended; may create an ordinary API Key     |
+| API key       | `bl auth login --api-key <key>`                                                                                                                                      | Existing keys, including Token Plan consumption |
+| OpenAPI AK/SK | Setup guide: `bl auth login --open-api`; if you already have keys: `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>`; or Alibaba env vars | Token Plan management / console recovery        |
 
 ```bash
 bl auth status
@@ -71,7 +71,7 @@ bl auth logout --open-api
 
 - Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key
 - Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview
-- Get an Alibaba Cloud AccessKey for OpenAPI AK/SK: https://ram.console.aliyun.com/manage/ak
+- Get an Alibaba Cloud AccessKey for OpenAPI AK/SK: run `bl auth login --open-api` and follow the guide, then paste with `--access-key-id` / `--access-key-secret`; if you already have keys, pass them directly; or https://ram.console.aliyun.com/manage/ak
 - Console login: China site https://bailian.console.aliyun.com?spm=a2ty07.github or international site https://modelstudio.console.alibabacloud.com
 
 ### Token Plan model consumption

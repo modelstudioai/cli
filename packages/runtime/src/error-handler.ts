@@ -7,12 +7,19 @@ import {
   type LocalizedText,
 } from "bailian-cli-core";
 import type { OutputReporter } from "./output/reporter.ts";
+import { flushOutput } from "./output/flush.ts";
 import { sanitizeDiagnosticDetails } from "./output/diagnostics.ts";
 import { API_KEY_PAGE } from "./urls.ts";
 
-/** The invocation owns rendering; this boundary owns process termination. */
-export function handleError(error: unknown, reporter: Pick<OutputReporter, "error">): never {
-  process.exit(reporter.error(error));
+/** Render the error, flush tracked stderr/stdout, then terminate. */
+export async function handleError(
+  error: unknown,
+  reporter: Pick<OutputReporter, "error">,
+): Promise<never> {
+  const code = reporter.error(error);
+  // Wait until writes complete; no timeout, so format-based warnings do not apply.
+  await flushOutput(null);
+  process.exit(code);
 }
 
 export function normalizeError(
@@ -151,9 +158,9 @@ export function errorHint(
       case "expired-console-session":
         return consoleRecoveryHint(commandPrefix, configName);
       case "missing-openapi-pair":
-        return `Set BAILIAN_ACCESS_KEY_ID and BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET), pass --access-key-id and --access-key-secret, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\`.`;
+        return `Set BAILIAN_ACCESS_KEY_ID / BAILIAN_ACCESS_KEY_SECRET (or ALIBABA_CLOUD_*), pass --access-key-id / --access-key-secret, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\` then paste your AccessKey.`;
       case "incomplete-openapi-config":
-        return `Run \`${recoveryCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>", configName)}\` again to save a complete pair.`;
+        return `Save a complete pair with \`${recoveryCommand(commandPrefix, "auth login --open-api --access-key-id <id> --access-key-secret <secret>", configName)}\`, or run \`${recoveryCommand(commandPrefix, "auth login --open-api", configName)}\` for the setup guide.`;
       case "incomplete-openapi-flag":
       case "incomplete-openapi-env":
         return hint;

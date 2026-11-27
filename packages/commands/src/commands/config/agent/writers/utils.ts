@@ -1,5 +1,15 @@
 import { dirname } from "path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from "fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  renameSync,
+  rmSync,
+} from "fs";
 import { BailianError, ExitCode, type LocalizedText } from "bailian-cli-core";
 
 /** Parameters shared by every agent writer. */
@@ -128,25 +138,31 @@ export function readJsonc(path: string): Record<string, unknown> {
 
 /** Atomically write `data` as pretty JSON with owner-only permissions. */
 export function writeJsonAtomic(path: string, data: unknown): void {
-  mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
-  writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n", { mode: 0o600 });
-  renameSync(tmp, path);
+  writeTextAtomic(path, JSON.stringify(data, null, 2) + "\n");
 }
 
 /** Atomically write raw text with owner-only permissions. */
 export function writeTextAtomic(path: string, content: string): void {
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
-  writeFileSync(tmp, content, { mode: 0o600 });
-  renameSync(tmp, path);
+  const tmp = `${path}.${randomUUID()}.tmp`;
+  const handle = openSync(tmp, "wx", 0o600);
+  try {
+    try {
+      writeFileSync(handle, content);
+    } finally {
+      closeSync(handle);
+    }
+    renameSync(tmp, path);
+  } finally {
+    rmSync(tmp, { force: true });
+  }
 }
 
-/** Copy an existing file to a timestamped `.bak.<epoch>` sibling. No-op if absent. */
+/** Private backup. Multiple Agent updates in the same second keep separate copies. */
 export function backup(path: string): void {
   if (!existsSync(path)) return;
-  const timestamp = Math.floor(Date.now() / 1000);
-  copyFileSync(path, `${path}.bak.${timestamp}`);
+  const name = `${path}.bak.${Date.now()}-${randomUUID()}`;
+  writeFileSync(name, readFileSync(path), { flag: "wx", mode: 0o600 });
 }
 
 /** Whether a base URL targets the Anthropic-messages compatible endpoint. */

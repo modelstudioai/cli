@@ -66,11 +66,35 @@ export function buildOpenInvocation(target: string, platform = process.platform)
   return { command: "xdg-open", args: [target] };
 }
 
+export interface OpenPathOptions {
+  /**
+   * Kill the opener after this many milliseconds. Left unset, the promise waits as
+   * long as the OS handler takes — the historical behaviour, and deliberately still
+   * the default: callers like `config ui` map a rejected opener onto an HTTP 400 or a
+   * "could not open" warning, so a blanket cap would turn "slow but already opened"
+   * into a false failure. Callers that must hand the terminal back pass `timeoutMs`.
+   */
+  timeoutMs?: number;
+}
+
+/**
+ * True when {@link openPath} killed the opener at its own cap, as opposed to the OS
+ * handler failing. Any caller that sets `timeoutMs` must branch on this, so an
+ * unconfirmed open is reported as "not confirmed" rather than "could not open".
+ */
+export function isOpenPathTimeout(error: unknown): boolean {
+  return error instanceof Error && (error as { killed?: boolean }).killed === true;
+}
+
 /**
  * Open a local file, directory, or URL with the OS default handler
  * (best-effort, cross-platform).
+ *
+ * When `timeoutMs` is set the child is killed at the cap. Killing is what releases
+ * Node's event loop: `child.unref()` alone does not, because `execFile` keeps ref'd
+ * stdout/stderr pipe handles, so an unref'd opener still delays the prompt.
  */
-export function openPath(target: string): Promise<void> {
+export function openPath(target: string, options: OpenPathOptions = {}): Promise<void> {
   const invocation = buildOpenInvocation(target);
   return new Promise((resolve, reject) => {
     execFile(
@@ -79,6 +103,9 @@ export function openPath(target: string): Promise<void> {
       {
         windowsHide: true,
         windowsVerbatimArguments: invocation.windowsVerbatimArguments,
+        ...(options.timeoutMs === undefined
+          ? {}
+          : { timeout: options.timeoutMs, killSignal: "SIGTERM" }),
       },
       (err) => {
         if (err) reject(err);
@@ -89,6 +116,6 @@ export function openPath(target: string): Promise<void> {
 }
 
 /** Open a URL in the user's default browser (best-effort, cross-platform). */
-export function openInBrowser(url: string): Promise<void> {
-  return openPath(url);
+export function openInBrowser(url: string, options?: OpenPathOptions): Promise<void> {
+  return openPath(url, options);
 }

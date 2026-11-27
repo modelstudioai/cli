@@ -29,7 +29,7 @@ function trainOptions(overrides: Partial<ModelTrainOptions> = {}): ModelTrainOpt
   };
 }
 
-function gatewayEnvelope(entries: unknown[]): unknown {
+function gatewayEnvelope(entries: unknown): unknown {
   return {
     code: "200",
     successResponse: true,
@@ -97,6 +97,25 @@ describe("fetchModelTrainOptions", () => {
       "cpt",
     );
     expect(options?.enabled).toBe(true);
+  });
+
+  test("returns null when the entries payload is null", async () => {
+    const options = await fetchModelTrainOptions(
+      async () => gatewayEnvelope(null),
+      "qwen3-8b",
+      "sft",
+    );
+    expect(options).toBeNull();
+  });
+
+  test.each([
+    ["a paginated object instead of the entries array", gatewayEnvelope({ list: [], total: 0 })],
+    ["an empty object", gatewayEnvelope({})],
+    ["a string payload", gatewayEnvelope("ok")],
+  ])("rejects %s", async (_label, response) => {
+    await expect(fetchModelTrainOptions(async () => response, "qwen3-8b", "sft")).rejects.toThrow(
+      /unexpected response shape/,
+    );
   });
 });
 

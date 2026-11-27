@@ -41,6 +41,18 @@ export {
   type ApiKeyLoginKind,
 } from "./profile-presets.ts";
 export { normalizeModelBaseUrl } from "./model-base-url.ts";
+export {
+  ORDINARY_WORKSPACE_REGIONS,
+  DOMESTIC_WORKSPACE_REGIONS,
+  INTERNATIONAL_WORKSPACE_REGIONS,
+  KNOWN_MODEL_BASE_URLS,
+  classifyModelHost,
+  hostnameOf,
+  type OrdinaryWorkspaceRegion,
+  type DomesticWorkspaceRegion,
+  type ApiKeyEndpointKind as ModelEndpointKind,
+  type ModelHostClass,
+} from "./model-endpoints.ts";
 export { validateTimeout } from "./validation.ts";
 export {
   PRE_ALIYUN_AUTHORIZATION_URL,

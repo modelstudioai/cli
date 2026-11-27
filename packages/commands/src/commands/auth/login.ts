@@ -19,6 +19,7 @@ import {
   runConsoleLogin,
   runConsoleTokenLogin,
 } from "./login-console.ts";
+import { resolveAkskGuideUrl, runOpenApiGuide } from "./login-openapi-guide.ts";
 
 const LOGIN_MODE_HINT = "Choose exactly one login mode: --api-key, --console, or --open-api";
 
@@ -63,7 +64,7 @@ export default defineCommand({
   },
   auth: "none",
   usageArgs:
-    "--api-key <key> | --console [--no-browser | --token-stdin --console-region <region>] | --open-api --access-key-id <id> --access-key-secret <secret>",
+    "--api-key <key> | --console [--no-browser | --token-stdin --console-region <region>] | --open-api [--no-browser] [--console-site <site>] [--access-key-id <id> --access-key-secret <secret>]",
   flags: {
     apiKey: {
       type: "string",
@@ -93,8 +94,9 @@ export default defineCommand({
     noBrowser: {
       type: "switch",
       description: {
-        "en-US": "With --console, print the login URL without opening a browser",
-        "zh-CN": "与 --console 一起使用，只打印登录地址，不自动打开浏览器",
+        "en-US":
+          "With --console or --open-api (setup guide), print the URL without opening a browser",
+        "zh-CN": "与 --console 或 --open-api（配置引导）一起使用，只打印地址，不自动打开浏览器",
       },
     },
     tokenStdin: {
@@ -122,8 +124,10 @@ export default defineCommand({
     openApi: {
       type: "switch",
       description: {
-        "en-US": "Store Alibaba Cloud OpenAPI AK/SK credentials",
-        "zh-CN": "保存阿里云 OpenAPI AK/SK 凭证",
+        "en-US":
+          "Open the AccessKey setup guide, or save keys when --access-key-id and --access-key-secret are both set",
+        "zh-CN":
+          "打开 AccessKey 配置引导；同时提供 --access-key-id 与 --access-key-secret 时则校验并保存",
       },
     },
     accessKeyId: {
@@ -148,15 +152,26 @@ export default defineCommand({
     "--console --no-browser --console-site international",
     "--console --token-stdin --console-site international --console-region ap-southeast-1",
     "--api-key sk-xxxxx",
+    "--open-api",
+    "--open-api --no-browser --console-site international",
     "--open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx",
+    "--open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx --console-site international",
   ],
   validate: (flags) => {
     const apiKeyMode = hasValue(flags.apiKey);
     const consoleMode = flags.console === true;
     const openApiMode = flags.openApi === true;
+    const openApiHasId = hasValue(flags.accessKeyId);
+    const openApiHasSecret = hasValue(flags.accessKeySecret);
+    const openApiPersist = openApiMode && openApiHasId && openApiHasSecret;
 
-    if (!consoleMode && (flags.noBrowser || flags.tokenStdin || hasValue(flags.consoleRegion))) {
-      return "Use --no-browser, --token-stdin and --console-region only with --console. / --no-browser、--token-stdin 和 --console-region 只能与 --console 一起使用。";
+    if (flags.tokenStdin || hasValue(flags.consoleRegion)) {
+      if (!consoleMode) {
+        return "Use --token-stdin and --console-region only with --console. / --token-stdin 和 --console-region 只能与 --console 一起使用。";
+      }
+    }
+    if (flags.noBrowser && !consoleMode && !openApiMode) {
+      return "Use --no-browser with --console or --open-api. / --no-browser 只能与 --console 或 --open-api 一起使用。";
     }
     if (flags.noBrowser && flags.tokenStdin) {
       return "Choose either --no-browser or --token-stdin. / --no-browser 与 --token-stdin 不能同时使用。";
@@ -173,11 +188,14 @@ export default defineCommand({
     if (!apiKeyMode && hasValue(flags.baseUrl)) {
       return "Use --base-url only with --api-key";
     }
-    if (!consoleMode && hasValue(flags.consoleSite)) {
-      return "Use --console-site only with --console";
+    if (hasValue(flags.consoleSite) && !consoleMode && !openApiMode) {
+      return "Use --console-site with --console or --open-api. / --console-site 只能与 --console 或 --open-api 一起使用。";
     }
-    if (!openApiMode && (hasValue(flags.accessKeyId) || hasValue(flags.accessKeySecret))) {
+    if (!openApiMode && (openApiHasId || openApiHasSecret)) {
       return "Use --open-api with --access-key-id and --access-key-secret";
+    }
+    if (openApiMode && flags.noBrowser && openApiPersist) {
+      return "Use --no-browser with --open-api setup guide (omit AK/SK). / --no-browser 只能与 --open-api 配置引导（不带 AK/SK）一起使用。";
     }
 
     // Login writes one credential domain per invocation. Multi-mode inputs such
@@ -185,9 +203,8 @@ export default defineCommand({
     const modeCount = [apiKeyMode, consoleMode, openApiMode].filter(Boolean).length;
     if (modeCount !== 1) return LOGIN_MODE_HINT;
 
-    // AK/SK are a credential pair. `auth login --open-api` persists exactly what
-    // the user typed and does not fill the missing half from env/config.
-    if (openApiMode && (!hasValue(flags.accessKeyId) || !hasValue(flags.accessKeySecret))) {
+    // AK/SK are a credential pair. Persist only what the user typed; guide when neither half is set.
+    if (openApiMode && openApiHasId !== openApiHasSecret) {
       return "Provide --access-key-id and --access-key-secret with --open-api";
     }
 
@@ -305,36 +322,120 @@ export default defineCommand({
     }
 
     if (flags.openApi) {
+      const openApiGuide = !hasValue(flags.accessKeyId) && !hasValue(flags.accessKeySecret);
+      const site = flags.consoleSite || settings.consoleSite || "domestic";
+
+      if (openApiGuide) {
+        if (pre) {
+          throw new BailianError(
+            ctx.localize({
+              "en-US":
+                "The AccessKey browser guide is only available online. In pre-release, provide --access-key-id and --access-key-secret, or use auth --login aliyun.",
+              "zh-CN":
+                "AccessKey 浏览器引导仅支持线上。预发请提供 --access-key-id 和 --access-key-secret，或使用 auth --login aliyun。",
+            }),
+            ExitCode.USAGE,
+          );
+        }
+        const guideUrl = resolveAkskGuideUrl(site);
+        if (settings.dryRun) {
+          ctx.output.result(
+            {
+              action: "auth.login",
+              method: "open-api-guide",
+              url: guideUrl,
+              no_browser: !!flags.noBrowser,
+              config_file: store.path,
+            },
+            {
+              text: ctx.localize(
+                flags.noBrowser
+                  ? {
+                      "en-US": `Would print the AccessKey setup URL without opening a browser:\n${guideUrl}`,
+                      "zh-CN": `将打印 AccessKey 配置地址，不自动打开浏览器：\n${guideUrl}`,
+                    }
+                  : {
+                      "en-US": `Would open the AccessKey setup URL in your browser:\n${guideUrl}`,
+                      "zh-CN": `将在浏览器中打开 AccessKey 配置地址：\n${guideUrl}`,
+                    },
+              ),
+            },
+          );
+          return;
+        }
+        // Global `--config` lives in settings, not command flags; recoveryConfigName
+        // is set for an explicit flag or an active named profile.
+        const pasteConfig = settings.recoveryConfigName?.trim() || undefined;
+        const { url, browserOpened } = await runOpenApiGuide(deps, {
+          site,
+          config: pasteConfig,
+          noBrowser: flags.noBrowser,
+        });
+        ctx.output.result(
+          {
+            action: "auth.login",
+            method: "open-api-guide",
+            url,
+            no_browser: !!flags.noBrowser,
+            browser_opened: browserOpened,
+            config: settings.configName ?? "default",
+            config_file: store.path,
+          },
+          {
+            text: ctx.localize(
+              flags.noBrowser
+                ? {
+                    "en-US": "Browser not opened automatically. Open the URL above manually.",
+                    "zh-CN": "未自动打开浏览器，请手动打开上方地址。",
+                  }
+                : browserOpened
+                  ? {
+                      "en-US": "Opened the setup page in your default browser.",
+                      "zh-CN": "已在默认浏览器打开引导页面。",
+                    }
+                  : {
+                      // The warning above already carries the errno reason and the
+                      // manual-open instruction, so the status line reports what is
+                      // still usable instead of repeating that the browser did not open.
+                      "en-US":
+                        "Guide URL and follow-up command printed above; paste your AccessKey after finishing the guide.",
+                      "zh-CN": "已打印引导地址与后续命令，完成引导后粘贴 AccessKey 即可。",
+                    },
+            ),
+          },
+        );
+        return;
+      }
+
+      const effectiveSettings: Settings = {
+        ...settings,
+        consoleSite: site as "domestic" | "international",
+      };
       if (settings.dryRun) {
-        const preview = previewPreLogin(settings, "openapi");
+        const preview = previewPreLogin(effectiveSettings, "openapi");
         ctx.output.result(
           { action: "auth.login", method: "openapi", config_file: store.path, ...preview?.result },
           {
             text:
               ctx.localize({
-                "en-US": "Would save OpenAPI AK/SK credentials and generate CLI access token.",
-                "zh-CN": "将保存 OpenAPI AK/SK 凭证并生成 CLI access token。",
+                "en-US": "Would save AccessKey credentials and generate a CLI access token.",
+                "zh-CN": "将保存 AccessKey 凭证并生成 CLI access token。",
               }) + (preview ? `\n${ctx.localize(preview.text)}` : ""),
           },
         );
         return;
       }
       const resolvedBaseUrl = store.resolveBaseUrl();
-      const target = pre
-        ? resolveConsoleLoginTarget(settings)
-        : resolveCLIAccessTokenTarget(settings, resolvedBaseUrl);
+      const target = resolveCLIAccessTokenTarget(effectiveSettings, resolvedBaseUrl);
       const gateway = pre ? requirePreConsoleGateway(pre, target) : undefined;
-      const tokenSettings = pre
-        ? { ...settings, consoleRegion: target.region, consoleSite: target.site }
-        : settings;
       ctx.output.progress({
         "en-US": "Generating CLI access token...",
         "zh-CN": "正在生成 CLI access token...",
       });
       const resp = await generateCLIAccessToken({
         identity,
-        settings: tokenSettings,
-        debug: (record) => ctx.output.debug(record),
+        settings: effectiveSettings,
+        debug: deps.debug,
         baseUrl: resolvedBaseUrl,
         accessKeyId: flags.accessKeyId!,
         accessKeySecret: flags.accessKeySecret!,
@@ -342,8 +443,8 @@ export default defineCommand({
       const accessToken = resp.cliAccessToken;
       await validateConsoleAccessToken(
         { ...target, ...(gateway ? { gateway } : {}), token: accessToken },
-        tokenSettings,
-        { debug: (record) => ctx.output.debug(record) },
+        effectiveSettings,
+        { debug: deps.debug },
       );
       await store.login({
         access_key_id: flags.accessKeyId,

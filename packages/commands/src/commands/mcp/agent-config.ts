@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { existsSync, readFileSync, realpathSync, unlinkSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { BailianError, ExitCode, type LocalizedText } from "bailian-cli-core";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import yaml from "yaml";
 import { getPiAgentDir } from "../config/agent/pi-home.ts";
@@ -37,6 +37,30 @@ const OPENCLAW_DIRS = [".openclaw", ".clawdbot", ".moltbot"] as const;
 
 export type NativeMcpAgent = (typeof MCP_AGENT_IDS)[number];
 export type McpTransport = "streamable-http" | "sse";
+export type McpScope = "user" | "project";
+
+const projectFiles: Partial<Record<NativeMcpAgent, string>> = {
+  codex: ".codex/config.toml",
+  "claude-code": ".mcp.json",
+  cursor: ".cursor/mcp.json",
+  qoder: ".qoder/settings.json",
+  "qwen-code": ".qwen/settings.json",
+  gemini: ".gemini/settings.json",
+  opencode: "opencode.json",
+  pi: ".pi/mcp.json",
+  workbuddy: ".workbuddy/mcp.json",
+};
+export const projectAgents = MCP_AGENT_IDS.filter((agent) => projectFiles[agent]);
+
+export class McpRegistrationError extends BailianError {
+  constructor(
+    readonly reason: string,
+    readonly text: LocalizedText,
+    exitCode: ExitCode = ExitCode.GENERAL,
+  ) {
+    super(typeof text === "string" ? text : text["en-US"], exitCode);
+  }
+}
 
 export interface McpConnectionSpec {
   name: string;
@@ -59,6 +83,10 @@ interface ManagedRegistration {
   transport: McpTransport;
   endpoint: string;
   path: string;
+  scope?: McpScope;
+  projectRoot?: string | null;
+  configPath?: string;
+  configPaths?: string[];
   fingerprint: string;
   cliVersion: string;
   updatedAt: string;
@@ -80,7 +108,13 @@ interface AgentAdapter {
   buildEntry(spec: McpConnectionSpec): Record<string, unknown>;
 }
 
-interface ConnectOptions {
+interface RegistrationOptions {
+  scope?: McpScope;
+  projectRoot?: string;
+  dryRun?: boolean;
+}
+
+interface ConnectOptions extends RegistrationOptions {
   agents: NativeMcpAgent[];
   spec: McpConnectionSpec;
   cliVersion: string;
@@ -88,7 +122,7 @@ interface ConnectOptions {
   configDir: string;
 }
 
-interface DisconnectOptions {
+interface DisconnectOptions extends RegistrationOptions {
   agents: NativeMcpAgent[];
   name: string;
   home: string;
@@ -105,19 +139,23 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function invalidConfiguration(path: string) {
+  return new McpRegistrationError("INVALID_CONFIG", {
+    "en-US": `Invalid MCP configuration in ${path}. Correct the file before retrying.`,
+    "zh-CN": `${path} 中的 MCP 配置无效，请修正文件后重试。`,
+  });
+}
+
 function parseObject(path: string, parser: (content: string) => unknown): Record<string, unknown> {
   if (!existsSync(path)) return {};
+  const content = readFileSync(path, "utf8");
   try {
-    const parsed = parser(readFileSync(path, "utf8"));
+    const parsed = parser(content);
     if (!isObject(parsed)) throw new Error("root value is not an object");
     return parsed;
-  } catch (error) {
-    throw new BailianError(
-      `Cannot update MCP configuration because ${path} is invalid.`,
-      ExitCode.GENERAL,
-      "Fix the existing configuration file and retry; it was not changed.",
-      { cause: error },
-    );
+  } catch {
+    // Parser errors may quote credentials from the source file.
+    throw invalidConfiguration(path);
   }
 }
 
@@ -137,10 +175,10 @@ function serverMap(config: Record<string, unknown>, key: string): Record<string,
     return created;
   }
   if (!isObject(current)) {
-    throw new BailianError(
-      `Cannot update MCP configuration because ${key} is not an object.`,
-      ExitCode.GENERAL,
-    );
+    throw new McpRegistrationError("INVALID_CONFIG", {
+      "en-US": `Expected an object for ${key} in the MCP configuration.`,
+      "zh-CN": `MCP 配置中的 ${key} 应为对象。`,
+    });
   }
   return current;
 }
@@ -176,8 +214,12 @@ function mergeConnectStatus(
 function unsupportedSseError(agent: NativeMcpAgent): BailianError {
   const label =
     agent === "codex" ? "Codex" : agent === "deepseek-harness" ? "DeepSeek Harness" : agent;
-  return new BailianError(
-    `${label} does not support SSE MCP servers; use --transport streamable-http.`,
+  return new McpRegistrationError(
+    "TRANSPORT_UNSUPPORTED",
+    {
+      "en-US": `${label} does not support SSE MCP servers. Choose a Streamable HTTP server.`,
+      "zh-CN": `${label} 不支持 SSE MCP 服务，请选择 Streamable HTTP 服务。`,
+    },
     ExitCode.USAGE,
   );
 }
@@ -255,29 +297,21 @@ function dshServerName(entry: Record<string, unknown>): string | undefined {
 function parseDshPatch(path: string): Record<string, unknown> {
   if (!existsSync(path)) return { [DSH_OTHER_PATCHES]: [], [DSH_SERVERS]: {} };
   let parsed: unknown;
+  const content = readFileSync(path, "utf8");
   try {
-    parsed = yaml.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    throw new BailianError(
-      `Cannot update MCP configuration because ${path} is invalid.`,
-      ExitCode.GENERAL,
-      "Fix the existing configuration file and retry; it was not changed.",
-      { cause: error },
-    );
+    parsed = yaml.parse(content);
+  } catch {
+    throw invalidConfiguration(path);
   }
   if (parsed === null || parsed === undefined) {
     return { [DSH_OTHER_PATCHES]: [], [DSH_SERVERS]: {} };
   }
   if (!Array.isArray(parsed)) {
-    throw new BailianError(
-      `Cannot update MCP configuration because ${path} is invalid.`,
-      ExitCode.GENERAL,
-      "Fix the existing configuration file and retry; it was not changed.",
-    );
+    throw invalidConfiguration(path);
   }
 
   const otherPatches: unknown[] = [];
-  const servers: Record<string, unknown> = {};
+  const servers: Record<string, unknown> = Object.create(null);
   for (const item of parsed) {
     if (isObject(item) && Array.isArray(item.insert)) {
       const otherEntries: unknown[] = [];
@@ -504,11 +538,124 @@ function fingerprint(value: unknown): string {
   return createHash("sha256").update(stableJson(value)).digest("hex");
 }
 
-function registrationKey(agent: NativeMcpAgent, name: string): string {
+function registrationKey(agent: NativeMcpAgent, name: string, projectRoot?: string): string {
+  if (projectRoot) return JSON.stringify([agent, projectRoot, name]);
   return `${agent}:${name}`;
 }
 
-function manifestPath(configDir: string): string {
+function targetPaths(
+  agent: NativeMcpAgent,
+  home: string,
+  projectRoot?: string,
+  savedPaths?: string[],
+): string[] {
+  if (!projectRoot) return adapterWritePaths(adapters[agent], home).map((path) => resolve(path));
+  const file = projectFiles[agent];
+  if (!file)
+    throw new McpRegistrationError("SCOPE_UNSUPPORTED", {
+      "en-US": `Project scope is unavailable for ${agent}.`,
+      "zh-CN": `${agent} 不支持项目级 MCP 配置。`,
+    });
+  let files = [file];
+  const accepted = [file];
+  if (agent === "opencode") {
+    accepted.push("opencode.jsonc");
+    if (existsSync(join(projectRoot, "opencode.jsonc"))) files = ["opencode.jsonc"];
+  }
+  if (agent === "workbuddy") {
+    accepted.push(".mcp.json", "mcp.json");
+    if (existsSync(join(home, ".codebuddy"))) {
+      if (!existsSync(join(home, ".workbuddy")) && !existsSync(join(home, ".workbuddy-ai")))
+        files = [];
+      files.push(
+        !existsSync(join(projectRoot, ".mcp.json")) && existsSync(join(projectRoot, "mcp.json"))
+          ? "mcp.json"
+          : ".mcp.json",
+      );
+    }
+  }
+  const paths = files.map((name) => join(projectRoot, name));
+  if (Array.isArray(savedPaths)) {
+    for (const name of accepted) {
+      const candidate = join(projectRoot, name);
+      if (savedPaths.includes(candidate) && !paths.includes(candidate)) paths.push(candidate);
+    }
+  }
+  for (const path of paths) {
+    if (!existsSync(projectRoot)) continue;
+    let parent = path;
+    while (!existsSync(parent)) parent = dirname(parent);
+    const within = relative(realpathSync(projectRoot), realpathSync(parent));
+    if (isAbsolute(within) || within === ".." || within.startsWith(".." + sep)) {
+      throw new McpRegistrationError("CONFIG_OUTSIDE_PROJECT", {
+        "en-US": `The Agent config resolves outside the project: ${path}.`,
+        "zh-CN": `Agent 配置路径指向项目以外的位置：${path}。`,
+      });
+    }
+  }
+  return paths;
+}
+
+function registrationTarget(
+  options: RegistrationOptions & { home: string },
+  manifest: RegistrationManifest,
+  agent: NativeMcpAgent,
+  name: string,
+) {
+  const projectRoot =
+    options.scope === "project" ? (options.projectRoot ?? process.cwd()) : undefined;
+  const key = registrationKey(agent, name, projectRoot);
+  const managed = manifest.registrations[key];
+  const paths = targetPaths(
+    agent,
+    options.home,
+    projectRoot,
+    managed?.configPaths ?? (managed?.configPath ? [managed.configPath] : undefined),
+  );
+  const ambiguous = () =>
+    new McpRegistrationError("AMBIGUOUS_REGISTRATION", {
+      "en-US": `Cannot identify the configuration owned by the saved ${agent} registration for ${name}.`,
+      "zh-CN": `无法确定 ${agent} 中 ${name} 的托管记录对应哪份配置。`,
+    });
+  if (!Object.hasOwn(manifest.registrations, key)) {
+    if (
+      !projectRoot &&
+      Object.values(manifest.registrations).some(
+        (record) => record && !record.scope && record.agent === agent && record.serverCode === name,
+      )
+    )
+      throw ambiguous();
+    return { key, managed: undefined, paths, projectRoot };
+  }
+  if (
+    !managed ||
+    managed.agent !== agent ||
+    managed.name !== name ||
+    managed.serverCode !== name ||
+    !managed.fingerprint ||
+    (managed.scope ?? "user") !== (options.scope ?? "user") ||
+    (managed.projectRoot ?? undefined) !== projectRoot
+  )
+    throw ambiguous();
+  // Version-one records only stored the primary user path. Migrate only recognizable targets.
+  if (!managed.scope) {
+    if (!paths.includes(managed.path)) throw ambiguous();
+    return { key, managed, paths, projectRoot };
+  }
+  const recorded = managed.configPaths ?? [managed.configPath];
+  if (
+    !Array.isArray(recorded) ||
+    !recorded.length ||
+    !recorded.every((path): path is string => typeof path === "string" && isAbsolute(path)) ||
+    recorded[0] !== managed.configPath ||
+    (projectRoot && !recorded.every((path) => paths.includes(path)))
+  )
+    throw ambiguous();
+  // Keep managing recorded files when discovery changes; new WorkBuddy product folders can join on connect.
+  return { key, managed, paths: recorded, projectRoot };
+}
+
+export function manifestPath(configDir: string): string {
   return join(configDir, "mcp-registrations.json");
 }
 
@@ -517,12 +664,86 @@ function readManifest(configDir: string): RegistrationManifest {
   if (!existsSync(path)) return { version: 1, registrations: {} };
   const parsed = parseJson(path);
   if (parsed.version !== 1 || !isObject(parsed.registrations)) {
-    throw new BailianError(
-      `Cannot update MCP registrations because ${path} has an unsupported format.`,
-      ExitCode.GENERAL,
-    );
+    throw invalidConfiguration(path);
   }
   return parsed as unknown as RegistrationManifest;
+}
+
+export function registeredMcpAgents(configDir: string, serverCode: string): NativeMcpAgent[] {
+  const { registrations } = readManifest(configDir);
+  const records = Object.values(registrations);
+  return MCP_AGENT_IDS.filter((agent) =>
+    records.some((record) => record?.agent === agent && record.serverCode === serverCode),
+  );
+}
+
+/** Join managed registrations to the native entries still present on this machine. */
+export function connectedMcpPaths(
+  configDir: string,
+  home: string,
+  serverCodes: Set<string>,
+  onUnreadable: (path: string) => void,
+) {
+  type PathsByAgent = Partial<Record<NativeMcpAgent, string[]>>;
+  const connections = new Map<string, PathsByAgent>();
+  if (serverCodes.size === 0) return connections;
+  let manifest: RegistrationManifest;
+  try {
+    manifest = readManifest(configDir);
+  } catch {
+    onUnreadable(manifestPath(configDir));
+    return connections;
+  }
+  const records = Object.values(manifest.registrations).filter(
+    (record) => record && serverCodes.has(record.serverCode),
+  );
+  for (const agent of MCP_AGENT_IDS) {
+    const managed = records.filter((record) => record.agent === agent);
+    if (!managed.length) continue;
+    const adapter = adapters[agent];
+    const recordsByPath = new Map<string, ManagedRegistration[]>();
+    for (const record of managed) {
+      try {
+        const target = registrationTarget(
+          { home, scope: record.scope, projectRoot: record.projectRoot ?? undefined },
+          manifest,
+          agent,
+          record.name,
+        );
+        if (target.managed !== record) {
+          onUnreadable(manifestPath(configDir));
+          continue;
+        }
+        for (const path of target.paths) {
+          if (!recordsByPath.has(path)) recordsByPath.set(path, []);
+          recordsByPath.get(path)!.push(record);
+        }
+      } catch {
+        onUnreadable(manifestPath(configDir));
+      }
+    }
+    for (const [path, pathRecords] of recordsByPath) {
+      if (!existsSync(path)) continue;
+      let entries: Record<string, unknown>;
+      try {
+        entries = adapter.getServers(adapter.parse(path));
+      } catch {
+        onUnreadable(path);
+        continue;
+      }
+      for (const record of pathRecords) {
+        if (
+          !Object.hasOwn(entries, record.name) ||
+          fingerprint(entries[record.name]) !== record.fingerprint
+        )
+          continue;
+        const paths = connections.get(record.serverCode) ?? {};
+        (paths[agent] ??= []).push(path);
+        connections.set(record.serverCode, paths);
+      }
+    }
+  }
+  return connections;
 }
 
 function assertManagedEntry(
@@ -533,24 +754,23 @@ function assertManagedEntry(
 ): void {
   if (existing === undefined) return;
   if (!managed) {
-    throw new BailianError(
-      `MCP server "${name}" already exists in ${agent} and is not managed by bailian-cli.`,
-      ExitCode.GENERAL,
-      "Choose another server name or remove the existing entry yourself.",
-    );
+    throw new McpRegistrationError("UNMANAGED_CONFLICT", {
+      "en-US": `MCP server "${name}" already exists in ${agent} and is not managed by bailian-cli.`,
+      "zh-CN": `${agent} 中已存在由其他方式管理的同名 MCP 服务“${name}”。`,
+    });
   }
   if (fingerprint(existing) !== managed.fingerprint) {
-    throw new BailianError(
-      `MCP server "${name}" in ${agent} conflicts with the last bailian-cli registration.`,
-      ExitCode.GENERAL,
-      "The entry was changed after registration; resolve it manually before retrying.",
-    );
+    throw new McpRegistrationError("MODIFIED_CONFLICT", {
+      "en-US": `MCP server "${name}" in ${agent} conflicts with the last bailian-cli registration.`,
+      "zh-CN": `${agent} 中的 MCP 服务“${name}”在注册后已被修改。`,
+    });
   }
 }
 
 function restoreWrites(writes: PlannedWrite[]): void {
   for (const write of writes.reverse()) {
     try {
+      if (readFileSync(write.path, "utf8") !== write.content) continue;
       if (write.original === undefined) unlinkSync(write.path);
       else writeTextAtomic(write.path, write.original);
     } catch {
@@ -567,6 +787,12 @@ function applyWrites(
   const completed: PlannedWrite[] = [];
   try {
     for (const write of writes) {
+      const current = existsSync(write.path) ? readFileSync(write.path, "utf8") : undefined;
+      if (current !== write.original)
+        throw new McpRegistrationError("MODIFIED_CONFLICT", {
+          "en-US": `The configuration changed during registration: ${write.path}.`,
+          "zh-CN": `注册期间配置文件发生变化：${write.path}。`,
+        });
       backup(write.path);
       writeTextAtomic(write.path, write.content);
       completed.push(write);
@@ -574,29 +800,33 @@ function applyWrites(
     writeJsonAtomic(manifestPath(configDir), manifest);
   } catch (error) {
     restoreWrites(completed);
-    throw new BailianError(
-      "Failed to update MCP Agent configuration.",
-      ExitCode.GENERAL,
-      undefined,
-      {
-        cause: error,
-      },
-    );
+    throw error;
   }
 }
 
 export function resolveMcpAgentTargets(
   target: NativeMcpAgent | "all",
   home: string,
+  registration?: { configDir: string; server: string; projectRoot?: string },
 ): NativeMcpAgent[] {
   if (target !== "all") return [target];
-  return MCP_AGENT_IDS.filter((agent) => adapters[agent].installed(home));
+  const records = registration ? readManifest(registration.configDir).registrations : {};
+  return MCP_AGENT_IDS.filter(
+    (agent) =>
+      adapters[agent].installed(home) ||
+      (registration &&
+        Object.hasOwn(
+          records,
+          registrationKey(agent, registration.server, registration.projectRoot),
+        )),
+  );
 }
 
 export function connectMcpAgents(options: ConnectOptions): McpAgentResult[] {
   const manifest = readManifest(options.configDir);
   const writes: PlannedWrite[] = [];
   const results: McpAgentResult[] = [];
+  let manifestChanged = false;
 
   for (const agent of options.agents) {
     const adapter = adapters[agent];
@@ -604,19 +834,30 @@ export function connectMcpAgents(options: ConnectOptions): McpAgentResult[] {
       throw unsupportedSseError(agent);
     }
 
-    const paths = adapterWritePaths(adapter, options.home);
-    const primaryPath = adapter.path(options.home);
-    const key = registrationKey(agent, options.spec.name);
-    const managed = manifest.registrations[key];
+    const target = registrationTarget(options, manifest, agent, options.spec.name);
+    const { key, managed, projectRoot } = target;
+    const paths =
+      agent === "workbuddy"
+        ? [...new Set([...target.paths, ...targetPaths(agent, options.home, projectRoot)])]
+        : target.paths;
+    const primaryPath = paths[0];
     const desired = adapter.buildEntry(options.spec);
     const desiredFingerprint = fingerprint(desired);
     let status: McpAgentResult["status"] | undefined;
 
     for (const path of paths) {
+      const original = existsSync(path) ? readFileSync(path, "utf8") : undefined;
       const config = adapter.parse(path);
       const servers = adapter.getServers(config);
-      const existing = servers[options.spec.name];
-      assertManagedEntry(existing, managed, agent, options.spec.name);
+      const existing = Object.hasOwn(servers, options.spec.name)
+        ? servers[options.spec.name]
+        : undefined;
+      assertManagedEntry(
+        existing,
+        target.paths.includes(path) ? managed : undefined,
+        agent,
+        options.spec.name,
+      );
       const pathStatus =
         existing === undefined
           ? "added"
@@ -625,10 +866,15 @@ export function connectMcpAgents(options: ConnectOptions): McpAgentResult[] {
             : "updated";
       status = mergeConnectStatus(status, pathStatus);
       if (pathStatus !== "unchanged") {
-        servers[options.spec.name] = desired;
+        Object.defineProperty(servers, options.spec.name, {
+          value: desired,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
         writes.push({
           path,
-          original: existsSync(path) ? readFileSync(path, "utf8") : undefined,
+          original,
           content: adapter.serialize(config),
         });
       }
@@ -636,7 +882,7 @@ export function connectMcpAgents(options: ConnectOptions): McpAgentResult[] {
 
     const resolvedStatus = status ?? "unchanged";
     results.push({ agent, path: primaryPath, status: resolvedStatus });
-    if (resolvedStatus !== "unchanged") {
+    if (resolvedStatus !== "unchanged" || !managed?.scope) {
       manifest.registrations[key] = {
         agent,
         name: options.spec.name,
@@ -644,14 +890,18 @@ export function connectMcpAgents(options: ConnectOptions): McpAgentResult[] {
         transport: options.spec.transport,
         endpoint: options.spec.endpoint,
         path: primaryPath,
+        scope: options.scope ?? "user",
+        projectRoot: projectRoot ?? null,
+        configPath: primaryPath,
+        configPaths: paths,
         fingerprint: desiredFingerprint,
         cliVersion: options.cliVersion,
         updatedAt: new Date().toISOString(),
       };
+      manifestChanged = true;
     }
   }
-
-  if (writes.length > 0) applyWrites(writes, manifest, options.configDir);
+  if (!options.dryRun && manifestChanged) applyWrites(writes, manifest, options.configDir);
   return results;
 }
 
@@ -663,28 +913,26 @@ export function disconnectMcpAgents(options: DisconnectOptions): McpAgentResult[
 
   for (const agent of options.agents) {
     const adapter = adapters[agent];
-    const primaryPath = adapter.path(options.home);
-    const key = registrationKey(agent, options.name);
-    const managed = manifest.registrations[key];
+    const { key, managed, paths } = registrationTarget(options, manifest, agent, options.name);
+    const primaryPath = paths[0];
     if (!managed) {
       results.push({ agent, path: primaryPath, status: "absent" });
       continue;
     }
 
     let removed = false;
-    let sawExisting = false;
-    for (const path of adapterWritePaths(adapter, options.home)) {
+    for (const path of paths) {
+      const original = existsSync(path) ? readFileSync(path, "utf8") : undefined;
       const config = adapter.parse(path);
       const servers = adapter.getServers(config);
-      const existing = servers[options.name];
+      const existing = Object.hasOwn(servers, options.name) ? servers[options.name] : undefined;
       if (existing === undefined) continue;
-      sawExisting = true;
       assertManagedEntry(existing, managed, agent, options.name);
       delete servers[options.name];
       removed = true;
       writes.push({
         path,
-        original: readFileSync(path, "utf8"),
+        original,
         content: adapter.serialize(config),
       });
     }
@@ -694,11 +942,11 @@ export function disconnectMcpAgents(options: DisconnectOptions): McpAgentResult[
     results.push({
       agent,
       path: primaryPath,
-      status: sawExisting && removed ? "removed" : "absent",
+      status: removed ? "removed" : "absent",
     });
   }
 
-  if (writes.length > 0 || manifestChanged) {
+  if (!options.dryRun && (writes.length > 0 || manifestChanged)) {
     applyWrites(writes, manifest, options.configDir);
   }
   return results;

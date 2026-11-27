@@ -93,7 +93,7 @@ test("all command metadata preserves standalone wording and resolves hosted refe
   };
   expect(JSON.parse(serialized.replaceAll("aliyun bl", "bl"))).toEqual(qualifiedStandalone);
   const skill = hosted.commands.find((command) => command.path.join(" ") === "bl skill init")!;
-  expect(JSON.stringify(skill.notes)).toContain("Equivalent to: `aliyun bl skill add --all`");
+  expect(JSON.stringify(skill.notes)).toContain("`aliyun bl skill add --all`");
 });
 
 // Real subprocesses below verify the product entrypoint reads the inherited host marker.

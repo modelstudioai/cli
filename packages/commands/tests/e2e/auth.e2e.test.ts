@@ -173,7 +173,9 @@ describe("e2e: auth", () => {
       "international",
     ]);
     expect(consoleSiteWithoutConsole.exitCode).toBe(2);
-    expect(consoleSiteWithoutConsole.stderr).toMatch(/Use --console-site only with --console/);
+    expect(consoleSiteWithoutConsole.stderr).toMatch(
+      /Use --console-site with --console or --open-api/,
+    );
   });
 
   test("auth login --open-api 要求 AK/SK 成对输入", async () => {
@@ -186,6 +188,84 @@ describe("e2e: auth", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/Provide --access-key-id and --access-key-secret with --open-api/);
+  });
+
+  test("auth login --open-api 无 AK/SK 时走浏览器引导（--no-browser / --dry-run）", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-auth-openapi-guide-"));
+    try {
+      const dryRun = await runCommandE2e(
+        AUTH_ROUTES,
+        ["auth", "login", "--open-api", "--dry-run"],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(dryRun.exitCode, dryRun.stderr).toBe(0);
+      expect(dryRun.stdout).toMatch(/aksk-guide/);
+      expect(dryRun.stdout).toMatch(/Would open the AccessKey setup URL/);
+      expect(existsSync(join(configDir, "config.json"))).toBe(false);
+
+      const noBrowser = await runCommandE2e(
+        AUTH_ROUTES,
+        [
+          "auth",
+          "login",
+          "--open-api",
+          "--no-browser",
+          "--console-site",
+          "international",
+          "--config",
+          "release-review",
+        ],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(noBrowser.exitCode, noBrowser.stderr).toBe(0);
+      expect(noBrowser.stdout + noBrowser.stderr).toMatch(
+        /modelstudio\.console\.alibabacloud\.com\/aksk-guide/,
+      );
+      expect(noBrowser.stdout + noBrowser.stderr).toMatch(
+        /auth login --open-api --access-key-id <id> --access-key-secret <secret> --console-site international --config release-review/,
+      );
+      expect(existsSync(join(configDir, "config.json"))).toBe(false);
+
+      const persistWithSite = await runCommandE2e(
+        AUTH_ROUTES,
+        [
+          "auth",
+          "login",
+          "--open-api",
+          "--access-key-id",
+          "LTAI-e2e",
+          "--access-key-secret",
+          "secret-e2e",
+          "--console-site",
+          "international",
+          // Mirror the full echoed paste command, `--config` included, so the
+          // guide output stays something the user can paste back verbatim.
+          "--config",
+          "release-review",
+          "--dry-run",
+        ],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(persistWithSite.exitCode, persistWithSite.stderr).toBe(0);
+      expect(persistWithSite.stdout).toMatch(/Would save AccessKey credentials/);
+
+      const noBrowserWithKeys = await runCommandE2e(AUTH_ROUTES, [
+        "auth",
+        "login",
+        "--open-api",
+        "--no-browser",
+        "--access-key-id",
+        "LTAI-e2e",
+        "--access-key-secret",
+        "secret-e2e",
+      ]);
+      expect(noBrowserWithKeys.exitCode).toBe(2);
+      expect(noBrowserWithKeys.stderr).toMatch(
+        /Use --no-browser with --open-api setup guide \(omit AK\/SK\)/,
+      );
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
   });
 
   test("auth login --open-api --dry-run 使用 placeholder 时不请求服务端、不写配置", async () => {
@@ -213,7 +293,7 @@ describe("e2e: auth", () => {
         },
       );
       expect(exitCode, stderr).toBe(0);
-      expect(stdout).toContain("Would save OpenAPI AK/SK credentials");
+      expect(stdout).toContain("Would save AccessKey credentials");
       expect(existsSync(join(configDir, "config.json"))).toBe(false);
     } finally {
       rmSync(configDir, { recursive: true, force: true });
@@ -1190,12 +1270,17 @@ describe("e2e: auth", () => {
     expect(data.console?.region).toBe("cn-beijing");
     expect(data.hint).toContain("尚未配置模型 API Key");
     expect(data.hint).toContain("bl auth login --api-key <key>");
+    expect(data.hint).toContain("OpenAPI（AK/SK）未配置");
+    expect(data.hint).toContain("bl auth login --open-api");
     expect(json.stdout).not.toContain("console-token-placeholder");
 
     const text = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "text"], env);
     expect(text.exitCode, text.stderr).toBe(0);
     expect(text.stdout).toContain("API key (model):  not configured");
     expect(text.stdout).toContain("尚未配置模型 API Key");
+    expect(text.stdout).toContain("OpenAPI (AK/SK):  not configured");
+    expect(text.stdout).toContain("OpenAPI（AK/SK）未配置");
+    expect(text.stdout).toContain("bl auth login --open-api");
   });
 
   test("auth logout 清除当前 Config 的全部凭证和 Base URL，保留普通配置", async () => {

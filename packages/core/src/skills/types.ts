@@ -1,7 +1,7 @@
 /**
  * Data structures for the unified skill publishing protocol (symmetric with FC publisher skills-publish.mjs).
  *
- * Remote layout (public-read OSS, the sole data source for `bl skill`):
+ * Public OSS layout used by the registry installer:
  *   <registry>/index.json                       — skill catalog (SkillsIndex)
  *   <registry>/<name>/sha256-<hex>.tar.br       — content-addressed skill object (tar + brotli);
  *     entry.object names the exact file, so index.json is the single atomic commit point.
@@ -14,6 +14,8 @@
 
 /** A single skill entry in index.json */
 export interface SkillIndexEntry {
+  /** Stable cloud ID, when the publisher associates this package with a catalog entry. */
+  remoteId?: string;
   /** Reserved for the skill's own semantic version (x.y.z); not yet populated by the publisher */
   version?: string;
   /** Beijing-time publish timestamp; refreshed whenever content changes — the human-facing release marker */
@@ -44,8 +46,18 @@ export interface SkillLockEntry {
   /** Publish timestamp of the installed revision (for display) */
   publishedAt?: string;
   installedAt: string;
-  /** Reserved: future support for github/gitlab and other sources */
-  sourceType: "oss";
+  sourceType: "oss" | "openapi";
+  sourceLocation?: string;
+  remoteId?: string;
+  canonicalName?: string;
+  installedVersion?: string;
+  pinnedVersion?: string;
+  cacheKey?: string;
+  /** Target-specific records identify their installation directly. Legacy OSS records use links. */
+  agent?: string;
+  scope?: "user" | "project";
+  projectRoot?: string;
+  installedPath?: string;
   description?: string;
   /** Fan-out link/copy paths to each agent; used for precise reclamation on remove */
   links?: string[];

@@ -156,7 +156,7 @@ test("human confirmation output includes the actual plan and notices", async () 
   try {
     await runCommandStage(context, async () => {});
   } catch (error) {
-    expect(() =>
+    await expect(
       handleError(
         error,
         createOutputReporter({
@@ -164,7 +164,7 @@ test("human confirmation output includes the actual plan and notices", async () 
           commandPrefix: "fixture",
         }),
       ),
-    ).toThrow("exit-confirmation");
+    ).rejects.toThrow("exit-confirmation");
   }
   expect(output.join("")).toContain("creates");
   expect(output.join("")).toContain("index");
@@ -185,3 +185,24 @@ test("confirmed preparation keeps billing notices as JSONL under quiet", async (
     warning: { code: "BILLING", message: "Creates a billed resource" },
   });
 });
+
+test.each(["preview", "confirmation", "success", "failure"] as const)(
+  "disposes temporary preparation resources on %s",
+  async (outcome) => {
+    const { context, prepare, run } = fixture({
+      dryRun: outcome === "preview",
+      confirmed: outcome !== "confirmation",
+    });
+    const dispose = vi.fn();
+    const renderDryRun = vi.fn();
+    context.command.prepare = async () => ({ ...(await prepare()), dispose, renderDryRun });
+    if (outcome === "failure") run.mockRejectedValueOnce(new Error("execution failed"));
+    vi.spyOn(context.output, "warning").mockImplementation(() => {});
+    const execution = runCommandStage(context, async () => {});
+    if (outcome === "confirmation") await expect(execution).rejects.toMatchObject({ exitCode: 7 });
+    else if (outcome === "failure") await expect(execution).rejects.toThrow("execution failed");
+    else await execution;
+    expect(renderDryRun).toHaveBeenCalledTimes(outcome === "preview" ? 1 : 0);
+    expect(dispose).toHaveBeenCalledOnce();
+  },
+);

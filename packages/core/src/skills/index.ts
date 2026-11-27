@@ -49,3 +49,5 @@ export {
   type SkillInstallRecord,
 } from "./installer.ts";
 export { listSkillDirsOnDisk, computeSkillStatuses } from "./status.ts";
+export { installationRoots, readCatalogInstalls } from "./catalog-installs.ts";
+export { downloadSkillZip, extractSkillZip } from "./zip.ts";

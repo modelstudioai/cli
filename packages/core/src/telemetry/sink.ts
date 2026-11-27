@@ -11,14 +11,13 @@ import {
 } from "./event.ts";
 import { detectEnv } from "./env.ts";
 import { ensureUid, loadUid } from "./uid.ts";
+import { telemetryRemoteTarget, type TelemetrySite } from "./site.ts";
 import Tracker from "../../lib/remote-telemetry/tracker.cjs";
 import EventPlugin from "../../lib/remote-telemetry/event-plugin.cjs";
 
 const TELEMETRY_FILE = () => join(getConfigDir(), "telemetry.jsonl");
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-
-let remoteSendEvent: ((name: string, opts: Record<string, unknown>) => void) | undefined;
 
 // Track in-flight remote sends so we can wait for them before process exit.
 // The underlying tracker is fire-and-forget (fetch starts without holding the promise);
@@ -31,24 +30,38 @@ interface PendingSend {
   promise: Promise<void>;
 }
 const inflightSends = new Set<PendingSend>();
-let remoteClient: any = undefined;
-let remoteInitialized = false;
+/** In-flight local JSONL writes; flush must wait so process.exit cannot drop them. */
+const inflightLocalWrites = new Set<Promise<void>>();
+
+interface RemoteSiteClient {
+  client: {
+    _sendAll?: () => void;
+    send: (payload: string, options?: { signal?: AbortSignal }) => unknown;
+  };
+  sendEvent: (name: string, opts: Record<string, unknown>) => void;
+}
+
+/** One Tracker per telemetry site so domestic/intl never share pid/endpoint. */
+const remoteBySite = new Map<TelemetrySite, RemoteSiteClient>();
 
 /**
- * Construct the tracker on first remote report so disabled telemetry neither
- * constructs the tracker nor creates the uid file. Fully synchronous; see ensureUid.
+ * Construct the tracker on first remote report for a site so disabled telemetry
+ * neither constructs the tracker nor creates the uid file. Fully synchronous; see ensureUid.
  */
-function initRemote(): void {
-  if (remoteInitialized) return;
-  remoteInitialized = true;
+function initRemoteForSite(site: TelemetrySite): RemoteSiteClient | undefined {
+  const existing = remoteBySite.get(site);
+  if (existing) return existing;
   try {
     const uid = ensureUid();
+    const target = telemetryRemoteTarget(site);
     // `env` on the Tracker top-level config becomes a URL query param; AEM's
     // "environment" column (raw field `env`) reads it. Allowed values:
     // prod/pre/daily/dev. We currently use only prod/dev.
     // anonymous install id as `uid`, which AEM exposes as a dashboard field.
+    // Cross-site uid/device_id stay shared (compliance-accepted).
     const client = new Tracker({
-      pid: "bailian-cli-node",
+      pid: target.pid,
+      endpoint: target.endpoint,
       env: detectEnv(),
       ...(uid ? { uid } : {}),
     });
@@ -75,19 +88,25 @@ function initRemote(): void {
       inflightSends.add(pending);
       return pending.promise;
     };
-    remoteClient = client;
-    remoteSendEvent = client.use(EventPlugin);
+    const entry: RemoteSiteClient = {
+      client,
+      sendEvent: client.use(EventPlugin),
+    };
+    remoteBySite.set(site, entry);
+    return entry;
   } catch {
     // Telemetry must never affect the CLI main flow
+    return undefined;
   }
 }
 
 /**
- * Best-effort wait for all in-flight telemetry sends.
+ * Best-effort wait for in-flight local JSONL writes and remote sends.
  *
- * 1. Call `_sendAll` to drain the tracker's debounce queue so events still in
- *    the 500ms merge window are pushed to the network immediately.
- * 2. Wait for sends within the budget; on timeout, cancel DNS/HTTP/body work.
+ * 1. Call `_sendAll` on every site tracker to drain the debounce queue so events
+ *    still in the 500ms merge window are pushed to the network immediately.
+ * 2. Wait for local writes and remote sends within the budget; on timeout,
+ *    cancel DNS/HTTP/body work (local writes are not cancellable).
  *
  * Telemetry must never block the CLI: callers should pass a short timeout
  * (e.g. 1000ms) and always race against it. Errors and timeouts are swallowed.
@@ -95,20 +114,20 @@ function initRemote(): void {
 export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
   let deadline: ReturnType<typeof setTimeout> | undefined;
   try {
-    if (remoteClient) {
+    for (const entry of remoteBySite.values()) {
       try {
-        // Drain the debounce queue so events stuck in the 500ms merge window
-        // are sent immediately (each send is appended to inflightSends).
-        if (typeof remoteClient._sendAll === "function") {
-          remoteClient._sendAll();
+        if (typeof entry.client._sendAll === "function") {
+          entry.client._sendAll();
         }
       } catch {
         // flush itself must never throw
       }
     }
-    if (inflightSends.size === 0) return;
+    const localWrites = [...inflightLocalWrites];
+    const remotePromises = [...inflightSends].map((pending) => pending.promise);
+    if (localWrites.length === 0 && remotePromises.length === 0) return;
     await Promise.race([
-      Promise.allSettled([...inflightSends].map((pending) => pending.promise)),
+      Promise.allSettled([...localWrites, ...remotePromises]),
       new Promise<void>((resolve) => {
         deadline = setTimeout(() => {
           for (const pending of inflightSends) pending.controller.abort();
@@ -125,6 +144,15 @@ export async function flushTelemetry(timeoutMs = 1000): Promise<void> {
 }
 
 export async function localSink(event: TrackingEvent | FirstInstallEvent): Promise<void> {
+  let pending!: Promise<void>;
+  pending = writeLocalEvent(event).finally(() => {
+    inflightLocalWrites.delete(pending);
+  });
+  inflightLocalWrites.add(pending);
+  await pending;
+}
+
+async function writeLocalEvent(event: TrackingEvent | FirstInstallEvent): Promise<void> {
   try {
     await ensureConfigDir();
     const path = TELEMETRY_FILE();
@@ -151,16 +179,26 @@ export async function localSink(event: TrackingEvent | FirstInstallEvent): Promi
 /** Returns whether the event was queued. Callers must not await before this function enqueues. */
 export async function remoteSink(event: TrackingEvent | FirstInstallEvent): Promise<boolean> {
   try {
-    initRemote();
-    if (!remoteSendEvent) return false;
+    // first_install has no command/auth context; it always reports domestic (best-effort).
+    const site: TelemetrySite = isFirstInstallEvent(event)
+      ? "domestic"
+      : (event.site ?? "domestic");
+    const entry = initRemoteForSite(site);
+    if (!entry) return false;
     if (isFirstInstallEvent(event)) {
-      remoteSendEvent(FIRST_INSTALL_EVENT_NAME, buildFirstInstallAemOptions(event));
+      entry.sendEvent(FIRST_INSTALL_EVENT_NAME, buildFirstInstallAemOptions(event));
     } else {
-      remoteSendEvent(event.command, buildRemoteAemOptions(event));
+      entry.sendEvent(event.command, buildRemoteAemOptions(event));
     }
     return true;
   } catch {
     // Telemetry must never affect the CLI main flow
     return false;
   }
+}
+
+/** Test-only: drop site trackers so the next remoteSink rebuilds them. */
+export function resetRemoteTelemetryForTests(): void {
+  remoteBySite.clear();
+  inflightSends.clear();
 }

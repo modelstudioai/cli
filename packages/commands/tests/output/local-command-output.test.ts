@@ -13,6 +13,7 @@ import {
   type AnyCommand,
   type LocalizedText,
 } from "bailian-cli-core";
+import { runPreparedCommand } from "../../../runtime/src/preparation.ts";
 import { createOutputReporter } from "bailian-cli-runtime";
 import { enterIsolatedHome } from "e2e/isolation";
 import authLogin from "../../src/commands/auth/login.ts";
@@ -70,7 +71,7 @@ const scenarios: Scenario[] = [
   {
     name: "skill list installed",
     command: skillList,
-    flags: {},
+    flags: { source: "oss" },
     seedSkill: true,
     registry: {
       "bailian-fixture": {
@@ -83,12 +84,22 @@ const scenarios: Scenario[] = [
   {
     name: "skill update up-to-date",
     command: skillUpdate,
-    flags: {},
+    flags: { all: true },
     seedSkill: true,
     registry: { "bailian-fixture": { contentHash: "fixture" } },
   },
-  { name: "skill update delisted", command: skillUpdate, flags: {}, seedSkill: true },
-  { name: "skill remove installed", command: skillRemove, flags: { name: "all" }, seedSkill: true },
+  {
+    name: "skill update delisted",
+    command: skillUpdate,
+    flags: { all: true },
+    seedSkill: true,
+  },
+  {
+    name: "skill remove installed",
+    command: skillRemove,
+    flags: { name: "all" },
+    seedSkill: true,
+  },
   {
     name: "skill remove preview",
     command: skillRemove,
@@ -99,7 +110,7 @@ const scenarios: Scenario[] = [
   {
     name: "skill add preview",
     command: skillAdd,
-    flags: { all: true },
+    flags: { all: true, withMcp: false },
     registry: { "bailian-fixture": {} },
     dryRun: true,
   },
@@ -143,10 +154,10 @@ const scenarios: Scenario[] = [
     },
   },
   { name: "config UI preview", command: configUi, flags: {}, dryRun: true },
-  { name: "skill list empty", command: skillList, flags: {} },
+  { name: "skill list empty", command: skillList, flags: { source: "oss" } },
   { name: "skill add empty", command: skillAdd, flags: { all: true } },
   { name: "skill remove empty", command: skillRemove, flags: { name: "all" } },
-  { name: "skill update empty", command: skillUpdate, flags: {} },
+  { name: "skill update empty", command: skillUpdate, flags: { all: true } },
   { name: "skill init empty", command: skillInit, flags: {} },
   { name: "MCP list", command: mcpList, flags: {} },
   { name: "MCP tools", command: mcpTools, flags: { server: "fixture" } },
@@ -237,30 +248,47 @@ async function invoke(
           }
         : {}),
     });
-    vi.spyOn(client, "console").mockResolvedValue({
-      data: { DataV2: { data: { data: { total: 0, mcpServerDetailList: [] } } } },
-    });
+    if (scenario.command === mcpList) {
+      vi.spyOn(client, "requestJson").mockResolvedValue({
+        success: true,
+        data: { total: 0, items: [] },
+      });
+    }
+    if (scenario.command === mcpConnect) {
+      vi.spyOn(client, "requestJson").mockResolvedValue({
+        success: true,
+        data: {
+          mcp_code: "fixture",
+          type: "OFFICIAL",
+          server_status: "ACTIVATED",
+          dashscope_endpoint: "https://fixture.invalid/mcp",
+        },
+      });
+    }
     const closed = vi.fn();
     vi.spyOn(client, "connectBailianMcp").mockResolvedValue({
       url: "https://fixture.invalid/mcp",
       client: {
-        listTools: async () => [],
+        listToolsPage: async () => ({ tools: [] }),
         callTool: async () => ({ content: [], ...retained }),
         close: closed,
       },
     } as never);
     let error: unknown;
     try {
-      await scenario.command.run({
+      const ctx = {
         identity,
         settings,
         flags: scenario.flags,
+        command: scenario.command,
+        confirmed: false,
         client,
         localize,
         output: reporter.output,
         configStore: makeConfigStore(),
         authStore: makeAuthStore({ flags: {}, file: {}, env: {} }),
-      } as never);
+      } as never;
+      await runPreparedCommand(ctx);
     } catch (caught) {
       error = caught;
     }

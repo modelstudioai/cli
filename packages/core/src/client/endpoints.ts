@@ -268,6 +268,25 @@ export function mcpWebSearchPath(): string {
   return "/api/v1/mcps/WebSearch/mcp";
 }
 
+export function mcpBaseUrl(workspaceId: string): string {
+  return workspaceEndpoint(workspaceId, "");
+}
+
+export function mcpServersPath(serverCode?: string): string {
+  const collection = "/api/v1/mcp/servers";
+  return serverCode === undefined ? collection : `${collection}/${encodeURIComponent(serverCode)}`;
+}
+
+export function skillBaseUrl(workspaceId: string): string {
+  return workspaceEndpoint(workspaceId, "");
+}
+
+export function skillsPath(skillId?: string): string {
+  if (skillId !== undefined && (!skillId.trim() || skillId === "." || skillId === ".."))
+    throw new UsageError("Invalid skill ID. / Skill ID 无效。");
+  return skillId === undefined ? "/api/v1/skills" : `/api/v1/skills/${encodeURIComponent(skillId)}`;
+}
+
 // ---- Datasets / Fine-tune Files ----
 
 /**
@@ -322,6 +341,11 @@ export function finetuneLogsPath(jobId: string): string {
 /** GET /api/v1/fine-tunes/fine-tunes-params — training hyper-parameter config. */
 export function finetuneParamsPath(): string {
   return "/api/v1/fine-tunes/fine-tunes-params";
+}
+
+/** GET /api/v1/fine-tunes/preset-datasets — preset datasets available for mixing. */
+export function finetunePresetDatasetsPath(): string {
+  return "/api/v1/fine-tunes/preset-datasets";
 }
 
 /** GET /api/v1/fine-tunes/{job_id}/basic_metrics — training metrics. */

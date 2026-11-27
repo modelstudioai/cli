@@ -3,7 +3,7 @@ import { createSocket } from "node:dgram";
 import type { EventEmitter } from "node:events";
 import { createServer, type Server } from "node:http";
 import { createServer as createTcpServer, type Socket } from "node:net";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -93,6 +93,7 @@ describe.each(["node", ...(hasBun ? ["bun"] : [])])(
       "dns",
       "tls",
       "fast",
+      "fast-run-to-exit",
       "disabled",
       "do-not-track",
       ...(runtime === "node" ? ["tls-no-proxy"] : []),
@@ -105,6 +106,7 @@ describe.each(["node", ...(hasBun ? ["bun"] : [])])(
         join(directory, "config.json"),
         JSON.stringify({ language: "en-US", telemetry: mode !== "disabled" }),
       );
+      const forceExit = mode === "fast-run-to-exit";
       const disabled = mode === "disabled" || mode === "do-not-track";
       const isolated = buildIsolatedCliEnv({
         overrides: {
@@ -152,18 +154,40 @@ describe.each(["node", ...(hasBun ? ["bun"] : [])])(
         const { stdout, stderr } = await execution;
         const exitedAt = performance.now();
         expect(JSON.parse(stdout)).toEqual({ ok: true });
-        const { outputToRunMs, ...connectionStatus } = JSON.parse(stderr);
-        expect(connectionStatus).toEqual({ requests: disabled ? 0 : 1, closed: !disabled });
-        if (["fast", "headers", "body"].includes(mode)) {
-          expect(outputToRunMs).toBeGreaterThanOrEqual(0);
-          expect(outputToRunMs, "output completion to run() return").toBeLessThan(3_000);
+        if (forceExit) {
+          // runToExit already called process.exit; judge from the parent's
+          // evidence that nothing was dropped and nothing lingered.
+          // The synthetic immediate response never touches the fixture server,
+          // so the remote send settles within microtasks — the worst-case race
+          // for the forced exit to drop the pending local JSONL write.
+          expect(requests).toHaveLength(0);
+          const telemetryPath = join(directory, "telemetry.jsonl");
+          expect(existsSync(telemetryPath), "runToExit dropped the in-flight local write").toBe(
+            true,
+          );
+          const events = readFileSync(telemetryPath, "utf8")
+            .split("\n")
+            .filter((line) => line.trim() !== "")
+            .map((line) => JSON.parse(line) as { command?: string });
+          expect(events.some((entry) => entry.command === "probe")).toBe(true);
           expect(outputCompletedAt).toBeDefined();
           expect(exitedAt - outputCompletedAt!, "output completion to process exit").toBeLessThan(
             3_000,
           );
+        } else {
+          const { outputToRunMs, ...connectionStatus } = JSON.parse(stderr);
+          expect(connectionStatus).toEqual({ requests: disabled ? 0 : 1, closed: !disabled });
+          if (["fast", "headers", "body"].includes(mode)) {
+            expect(outputToRunMs).toBeGreaterThanOrEqual(0);
+            expect(outputToRunMs, "output completion to run() return").toBeLessThan(3_000);
+            expect(outputCompletedAt).toBeDefined();
+            expect(exitedAt - outputCompletedAt!, "output completion to process exit").toBeLessThan(
+              3_000,
+            );
+          }
         }
         expect(dnsQueries).toBe(0);
-        if (!disabled && !mode.startsWith("tls")) {
+        if (!disabled && !forceExit && !mode.startsWith("tls")) {
           expect(requests[0]?.method).toBe("POST");
           const body = JSON.parse(requests[0]!.body) as { gokey: string; gmkey: string };
           expect(body.gmkey).toBe("EXP");

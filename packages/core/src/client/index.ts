@@ -18,6 +18,10 @@ export {
   memorySearchPath,
   memorySkillExportPath,
   mcpWebSearchPath,
+  mcpBaseUrl,
+  mcpServersPath,
+  skillBaseUrl,
+  skillsPath,
   modelsLimitsPath,
   modelsPermissionsPath,
   profileSchemaItemPath,
@@ -95,6 +99,15 @@ export {
   type ClientOpenApiQueryOpts,
   type ClientOpenApiJsonOpts,
 } from "./client.ts";
+export {
+  SERVICE_PLANES,
+  classifyServicePlane,
+  productSiteOf,
+  type PlaneSite,
+  type ProductSite,
+  type ServicePlane,
+} from "./service-planes.ts";
+export { createRequestSignals, type RequestSignals } from "./request-signals.ts";
 export {
   createBailianControlUser,
   listBailianControlWorkspaces,

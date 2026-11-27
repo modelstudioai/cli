@@ -1,8 +1,13 @@
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import { detectInstalledAgents, fanOutSkillToAgents, type AgentTarget } from "./agents.ts";
+import {
+  detectInstalledAgents,
+  fanOutSkillToAgents,
+  type AgentTarget,
+  type LinkResult,
+} from "./agents.ts";
 import {
   atomicSwap,
   computeDirContentHash,
@@ -43,6 +48,20 @@ export async function installSkillFromBuffer(
   expectedContentHash?: string,
   windowsPathRoots?: string[],
 ): Promise<InstalledSkill> {
+  return installSkillFromSource(
+    name,
+    (directory) => extractTarBr(tarBrBuffer, directory),
+    expectedContentHash,
+    windowsPathRoots,
+  );
+}
+
+async function installSkillFromSource(
+  name: string,
+  extract: (directory: string) => void | Promise<void>,
+  expectedContentHash?: string,
+  windowsPathRoots?: string[],
+): Promise<InstalledSkill> {
   assertSafeName(name);
   const skillsDir = getSkillsDir();
   const dest = join(skillsDir, name);
@@ -50,7 +69,7 @@ export async function installSkillFromBuffer(
   const tmpDir = join(skillsDir, `.tmp-${name}-${process.pid}-${Date.now()}`);
   try {
     mkdirSync(tmpDir, { recursive: true });
-    await extractTarBr(tarBrBuffer, tmpDir);
+    await extract(tmpDir);
     const projectedRoots = windowsPathRoots ?? (process.platform === "win32" ? [dest] : []);
     const pathViolation = findWindowsPathViolation(tmpDir, projectedRoots);
     if (pathViolation) {
@@ -120,6 +139,8 @@ export function removeSkillDir(name: string): boolean {
  */
 export function buildSkillLockEntry(entry: SkillIndexEntry, links: string[]): SkillLockEntry {
   return {
+    remoteId: entry.remoteId,
+    installedVersion: entry.version,
     ...(entry.contentHash ? { contentHash: entry.contentHash } : {}),
     ...(entry.publishedAt ? { publishedAt: entry.publishedAt } : {}),
     installedAt: new Date().toISOString(),
@@ -134,6 +155,7 @@ export interface SkillInstallRecord {
   lockEntry: SkillLockEntry;
   /** Ids of agents that actually received a link/copy (skipped ones excluded) */
   linkedAgents: string[];
+  linkResults: LinkResult[];
 }
 
 /**
@@ -151,15 +173,24 @@ export async function installSkillWithFanout(
   agents: AgentTarget[] = detectInstalledAgents(),
   recordedLinks: string[] = [],
   downloadAttempts?: number,
+  preparedDirectory?: string,
 ): Promise<SkillInstallRecord> {
   const windowsPathRoots =
     process.platform === "win32"
       ? [join(getSkillsDir(), name), ...agents.map((agent) => join(agent.skillsDir, name))]
       : undefined;
-  await installSkill(name, entry, downloadAttempts, windowsPathRoots);
+  if (preparedDirectory)
+    await installSkillFromSource(
+      name,
+      (directory) => cpSync(preparedDirectory, directory, { recursive: true }),
+      entry.contentHash,
+      windowsPathRoots,
+    );
+  else await installSkill(name, entry, downloadAttempts, windowsPathRoots);
   const fanout = fanOutSkillToAgents(name, agents, recordedLinks);
   return {
     lockEntry: buildSkillLockEntry(entry, fanout.links),
     linkedAgents: fanout.linkedAgents,
+    linkResults: fanout.results,
   };
 }

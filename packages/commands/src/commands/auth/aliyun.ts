@@ -33,6 +33,7 @@ import {
   type LocalizedText,
   type Settings,
 } from "bailian-cli-core";
+import { registerInterruptHandler } from "bailian-cli-runtime";
 import { listenLocalServer, openInBrowser } from "../shared/local-server.ts";
 
 export interface AliyunOAuthLoginDeps {
@@ -492,7 +493,7 @@ export async function runAliyunOAuthLogin(
     ? AbortSignal.any([options.signal, cancellation.signal])
     : cancellation.signal;
   const onSignal = () => cancellation.abort();
-  process.once("SIGINT", onSignal);
+  const releaseInterrupt = registerInterruptHandler(onSignal);
   process.once("SIGTERM", onSignal);
   const oauthDeps = { identity: deps.identity, timeout: deps.settings.timeout };
   const secrets: string[] = [];
@@ -560,7 +561,7 @@ export async function runAliyunOAuthLogin(
     }
     throw safeLoginError(error, secrets);
   } finally {
-    process.off("SIGINT", onSignal);
+    releaseInterrupt();
     process.off("SIGTERM", onSignal);
   }
 }

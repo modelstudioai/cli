@@ -19,6 +19,11 @@ import {
   FIRST_INSTALL_REPORT_FILE,
   isFirstInstallReportLaunch,
 } from "../src/telemetry/first-install.ts";
+import { Client } from "../src/client/client.ts";
+import { httpTransport } from "../src/client/transport.ts";
+import { createRequestSignals } from "../src/client/request-signals.ts";
+import { RAG_PATHS, ragEndpoint } from "../src/client/endpoints.ts";
+import { resolveTelemetrySite } from "../src/telemetry/site.ts";
 
 type ReportedEvent = TrackingEvent | FirstInstallEvent;
 
@@ -103,9 +108,205 @@ test("derives event version and prefix from identity", () => {
     command: "config show",
     cliVersion: "identity-version",
     commandPrefix: "bl",
+    site: "domestic",
   });
   expect(buildRemoteAemOptions(event)).toMatchObject({
-    ext: { cliVersion: "identity-version", commandPrefix: "bl" },
+    ext: { cliVersion: "identity-version", commandPrefix: "bl", site: "domestic" },
+  });
+});
+
+test("resolveSite runs in finally and attaches site fields", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  let calledAfterCommand = false;
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true } as Settings,
+      authMethod: "apiKey",
+      caller: unknownCaller,
+      resolveSite: () => {
+        calledAfterCommand = true;
+        return { site: "international", siteReason: "positive-international" };
+      },
+    },
+    ["text", "chat"],
+    {},
+    async () => {
+      expect(calledAfterCommand).toBe(false);
+    },
+  );
+  expect(calledAfterCommand).toBe(true);
+  const event = asCommand(sinkMocks.localSink.mock.calls[0]![0]);
+  expect(event).toMatchObject({
+    site: "international",
+    siteReason: "positive-international",
+  });
+  expect(buildRemoteAemOptions(event).ext).toMatchObject({
+    site: "international",
+    siteReason: "positive-international",
+  });
+});
+
+test("resolveSite failure still emits domestic event", async () => {
+  sinkMocks.localSink.mockClear();
+  sinkMocks.remoteSink.mockClear();
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true } as Settings,
+      caller: unknownCaller,
+      resolveSite: () => {
+        throw new Error("resolve boom");
+      },
+    },
+    ["config", "show"],
+    {},
+    async () => {},
+  );
+  expect(asCommand(sinkMocks.localSink.mock.calls[0]![0])).toMatchObject({
+    site: "domestic",
+    siteReason: "default-fallback",
+  });
+});
+
+/**
+ * `dryRun` marks preview mode, nothing more. A preview that sends no request
+ * records no origin and no service plane, so its site can only come from the
+ * configured base URL — for domestic-only products like knowledge base and
+ * memory that would otherwise read as international product demand. Reporting
+ * the flag keeps preview traffic separable from executed calls.
+ */
+test("dry-run runs are marked in the event and in the AEM ext", async () => {
+  sinkMocks.localSink.mockClear();
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true, dryRun: true } as Settings,
+      caller: unknownCaller,
+      authMethod: "apiKey",
+      resolveSite: () => ({ site: "international", siteReason: "positive-international" }),
+    },
+    ["knowledge", "list"],
+    {},
+    async () => {},
+  );
+
+  const event = asCommand(sinkMocks.localSink.mock.calls[0]![0]);
+  expect(event).toMatchObject({ command: "knowledge list", dryRun: true });
+  expect(buildRemoteAemOptions(event).ext).toMatchObject({ dryRun: true });
+});
+
+test("normal runs omit the dryRun field", async () => {
+  sinkMocks.localSink.mockClear();
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true, dryRun: false } as Settings,
+      caller: unknownCaller,
+    },
+    ["config", "show"],
+    {},
+    async () => {},
+  );
+
+  expect(asCommand(sinkMocks.localSink.mock.calls[0]![0])).not.toHaveProperty("dryRun");
+});
+
+/**
+ * The two signals are orthogonal, and this is the case that must not be
+ * "corrected" into treating `dryRun` as proof of zero network traffic: commands
+ * with `prepare` read existing resources even under `--dry-run`, so the run
+ * records a real service plane and still earns a product verdict.
+ */
+test("dryRun coexists with a product site verdict for previews that read resources", () => {
+  const event = createTrackingEvent({
+    command: "knowledge init",
+    durationMs: 12,
+    success: true,
+    identity,
+    authMethod: "apiKey",
+    caller: unknownCaller,
+    site: "domestic",
+    siteReason: "product-domestic",
+    dryRun: true,
+  });
+
+  expect(event).toMatchObject({
+    command: "knowledge init",
+    dryRun: true,
+    site: "domestic",
+    siteReason: "product-domestic",
+  });
+  expect(buildRemoteAemOptions(event).ext).toMatchObject({
+    dryRun: true,
+    siteReason: "product-domestic",
+  });
+});
+
+/**
+ * End-to-end for the narrowed claim. The pure-field test above only proves the
+ * two keys can coexist; this drives the real path — a `--dry-run` run whose
+ * prepare phase reads the mainland workspace gateway while the configured model
+ * base URL is international — and asserts the event carries both the preview
+ * mark and the product verdict. If request recording ever stops happening for
+ * absolute `path` requests, this goes red instead of the docs quietly lying.
+ */
+test("a preview that read the workspace gateway reports dryRun with a product site", async () => {
+  sinkMocks.localSink.mockClear();
+  const transport = vi
+    .spyOn(httpTransport, "fetch")
+    .mockResolvedValue(Response.json({ data: { rows: [], total_count: 0 } }));
+  const client = new Client({
+    identity,
+    settings: { telemetry: true, dryRun: true, timeout: 30 } as Settings,
+    baseUrl: "https://dashscope-intl.aliyuncs.com",
+    baseUrlIsDefault: false,
+    requestSignals: createRequestSignals(),
+    apiCred: {
+      token: "sk-test",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+      source: "config",
+    },
+  });
+
+  try {
+    await trackCommandExecution(
+      {
+        identity,
+        settings: { telemetry: true, dryRun: true } as Settings,
+        caller: unknownCaller,
+        authMethod: "apiKey",
+        resolveSite: () =>
+          resolveTelemetrySite({
+            auth: "apiKey",
+            productSite: client.productSite,
+            lastResolvedOrigin: client.lastResolvedOrigin,
+            baseUrl: client.baseUrl,
+            baseUrlIsDefault: client.baseUrlIsDefault,
+          }),
+      },
+      ["knowledge", "init"],
+      {},
+      async () => {
+        // The read-only request a `knowledge init` preview actually issues.
+        await client.requestJson({
+          path: ragEndpoint("ws-review", RAG_PATHS.indexList),
+          method: "GET",
+        });
+      },
+    );
+  } finally {
+    vi.restoreAllMocks();
+  }
+
+  expect(transport).toHaveBeenCalledOnce();
+  expect(asCommand(sinkMocks.localSink.mock.calls[0]![0])).toMatchObject({
+    command: "knowledge init",
+    success: true,
+    dryRun: true,
+    site: "domestic",
+    siteReason: "product-domestic",
   });
 });
 

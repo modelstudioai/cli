@@ -195,11 +195,20 @@ export const SPEECH_GENERATE_ROUTES: E2eRouteExports = {
 };
 
 export const MCP_ROUTES: E2eRouteExports = {
+  "mcp activate": "mcpActivate",
   "mcp call": "mcpCall",
   "mcp connect": "mcpConnect",
+  "mcp create": "mcpCreate",
+  "mcp deactivate": "mcpDeactivate",
+  "mcp delete": "mcpDelete",
   "mcp disconnect": "mcpDisconnect",
+  "mcp get": "mcpGet",
   "mcp list": "mcpList",
   "mcp tools": "mcpTools",
+  "mcp tool call": "mcpToolCall",
+  "mcp tool list": "mcpToolList",
+  "mcp tool search": "mcpToolSearch",
+  "mcp update": "mcpUpdate",
 };
 
 export const SEARCH_WEB_ROUTES: E2eRouteExports = { "search web": "searchWeb" };
@@ -403,6 +412,7 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune capability": "finetuneCapability",
   "finetune params": "finetuneParams",
   "finetune train-options": "finetuneTrainOptions",
+  "finetune preset-datasets": "finetunePresetDatasets",
   "finetune metrics": "finetuneMetrics",
   "finetune compress templates": "finetuneCompressTemplates",
   "finetune compress create": "finetuneCompressCreate",
@@ -450,6 +460,8 @@ export const TOKEN_PLAN_ROUTES: E2eRouteExports = {
 
 export const SKILL_ROUTES: E2eRouteExports = {
   "skill add": "skillAdd",
+  "skill search": "skillSearch",
+  "skill get": "skillGet",
   "skill update": "skillUpdate",
   "skill remove": "skillRemove",
   "skill list": "skillList",
