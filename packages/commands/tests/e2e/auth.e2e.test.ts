@@ -117,7 +117,7 @@ describe("e2e: auth", () => {
     ]);
     expect(consoleSiteWithoutConsole.exitCode).toBe(2);
     expect(consoleSiteWithoutConsole.stderr).toMatch(
-      /Use --console-site with --console or --open-api \(setup guide\)/,
+      /Use --console-site with --console or --open-api/,
     );
   });
 
@@ -148,7 +148,16 @@ describe("e2e: auth", () => {
 
       const noBrowser = await runCommandE2e(
         AUTH_ROUTES,
-        ["auth", "login", "--open-api", "--no-browser", "--console-site", "international"],
+        [
+          "auth",
+          "login",
+          "--open-api",
+          "--no-browser",
+          "--console-site",
+          "international",
+          "--config",
+          "release-review",
+        ],
         { BAILIAN_CONFIG_DIR: configDir },
       );
       expect(noBrowser.exitCode, noBrowser.stderr).toBe(0);
@@ -156,9 +165,32 @@ describe("e2e: auth", () => {
         /modelstudio\.console\.alibabacloud\.com\/aksk-guide/,
       );
       expect(noBrowser.stdout + noBrowser.stderr).toMatch(
-        /auth login --open-api --access-key-id <id> --access-key-secret <secret>/,
+        /auth login --open-api --access-key-id <id> --access-key-secret <secret> --console-site international --config release-review/,
       );
       expect(existsSync(join(configDir, "config.json"))).toBe(false);
+
+      const persistWithSite = await runCommandE2e(
+        AUTH_ROUTES,
+        [
+          "auth",
+          "login",
+          "--open-api",
+          "--access-key-id",
+          "LTAI-e2e",
+          "--access-key-secret",
+          "secret-e2e",
+          "--console-site",
+          "international",
+          // Mirror the full echoed paste command, `--config` included, so the
+          // guide output stays something the user can paste back verbatim.
+          "--config",
+          "release-review",
+          "--dry-run",
+        ],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(persistWithSite.exitCode, persistWithSite.stderr).toBe(0);
+      expect(persistWithSite.stdout).toMatch(/Would save AccessKey credentials/);
 
       const noBrowserWithKeys = await runCommandE2e(AUTH_ROUTES, [
         "auth",

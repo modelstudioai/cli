@@ -27,7 +27,7 @@ export default defineCommand({
   },
   auth: "none",
   usageArgs:
-    "--api-key <key> | --console [--no-browser | --token-stdin --console-region <region>] | --open-api [--no-browser] [--access-key-id <id> --access-key-secret <secret>]",
+    "--api-key <key> | --console [--no-browser | --token-stdin --console-region <region>] | --open-api [--no-browser] [--console-site <site>] [--access-key-id <id> --access-key-secret <secret>]",
   flags: {
     apiKey: {
       type: "string",
@@ -118,6 +118,7 @@ export default defineCommand({
     "--open-api",
     "--open-api --no-browser --console-site international",
     "--open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx",
+    "--open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx --console-site international",
   ],
   validate: (flags) => {
     const apiKeyMode = hasValue(flags.apiKey);
@@ -126,7 +127,6 @@ export default defineCommand({
     const openApiHasId = hasValue(flags.accessKeyId);
     const openApiHasSecret = hasValue(flags.accessKeySecret);
     const openApiPersist = openApiMode && openApiHasId && openApiHasSecret;
-    const openApiGuide = openApiMode && !openApiHasId && !openApiHasSecret;
 
     if (flags.tokenStdin || hasValue(flags.consoleRegion)) {
       if (!consoleMode) {
@@ -151,8 +151,8 @@ export default defineCommand({
     if (!apiKeyMode && hasValue(flags.baseUrl)) {
       return "Use --base-url only with --api-key";
     }
-    if (hasValue(flags.consoleSite) && !consoleMode && !openApiGuide) {
-      return "Use --console-site with --console or --open-api (setup guide). / --console-site 只能与 --console 或 --open-api（配置引导）一起使用。";
+    if (hasValue(flags.consoleSite) && !consoleMode && !openApiMode) {
+      return "Use --console-site with --console or --open-api. / --console-site 只能与 --console 或 --open-api 一起使用。";
     }
     if (!openApiMode && (openApiHasId || openApiHasSecret)) {
       return "Use --open-api with --access-key-id and --access-key-secret";
@@ -305,8 +305,12 @@ export default defineCommand({
           );
           return;
         }
-        const { url } = await runOpenApiGuide(deps, {
+        // Global `--config` lives in settings, not command flags; recoveryConfigName
+        // is set for an explicit flag or an active named profile.
+        const pasteConfig = settings.recoveryConfigName?.trim() || undefined;
+        const { url, browserOpened } = await runOpenApiGuide(deps, {
           site,
+          config: pasteConfig,
           noBrowser: flags.noBrowser,
         });
         ctx.output.result(
@@ -315,6 +319,7 @@ export default defineCommand({
             method: "open-api-guide",
             url,
             no_browser: !!flags.noBrowser,
+            browser_opened: browserOpened,
             config: settings.configName ?? "default",
             config_file: store.path,
           },
@@ -325,10 +330,19 @@ export default defineCommand({
                     "en-US": "Browser not opened automatically. Open the URL above manually.",
                     "zh-CN": "未自动打开浏览器，请手动打开上方地址。",
                   }
-                : {
-                    "en-US": "Opened the setup page in your default browser.",
-                    "zh-CN": "已在默认浏览器打开引导页面。",
-                  },
+                : browserOpened
+                  ? {
+                      "en-US": "Opened the setup page in your default browser.",
+                      "zh-CN": "已在默认浏览器打开引导页面。",
+                    }
+                  : {
+                      // The warning above already carries the errno reason and the
+                      // manual-open instruction, so the status line reports what is
+                      // still usable instead of repeating that the browser did not open.
+                      "en-US":
+                        "Guide URL and follow-up command printed above; paste your AccessKey after finishing the guide.",
+                      "zh-CN": "已打印引导地址与后续命令，完成引导后粘贴 AccessKey 即可。",
+                    },
             ),
           },
         );

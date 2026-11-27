@@ -41,12 +41,12 @@ bl auth generate-access-token --access-key-id LTAIxxxxx --access-key-secret xxxx
 
 ### `bl auth login`
 
-| Field              | Value                                                                                                                                                                                   |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `auth login`                                                                                                                                                                            |
-| **Description**    | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                                                                                            |
-| **Authentication** | No Auth                                                                                                                                                                                 |
-| **Usage**          | `bl auth login --api-key <key> \| --console [--no-browser \| --token-stdin --console-region <region>] \| --open-api [--no-browser] [--access-key-id <id> --access-key-secret <secret>]` |
+| Field              | Value                                                                                                                                                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `auth login`                                                                                                                                                                                                    |
+| **Description**    | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                                                                                                                    |
+| **Authentication** | No Auth                                                                                                                                                                                                         |
+| **Usage**          | `bl auth login --api-key <key> \| --console [--no-browser \| --token-stdin --console-region <region>] \| --open-api [--no-browser] [--console-site <site>] [--access-key-id <id> --access-key-secret <secret>]` |
 
 #### Flags
 
@@ -91,6 +91,10 @@ bl auth login --open-api --no-browser --console-site international
 
 ```bash
 bl auth login --open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx
+```
+
+```bash
+bl auth login --open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx --console-site international
 ```
 
 ### `bl auth logout`
