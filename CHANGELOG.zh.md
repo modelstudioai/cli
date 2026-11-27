@@ -6,13 +6,14 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [2.12.1] - 2026-11-27
+## [2.13.0] - 2026-11-27
 
 ### 新增
 
 - **`bl finetune preset-datasets`**：新增命令，查询指定基础模型与训练类型下可混入训练的预置数据集（`--base-model`、`--training-type`、可选 `--model-version`）。结果原样保留服务端字段（`dataset_code`、`dataset_title`、`dataset_desc`）；结果为空属于成功。
 - **混合训练**：`bl finetune text create` 新增 `--augmentation-types`（预置数据集编码，按小写下发）与 `--augmentation-ratio`（按位置对应每种数据集的混合倍率，范围 0.0～2.0，两者必须同时提供）。传入 `--augmentation-types` 即开启数据增强。
 - **OSS 挂数据集**：`bl finetune text create` 的 `--datasets` / `--validations` 支持 `oss://<bucket>/<object key>` 条目，由服务端原地读取，不做本地校验、不上传，并跳过样本数预检。`--oss-region` 指定 Bucket 所在地域（默认 `cn-beijing`），原样下发。
+- **OpenAPI AccessKey 浏览器引导**：`bl auth login --open-api` 在未提供 `--access-key-id` / `--access-key-secret` 时打开控制台 AccessKey 配置页（或配合 `--no-browser` 只打印地址），并给出可粘贴的后续命令；同时提供两个 key 参数时仍按原逻辑校验并保存。`bl auth status` 在缺少 OpenAPI 凭证时会指向同一引导入口。
 
 ### 变更
 
@@ -21,6 +22,8 @@
 ### 修复
 
 - **必填超参数**：`bl finetune text create` 未指定 `n_epochs`、`batch_size` 或 `max_length` 时，按模型参数配置中的默认值补齐；创建任务接口在缺少这三项时会拒绝任务。
+- **命令输出刷盘**：进程退出前会完整刷完 stdout/stderr，管道或重定向读取较慢时不再截断输出。
+- **OpenAPI 引导后续命令**：粘贴用的 `bl auth login --open-api ...` 会保留所选 `--console-site` 与 `--config`；系统打开浏览器过慢时改为报告未能确认，而不再误报为失败。
 
 ## [2.12.0] - 2026-11-25
 
