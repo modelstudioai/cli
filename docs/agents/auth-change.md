@@ -79,7 +79,8 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 ### 阿里云 OAuth 登录与续期
 
 - `bl auth --login aliyun` 是可执行的 `auth` 父命令，保留既有 `auth login/status/logout` 子命令；不在 runtime 改写 argv。
-- OAuth 回调仅监听 `127.0.0.1` 随机端口的 `/oauth/callback` 路径，授权请求与换票使用同一 `redirect_uri`。IAM 登记 `http://127.0.0.1:12345/oauth/callback`；NativeApp 忽略回环端口，但协议、主机和路径必须一致，不保留根路径兼容。
+- 默认 OAuth 回调仅监听 `127.0.0.1` 随机端口的 `/oauth/callback` 路径，授权请求与换票使用同一 `redirect_uri`。IAM 登记 `http://127.0.0.1:12345/oauth/callback`；NativeApp 忽略回环端口，但协议、主机和路径必须一致，不保留根路径兼容。
+- OAuth 的 `--no-browser` 显式选择跨设备手动授权：固定使用已登记的 `http://127.0.0.1:12345/oauth/callback`，不启服务器，在原进程粘贴完整回调 URL；校验地址、唯一且匹配的 state、唯一非空 code，拒绝 userinfo、fragment、非法查询编码、解码后包含控制字符的查询与其它登录会话。有可关闭回显的 TTY 时隐藏输入，非 TTY 提示上游终端可能回显；不保存输入历史。错误输入可重试但不重新生成 state/PKCE；有效 state 的授权拒绝、EOF、超长输入、Ctrl+C、Ctrl+Z 或超时结束登录。与默认流共用换票、落盘及取消处理，不自动降级、不提供设备码流程，不改变 `auth login --console --no-browser` 的本机回调语义。
 - 线上首次登录必须显式配置正式 OAuth 应用 ID 和授权 URL，之后可复用选中 Profile；端点维持显式参数 > Profile > 默认地址。预发模式由 `bl` 入口解析 `BAILIAN_PRE` 后传入 core/runtime，使用独立配置路径和已确认的国内端点，不读线上控制面凭据、不隐式回退、不改 hosts/代理。Console 浏览器登录与 Bearer 网关须分别确认后显式配置；未确认的预发管理接口必须联网前阻断。MCP 管理和云端 Skill 沿用 API Key 与工作空间路由，不切换到预发。模型域来源和 `kscli` 不受开关影响。
 - `aliyun_oauth` 仅保存端点、client_id/scope、会话引用、域激活状态及到期元数据；OAuth AT 不覆盖旧的 Console `access_token`。凭据存于配置目录下独立的 `oauth/<session_ref>.json` 明文文件，绑定会话引用，不写入主配置。Unix 校验目录 `0700` 和文件 `0600` 及所有者，Windows 校验私有 ACL；拒绝非普通文件及链接，使用同目录唯一临时文件、fsync 和原子替换。旧加密会话不迁移，需要重新登录。
 - 同一个异步 OpenAPI provider 负责 OAuth AT/RT→STS，Console 换票与 OpenAPI 签名前复用。优先级保持 flag > 百炼 env > 所选 file（静态或 OAuth）> 阿里云 env；临时来源不落盘。`describe/stored` 只读元数据，不读取凭据文件；静态 dry-run 不调用 OAuth，框架更新/遥测仍遵循原设置。

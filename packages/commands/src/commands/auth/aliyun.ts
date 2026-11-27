@@ -1,4 +1,6 @@
 import http from "node:http";
+import { createInterface } from "node:readline";
+import { PassThrough, type Readable } from "node:stream";
 import {
   ALIYUN_CLI_CLIENT_ID,
   ALIYUN_CLI_SCOPE,
@@ -40,11 +42,12 @@ export interface AliyunOAuthLoginDeps {
   identity: Identity;
   settings: Settings;
   authStore: Pick<AuthStore, "describe" | "loginAliyun">;
-  output: Pick<CommandOutput, "result">;
+  output: Pick<CommandOutput, "result" | "warning">;
   localize?: (text: LocalizedText) => string;
   writeStderr?: (text: string) => void;
   openBrowser?: (url: string) => void | Promise<void>;
   onAuthUrl?: (url: string) => void | Promise<void>;
+  stdin?: Readable & { isTTY?: boolean; setRawMode?: (mode: boolean) => unknown };
 }
 
 export interface AliyunOAuthLoginOptions {
@@ -205,6 +208,189 @@ function assertActive(signal: AbortSignal, deps: AliyunOAuthLoginDeps): void {
   if (signal.aborted) throw interrupted(deps);
 }
 
+function loginPromptWriter(deps: AliyunOAuthLoginDeps): (text: string) => void {
+  if (deps.settings.output === "json") {
+    return (text) => {
+      const message = text.trim();
+      if (message) deps.output.warning(message);
+    };
+  }
+  return deps.writeStderr ?? ((text) => process.stderr.write(text));
+}
+
+async function receiveManualCode(
+  deps: AliyunOAuthLoginDeps,
+  profile: LoginProfile,
+  proof: ReturnType<typeof createOAuthProofKey>,
+  options: AliyunOAuthLoginOptions,
+  signal: AbortSignal,
+): Promise<{ code: string; redirectUri: string }> {
+  const input = deps.stdin ?? process.stdin;
+  const closedInput = () =>
+    new BailianError(
+      localize(deps, {
+        "en-US": "Callback input closed before authorization was received.",
+        "zh-CN": "尚未收到授权回调，输入已关闭。",
+      }),
+      ExitCode.GENERAL,
+    );
+  if (input.destroyed || input.readableEnded) throw closedInput();
+  const redirectUri = `http://127.0.0.1:12345${OAUTH_CALLBACK_PATH}`;
+  const authUrl = aliyunAuthorizationUrl(profile, redirectUri, proof);
+  const writeStderr = loginPromptWriter(deps);
+  const hiddenInput = !!input.isTTY && typeof input.setRawMode === "function";
+  const prompt = () =>
+    writeStderr(
+      localize(
+        deps,
+        hiddenInput
+          ? {
+              "en-US": "Callback URL (input hidden; Ctrl+C to cancel): ",
+              "zh-CN": "回调 URL（输入不回显；按 Ctrl+C 取消）：",
+            }
+          : {
+              "en-US": "Callback URL (Ctrl+C to cancel): ",
+              "zh-CN": "回调 URL（按 Ctrl+C 取消）：",
+            },
+      ),
+    );
+  // Bound input before readline can buffer it, and keep its TTY decoder off shared stdin.
+  const callbackInput = Object.assign(new PassThrough(), {
+    setRawMode: (mode: boolean) => input.setRawMode?.(mode),
+  });
+  const reader = createInterface({
+    input: callbackInput,
+    terminal: hiddenInput,
+    historySize: 0,
+    crlfDelay: Infinity,
+  });
+  let finished = false;
+  let resolveCode!: (code: string) => void;
+  let rejectCode!: (error: unknown) => void;
+  const completion = new Promise<string>((resolve, reject) => {
+    resolveCode = resolve;
+    rejectCode = reject;
+  });
+  void completion.catch(() => {});
+  const settle = (code?: string, error?: BailianError) => {
+    if (finished) return;
+    finished = true;
+    if (error) rejectCode(error);
+    else resolveCode(code!);
+  };
+  const onLine = (answer: string) => {
+    if (finished) return;
+    const raw = answer.trim();
+    if (raw.startsWith(`${redirectUri}?`) && !/[\p{Cc}\s#]/u.test(raw)) {
+      try {
+        const decodedQuery = decodeURIComponent(raw.slice(redirectUri.length + 1));
+        if (!/\p{Cc}/u.test(decodedQuery)) {
+          settle(parseAliyunCallback(new URL(raw), proof.state));
+          return;
+        }
+      } catch (error) {
+        if (error instanceof BailianError && !(error instanceof UsageError)) {
+          settle(undefined, error);
+          return;
+        }
+      }
+    }
+    writeStderr(
+      `\n${localize(deps, {
+        "en-US": "Invalid OAuth callback address. Paste the complete callback URL for this login.",
+        "zh-CN": "OAuth 回调地址无效，请粘贴本次登录的完整回调 URL。",
+      })}\n`,
+    );
+    prompt();
+  };
+  let pendingBytes = 0;
+  const onData = (chunk: Buffer | string) => {
+    const bytes = typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk;
+    let start = 0;
+    for (const [offset, byte] of bytes.entries()) {
+      if (finished) return;
+      if (byte === 10 || byte === 13) {
+        pendingBytes = 0;
+        callbackInput.write(bytes.subarray(start, offset + 1));
+        start = offset + 1;
+      } else if (++pendingBytes >= 16 * 1024) {
+        settle(
+          undefined,
+          new UsageError("OAuth callback URL is too long. / OAuth 回调 URL 过长。"),
+        );
+        return;
+      }
+    }
+    if (!finished && start < bytes.length) callbackInput.write(bytes.subarray(start));
+  };
+  const onAbort = () => settle(undefined, interrupted(deps));
+  const onClose = () => settle(undefined, closedInput());
+  const onEnd = () => callbackInput.end();
+  reader.on("line", onLine);
+  reader.on("SIGINT", onAbort);
+  // Readline would restore echo before trying to suspend, even if the shell cannot suspend us.
+  reader.on("SIGTSTP", onAbort);
+  reader.on("close", onClose);
+  input.on("error", onClose);
+  input.on("end", onEnd);
+  input.on("close", onEnd);
+  input.on("data", onData);
+  signal.addEventListener("abort", onAbort, { once: true });
+  const timer = setTimeout(
+    () =>
+      settle(
+        undefined,
+        new BailianError(
+          localize(deps, {
+            "en-US": "Aliyun OAuth login timed out waiting for the pasted callback URL.",
+            "zh-CN": "阿里云 OAuth 登录等待粘贴回调 URL 超时。",
+          }),
+          ExitCode.TIMEOUT,
+        ),
+      ),
+    options.callbackTimeoutMs ?? CALLBACK_TIMEOUT_MS,
+  );
+  try {
+    assertActive(signal, deps);
+    if (!hiddenInput)
+      writeStderr(
+        `${localize(deps, {
+          "en-US":
+            "Warning: your terminal may echo the callback URL. To hide input in an interactive SSH or container session, allocate a TTY (ssh -t or docker exec -it).",
+          "zh-CN":
+            "警告：终端可能回显回调 URL。如需隐藏交互输入，请为 SSH 或容器会话分配 TTY（ssh -t 或 docker exec -it）。",
+        })}\n\n`,
+      );
+    writeStderr(
+      `${localize(deps, {
+        "en-US": "Open this login URL in a browser on your computer or phone:",
+        "zh-CN": "请在电脑或手机浏览器中打开以下登录地址：",
+      })}\n${authUrl}\n\n${localize(deps, {
+        "en-US": `After authorizing, the browser redirects to ${redirectUri}. The page may fail to load; this is expected. Copy the entire URL from the address bar, including code and state, and paste it only into this terminal.`,
+        "zh-CN": `授权后浏览器会跳转到 ${redirectUri}。页面打不开是正常现象；请复制地址栏中的完整 URL（含 code 和 state），只粘贴到此终端。`,
+      })}\n`,
+    );
+    prompt();
+    if (deps.onAuthUrl)
+      void Promise.resolve()
+        .then(() => deps.onAuthUrl!(authUrl))
+        .catch(onClose);
+    return { code: await completion, redirectUri };
+  } finally {
+    finished = true;
+    clearTimeout(timer);
+    signal.removeEventListener("abort", onAbort);
+    input.off("data", onData);
+    input.off("end", onEnd);
+    input.off("close", onEnd);
+    input.off("error", onClose);
+    input.pause();
+    reader.close();
+    callbackInput.destroy();
+    writeStderr("\n");
+  }
+}
+
 /** Only this process's callback server and listeners are owned by this function. */
 async function receiveCode(
   deps: AliyunOAuthLoginDeps,
@@ -214,6 +400,7 @@ async function receiveCode(
   signal: AbortSignal,
 ): Promise<{ code: string; redirectUri: string }> {
   assertActive(signal, deps);
+  if (options.noBrowser) return receiveManualCode(deps, profile, proof, options, signal);
   let finished = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let resolveCode!: (code: string) => void;
@@ -296,11 +483,7 @@ async function receiveCode(
   const onAbort = () => settle(undefined, interrupted(deps));
   server.on("error", onError);
   signal.addEventListener("abort", onAbort, { once: true });
-  const writeStderr =
-    deps.writeStderr ??
-    ((text: string) => {
-      process.stderr.write(text);
-    });
+  const writeStderr = loginPromptWriter(deps);
   try {
     const port = await listenLocalServer(server, 0);
     assertActive(signal, deps);
@@ -333,20 +516,18 @@ async function receiveCode(
       void Promise.resolve()
         .then(() => deps.onAuthUrl!(authUrl))
         .catch(onError);
-    if (!options.noBrowser) {
-      // Never await browser launch: it can fail, hang, or deliver an immediate callback.
-      void Promise.resolve()
-        .then(() => (deps.openBrowser ?? openInBrowser)(authUrl))
-        .catch(() => {
-          if (!finished)
-            writeStderr(
-              `${localize(deps, {
-                "en-US": "Could not open the browser. Open the URL above manually.",
-                "zh-CN": "无法自动打开浏览器，请手动打开上方地址。",
-              })}\n`,
-            );
-        });
-    }
+    // Never await browser launch: it can fail, hang, or deliver an immediate callback.
+    void Promise.resolve()
+      .then(() => (deps.openBrowser ?? openInBrowser)(authUrl))
+      .catch(() => {
+        if (!finished)
+          writeStderr(
+            `${localize(deps, {
+              "en-US": "Could not open the browser. Open the URL above manually.",
+              "zh-CN": "无法自动打开浏览器，请手动打开上方地址。",
+            })}\n`,
+          );
+      });
     return { code: await completion, redirectUri };
   } finally {
     finished = true;
@@ -451,8 +632,8 @@ export async function runAliyunOAuthLogin(
       },
       {
         text: localize(deps, {
-          "en-US": `Would authorize Aliyun OAuth with a random loopback port, exchange STS, validate Console access and save the session. ${missingClientId ? "Missing required options" : "Missing endpoints"}: ${missing.join(", ") || "none"}.${preEndpoints}`,
-          "zh-CN": `将通过随机回环端口完成阿里云 OAuth 授权、置换 STS、校验控制台并保存会话。${missingClientId ? "缺少必填选项" : "缺少端点"}：${missing.join("、") || "无"}。${preEndpoints}`,
+          "en-US": `Would authorize Aliyun OAuth ${options.noBrowser ? "by pasting the callback URL without listening on a port" : "with a random loopback port"}, exchange STS, validate Console access and save the session. ${missingClientId ? "Missing required options" : "Missing endpoints"}: ${missing.join(", ") || "none"}.${preEndpoints}`,
+          "zh-CN": `将${options.noBrowser ? "通过粘贴回调 URL（不监听端口）" : "通过随机回环端口"}完成阿里云 OAuth 授权、置换 STS、校验控制台并保存会话。${missingClientId ? "缺少必填选项" : "缺少端点"}：${missing.join("、") || "无"}。${preEndpoints}`,
         }),
       },
     );
@@ -573,9 +754,10 @@ export default defineCommand({
   description: { "en-US": "Authenticate with Aliyun OAuth", "zh-CN": "通过阿里云 OAuth 登录" },
   auth: "none",
   usageArgs:
-    "--login aliyun [--client-id <id>] [--authorization-url <url>] [--modelstudio-host <hostname>] [--console-gateway <origin>]",
+    "--login aliyun [--client-id <id>] [--authorization-url <url>] [--modelstudio-host <hostname>] [--console-gateway <origin>] [--no-browser]",
   exampleArgs: [
     "--login aliyun --client-id <id> --authorization-url <url>",
+    "--login aliyun --client-id <id> --authorization-url <url> --no-browser",
     "--login aliyun --client-id <id> --authorization-url <url> --modelstudio-host <hostname> --console-gateway <origin>",
   ],
   flags: {
@@ -654,17 +836,17 @@ export default defineCommand({
     noBrowser: {
       type: "switch",
       description: {
-        "en-US": "Do not open the browser automatically; still wait for the local callback",
-        "zh-CN": "不自动打开浏览器；仍等待本机回调",
+        "en-US": "Authorize on another device and paste the full callback URL; no local listener",
+        "zh-CN": "在其它设备授权后粘贴完整回调 URL；不监听本地端口",
       },
     },
   },
   notes: [
     {
       "en-US":
-        "Outside pre-release, first login requires an explicit client ID and a confirmed authorization URL. In pre-release, endpoint overrides must match the trusted endpoints, and the CLI gateway must be configured. No device flow or remote callback import is supported.",
+        "Outside pre-release, first login requires an explicit client ID and a confirmed authorization URL. In pre-release, endpoint overrides must match the trusted endpoints, and the CLI gateway must be configured. With --no-browser, paste the complete callback URL into this login session; this is not device authorization.",
       "zh-CN":
-        "非预发环境首次登录需要显式指定客户端 ID 和已确认的授权地址。预发端点覆盖必须与可信端点一致，并且必须配置 CLI 网关。不支持设备授权或导入远程回调。",
+        "非预发环境首次登录需要显式指定客户端 ID 和已确认的授权地址。预发端点覆盖必须与可信端点一致，并且必须配置 CLI 网关。使用 --no-browser 时须在本次登录会话中粘贴完整回调 URL；这不是设备授权。",
     },
     {
       "en-US":

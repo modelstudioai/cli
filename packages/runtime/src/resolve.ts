@@ -7,7 +7,7 @@ import {
   validateTimeout,
 } from "bailian-cli-core";
 import type { CommandRegistry } from "./registry.ts";
-import { parseFlags, parsePath } from "./args.ts";
+import { assertRequiredFlags, parseFlags, parsePath } from "./args.ts";
 import { confirmationFlagDefs } from "./confirm.ts";
 import { createTranslator, type Translator } from "./i18n.ts";
 
@@ -65,18 +65,22 @@ export function resolve(
             ...target.command.flags,
           }
         : GLOBAL_FLAGS;
-    let parsedFlags: Record<string, unknown>;
-    try {
-      parsedFlags = parseFlags(rest, definitions, localize, {
-        enforceRequired:
-          target.kind === "leaf" && !hasHelpFlag && !hasVersionFlag && !hasIntrospectFlag,
-      });
-    } catch (error) {
-      // A bare leaf with missing required flags remains an incomplete invocation.
-      if (error instanceof UsageError && target.kind === "leaf" && rest.length === 0) {
-        return { kind: "help", path: target.matched, parsedFlags: {} };
+    const parsedFlags = parseFlags(rest, definitions, localize, { enforceRequired: false });
+    let showHelp = hasHelpFlag;
+    if (target.kind === "leaf" && !hasHelpFlag && !hasVersionFlag && !hasIntrospectFlag) {
+      try {
+        assertRequiredFlags(definitions, parsedFlags, localize);
+      } catch (error) {
+        const onlyGlobalFlags =
+          target.hasChildren &&
+          Object.entries(parsedFlags).every(
+            ([key, value]) =>
+              Object.hasOwn(GLOBAL_FLAGS, key) ||
+              (definitions[key]?.type === "switch" && value === false),
+          );
+        if (!(error instanceof UsageError) || (rest.length !== 0 && !onlyGlobalFlags)) throw error;
+        showHelp = true;
       }
-      throw error;
     }
 
     if (parsedFlags.timeout !== undefined) {
@@ -91,7 +95,7 @@ export function resolve(
 
     switch (target.kind) {
       case "leaf":
-        return hasHelpFlag
+        return showHelp
           ? { kind: "help", path: target.matched, parsedFlags }
           : { kind: "run", path: target.matched, command: target.command, rest, parsedFlags };
       case "group":

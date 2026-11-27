@@ -202,7 +202,15 @@ bl auth --login aliyun --config aliyun \
 
 Register `http://127.0.0.1:12345/oauth/callback` as the IAM redirect URI. NativeApp loopback callbacks allow a random port, but the scheme, host and path must match. The CLI accepts only `/oauth/callback`, not the root path or an extra trailing `/`.
 
-Online endpoints resolve in the order explicit flags > selected Profile > defaults. Later logins can reuse the saved application ID and endpoints. `--no-browser` prints the URL and still waits for a callback on the same machine. `--dry-run` previews the plan without opening a browser, reading credential files or exchanging credentials.
+Online endpoints resolve in the order explicit flags > selected Profile > defaults. Later logins can reuse the saved application ID and endpoints. `--dry-run` previews the plan without opening a browser, reading credential files or exchanging credentials.
+
+For SSH, containers or other environments without a browser, add `--no-browser`. Open the generated link on a computer or phone, authorize, then paste the entire redirected URL (including `code` and `state`) back into the same CLI session. The callback is `http://127.0.0.1:12345/oauth/callback`; no port is opened and the browser's connection error is expected. Input is hidden only when the CLI can disable echo on a terminal; otherwise it warns that the callback URL may be visible. For interactive SSH, use `ssh -t user@host 'bl auth --login aliyun --no-browser'`; in Docker, allocate a TTY with `docker exec -it`. The CLI does not save the URL in input history. This is interactive cross-device authorization, not device-code login or unattended CI authentication.
+
+```bash
+bl auth --login aliyun --config aliyun --no-browser
+```
+
+The example reuses an already configured OAuth Profile; first online login still requires `--client-id` and `--authorization-url`.
 
 #### Domestic pre-release control plane
 

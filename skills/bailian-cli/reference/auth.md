@@ -19,12 +19,12 @@ Index: [index.md](index.md)
 
 ### `bl auth`
 
-| Field              | Value                                                                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Name**           | `auth`                                                                                                                               |
-| **Description**    | Authenticate with Aliyun OAuth                                                                                                       |
-| **Authentication** | No Auth                                                                                                                              |
-| **Usage**          | `bl auth --login aliyun [--client-id <id>] [--authorization-url <url>] [--modelstudio-host <hostname>] [--console-gateway <origin>]` |
+| Field              | Value                                                                                                                                               |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `auth`                                                                                                                                              |
+| **Description**    | Authenticate with Aliyun OAuth                                                                                                                      |
+| **Authentication** | No Auth                                                                                                                                             |
+| **Usage**          | `bl auth --login aliyun [--client-id <id>] [--authorization-url <url>] [--modelstudio-host <hostname>] [--console-gateway <origin>] [--no-browser]` |
 
 #### Flags
 
@@ -39,17 +39,21 @@ Index: [index.md](index.md)
 | `--console-gateway <origin>`       | string | no       | Console gateway origin override (production default: https://bailian-cs.console.aliyun.com)  |
 | `--bailiancontrol-host <hostname>` | string | no       | Optional Bailian Control OpenAPI hostname                                                    |
 | `--console-region <cn-beijing>`    | string | no       | Console region (only cn-beijing; default: cn-beijing)                                        |
-| `--no-browser`                     | switch | no       | Do not open the browser automatically; still wait for the local callback                     |
+| `--no-browser`                     | switch | no       | Authorize on another device and paste the full callback URL; no local listener               |
 
 #### Notes
 
-- Outside pre-release, first login requires an explicit client ID and a confirmed authorization URL. In pre-release, endpoint overrides must match the trusted endpoints, and the CLI gateway must be configured. No device flow or remote callback import is supported.
+- Outside pre-release, first login requires an explicit client ID and a confirmed authorization URL. In pre-release, endpoint overrides must match the trusted endpoints, and the CLI gateway must be configured. With --no-browser, paste the complete callback URL into this login session; this is not device authorization.
 - Register http://127.0.0.1:12345/oauth/callback as the IAM redirect URI. NativeApp loopback ports may vary; scheme, host and path must match.
 
 #### Examples
 
 ```bash
 bl auth --login aliyun --client-id <id> --authorization-url <url>
+```
+
+```bash
+bl auth --login aliyun --client-id <id> --authorization-url <url> --no-browser
 ```
 
 ```bash

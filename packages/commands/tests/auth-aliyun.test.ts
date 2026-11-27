@@ -1,4 +1,7 @@
 import http from "node:http";
+import { PassThrough } from "node:stream";
+import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import {
   ALIYUN_CLI_CLIENT_ID,
@@ -19,7 +22,7 @@ import {
   type PreControlPlane,
 } from "bailian-cli-core";
 import { createOutputReporter } from "bailian-cli-runtime";
-import { enterIsolatedHome, type IsolatedHomeHandle } from "e2e/isolation";
+import { buildIsolatedCliEnv, enterIsolatedHome, type IsolatedHomeHandle } from "e2e/isolation";
 import { afterEach, beforeEach, expect, test, vi, type MockInstance } from "vite-plus/test";
 import authRoot, {
   runAliyunOAuthLogin,
@@ -207,6 +210,7 @@ function launch(
     verbose?: boolean;
     omitEndpoints?: boolean;
     preControlPlane?: PreControlPlane;
+    stdin?: AliyunOAuthLoginDeps["stdin"];
   } = {},
 ) {
   const stdout: string[] = [];
@@ -262,6 +266,7 @@ function launch(
     authStore: { describe, loginAliyun: save },
     onAuthUrl: url.resolve,
     openBrowser: browser,
+    stdin: settingsOptions.stdin,
   };
   const signal = options.signal
     ? AbortSignal.any([controller.signal, options.signal])
@@ -511,8 +516,11 @@ test("完整 OAuth→STS→显式 POP→显式网关→保存链路使用 PKCE�
     console: true,
     openapi: true,
   });
-  expect(probe.stderr.join("")).toContain(authUrl);
-  expect(probe.stderr.join("")).toContain("Waiting for the local OAuth callback");
+  expect(probe.stderr).toHaveLength(1);
+  expect(JSON.parse(probe.stderr[0]!)).toEqual({
+    warning: { message: expect.stringContaining(authUrl) },
+  });
+  expect(probe.stderr[0]).toContain("Waiting for the local OAuth callback");
   assertNoSecrets(probe, [verifier]);
   assertSignalCleanup(probe);
   expect(createServer.mock.results[0]!.value.address()).toBeNull();
@@ -520,23 +528,244 @@ test("完整 OAuth→STS→显式 POP→显式网关→保存链路使用 PKCE�
 });
 
 test.each(["text", "json"] as const)(
-  "双语成功结果仅含安全状态，登录链接仍写 stderr (%s)",
+  "双语成功结果仅含安全状态，登录链接写入对应格式的 stderr (%s)",
   async (output) => {
-    const probe = launch({}, { output, language: "zh-CN" });
-    await finish(probe);
-    expect(probe.stderr.join("")).toContain("请在本机浏览器中打开");
-    expect(probe.stderr.join("")).toContain("正在等待本机 OAuth 回调");
-    if (output === "text")
+    const probe = launch({}, { output, language: "zh-CN", quiet: true });
+    const { authUrl } = await finish(probe);
+    const prompt = `请在本机浏览器中打开以下登录地址：\n${authUrl}\n正在等待本机 OAuth 回调。按 Ctrl+C 取消。`;
+    expect(probe.stderr).toHaveLength(1);
+    if (output === "text") {
+      expect(probe.stderr[0]).toBe(`${prompt}\n`);
       expect(probe.stdout.join("")).toBe(
         "阿里云 OAuth 登录成功（配置：oauth-test；console：true；openapi：true）。\n",
       );
-    else expect(JSON.parse(probe.stdout.join("")).authenticated).toBe(true);
+    } else {
+      expect(JSON.parse(probe.stderr[0]!)).toEqual({ warning: { message: prompt } });
+      expect(JSON.parse(probe.stdout.join("")).authenticated).toBe(true);
+    }
     assertNoSecrets(probe);
   },
 );
 
+test.each(["en-US", "zh-CN"] as const)(
+  "无浏览器模式在其它设备授权后粘回 URL，复用 PKCE 和四段换票且不监听端口 (%s)",
+  async (language) => {
+    const input = new PassThrough();
+    const listen = vi.spyOn(http.Server.prototype, "listen");
+    const createServer = vi.spyOn(http, "createServer");
+    const probe = launch({ noBrowser: true }, { stdin: input, language });
+    const authUrl = await probe.authUrl;
+    const callback = callbackUrl(authUrl);
+    expect(callback.origin + callback.pathname).toBe("http://127.0.0.1:12345/oauth/callback");
+    expect(listen).not.toHaveBeenCalled();
+    expect(createServer).not.toHaveBeenCalled();
+    expect(probe.browser).not.toHaveBeenCalled();
+    input.end(callback.href);
+    expect(await probe.outcome).toBeUndefined();
+    const form = new URLSearchParams(stringBody(requests[0]!.init.body));
+    expect(form.get("redirect_uri")).toBe(callback.origin + callback.pathname);
+    expect(form.get("code")).toBe(SECRETS.code);
+    expect(new URL(authUrl).searchParams.get("code_challenge")).toBe(
+      createHash("sha256").update(form.get("code_verifier")!, "ascii").digest("base64url"),
+    );
+    expect(requests.map((request) => request.url.pathname)).toEqual(Object.values(STAGE_PATHS));
+    expect(probe.save).toHaveBeenCalledTimes(1);
+    expect(probe.stderr.map((line) => JSON.parse(line))).toEqual([
+      { warning: { message: expect.stringContaining("ssh -t") } },
+      { warning: { message: expect.stringContaining(authUrl) } },
+      { warning: { message: expect.stringMatching(/Callback URL|回调 URL/u) } },
+    ]);
+    expect(probe.stderr.join("")).toContain(
+      language === "zh-CN" ? "电脑或手机浏览器" : "browser on your computer or phone",
+    );
+    expect(probe.stderr.join("")).toContain(language === "zh-CN" ? "可能回显" : "may echo");
+    expect(probe.stderr.join("")).toContain("ssh -t");
+    expect(probe.stderr.join("")).not.toMatch(
+      /输入不回显|input hidden|Waiting for the local OAuth callback/u,
+    );
+    assertNoSecrets(probe, [callback.href, form.get("code_verifier")!]);
+    assertSignalCleanup(probe);
+    expect(input.listenerCount("data")).toBe(0);
+    expect(input.listenerCount("error")).toBe(0);
+  },
+);
+
+test("粘贴无效回调仅重试本次会话，不换票、不回显原文", async () => {
+  const input = new PassThrough();
+  const probe = launch({ noBrowser: true }, { stdin: input });
+  const authUrl = await probe.authUrl;
+  const callback = callbackUrl(authUrl);
+  const invalid = [
+    "",
+    SECRETS.code,
+    "not-a-url",
+    callback.href + "#",
+    ...["%ZZ", "%FF", "%C3", "%00", "%0A", "%C2%85"].map((suffix) => callback.href + suffix),
+  ];
+  for (const replacement of [
+    "https://127.0.0.1:12345/oauth/callback",
+    "http://localhost:12345/oauth/callback",
+    "http://127.0.0.1:12346/oauth/callback",
+    "http://127.0.0.1:12345/cli/callback",
+    "http://127.0.0.1:12345/oauth/callback/",
+    "http://127.0.0.1:12345/other/../oauth/callback",
+    "http://user@127.0.0.1:12345/oauth/callback",
+  ])
+    invalid.push(callback.href.replace(callback.origin + callback.pathname, replacement));
+  const wrongState = new URL(callback);
+  wrongState.searchParams.set("state", "wrong-state");
+  wrongState.searchParams.set("error", "access_denied");
+  invalid.push(wrongState.href);
+  for (const key of ["state", "code"]) {
+    const absent = new URL(callback);
+    absent.searchParams.delete(key);
+    invalid.push(absent.href);
+    const duplicate = new URL(callback);
+    duplicate.searchParams.append(key, duplicate.searchParams.get(key)!);
+    invalid.push(duplicate.href);
+  }
+  const emptyCode = new URL(callback);
+  emptyCode.searchParams.set("code", " ");
+  invalid.push(emptyCode.href);
+  for (const answer of invalid) input.write(answer + "\n");
+  expect(probe.stderr.join("").match(/Invalid OAuth callback address/g)).toHaveLength(
+    invalid.length,
+  );
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(probe.save).not.toHaveBeenCalled();
+  input.end(callback.href + "\r\n");
+  expect(await probe.outcome).toBeUndefined();
+  expect(new URLSearchParams(stringBody(requests[0]!.init.body)).get("code")).toBe(SECRETS.code);
+  assertNoSecrets(probe, [callback.href]);
+});
+
+test.each(process.platform === "win32" ? ["Ctrl+C"] : ["Ctrl+C", "Ctrl+Z"])(
+  "TTY 输入不回显且 %s 取消并清理 raw mode",
+  async (key) => {
+    const input = Object.assign(new PassThrough(), { isTTY: true, setRawMode: vi.fn() });
+    const probe = launch({ noBrowser: true }, { stdin: input });
+    const callback = callbackUrl(await probe.authUrl);
+    expect(probe.stderr.join("")).toContain("input hidden");
+    expect(probe.stderr.join("")).not.toContain("may echo");
+    expect(input.setRawMode).toHaveBeenCalledWith(true);
+    input.write(callback.href);
+    expect(fetchMock).not.toHaveBeenCalled();
+    input.write(key === "Ctrl+C" ? "\u0003" : "\u001a");
+    expect(await probe.outcome).toMatchObject({ exitCode: ExitCode.INTERRUPTED });
+    expect(input.setRawMode).toHaveBeenLastCalledWith(false);
+    expect(probe.save).not.toHaveBeenCalled();
+    assertNoSecrets(probe, [callback.href]);
+    assertSignalCleanup(probe);
+    expect(input.listenerCount("data")).toBe(0);
+    input.destroy();
+  },
+);
+
+test.each(["EOF", "error", "oversize", "denied"] as const)(
+  "手动回调的%s终止而不换票或保存",
+  async (kind) => {
+    const input = new PassThrough();
+    const probe = launch({ noBrowser: true }, { stdin: input });
+    const authUrl = await probe.authUrl;
+    if (kind === "EOF") input.end();
+    else if (kind === "error") input.emit("error", new Error(SECRETS.refreshToken));
+    else if (kind === "oversize") {
+      input.write("x".repeat(8192));
+      input.write("x".repeat(8192));
+    } else
+      input.write(
+        callbackUrl(authUrl, { error: "access_denied", error_description: SECRETS.refreshToken })
+          .href + "\n",
+      );
+    const error = await probe.outcome;
+    expect(error).toMatchObject({
+      exitCode: kind === "oversize" ? ExitCode.USAGE : ExitCode.GENERAL,
+    });
+    probe.reporter.error(error);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(probe.save).not.toHaveBeenCalled();
+    assertNoSecrets(probe);
+    assertSignalCleanup(probe);
+    expect(input.listenerCount("data")).toBe(0);
+    input.destroy();
+  },
+);
+
+test.each(["abort", "SIGINT", "SIGTERM", "timeout"] as const)(
+  "等待手动回调期间%s清理输入和计时器",
+  async (kind) => {
+    vi.useFakeTimers();
+    const input = new PassThrough();
+    const probe = launch({ noBrowser: true, callbackTimeoutMs: 100 }, { stdin: input });
+    await probe.authUrl;
+    await vi.advanceTimersByTimeAsync(99);
+    expect(fetchMock).not.toHaveBeenCalled();
+    if (kind === "timeout") await vi.advanceTimersByTimeAsync(1);
+    else if (kind === "abort") probe.controller.abort();
+    else Reflect.apply(process.listeners(kind).at(-1)!, process, []);
+    expect(await probe.outcome).toMatchObject({
+      exitCode: kind === "timeout" ? ExitCode.TIMEOUT : ExitCode.INTERRUPTED,
+    });
+    expect(vi.getTimerCount()).toBe(0);
+    expect(input.listenerCount("data")).toBe(0);
+    expect(probe.save).not.toHaveBeenCalled();
+    assertSignalCleanup(probe);
+    input.destroy();
+  },
+);
+
+// A real product invocation checks flag routing, stdin EOF and exit without a browser or network fixture.
+test("产品子进程的手动登录从 stdin 读取，回调无效后遇到 EOF 退出", async () => {
+  const environment = buildIsolatedCliEnv({
+    overrides: {
+      BAILIAN_PRE: "0",
+      NODE_OPTIONS: "",
+      NODE_NO_WARNINGS: "1",
+      DO_NOT_TRACK: "1",
+      NO_UPDATE_NOTIFIER: "1",
+    },
+  });
+  try {
+    const result = await new Promise<{
+      exitCode: number | string | undefined;
+      stdout: string;
+      stderr: string;
+    }>((resolve, reject) => {
+      const child = execFile(
+        process.execPath,
+        [
+          "--import",
+          import.meta.resolve("tsx"),
+          fileURLToPath(new URL("../../cli/src/main.ts", import.meta.url)),
+          "auth",
+          "--login",
+          "aliyun",
+          "--no-browser",
+          "--client-id",
+          "test-client",
+          "--authorization-url",
+          ENDPOINTS.authorizationUrl,
+        ],
+        { env: environment.env, encoding: "utf8", timeout: 7000, killSignal: "SIGKILL" },
+        (error, stdout, stderr) => resolve({ exitCode: error?.code ?? undefined, stdout, stderr }),
+      );
+      child.stdin!.once("error", reject);
+      child.stdin!.end(SECRETS.code + "\n");
+    });
+    expect(result.exitCode).toBe(ExitCode.GENERAL);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("your terminal may echo the callback URL");
+    expect(result.stderr).not.toContain("input hidden");
+    expect(result.stderr).toContain("Paste the complete callback URL");
+    expect(result.stderr).toContain("Callback input closed before authorization was received");
+    expect(result.stderr).not.toContain(SECRETS.code);
+  } finally {
+    environment.dispose();
+  }
+}, 10_000);
+
 test("错误或重复 state、缺失或重复 code 均拒绝并继续等待，有效 state 的拒绝不能被错误 state 伪造", async () => {
-  const probe = launch({ noBrowser: true });
+  const probe = launch();
   const authUrl = await probe.authUrl;
   const callback = callbackUrl(authUrl);
   const malformed: URL[] = [];
@@ -561,7 +790,7 @@ test("错误或重复 state、缺失或重复 code 均拒绝并继续等待，�
   expect(probe.save).not.toHaveBeenCalled();
   expect((await localRequest(callback)).status).toBe(200);
   expect(await probe.outcome).toBeUndefined();
-  expect(probe.browser).not.toHaveBeenCalled();
+  expect(probe.browser).toHaveBeenCalledTimes(1);
   assertNoSecrets(probe);
 });
 
@@ -628,7 +857,7 @@ test("打开浏览器时即刻回调不会漏掉完成事件", async () => {
 });
 
 test("真实短超时关闭服务器且不产生请求、保存或遗留信号监听器", async () => {
-  const probe = launch({ callbackTimeoutMs: 20, noBrowser: true });
+  const probe = launch({ callbackTimeoutMs: 20 });
   const callback = callbackUrl(await probe.authUrl);
   expect(await probe.outcome).toMatchObject({ exitCode: ExitCode.TIMEOUT });
   expect(fetchMock).not.toHaveBeenCalled();
@@ -639,7 +868,7 @@ test("真实短超时关闭服务器且不产生请求、保存或遗留信号�
 
 test("受控时间推进覆盖超时边界并清除本次定时器", async () => {
   vi.useFakeTimers();
-  const probe = launch({ callbackTimeoutMs: 100, noBrowser: true });
+  const probe = launch({ callbackTimeoutMs: 100 });
   await probe.authUrl;
   await vi.advanceTimersByTimeAsync(99);
   expect(probe.save).not.toHaveBeenCalled();
@@ -653,7 +882,7 @@ test("受控时间推进覆盖超时边界并清除本次定时器", async () =>
 test.each(["abort", "SIGINT", "SIGTERM"] as const)(
   "等待回调期间%s取消并清理服务器",
   async (kind) => {
-    const probe = launch({ noBrowser: true });
+    const probe = launch();
     const callback = callbackUrl(await probe.authUrl);
     if (kind === "abort") probe.controller.abort(new Error(SECRETS.accessToken));
     else {
@@ -703,7 +932,7 @@ test.each(STAGES)("%s 请求在途时 Ctrl+C 中止换票，仅撤销已获得�
       }
     },
   };
-  const probe = launch({ noBrowser: true });
+  const probe = launch();
   try {
     expect((await localRequest(callbackUrl(await probe.authUrl))).status).toBe(200);
     const requestSignal = await Promise.race([
@@ -842,7 +1071,7 @@ test("下游阶段取消不保存，并撤销已经获得的 RT", async () => {
 });
 
 test("已开始持久化时取消，不撤销成功保存的会话", async () => {
-  const probe = launch({ noBrowser: true });
+  const probe = launch();
   probe.save.mockImplementation(async () => probe.controller.abort());
   await finish(probe);
   expect(probe.save).toHaveBeenCalledTimes(1);
@@ -986,8 +1215,13 @@ test.each([true, false])(
   "dry-run 零秘密读取/监听/浏览器/请求/保存，允许缺端点 (%s)",
   async (omitEndpoints) => {
     const listen = vi.spyOn(http.Server.prototype, "listen");
-    const probe = launch({}, { dryRun: true, omitEndpoints });
+    const input = new PassThrough();
+    const probe = launch(
+      { noBrowser: omitEndpoints },
+      { dryRun: true, omitEndpoints, stdin: input },
+    );
     expect(await probe.outcome).toBeUndefined();
+    expect(input.listenerCount("data")).toBe(0);
     expect(probe.describe).not.toHaveBeenCalled();
     expect(listen).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -996,6 +1230,7 @@ test.each([true, false])(
     expect(probe.stderr).toEqual([]);
     const data = JSON.parse(probe.stdout.join(""));
     expect(data.method).toBe("aliyun");
+    expect(data.no_browser).toBe(omitEndpoints);
     expect(data.missing).toEqual(omitEndpoints ? ["--authorization-url"] : []);
     expect(data.plan.modelstudio_host).toBe(
       omitEndpoints ? DEFAULT_ENDPOINTS.modelstudioHost : ENDPOINTS.modelstudioHost,
@@ -1012,6 +1247,21 @@ test.each([true, false])(
     assertSignalCleanup(probe);
   },
 );
+
+test.each([
+  [false, "en-US", "with a random loopback port"],
+  [true, "en-US", "by pasting the callback URL without listening on a port"],
+  [false, "zh-CN", "通过随机回环端口"],
+  [true, "zh-CN", "通过粘贴回调 URL（不监听端口）"],
+] as const)("OAuth 文本预览按模式显示回调方式 (%s, %s)", async (noBrowser, language, text) => {
+  const probe = launch({ noBrowser }, { dryRun: true, output: "text", language });
+  expect(await probe.outcome).toBeUndefined();
+  expect(probe.stdout.join("")).toContain(text);
+  if (noBrowser) expect(probe.stdout.join("")).not.toMatch(/random loopback port|随机回环端口/u);
+  expect(probe.stderr).toEqual([]);
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(probe.save).not.toHaveBeenCalled();
+});
 
 test("预发 OAuth 首次登录预览列出预设端点和未确认的 Console 网关", async () => {
   const probe = launch({}, { dryRun: true, omitEndpoints: true, preControlPlane: {} });

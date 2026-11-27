@@ -201,7 +201,15 @@ bl auth --login aliyun --config aliyun \
 
 IAM 重定向 URI 应登记为 `http://127.0.0.1:12345/oauth/callback`。NativeApp 本机回环回调允许随机端口，但协议、主机和路径必须一致；CLI 仅接受 `/oauth/callback`，不接受根路径或末尾额外的 `/`。
 
-线上端点按显式参数 > 所选 Profile > 默认地址解析；之后可以复用已保存的应用 ID 和端点。`--no-browser` 只禁止自动打开浏览器，仍等待同一台机器的本机回调；`--dry-run` 仅展示计划，不打开浏览器、不读凭据文件、不换票。
+线上端点按显式参数 > 所选 Profile > 默认地址解析；之后可以复用已保存的应用 ID 和端点。`--dry-run` 仅展示计划，不打开浏览器、不读凭据文件、不换票。
+
+SSH、容器等无法打开浏览器的环境可加 `--no-browser`：在电脑或手机上打开本次生成的链接并授权，再把地址栏中完整的回调 URL（含 `code` 和 `state`）粘回同一个 CLI 会话。回调地址为 `http://127.0.0.1:12345/oauth/callback`，不监听端口，浏览器提示连接失败是正常现象。只有 CLI 能关闭终端回显时才隐藏输入，否则会提醒回调 URL 可能被显示。通过 SSH 交互登录时，用 `ssh -t user@host 'bl auth --login aliyun --no-browser'`；在 Docker 里，用 `docker exec -it` 分配 TTY。CLI 不会把回调 URL 保存到输入历史。这仍需人工授权，不是设备码登录或无人值守的 CI 鉴权。
+
+```bash
+bl auth --login aliyun --config aliyun --no-browser
+```
+
+示例复用已配置的 OAuth Profile；线上首次登录仍须提供 `--client-id` 和 `--authorization-url`。
 
 #### 国内预发控制面
 

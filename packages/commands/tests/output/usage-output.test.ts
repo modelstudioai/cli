@@ -291,6 +291,7 @@ async function invoke(
   });
   const client = {
     baseUrl: REGIONS.cn,
+    resolveOpenApiHost: (host: string) => host,
     console: async (api: string, data: Record<string, unknown>) => {
       calls.push({ api, data: structuredClone(data) });
       if (failure) throw new BailianError("Original console failure", ExitCode.GENERAL);
