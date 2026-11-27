@@ -38,6 +38,7 @@ Index: [index.md](index.md)
 | `bl finetune opd run`            | API Key        | Submit a pure Model OPD distillation job (pg_opd) via the fine-tunes OpenAPI                                                    |
 | `bl finetune opd watch`          | API Key        | Probe an OPD job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                           |
 | `bl finetune params`             | API Key        | Query the training hyper-parameter configuration for a base model                                                               |
+| `bl finetune preset-datasets`    | API Key        | List the preset datasets that can be mixed into a fine-tuning job                                                               |
 | `bl finetune price`              | Console        | Estimate the training cost for a fine-tune job (token billing)                                                                  |
 | `bl finetune rl authorize`       | Console        | Check and authorize reinforcement-learning access (whitelist, service roles, enablement)                                        |
 | `bl finetune rl cancel`          | API Key        | Cancel a running RL job                                                                                                         |
@@ -1231,6 +1232,58 @@ bl finetune params --base-model qwen3-8b --output json
 bl finetune params --base-model qwen3-8b --dry-run
 ```
 
+### `bl finetune preset-datasets`
+
+| Field              | Value                                                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**           | `finetune preset-datasets`                                                                                                                                               |
+| **Description**    | List the preset datasets that can be mixed into a fine-tuning job                                                                                                        |
+| **Authentication** | API Key                                                                                                                                                                  |
+| **Usage**          | `bl finetune preset-datasets --base-model <model> [--training-type <t>] [--model-version <version>] [--modality <text\|vision>] [--reasoning-mode <instruct\|thinking>]` |
+
+#### Flags
+
+| Flag                                    | Type   | Required | Description                                                                                                                                                 |
+| --------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--base-model <model>`                  | string | yes      | Base model to list preset datasets for (e.g. qwen3-8b)                                                                                                      |
+| `--training-type <t>`                   | string | no       | Training type: sft \| sft-lora \| dpo \| dpo-lora \| cpt (default: sft-lora). Mapped to the server's training_type (e.g. sft-lora -> efficient_sft).        |
+| `--model-version <version>`             | string | no       | Base-model training-config version. Omit to use the latest applicable config (or, when resuming, the source job's version).                                 |
+| `--modality <text\|vision>`             | string | no       | Training modality: text \| vision. Only meaningful for models with dynamic train options; sent as modality inside hyper_parameters.                         |
+| `--reasoning-mode <instruct\|thinking>` | string | no       | Reasoning mode: instruct (non-thinking) \| thinking. Only meaningful for models with dynamic train options; sent as reasoning_mode inside hyper_parameters. |
+| `--api-key <key>`                       | string | no       | API key                                                                                                                                                     |
+| `--base-url <url>`                      | string | no       | API base URL                                                                                                                                                |
+| `--console-region <region>`             | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                                                                                                    |
+| `--console-site <site>`                 | string | no       | Console site: domestic, international                                                                                                                       |
+| `--console-switch-agent <uid>`          | number | no       | Switch agent UID for delegated access                                                                                                                       |
+| `--workspace-id <id>`                   | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                                                                                                    |
+
+#### Notes
+
+- Queries GET /api/v1/fine-tunes/preset-datasets. Each entry keeps the server field names verbatim (dataset_code, dataset_title, dataset_desc); dataset_code is case-sensitive as returned; finetune text create sends it lowercased as augmentation_types (e.g. mix_V2 -> mix_v2). An empty output (nothing to mix for this model and training type) is a success with exit code 0.
+- --modality / --reasoning-mode travel as one hyper_parameters query parameter (JSON). When a console session is available, the combination is prechecked against the model's supported combinations and omitted options are completed from its defaults; invalid combinations fail with a usage error. Without a console session the check is skipped with a warning and the server result is authoritative.
+
+#### Examples
+
+```bash
+bl finetune preset-datasets --base-model qwen3-8b
+```
+
+```bash
+bl finetune preset-datasets --base-model qwen3-8b --training-type sft-lora --output json
+```
+
+```bash
+bl finetune preset-datasets --base-model qwen3.6-plus-base-2026-04-02 --training-type sft --modality vision --reasoning-mode instruct
+```
+
+```bash
+bl finetune preset-datasets --base-model qwen3-8b --training-type dpo
+```
+
+```bash
+bl finetune preset-datasets --base-model qwen3-8b --dry-run
+```
+
 ### `bl finetune price`
 
 | Field              | Value                                                                                               |
@@ -1705,48 +1758,51 @@ bl finetune runtime prepare --dry-run
 
 ### `bl finetune text create`
 
-| Field              | Value                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `finetune text create`                                                                                                                                                                                                                                                                                                                                                                                     |
-| **Description**    | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                                                                                                                                              |
-| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                                                                    |
-| **Usage**          | `bl finetune text create --base-model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--job-name <name>] [--priority <L0\|L1\|L2\|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>] [--modality <text\|vision>] [--reasoning-mode <instruct\|thinking>]` |
+| Field              | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune text create`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Description**    | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Usage**          | `bl finetune text create --base-model <model> --datasets <id\|path\|oss://...,...> [--validations <id\|path\|oss://...,...>] [--oss-region <region>] [--job-name <name>] [--priority <L0\|L1\|L2\|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>] [--data-augmentation <true\|false>] [--augmentation-types <code,...>] [--augmentation-ratio <r,...>] [--modality <text\|vision>] [--reasoning-mode <instruct\|thinking>]` |
 
 #### Flags
 
-| Flag                                     | Type   | Required | Description                                                                                                                                                                                                    |
-| ---------------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--base-model <model>`                   | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                                                             |
-| `--datasets <ids\|paths>`                | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image/video). Local paths are uploaded (validated) first, then their file-ids are used.                                       |
-| `--validations <ids\|paths>`             | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                                                                    |
-| `--model-name <name>`                    | string | no       | Output model name (after training)                                                                                                                                                                             |
-| `--suffix <text>`                        | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                                                               |
-| `--job-name <value>`                     | string | no       | Training job display name (job_name)                                                                                                                                                                           |
-| `--priority <L0\|L1\|L2\|L3>`            | string | no       | Requested scheduling priority; verify the service response                                                                                                                                                     |
-| `--eval-steps <value>`                   | number | no       | Validation interval in training steps                                                                                                                                                                          |
-| `--lora-alpha <value>`                   | number | no       | LoRA scaling coefficient                                                                                                                                                                                       |
-| `--lora-dropout <value>`                 | number | no       | LoRA dropout probability                                                                                                                                                                                       |
-| `--lora-rank <value>`                    | number | no       | LoRA matrix rank                                                                                                                                                                                               |
-| `--lr-scheduler-type <value>`            | string | no       | Learning rate scheduler supported by the selected model                                                                                                                                                        |
-| `--save-strategy <epoch\|steps>`         | string | no       | Checkpoint saving strategy                                                                                                                                                                                     |
-| `--save-total-limit <value>`             | number | no       | Maximum number of saved checkpoints                                                                                                                                                                            |
-| `--save-steps <value>`                   | number | no       | Checkpoint saving interval for strategy=steps                                                                                                                                                                  |
-| `--split <value>`                        | number | no       | Training fraction when no validation dataset is supplied                                                                                                                                                       |
-| `--max-split-val-dataset-sample <value>` | number | no       | Maximum automatically split validation samples                                                                                                                                                                 |
-| `--data-augmentation <true\|false>`      | string | no       | Mix platform training data (true or false)                                                                                                                                                                     |
-| `--training-type <t>`                    | string | no       | Training type: sft \| sft-lora \| dpo \| dpo-lora \| cpt (default: sft-lora). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full).                       |
-| `--n-epochs <n>`                         | number | no       | Number of epochs; valid values are checked against the selected model                                                                                                                                          |
-| `--batch-size <n>`                       | number | no       | Per-device batch size; range and step are checked against the selected model                                                                                                                                   |
-| `--learning-rate <str>`                  | string | no       | Learning rate as a string to preserve precision (e.g. "1.6e-5")                                                                                                                                                |
-| `--max-length <n>`                       | number | no       | Max sequence length                                                                                                                                                                                            |
-| `--modality <text\|vision>`              | string | no       | Training-option modality sent as hyper_parameters.modality (not the dataset format fixed by this subcommand). Only for models with dynamic train options; valid values come from the model's parameter schema. |
-| `--reasoning-mode <instruct\|thinking>`  | string | no       | Reasoning mode sent as hyper_parameters.reasoning_mode. Only for models with dynamic train options; valid values come from the model's parameter schema.                                                       |
-| `--api-key <key>`                        | string | no       | API key                                                                                                                                                                                                        |
-| `--base-url <url>`                       | string | no       | API base URL                                                                                                                                                                                                   |
-| `--console-region <region>`              | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                                                                                                                                                       |
-| `--console-site <site>`                  | string | no       | Console site: domestic, international                                                                                                                                                                          |
-| `--console-switch-agent <uid>`           | number | no       | Switch agent UID for delegated access                                                                                                                                                                          |
-| `--workspace-id <id>`                    | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                                                                                                                                                       |
+| Flag                                     | Type   | Required | Description                                                                                                                                                                                                                                                         |
+| ---------------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--base-model <model>`                   | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                                                                                                                  |
+| `--datasets <ids\|paths\|oss://...>`     | string | yes      | Comma-separated dataset file IDs, local paths (.jsonl) or OSS mounts (oss://<bucket>/<object key>). Local paths are uploaded (validated) first, then their file-ids are used. An OSS mount is read in place by the service, so it is not validated or uploaded here |
+| `--validations <ids\|paths\|oss://...>`  | string | no       | Comma-separated validation dataset file IDs, local paths or OSS mounts (oss://<bucket>/<object key>), handled like --datasets                                                                                                                                       |
+| `--model-name <name>`                    | string | no       | Output model name (after training)                                                                                                                                                                                                                                  |
+| `--suffix <text>`                        | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                                                                                                                    |
+| `--oss-region <region>`                  | string | no       | Region ID of the OSS buckets mounted by the oss:// entries of --datasets / --validations (default: cn-beijing); sent as given, whether the service can mount from it is judged by the service                                                                       |
+| `--job-name <value>`                     | string | no       | Training job display name (job_name)                                                                                                                                                                                                                                |
+| `--priority <L0\|L1\|L2\|L3>`            | string | no       | Requested scheduling priority; verify the service response                                                                                                                                                                                                          |
+| `--eval-steps <value>`                   | number | no       | Validation interval in training steps                                                                                                                                                                                                                               |
+| `--lora-alpha <value>`                   | number | no       | LoRA scaling coefficient                                                                                                                                                                                                                                            |
+| `--lora-dropout <value>`                 | number | no       | LoRA dropout probability                                                                                                                                                                                                                                            |
+| `--lora-rank <value>`                    | number | no       | LoRA matrix rank                                                                                                                                                                                                                                                    |
+| `--lr-scheduler-type <value>`            | string | no       | Learning rate scheduler supported by the selected model                                                                                                                                                                                                             |
+| `--save-strategy <epoch\|steps>`         | string | no       | Checkpoint saving strategy                                                                                                                                                                                                                                          |
+| `--save-total-limit <value>`             | number | no       | Maximum number of saved checkpoints                                                                                                                                                                                                                                 |
+| `--save-steps <value>`                   | number | no       | Checkpoint saving interval for strategy=steps                                                                                                                                                                                                                       |
+| `--split <value>`                        | number | no       | Training fraction when no validation dataset is supplied                                                                                                                                                                                                            |
+| `--max-split-val-dataset-sample <value>` | number | no       | Maximum automatically split validation samples                                                                                                                                                                                                                      |
+| `--data-augmentation <true\|false>`      | string | no       | Mix platform preset training data into the job (true or false). Only honored for sft and sft-lora; turned on automatically by --augmentation-types                                                                                                                  |
+| `--augmentation-types <code,...>`        | string | no       | Preset datasets to mix in, comma-separated. Codes come from finetune preset-datasets and are sent lowercased (e.g. mix_V2 -> mix_v2). Requires --augmentation-ratio                                                                                                 |
+| `--augmentation-ratio <r,...>`           | string | no       | Mix ratio per preset dataset, comma-separated and positionally matching --augmentation-types; each is 0.0~2.0 of the training data volume                                                                                                                           |
+| `--training-type <t>`                    | string | no       | Training type: sft \| sft-lora \| dpo \| dpo-lora \| cpt (default: sft-lora). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full).                                                                            |
+| `--n-epochs <n>`                         | number | no       | Number of epochs; valid values are checked against the selected model                                                                                                                                                                                               |
+| `--batch-size <n>`                       | number | no       | Per-device batch size; range and step are checked against the selected model                                                                                                                                                                                        |
+| `--learning-rate <str>`                  | string | no       | Learning rate as a string to preserve precision (e.g. "1.6e-5")                                                                                                                                                                                                     |
+| `--max-length <n>`                       | number | no       | Max sequence length                                                                                                                                                                                                                                                 |
+| `--modality <text\|vision>`              | string | no       | Training-option modality sent as hyper_parameters.modality (not the dataset format fixed by this subcommand). Only for models with dynamic train options; valid values come from the model's parameter schema.                                                      |
+| `--reasoning-mode <instruct\|thinking>`  | string | no       | Reasoning mode sent as hyper_parameters.reasoning_mode. Only for models with dynamic train options; valid values come from the model's parameter schema.                                                                                                            |
+| `--api-key <key>`                        | string | no       | API key                                                                                                                                                                                                                                                             |
+| `--base-url <url>`                       | string | no       | API base URL                                                                                                                                                                                                                                                        |
+| `--console-region <region>`              | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                                                                                                                                                                                                            |
+| `--console-site <site>`                  | string | no       | Console site: domestic, international                                                                                                                                                                                                                               |
+| `--console-switch-agent <uid>`           | number | no       | Switch agent UID for delegated access                                                                                                                                                                                                                               |
+| `--workspace-id <id>`                    | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                                                                                                                                                                                                            |
 
 #### Notes
 
@@ -1755,10 +1811,12 @@ bl finetune runtime prepare --dry-run
 - --datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.
 - Training-type values use the `<method>` / `<method>-lora` convention: sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map to the server's training_type at the interface boundary, so the rest of the CLI never sees the raw server strings.
 - Before submitting (non dry-run) the job, the model's training capability is checked via listFoundationModels (no console login required); an unsupported training type fails fast with the list the model actually supports.
-- Before upload, the command queries the selected model and training type's parameter schema. Explicit overrides must satisfy its editability, type, enum, range, and step constraints; omitted values use platform defaults.
+- Before upload, the command queries the selected model and training type's parameter schema. Explicit overrides must satisfy its editability, type, enum, range, and step constraints. The create API requires n_epochs, batch_size and max_length: an omitted one is filled from the schema's default (query it with the finetune params command); every other omitted value uses the platform default.
 - Learning rate is forwarded as a string to avoid JSON-number precision loss.
 - Pre-submit gate: if the training dataset's sample count is not greater than batch_size, the job is rejected before upload or quota consumption (the platform would otherwise fail ~10 min in, after data processing).
 - --modality / --reasoning-mode are training options forwarded as hyper_parameters entries, independent of the dataset format fixed by the subcommand. Models with dynamic train options require them to resolve the parameter schema (e.g. a vision-only CPT base needs --modality vision); models without dynamic options reject them. Invalid combinations are rejected by the server and surfaced as-is.
+- Mixed training: --data-augmentation turns it on; --augmentation-types selects preset datasets (list them with finetune preset-datasets; codes are sent lowercased, e.g. mix_V2 -> mix_v2) and --augmentation-ratio gives one ratio (0.0~2.0) per type, positionally. Passing types turns data_augmentation on. These three are documented on the create API but absent from the model's parameter schema, so they are not part of the schema check; whether the selected model and training type honors them is decided by the server (documented for sft and sft-lora), and mixed data is billed as training tokens.
+- OSS mount: an oss://<bucket>/<object key> entry of --datasets / --validations is read in place, so it skips local validation, upload and the sample-count pre-check. Upload the uncompressed dataset folder to OSS as-is (a zip cannot be mounted) and, for a multi-file dataset, point at its data.jsonl. Every oss:// entry shares --oss-region. A request with an OSS mount sends training_datasets / validation_datasets instead of training_file_ids / validation_file_ids.
 
 #### Examples
 
@@ -1787,6 +1845,10 @@ bl finetune text create --base-model qwen3-8b --datasets ./jev-train.jsonl --job
 ```
 
 ```bash
+bl finetune text create --base-model qwen3-8b --datasets ./train.jsonl --training-type sft-lora --augmentation-types mix_V2 --augmentation-ratio 0.5
+```
+
+```bash
 bl finetune text create --base-model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4
 ```
 
@@ -1796,6 +1858,10 @@ bl finetune text create --base-model qwen3.6-plus-base-2026-04-02 --datasets fil
 
 ```bash
 bl finetune text create --base-model qwen3-8b --datasets file-xxx --output json
+```
+
+```bash
+bl finetune text create --base-model qwen3-8b --datasets oss://my-bucket/datasets/train/data.jsonl --oss-region cn-beijing
 ```
 
 ```bash
@@ -1824,9 +1890,9 @@ bl finetune text create --base-model qwen3-8b --datasets file-xxx --dry-run
 
 #### Notes
 
-- Calls the console gateway model-train-options API and requires a console login session. The result keeps the server field names verbatim (optionKeys, optionDefinitions, defaults, supportedCombinations). Models without dynamic train options return training_options: null.
-- supportedCombinations is the authority for valid option combinations. finetune params and finetune text create call this same API once as a best-effort precheck when a console session is available: omitted options are completed from defaults and invalid combinations are rejected; without a session the check is skipped with a warning.
-- Pass the selected options to finetune params / finetune text create via --modality / --reasoning-mode; they travel as hyper_parameters to the training API.
+- Calls the console gateway model-train-options API and requires a console login session. The result keeps the server field names verbatim (optionKeys, optionDefinitions, defaults, supportedCombinations) and carries a status: configured (options were returned), not_configured (the model is confirmed in the trainable catalog and has no dynamic options, so training_options is null) or unverified (no options were returned and the catalog lookup failed). A model id that is not a trainable base model fails with an error instead of returning null.
+- supportedCombinations is the authority for valid option combinations. finetune params, finetune preset-datasets and finetune text create call this same API once as a best-effort precheck when a console session is available: omitted options are completed from defaults and invalid combinations are rejected; without a session the check is skipped with a warning.
+- Pass the selected options to finetune params / finetune preset-datasets / finetune text create via --modality / --reasoning-mode; they travel as hyper_parameters to the training API.
 
 #### Examples
 

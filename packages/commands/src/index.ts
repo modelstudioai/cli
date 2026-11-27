@@ -214,6 +214,7 @@ export { default as finetuneCapability } from "./commands/finetune/capability.ts
 export { default as finetunePrice } from "./commands/finetune/price.ts";
 export { default as finetuneParams } from "./commands/finetune/params.ts";
 export { default as finetuneTrainOptions } from "./commands/finetune/train-options.ts";
+export { default as finetunePresetDatasets } from "./commands/finetune/preset-datasets.ts";
 export { default as finetuneMetrics } from "./commands/finetune/metrics.ts";
 export { default as finetuneCompressTemplates } from "./commands/finetune/compress-templates.ts";
 export { default as finetuneCompressCreate } from "./commands/finetune/compress-create.ts";

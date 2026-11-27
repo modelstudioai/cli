@@ -324,6 +324,11 @@ export function finetuneParamsPath(): string {
   return "/api/v1/fine-tunes/fine-tunes-params";
 }
 
+/** GET /api/v1/fine-tunes/preset-datasets — preset datasets available for mixing. */
+export function finetunePresetDatasetsPath(): string {
+  return "/api/v1/fine-tunes/preset-datasets";
+}
+
 /** GET /api/v1/fine-tunes/{job_id}/basic_metrics — training metrics. */
 export function finetuneBasicMetricsPath(jobId: string): string {
   return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/basic_metrics`;

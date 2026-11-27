@@ -94,6 +94,7 @@ function parameterSchema(
       data_range: ["1", "200"],
       step: 1,
       editable: true,
+      defaultValue: "3",
     },
     { name: "learning_rate", type: "input", editable: true },
     {
@@ -101,6 +102,7 @@ function parameterSchema(
       type: "intInputNumber",
       data_range: ["500", "65536"],
       editable: true,
+      defaultValue: "32768",
     },
     {
       name: "eval_steps",
@@ -167,12 +169,8 @@ function parameterSchema(
       data_range: ["1", "2147483647"],
       editable: true,
     },
-    {
-      name: "data_augmentation",
-      type: "select",
-      support_values: ["true", "false"],
-      editable: true,
-    },
+    // Mixed-training parameters (data_augmentation / augmentation_types /
+    // augmentation_ratio) are deliberately absent, as on the real service.
   ];
 }
 
@@ -257,7 +255,7 @@ describe("e2e: finetune (schema-gated)", () => {
     expect(stderr).toMatch(/--base-model|--datasets/i);
   });
 
-  test("finetune create --dry-run 构造 SFT 默认请求体", async () => {
+  test("finetune create --dry-run 用参数配置默认值补齐必填超参", async () => {
     const { stdout, stderr, exitCode } = await runSchemaCommand([
       "finetune",
       "text",
@@ -288,7 +286,13 @@ describe("e2e: finetune (schema-gated)", () => {
     expect(data.body.training_file_ids).toEqual(["file-aaa", "file-bbb"]);
     expect(data.body.validation_file_ids).toEqual(["file-ccc"]);
     expect(data.body.training_type).toBe("efficient_sft");
-    expect(data.body.hyper_parameters).toEqual({});
+    // The create API rejects a job without n_epochs / batch_size / max_length,
+    // so omitted ones are sent with the schema's defaults.
+    expect(data.body.hyper_parameters).toEqual({
+      n_epochs: 3,
+      batch_size: 8,
+      max_length: 32768,
+    });
   });
 
   test("finetune create --dry-run 转发训练类型与超参", async () => {
@@ -392,7 +396,7 @@ describe("e2e: finetune (schema-gated)", () => {
     expect(exitCode, stdout + stderr).not.toBe(0);
   });
 
-  test("finetune text create --help 展示训练选项 flag", async () => {
+  test("finetune text create --help 展示训练选项与混合训练 flag", async () => {
     const { stderr, exitCode } = await runCommandHelp(FINETUNE_ROUTES, [
       "finetune",
       "text",
@@ -402,6 +406,11 @@ describe("e2e: finetune (schema-gated)", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--modality/);
     expect(stderr).toMatch(/--reasoning-mode/);
+    expect(stderr).toMatch(/--data-augmentation/);
+    expect(stderr).toMatch(/--augmentation-types/);
+    expect(stderr).toMatch(/--augmentation-ratio/);
+    expect(stderr).toMatch(/--oss-region/);
+    expect(stderr).toMatch(/oss:\/\//);
   });
 
   test("finetune create --dry-run 动态选项模型透传 modality/reasoning_mode 并作为 schema 查询上下文", async () => {
@@ -439,6 +448,30 @@ describe("e2e: finetune (schema-gated)", () => {
     expect(lastSchemaQuery?.get("hyper_parameters")).toBe(
       JSON.stringify({ modality: "vision", reasoning_mode: "instruct" }),
     );
+  });
+
+  test("finetune create 只补参数配置里有默认值的必填超参", async () => {
+    // This schema gives batch_size a default, lists n_epochs without one and has
+    // no max_length: only batch_size is filled, nothing is invented.
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "text",
+      "create",
+      "--base-model",
+      DYNAMIC_OPTION_MODEL,
+      "--datasets",
+      "file-aaa",
+      "--training-type",
+      "cpt",
+      "--modality",
+      "vision",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ body: { hyper_parameters: Record<string, unknown> } }>(stdout);
+    expect(data.body.hyper_parameters).toEqual({ batch_size: 8, modality: "vision" });
   });
 
   test("finetune create 动态选项模型缺 modality 时空 schema 闸门给出训练选项提示", async () => {
@@ -798,6 +831,83 @@ describe("e2e: finetune (schema-gated)", () => {
 
   test("finetune train-options 缺少 --base-model 时退出为用法错误 (2)", async () => {
     const { stderr, exitCode } = await runSchemaCommand(["finetune", "train-options", "--quiet"]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--base-model|Missing required argument/i);
+  });
+
+  test("finetune preset-datasets --help 展示必填项与可选 flag", async () => {
+    const { stderr, exitCode } = await runSchemaCommand(["finetune", "preset-datasets", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--base-model/);
+    expect(stderr).toMatch(/--model-version/);
+    expect(stderr).toMatch(/--console-region/);
+  });
+
+  test("finetune preset-datasets --dry-run 离线预览 query，未传的可选项不出现", async () => {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "preset-datasets",
+      "--base-model",
+      "qwen3-8b",
+      "--dry-run",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(parseStdoutJson(stdout)).toEqual({
+      action: "finetune.preset-datasets",
+      base_model: "qwen3-8b",
+      training_type: "efficient_sft",
+    });
+  });
+
+  test("finetune preset-datasets --dry-run 带上显式训练类型与可选项", async () => {
+    // --modality / --reasoning-mode merge into one hyper_parameters JSON query
+    // string; the training type stays the server value of the CLI mapping.
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "preset-datasets",
+      "--base-model",
+      DYNAMIC_OPTION_MODEL,
+      "--training-type",
+      "sft",
+      "--model-version",
+      "v1",
+      "--modality",
+      "vision",
+      "--reasoning-mode",
+      "instruct",
+      "--workspace-id",
+      "ws-123",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(parseStdoutJson(stdout)).toEqual({
+      action: "finetune.preset-datasets",
+      base_model: DYNAMIC_OPTION_MODEL,
+      training_type: "sft",
+      version: "v1",
+      hyper_parameters: '{"modality":"vision","reasoning_mode":"instruct"}',
+      workspace_id: "ws-123",
+    });
+  });
+
+  test("finetune preset-datasets 非法训练类型退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runSchemaCommand([
+      "finetune",
+      "preset-datasets",
+      "--base-model",
+      "qwen3-8b",
+      "--training-type",
+      "nope",
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--training-type|nope/);
+  });
+
+  test("finetune preset-datasets 缺少 --base-model 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runSchemaCommand(["finetune", "preset-datasets", "--quiet"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--base-model|Missing required argument/i);
   });
@@ -1575,4 +1685,307 @@ describe("finetune complete recipe (offline)", () => {
     const result = await runSchemaCommand(invalidArgs);
     expect(result.exitCode).toBe(2);
   });
+});
+
+describe("finetune text create mixed training (offline)", () => {
+  const baseArgs = [
+    "finetune",
+    "text",
+    "create",
+    "--base-model",
+    "qwen3-8b",
+    "--datasets",
+    "file-aaa",
+    "--dry-run",
+    "--output",
+    "json",
+  ];
+
+  async function previewHyperParameters(extra: string[]): Promise<Record<string, unknown>> {
+    const { stdout, stderr, exitCode } = await runSchemaCommand([...baseArgs, ...extra]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ body: { hyper_parameters: Record<string, unknown> } }>(stdout);
+    return data.body.hyper_parameters;
+  }
+
+  test("--augmentation-types 按小写下发并自动开启 data_augmentation", async () => {
+    // preset-datasets returns `mix_V2`; the create API documents lowercase codes.
+    expect(
+      await previewHyperParameters([
+        "--augmentation-types",
+        "mix_V2",
+        "--augmentation-ratio",
+        "0.5",
+      ]),
+    ).toMatchObject({
+      data_augmentation: true,
+      augmentation_types: "mix_v2",
+      augmentation_ratio: "0.5",
+    });
+  });
+
+  test("多个数据集与倍率按位置对应并去掉空白", async () => {
+    expect(
+      await previewHyperParameters([
+        "--augmentation-types",
+        " mix_V2 , vl_mix ",
+        "--augmentation-ratio",
+        "0.5, 1.25",
+      ]),
+    ).toMatchObject({
+      data_augmentation: true,
+      augmentation_types: "mix_v2,vl_mix",
+      augmentation_ratio: "0.5,1.25",
+    });
+  });
+
+  test("--data-augmentation 不在参数配置里也原样下发", async () => {
+    // The real schema has no data_augmentation entry; the flag must not be
+    // rejected by the schema check.
+    expect(await previewHyperParameters(["--data-augmentation", "true"])).toMatchObject({
+      data_augmentation: true,
+    });
+  });
+
+  test("未传混合训练 flag 时请求体不带相关字段", async () => {
+    const hyperParameters = await previewHyperParameters([]);
+    expect(
+      Object.keys(hyperParameters).some((parameterName) => /augmentation/.test(parameterName)),
+    ).toBe(false);
+  });
+
+  test.each([
+    ["only --augmentation-types", ["--augmentation-types", "mix_V2"], /--augmentation-ratio/],
+    ["only --augmentation-ratio", ["--augmentation-ratio", "0.5"], /--augmentation-types/],
+    [
+      "conflict with --data-augmentation false",
+      [
+        "--augmentation-types",
+        "mix_V2",
+        "--augmentation-ratio",
+        "0.5",
+        "--data-augmentation",
+        "false",
+      ],
+      /--data-augmentation false/,
+    ],
+    [
+      "empty item",
+      ["--augmentation-types", "mix_V2,,vl_mix", "--augmentation-ratio", "0.5,1"],
+      /empty items|空项/,
+    ],
+    [
+      "ratio count mismatch",
+      ["--augmentation-types", "mix_V2,vl_mix", "--augmentation-ratio", "0.5"],
+      /one ratio per|逐项对应/,
+    ],
+    [
+      "ratio above 2",
+      ["--augmentation-types", "mix_V2", "--augmentation-ratio", "2.5"],
+      /within \[0, 2\]|0\.0~2\.0/,
+    ],
+    [
+      "non-numeric ratio",
+      ["--augmentation-types", "mix_V2", "--augmentation-ratio", "abc"],
+      /within \[0, 2\]|0\.0~2\.0/,
+    ],
+  ])("rejects %s as a usage error before any request", async (_case, extra, pattern) => {
+    const queryBefore = lastSchemaQuery;
+    const { stdout, stderr, exitCode } = await runSchemaCommand([...baseArgs, ...extra]);
+    expect(exitCode, stdout + stderr).toBe(2);
+    expect(stderr).toMatch(pattern);
+    expect(lastSchemaQuery).toBe(queryBefore);
+  });
+});
+
+describe("finetune text create OSS mount (offline)", () => {
+  const commandArgs = ["finetune", "text", "create", "--base-model", "qwen3-8b"];
+  const previewArgs = (datasets: string): string[] => [
+    ...commandArgs,
+    "--datasets",
+    datasets,
+    "--dry-run",
+    "--output",
+    "json",
+  ];
+
+  interface DatasetEntry {
+    data_source_type: string;
+    file_id?: string;
+    mount_storage?: { region: string; bucket: string; file_path: string };
+  }
+
+  interface PreviewBody {
+    training_file_ids?: string[];
+    validation_file_ids?: string[];
+    training_datasets?: DatasetEntry[];
+    validation_datasets?: DatasetEntry[];
+  }
+
+  interface Preview {
+    body: PreviewBody;
+    pending: Array<{ field: string; path: string }>;
+  }
+
+  async function preview(args: string[]): Promise<Preview> {
+    const { stdout, stderr, exitCode } = await runSchemaCommand(args);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      body: PreviewBody;
+      pending_uploads?: Array<{ field: string; path: string }>;
+    }>(stdout);
+    return { body: data.body, pending: data.pending_uploads ?? [] };
+  }
+
+  test("oss:// entry is sent as a mount in the default region, replacing the flat file-id field", async () => {
+    const { body } = await preview(previewArgs("oss://my-bucket/datasets/train/data.jsonl"));
+    expect(body.training_datasets).toEqual([
+      {
+        data_source_type: "oss_mount",
+        mount_storage: {
+          region: "cn-beijing",
+          bucket: "my-bucket",
+          file_path: "datasets/train/data.jsonl",
+        },
+      },
+    ]);
+    expect(body).not.toHaveProperty("training_file_ids");
+  });
+
+  test("--oss-region applies to every mount of both fields", async () => {
+    const { body } = await preview([
+      ...commandArgs,
+      "--datasets",
+      "oss://train-bucket/train/data.jsonl,oss://other-bucket/more/data.jsonl",
+      "--validations",
+      "oss://eval-bucket/eval/data.jsonl",
+      "--oss-region",
+      "ap-southeast-1",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    const regions = [...(body.training_datasets ?? []), ...(body.validation_datasets ?? [])].map(
+      (entry) => entry.mount_storage?.region,
+    );
+    expect(regions).toEqual(["ap-southeast-1", "ap-southeast-1", "ap-southeast-1"]);
+  });
+
+  test("--oss-region is sent as given: the service judges whether it can mount", async () => {
+    const { body } = await preview([
+      ...previewArgs("oss://my-bucket/data.jsonl"),
+      "--oss-region",
+      "cn-hangzhou",
+    ]);
+    expect(body.training_datasets?.[0]?.mount_storage?.region).toBe("cn-hangzhou");
+  });
+
+  test("file-ids and local paths share the dataset entries with a mount, both in training and validation", async () => {
+    const localPath = join(e2eFixturesDir, ".dataset-valid.jsonl");
+    const { body, pending } = await preview([
+      ...commandArgs,
+      "--datasets",
+      `file-aaa,${localPath},oss://my-bucket/train/data.jsonl`,
+      "--validations",
+      "file-ccc",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(body.training_datasets).toEqual([
+      { data_source_type: "file_id", file_id: "file-aaa" },
+      { data_source_type: "file_id", file_id: localPath },
+      {
+        data_source_type: "oss_mount",
+        mount_storage: {
+          region: "cn-beijing",
+          bucket: "my-bucket",
+          file_path: "train/data.jsonl",
+        },
+      },
+    ]);
+    expect(body.validation_datasets).toEqual([
+      { data_source_type: "file_id", file_id: "file-ccc" },
+    ]);
+    expect(pending).toEqual([{ field: "datasets", path: localPath }]);
+    expect(body).not.toHaveProperty("training_file_ids");
+    expect(body).not.toHaveProperty("validation_file_ids");
+  });
+
+  test("an OSS mount on the validation set alone also moves the training set to dataset entries", async () => {
+    const { body } = await preview([
+      ...previewArgs("file-aaa"),
+      "--validations",
+      "oss://my-bucket/eval/data.jsonl",
+    ]);
+    expect(body.training_datasets).toEqual([{ data_source_type: "file_id", file_id: "file-aaa" }]);
+    expect(body.validation_datasets?.[0]?.mount_storage).toEqual({
+      region: "cn-beijing",
+      bucket: "my-bucket",
+      file_path: "eval/data.jsonl",
+    });
+    expect(body).not.toHaveProperty("training_file_ids");
+  });
+
+  test("without an OSS mount the request keeps the flat file-id form", async () => {
+    const { body } = await preview(previewArgs("file-aaa"));
+    expect(body.training_file_ids).toEqual(["file-aaa"]);
+    expect(body).not.toHaveProperty("training_datasets");
+    expect(body).not.toHaveProperty("validation_datasets");
+  });
+
+  test.each([
+    [
+      "no object key",
+      ["--datasets", "oss://my-bucket"],
+      /--datasets entry .*oss:\/\/my-bucket.* is missing the object key/,
+    ],
+    [
+      "no bucket",
+      ["--datasets", "oss:///data.jsonl"],
+      /--datasets entry .*oss:\/\/\/data.jsonl.* is missing the bucket/,
+    ],
+    ["a zip on the training set", ["--datasets", "oss://my-bucket/train.zip"], /zip file/],
+    [
+      "a zip on the validation set",
+      ["--datasets", "file-aaa", "--validations", "oss://my-bucket/eval.zip"],
+      /--validations entry .*eval\.zip.* points at a zip file/,
+    ],
+  ])("rejects %s as a usage error before any request", async (_case, extra, pattern) => {
+    const queryBefore = lastSchemaQuery;
+    const { stdout, stderr, exitCode } = await runSchemaCommand([
+      ...commandArgs,
+      ...extra,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).toBe(2);
+    expect(stderr).toMatch(pattern);
+    expect(lastSchemaQuery).toBe(queryBefore);
+  });
+
+  test.each([
+    ["audio", ["finetune", "audio", "create", "--base-model", "cosyvoice-v3-flash"]],
+    [
+      "decision",
+      ["finetune", "decision", "create", "--base-model", "decision-model-preview-2026-09-24"],
+    ],
+  ])(
+    "rejects an oss:// entry on %s create: that request cannot carry a mount",
+    async (_modality, command) => {
+      const queryBefore = lastSchemaQuery;
+      const { stdout, stderr, exitCode } = await runSchemaCommand([
+        ...command,
+        "--datasets",
+        "oss://my-bucket/train/data.jsonl",
+        "--dry-run",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stdout + stderr).toBe(2);
+      expect(stderr).toMatch(/only supported by finetune text create/);
+      expect(lastSchemaQuery).toBe(queryBefore);
+    },
+  );
 });

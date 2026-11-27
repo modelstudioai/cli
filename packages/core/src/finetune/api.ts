@@ -12,6 +12,7 @@ import {
   finetuneCheckpointsPath,
   finetuneExportPath,
   finetuneParamsPath,
+  finetunePresetDatasetsPath,
   finetuneBasicMetricsPath,
 } from "../client/endpoints.ts";
 import type { Client } from "../client/client.ts";
@@ -26,6 +27,7 @@ import type {
   ListCheckpointsResponse,
   ExportCheckpointResponse,
   GetFineTuneParamsResponse,
+  ListPresetDatasetsResponse,
   ListBasicMetricsResponse,
 } from "./types.ts";
 
@@ -197,6 +199,51 @@ export async function getFineTuneParams(
     path,
     method: "GET",
     headers: params.workspaceId ? { "X-DashScope-WorkSpace": params.workspaceId } : undefined,
+    signal: params.signal,
+  });
+}
+
+export interface ListPresetDatasetsParams {
+  /** Base model ID (e.g. qwen3-8b), or a platform fine-tuned model for continued training. */
+  inputModel: string;
+  /** Server training_type: sft | efficient_sft | dpo_full | dpo_lora | cpt. */
+  trainingType: string;
+  /**
+   * Base-model training config version. Omit for the latest applicable one; for
+   * continued training the source job's base-model version is reused.
+   */
+  version?: string;
+  /**
+   * Training-option context, sent as a single `hyper_parameters` query
+   * parameter holding the JSON-serialized object. The options narrow the
+   * candidate list; omit when no extra condition is selected.
+   */
+  trainOptions?: Record<string, string>;
+  /** Sent as X-DashScope-WorkSpace; use the job's owning workspace. */
+  workspaceId?: string;
+  signal?: AbortSignal;
+}
+
+/**
+ * GET /api/v1/fine-tunes/preset-datasets — preset datasets that can be mixed
+ * into training for a model / training-type combination. An empty `output`
+ * is a normal result.
+ */
+export async function listPresetDatasets(
+  client: Client,
+  params: ListPresetDatasetsParams,
+): Promise<ListPresetDatasetsResponse> {
+  const qs = new URLSearchParams();
+  qs.set("input_model", params.inputModel);
+  qs.set("training_type", params.trainingType);
+  if (params.version) qs.set("version", params.version);
+  if (params.trainOptions && Object.keys(params.trainOptions).length > 0) {
+    qs.set("hyper_parameters", JSON.stringify(params.trainOptions));
+  }
+  return client.requestJson<ListPresetDatasetsResponse>({
+    path: `${finetunePresetDatasetsPath()}?${qs.toString()}`,
+    method: "GET",
+    headers: workspaceHeaders(params.workspaceId),
     signal: params.signal,
   });
 }
