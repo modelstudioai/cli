@@ -17,6 +17,8 @@ import { ConsoleSession } from "./console-session.ts";
 import { debugRequest, debugResponse } from "./diagnostics.ts";
 import { getApiKeyLoginKind } from "../config/profile-presets.ts";
 import { trackingHeaders } from "./headers.ts";
+import type { ProductSite } from "./service-planes.ts";
+import { createRequestSignals, type RequestSignals } from "./request-signals.ts";
 
 /** Client 的结构化依赖:身份 + 有效配置 + 各域凭证(按命令的 auth 注入)。 */
 export interface ClientDeps {
@@ -27,6 +29,12 @@ export interface ClientDeps {
   baseUrl: string;
   /** True only when the shared URL chain used its default; explicit origins win over service defaults. */
   baseUrlIsDefault?: boolean;
+  /**
+   * Per-run record of the origins and service planes this command actually
+   * touched. Shared by reference with derived Clients, so a request made
+   * through a copy is never invisible to the outer telemetry stage.
+   */
+  requestSignals?: RequestSignals;
   apiCred?: ApiKeyCredential;
   consoleCred?: ConsoleCredential;
   /** Lazily resolve AK/SK only when the Console token is missing or expired. */
@@ -77,11 +85,14 @@ export interface OpenApiResponse {
  */
 export class Client {
   private consoleSession: ConsoleSession;
-  /** Last origin from url()/upload defaultBaseUrl resolution (telemetry only). */
-  private recordedOrigin: string | undefined;
+  private readonly requestSignals: RequestSignals;
 
   constructor(private readonly deps: ClientDeps) {
     this.consoleSession = new ConsoleSession(deps);
+    // Callers that do not track attribution (installer, embedded SDK adapters,
+    // tests) still get a coherent private record. The per-run record injected
+    // by authStage is preferred, because derived Clients must share it.
+    this.requestSignals = deps.requestSignals ?? createRequestSignals();
   }
 
   private get http(): HttpDeps {
@@ -116,20 +127,32 @@ export class Client {
   }
 
   /**
-   * Origin last selected by {@link url} / upload defaultBaseUrl callbacks.
-   * Used by telemetry site routing; undefined when no valid origin was recorded.
+   * Origin last used by this command run.
+   *
+   * Recorded for every request URL, including the absolute URLs commands pass
+   * as `path` (RAG admin plane, memory, ParseX, AgentStudio). Before those were
+   * recorded, site routing fell back to the shared model base URL and
+   * attributed those products to whatever host the user had configured.
+   * Overwritten per request, so a multi-origin run reports the origin actually
+   * used last rather than the first-seen one. Used by telemetry only; undefined
+   * when nothing valid was recorded.
    */
   get lastResolvedOrigin(): string | undefined {
-    return this.recordedOrigin;
+    return this.requestSignals.lastOrigin();
   }
 
-  private rememberResolvedOrigin(baseUrl: string): void {
-    try {
-      const origin = new URL(baseUrl).origin;
-      if (origin && origin !== "null") this.recordedOrigin = origin;
-    } catch {
-      // Invalid or empty callback origins (e.g. managed-agent) are ignored.
-    }
+  /**
+   * Product verdict from the fixed service planes this run touched (telemetry
+   * only). Undefined when the run touched only `follow` planes or made no
+   * recorded request.
+   */
+  get productSite(): ProductSite | undefined {
+    return this.requestSignals.productSite();
+  }
+
+  /** Note where a request actually went. Best-effort and never throws. */
+  private recordRequest(requestUrl: string): void {
+    this.requestSignals.record(requestUrl);
   }
 
   /**
@@ -162,15 +185,21 @@ export class Client {
    */
   url(path: string, defaultBaseUrl?: () => string): string {
     const baseUrl = this.deps.baseUrlIsDefault && defaultBaseUrl ? defaultBaseUrl() : this.baseUrl;
-    this.rememberResolvedOrigin(baseUrl);
-    return baseUrl + path;
+    const requestUrl = baseUrl + path;
+    this.recordRequest(requestUrl);
+    return requestUrl;
   }
 
   private toOpts({ path, ...rest }: ClientRequestOpts): RequestOpts {
     const cred = this.requireApi();
+    const requestUrl = /^https?:\/\//.test(path) ? path : cred.baseUrl + path;
+    // An absolute `path` is a real per-command choice, so record it exactly
+    // like a URL built through {@link url}; otherwise the request's own origin
+    // is lost and telemetry classifies the product by the shared base URL.
+    this.recordRequest(requestUrl);
     return {
       ...rest,
-      url: /^https?:\/\//.test(path) ? path : cred.baseUrl + path,
+      url: requestUrl,
       headers: { ...rest.headers, Authorization: `Bearer ${cred.token}` },
     };
   }
@@ -276,6 +305,10 @@ export class Client {
   withConsoleSwitchAgent(switchAgent: number): Client {
     const client = new Client({
       ...this.deps,
+      // Always inherit the parent's record — including a private one — so the
+      // requests this derived Client makes stay visible to whoever reads the
+      // parent's attribution (the outer telemetry stage).
+      requestSignals: this.requestSignals,
       settings: { ...this.deps.settings, consoleSwitchAgent: switchAgent },
     });
     client.consoleSession = this.consoleSession.withSwitchAgent(switchAgent);

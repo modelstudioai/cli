@@ -41,6 +41,7 @@ import {
   reportFirstInstallNow,
   isFirstInstallReportLaunch,
   Client,
+  createRequestSignals,
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
@@ -339,6 +340,10 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
               settings,
               debug: (diagnostic) => reporter.output.debug(diagnostic),
               ...resolveModelBaseUrlState(sources),
+              // `auth: "none"` commands keep this Client, so it needs its own
+              // per-run record; the other auth domains get a fresh one from
+              // authStage.
+              requestSignals: createRequestSignals(),
             }),
           };
           await runMiddleware(ctx);

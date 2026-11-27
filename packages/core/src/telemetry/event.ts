@@ -33,6 +33,14 @@ export interface TrackingEvent {
   site: TelemetrySite;
   /** Coarse site resolution reason; never includes raw hosts. */
   siteReason?: TelemetrySiteReason;
+  /**
+   * The run was a `--dry-run` preview, so it sent no business request and
+   * recorded no request origin or service plane. Sparse — only reported when
+   * true. This is what separates preview events from real calls: a real call's
+   * site comes from the product it touched, a preview's can only come from the
+   * configured base URL.
+   */
+  dryRun?: true;
 }
 
 export function createTrackingEvent(opts: {
@@ -49,6 +57,7 @@ export function createTrackingEvent(opts: {
   bizFrom?: string;
   site?: TelemetrySite;
   siteReason?: TelemetrySiteReason;
+  dryRun?: boolean;
 }): TrackingEvent {
   const event: TrackingEvent = {
     command: opts.command,
@@ -96,6 +105,10 @@ export function createTrackingEvent(opts: {
 
   if (opts.siteReason) {
     event.siteReason = opts.siteReason;
+  }
+
+  if (opts.dryRun) {
+    event.dryRun = true;
   }
 
   return event;

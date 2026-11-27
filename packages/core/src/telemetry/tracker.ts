@@ -231,6 +231,9 @@ export async function trackCommandExecution(
       bizFrom: normalizeBizFrom(deps.settings.bizFrom),
       site: siteResolution.site,
       siteReason: siteResolution.siteReason,
+      // Read from settings, not flags: `--dry-run` is a global flag, so it
+      // never reaches `extractParams` (global flags are skipped there).
+      dryRun: deps.settings.dryRun,
     });
 
     // The install day is reported when install succeeds, not from this command.

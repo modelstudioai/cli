@@ -5,6 +5,8 @@ export type TelemetrySite = "domestic" | "international";
 
 /** Coarse reason for site resolution; never includes raw hosts. */
 export type TelemetrySiteReason =
+  | "product-domestic"
+  | "product-international"
   | "positive-domestic"
   | "positive-international"
   | "default-fallback"
@@ -18,7 +20,13 @@ export interface TelemetrySiteResolution {
 export interface ResolveTelemetrySiteInput {
   auth: AuthRequirement;
   consoleSite?: "domestic" | "international";
-  /** Origin recorded from Client.url() / upload defaultBaseUrl paths. */
+  /**
+   * Site declared by the product(s) the command actually called — the
+   * service-plane table, not anything the user configured. For every non-console
+   * auth domain this outranks all host-derived signals.
+   */
+  productSite?: TelemetrySite;
+  /** Origin of the last recorded request (Client.url(), upload, absolute paths). */
   lastResolvedOrigin?: string;
   /** Model-domain base URL (or its host). */
   baseUrl?: string;
@@ -50,8 +58,12 @@ export function telemetryRemoteTarget(site: TelemetrySite): TelemetryRemoteTarge
 }
 
 /**
- * Resolve AEM reporting site (D4=B): console → consoleSite;
- * apiKey/openapi → model host/region; none → OR of both.
+ * Resolve the AEM reporting site. The product decides first: a service plane
+ * the CLI only ever serves domestically reports domestic no matter which base
+ * URL is configured (issue #349). Console keeps the account-site axis because
+ * for that gateway the account site *is* the product site. Only when there is
+ * no product verdict do user-side signals decide: consoleSite for console,
+ * model host/region for apiKey/openapi, OR of both for none.
  */
 export function resolveTelemetrySite(input: ResolveTelemetrySiteInput): TelemetrySiteResolution {
   if (input.auth === "console") {
@@ -62,6 +74,13 @@ export function resolveTelemetrySite(input: ResolveTelemetrySiteInput): Telemetr
       return { site: "domestic", siteReason: "positive-domestic" };
     }
     return { site: "domestic", siteReason: "default-fallback" };
+  }
+
+  if (input.productSite) {
+    return {
+      site: input.productSite,
+      siteReason: input.productSite === "domestic" ? "product-domestic" : "product-international",
+    };
   }
 
   if (input.auth === "apiKey" || input.auth === "openapi") {
@@ -83,10 +102,14 @@ export function resolveTelemetrySite(input: ResolveTelemetrySiteInput): Telemetr
 }
 
 function classifyFromModelOrigin(input: ResolveTelemetrySiteInput): TelemetrySiteResolution {
-  // lastResolvedOrigin is a real per-command choice and wins over the shared base URL.
-  const host =
-    hostnameOf(input.lastResolvedOrigin) ??
-    (input.baseUrlIsDefault ? undefined : hostnameOf(input.baseUrl));
+  const baseHost = hostnameOf(input.baseUrl);
+  const originHost = hostnameOf(input.lastResolvedOrigin);
+  // A recorded origin that is simply the shared base URL carries no signal
+  // beyond `baseUrl`, so it must not promote a built-in default into a positive
+  // user choice. Only a *different* origin — an absolute workspace URL or a
+  // service-supplied default — outranks the base URL here.
+  const distinctOriginHost = originHost && originHost !== baseHost ? originHost : undefined;
+  const host = distinctOriginHost ?? (input.baseUrlIsDefault ? undefined : baseHost);
   if (!host) {
     return { site: "domestic", siteReason: "default-fallback" };
   }

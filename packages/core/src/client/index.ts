@@ -96,6 +96,15 @@ export {
   type ClientOpenApiJsonOpts,
 } from "./client.ts";
 export {
+  SERVICE_PLANES,
+  classifyServicePlane,
+  productSiteOf,
+  type PlaneSite,
+  type ProductSite,
+  type ServicePlane,
+} from "./service-planes.ts";
+export { createRequestSignals, type RequestSignals } from "./request-signals.ts";
+export {
   createBailianControlUser,
   listBailianControlWorkspaces,
   resetBailianControlPolicies4Agent,

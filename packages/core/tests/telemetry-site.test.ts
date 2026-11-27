@@ -205,11 +205,93 @@ test("mixed profile: console domestic does not force apiKey domestic", () => {
   ).toEqual({ site: "international", siteReason: "positive-international" });
 });
 
+/**
+ * Every request now records its own origin, including plain relative paths, so
+ * an origin that is just the shared default base URL must not be mistaken for a
+ * user choice. A *different* origin is still a real per-command signal.
+ */
+test("an origin equal to the default base URL keeps default-fallback", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      lastResolvedOrigin: "https://dashscope.aliyuncs.com",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "default-fallback" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      lastResolvedOrigin: "https://ws-review.cn-beijing.maas.aliyuncs.com",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "positive-domestic" });
+});
+
 test("missing baseUrl defaults domestic", () => {
   expect(resolveTelemetrySite({ auth: "apiKey" })).toEqual({
     site: "domestic",
     siteReason: "default-fallback",
   });
+});
+
+/**
+ * The reporting site follows the product, not the domain the user configured:
+ * a domestic-only service plane reports domestic even when every user-side
+ * signal points international (issue #349).
+ */
+test("product verdict outranks every user-side host signal", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      productSite: "domestic",
+      lastResolvedOrigin: "https://ws.ap-southeast-1.maas.aliyuncs.com",
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+    }),
+  ).toEqual({ site: "domestic", siteReason: "product-domestic" });
+
+  expect(
+    resolveTelemetrySite({
+      auth: "openapi",
+      productSite: "international",
+      baseUrl: "https://dashscope.aliyuncs.com",
+    }),
+  ).toEqual({ site: "international", siteReason: "product-international" });
+});
+
+test("product verdict outranks consoleSite for auth none", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "none",
+      productSite: "domestic",
+      consoleSite: "international",
+      baseUrl: "https://dashscope.aliyuncs.com",
+      baseUrlIsDefault: true,
+    }),
+  ).toEqual({ site: "domestic", siteReason: "product-domestic" });
+});
+
+/** Console commands stay on the account-site axis: there the account site *is* the product site. */
+test("console auth keeps the account-site axis even with a product verdict", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "console",
+      productSite: "domestic",
+      consoleSite: "international",
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
+});
+
+test("without a product verdict host classification is unchanged", () => {
+  expect(
+    resolveTelemetrySite({
+      auth: "apiKey",
+      productSite: undefined,
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+    }),
+  ).toEqual({ site: "international", siteReason: "positive-international" });
 });
 
 test("telemetryRemoteTarget maps site to endpoint and pid", () => {

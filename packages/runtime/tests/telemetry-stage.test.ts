@@ -146,6 +146,35 @@ test("resolveSite treats default baseUrl as fallback", async () => {
   });
 });
 
+/**
+ * The stage must forward the Client's product verdict, or a knowledge / memory
+ * command run against an international base URL would be attributed to the
+ * international site again (issue #349).
+ */
+test("resolveSite forwards the client product verdict ahead of host signals", async () => {
+  const next = vi.fn(async () => {});
+  const context = makeContext({
+    command: { auth: "apiKey" },
+    client: {
+      baseUrl: "https://dashscope-intl.aliyuncs.com",
+      baseUrlIsDefault: false,
+      lastResolvedOrigin: "https://ws-review.cn-beijing.maas.aliyuncs.com",
+      productSite: "domestic",
+    },
+    settings: { telemetry: true },
+  });
+
+  await telemetryStage(context, next);
+
+  const deps = trackerMocks.trackCommandExecution.mock.calls[0]![0] as {
+    resolveSite: () => { site: string; siteReason: string };
+  };
+  expect(deps.resolveSite()).toEqual({
+    site: "domestic",
+    siteReason: "product-domestic",
+  });
+});
+
 test("defaults to unknown when caller env is unset", async () => {
   vi.stubEnv("BAILIAN_CALLER_TYPE", undefined);
   vi.stubEnv("BAILIAN_CALLER_NAME", undefined);

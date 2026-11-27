@@ -165,6 +165,49 @@ test("resolveSite failure still emits domestic event", async () => {
   });
 });
 
+/**
+ * A `--dry-run` preview sends nothing, so no request origin or service plane is
+ * recorded and its site can only come from the configured base URL. Marking the
+ * event keeps preview traffic separable from real calls — for domestic-only
+ * products like knowledge base and memory, a preview from an international base
+ * URL otherwise looks like international product demand.
+ */
+test("dry-run runs are marked in the event and in the AEM ext", async () => {
+  sinkMocks.localSink.mockClear();
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true, dryRun: true } as Settings,
+      caller: unknownCaller,
+      authMethod: "apiKey",
+      resolveSite: () => ({ site: "international", siteReason: "positive-international" }),
+    },
+    ["knowledge", "list"],
+    {},
+    async () => {},
+  );
+
+  const event = asCommand(sinkMocks.localSink.mock.calls[0]![0]);
+  expect(event).toMatchObject({ command: "knowledge list", dryRun: true });
+  expect(buildRemoteAemOptions(event).ext).toMatchObject({ dryRun: true });
+});
+
+test("normal runs omit the dryRun field", async () => {
+  sinkMocks.localSink.mockClear();
+  await trackCommandExecution(
+    {
+      identity,
+      settings: { telemetry: true, dryRun: false } as Settings,
+      caller: unknownCaller,
+    },
+    ["config", "show"],
+    {},
+    async () => {},
+  );
+
+  expect(asCommand(sinkMocks.localSink.mock.calls[0]![0])).not.toHaveProperty("dryRun");
+});
+
 const entryIdentities = [
   {
     label: "bl",
