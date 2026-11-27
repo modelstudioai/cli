@@ -1,8 +1,11 @@
 import { httpTransport } from "./transport.ts";
 import type { Identity, Settings } from "../config/schema.ts";
+import { resolvePreOpenApiHost, validatePreConsoleScope } from "../config/control-plane.ts";
 import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential } from "../auth/types.ts";
+import type { OpenApiCredentialProvider } from "../auth/aliyun-types.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
+import { CredentialError } from "../errors/credential.ts";
 import { request, requestJson, type HttpDeps, type RequestOpts } from "./http.ts";
 import { buildAcsCanonicalQuery, signAcsRequest, type AcsQueryParams } from "./acs.ts";
 import { imageFileToDataUri, isLocalFile, resolveFileUrl } from "../files/upload.ts";
@@ -30,7 +33,8 @@ export interface ClientDeps {
   apiCred?: ApiKeyCredential;
   consoleCred?: ConsoleCredential;
   /** Lazily resolve AK/SK only when the Console token is missing or expired. */
-  resolveConsoleOpenApiCredential?: () => OpenApiCredential;
+  resolveConsoleOpenApiCredential?: () => OpenApiCredential | Promise<OpenApiCredential>;
+  openApiProvider?: OpenApiCredentialProvider;
   /** Optional host-provided recovery text; core does not construct CLI instructions. */
   consoleRecoveryHint?: string;
   openApiCred?: OpenApiCredential;
@@ -62,6 +66,7 @@ export interface ClientOpenApiJsonOpts {
 }
 
 export interface OpenApiResponse {
+  RequestId?: string;
   Success?: boolean;
   Code?: string;
   Message?: string;
@@ -93,7 +98,8 @@ export class Client {
     return this.deps.apiCred;
   }
 
-  private requireOpenApi(): OpenApiCredential {
+  private async requireOpenApi(): Promise<OpenApiCredential> {
+    if (this.deps.openApiProvider) return this.deps.openApiProvider.getCredential();
     if (!this.deps.openApiCred) {
       throw new BailianError(
         "This command needs Alibaba Cloud OpenAPI AK/SK credentials.",
@@ -261,15 +267,39 @@ export class Client {
     return this.consoleSession.request<T>(api, data);
   }
 
+  resolveOpenApiHost(host: string, credential?: OpenApiCredential): string {
+    const { settings, openApiProvider } = this.deps;
+    if (settings.preControlPlane) {
+      validatePreConsoleScope({ region: settings.consoleRegion, site: settings.consoleSite });
+      const expected = resolvePreOpenApiHost(host);
+      const resolved = openApiProvider?.resolveHost(host, credential) ?? expected;
+      if (resolvePreOpenApiHost(resolved) !== expected) {
+        throw new CredentialError(
+          "changed-openapi-identity",
+          "The OpenAPI endpoint does not match the pre-release route. / OpenAPI 端点与预发路由不匹配。",
+        );
+      }
+      return expected;
+    }
+    return openApiProvider?.resolveHost(host, credential) ?? host;
+  }
+
   openApiQueryJson<T extends OpenApiResponse>(opts: ClientOpenApiQueryOpts): Promise<T> {
     return this.openApiJson<T>(opts);
   }
 
   async openApiJson<T extends OpenApiResponse>(opts: ClientOpenApiJsonOpts): Promise<T> {
-    const cred = this.requireOpenApi();
+    const expectedHost = this.resolveOpenApiHost(opts.host);
+    const cred = await this.requireOpenApi();
+    const host = this.resolveOpenApiHost(opts.host, cred);
+    if (host !== expectedHost)
+      throw new CredentialError(
+        "changed-openapi-identity",
+        "The OpenAPI endpoint changed before signing. / 签名前 OpenAPI 端点已变更。",
+      );
     const bodyStr = opts.body === undefined ? "" : JSON.stringify(opts.body);
     const queryString = opts.queryParams ? buildAcsCanonicalQuery(opts.queryParams) : "";
-    const endpoint = `https://${opts.host}${opts.path}${queryString ? `?${queryString}` : ""}`;
+    const endpoint = `https://${host}${opts.path}${queryString ? `?${queryString}` : ""}`;
     const headers = signAcsRequest({
       accessKeyId: cred.accessKeyId,
       accessKeySecret: cred.accessKeySecret,
@@ -277,7 +307,7 @@ export class Client {
       action: opts.action,
       version: opts.version,
       body: bodyStr,
-      host: opts.host,
+      host,
       pathname: opts.path,
       method: opts.method,
       queryString,
@@ -290,25 +320,33 @@ export class Client {
       method: opts.method,
       headers: { ...headers, ...trackingHeaders(this.deps.identity) },
       body: bodyStr || undefined,
+      redirect: "error",
       signal: AbortSignal.timeout(timeoutMs),
     });
 
     const rawText = await res.text();
     debugResponse(this.http, res);
 
+    const redact = (value: string) =>
+      [cred.accessKeySecret, cred.securityToken].reduce<string>(
+        (message, secret) => (secret ? message.replaceAll(secret, "[REDACTED]") : message),
+        value,
+      );
     let data: T;
     try {
       data = JSON.parse(rawText) as T;
     } catch {
       throw new BailianError(
-        `${res.status} ${res.statusText} - ${rawText.slice(0, 500)}`,
+        redact(`${res.status} ${res.statusText} - ${rawText.slice(0, 500)}`),
         ExitCode.GENERAL,
       );
     }
     if (!res.ok || data.Success === false) {
       throw new BailianError(
-        `${data.Code || res.status} - ${data.Message || res.statusText}`,
+        redact(`${data.Code || res.status} - ${data.Message || res.statusText}`),
         ExitCode.GENERAL,
+        undefined,
+        { api: { httpStatus: res.status, apiCode: data.Code, requestId: data.RequestId } },
       );
     }
 

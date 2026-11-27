@@ -8,14 +8,51 @@ import {
   validateConsoleAccessToken,
   getModelProfilePreset,
   normalizeModelBaseUrl,
+  PRE_MODEL_STUDIO_HOST,
+  requirePreConsoleGateway,
+  requirePreConsoleOrigin,
+  type Settings,
 } from "bailian-cli-core";
 import { persistApiKey, validateApiKey } from "./login-api-key.ts";
-import { resolveConsoleOrigin, runConsoleLogin, runConsoleTokenLogin } from "./login-console.ts";
+import {
+  resolveConsoleLoginTarget,
+  runConsoleLogin,
+  runConsoleTokenLogin,
+} from "./login-console.ts";
 
 const LOGIN_MODE_HINT = "Choose exactly one login mode: --api-key, --console, or --open-api";
 
 function hasValue(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function previewPreLogin(
+  settings: Settings,
+  mode: "browser" | "token" | "openapi",
+  target = resolveConsoleLoginTarget(settings),
+) {
+  const pre = settings.preControlPlane;
+  if (!pre) return undefined;
+  const gateway = pre.consoleGateway ? requirePreConsoleGateway(pre, target) : undefined;
+  const missing = gateway ? [] : ["BAILIAN_PRE_CONSOLE_GATEWAY"];
+  let origin: string | undefined;
+  if (mode === "browser") {
+    if (pre.consoleOrigin) origin = requirePreConsoleOrigin(pre, target);
+    else missing.push("BAILIAN_PRE_CONSOLE_ORIGIN");
+  }
+  const endpoints = {
+    ...(origin ? { console_origin: origin } : {}),
+    ...(gateway ? { console_gateway: gateway } : {}),
+    ...(mode === "openapi" ? { modelstudio_host: PRE_MODEL_STUDIO_HOST } : {}),
+  };
+  const addresses = Object.values(endpoints).join(", ");
+  return {
+    result: { environment: "pre", endpoints, missing },
+    text: {
+      "en-US": `Control plane: pre-release. Endpoints: ${addresses || "none configured"}. Missing: ${missing.join(", ") || "none"}.`,
+      "zh-CN": `控制面：预发。端点：${addresses || "尚未配置"}。缺少：${missing.join("、") || "无"}。`,
+    },
+  };
 }
 
 export default defineCommand({
@@ -48,9 +85,9 @@ export default defineCommand({
       type: "switch",
       description: {
         "en-US":
-          "Sign in via browser (China by default; use --console-site international for the international site). Creates an ordinary API key if needed; subscription plans require --api-key",
+          "Sign in via browser (China by default; use --console-site international for the international site). Outside pre-release, creates an ordinary API key if needed; subscription plans require --api-key",
         "zh-CN":
-          "通过浏览器登录（默认中国站；国际站使用 --console-site international）。需要时会创建普通 API Key；订阅计划必须使用 --api-key 登录",
+          "通过浏览器登录（默认中国站；国际站使用 --console-site international）。非预发环境下按需创建普通 API Key；订阅计划必须使用 --api-key 登录",
       },
     },
     noBrowser: {
@@ -158,6 +195,7 @@ export default defineCommand({
   },
   async run(ctx) {
     const { identity, settings, flags } = ctx;
+    const pre = settings.preControlPlane;
     const store = ctx.authStore;
     const deps = {
       identity,
@@ -181,7 +219,17 @@ export default defineCommand({
     const baseUrl = flags.baseUrl ? normalizeModelBaseUrl(flags.baseUrl) : undefined;
 
     if (flags.console) {
+      // Explicit Console site wins over the selected Profile; all requests use this target.
+      const consoleSettings: Settings = {
+        ...settings,
+        consoleSite: (flags.consoleSite || settings.consoleSite || "domestic") as
+          | "domestic"
+          | "international",
+        consoleRegion: flags.consoleRegion ?? settings.consoleRegion,
+      };
+      const target = resolveConsoleLoginTarget(consoleSettings);
       if (settings.dryRun) {
+        const preview = previewPreLogin(settings, flags.tokenStdin ? "token" : "browser", target);
         ctx.output.result(
           {
             action: "auth.login",
@@ -189,28 +237,30 @@ export default defineCommand({
             token_stdin: !!flags.tokenStdin,
             no_browser: !!flags.noBrowser,
             config_file: store.path,
+            ...preview?.result,
           },
           {
-            text: ctx.localize(
-              flags.tokenStdin
-                ? {
-                    "en-US":
-                      "Would read a console token from stdin, validate it and save it without opening a browser or local server.",
-                    "zh-CN": "将从 stdin 读取控制台 token，校验后保存，不启动浏览器或本地服务。",
-                  }
-                : flags.noBrowser
+            text:
+              ctx.localize(
+                flags.tokenStdin
                   ? {
                       "en-US":
-                        "Would bind a free port on 127.0.0.1 and print the console login URL without opening a browser.",
-                      "zh-CN":
-                        "将在 127.0.0.1 监听空闲端口并打印控制台登录地址，不自动打开浏览器。",
+                        "Would read a console token from stdin, validate it and save it without opening a browser or local server.",
+                      "zh-CN": "将从 stdin 读取控制台 token，校验后保存，不启动浏览器或本地服务。",
                     }
-                  : {
-                      "en-US":
-                        "Would bind a free port on 127.0.0.1 and open the console login URL in your browser.",
-                      "zh-CN": "将在 127.0.0.1 监听空闲端口并在浏览器中打开控制台登录地址。",
-                    },
-            ),
+                  : flags.noBrowser
+                    ? {
+                        "en-US":
+                          "Would bind a free port on 127.0.0.1 and print the console login URL without opening a browser.",
+                        "zh-CN":
+                          "将在 127.0.0.1 监听空闲端口并打印控制台登录地址，不自动打开浏览器。",
+                      }
+                    : {
+                        "en-US":
+                          "Would bind a free port on 127.0.0.1 and open the console login URL in your browser.",
+                        "zh-CN": "将在 127.0.0.1 监听空闲端口并在浏览器中打开控制台登录地址。",
+                      },
+              ) + (preview ? `\n${ctx.localize(preview.text)}` : ""),
           },
         );
         return;
@@ -225,15 +275,8 @@ export default defineCommand({
           }),
           ExitCode.USAGE,
         );
-      const hasApiKey = !!(key || store.stored().apiKey);
-      // 本次登录站点:参数缺省时用配置默认(file 里上次登录存的站点)。
-      const site = flags.consoleSite || settings.consoleSite || "domestic";
       if (flags.tokenStdin) {
-        await runConsoleTokenLogin(deps, {
-          site: site as "domestic" | "international",
-          region: flags.consoleRegion!,
-          switchAgent: settings.consoleSwitchAgent,
-        });
+        await runConsoleTokenLogin({ ...deps, settings: consoleSettings }, target);
         finish(
           "console",
           ctx.localize({
@@ -243,10 +286,14 @@ export default defineCommand({
         );
         return;
       }
-      await runConsoleLogin(resolveConsoleOrigin(site), deps, {
-        needApiKey: !hasApiKey,
-        noBrowser: flags.noBrowser,
-      });
+      await runConsoleLogin(
+        undefined,
+        { ...deps, settings: consoleSettings },
+        {
+          needApiKey: !pre && !(key || store.stored().apiKey),
+          noBrowser: flags.noBrowser,
+        },
+      );
       finish(
         "console",
         ctx.localize({
@@ -259,35 +306,45 @@ export default defineCommand({
 
     if (flags.openApi) {
       if (settings.dryRun) {
+        const preview = previewPreLogin(settings, "openapi");
         ctx.output.result(
-          { action: "auth.login", method: "openapi", config_file: store.path },
+          { action: "auth.login", method: "openapi", config_file: store.path, ...preview?.result },
           {
-            text: ctx.localize({
-              "en-US": "Would save OpenAPI AK/SK credentials and generate CLI access token.",
-              "zh-CN": "将保存 OpenAPI AK/SK 凭证并生成 CLI access token。",
-            }),
+            text:
+              ctx.localize({
+                "en-US": "Would save OpenAPI AK/SK credentials and generate CLI access token.",
+                "zh-CN": "将保存 OpenAPI AK/SK 凭证并生成 CLI access token。",
+              }) + (preview ? `\n${ctx.localize(preview.text)}` : ""),
           },
         );
         return;
       }
       const resolvedBaseUrl = store.resolveBaseUrl();
-      const target = resolveCLIAccessTokenTarget(settings, resolvedBaseUrl);
+      const target = pre
+        ? resolveConsoleLoginTarget(settings)
+        : resolveCLIAccessTokenTarget(settings, resolvedBaseUrl);
+      const gateway = pre ? requirePreConsoleGateway(pre, target) : undefined;
+      const tokenSettings = pre
+        ? { ...settings, consoleRegion: target.region, consoleSite: target.site }
+        : settings;
       ctx.output.progress({
         "en-US": "Generating CLI access token...",
         "zh-CN": "正在生成 CLI access token...",
       });
       const resp = await generateCLIAccessToken({
         identity,
-        settings,
+        settings: tokenSettings,
         debug: (record) => ctx.output.debug(record),
         baseUrl: resolvedBaseUrl,
         accessKeyId: flags.accessKeyId!,
         accessKeySecret: flags.accessKeySecret!,
       });
       const accessToken = resp.cliAccessToken;
-      await validateConsoleAccessToken({ ...target, token: accessToken }, settings, {
-        debug: (record) => ctx.output.debug(record),
-      });
+      await validateConsoleAccessToken(
+        { ...target, ...(gateway ? { gateway } : {}), token: accessToken },
+        tokenSettings,
+        { debug: (record) => ctx.output.debug(record) },
+      );
       await store.login({
         access_key_id: flags.accessKeyId,
         access_key_secret: flags.accessKeySecret,

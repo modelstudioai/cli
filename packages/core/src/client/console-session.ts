@@ -1,9 +1,12 @@
 import type { Identity, Settings } from "../config/schema.ts";
 import type { ConsoleCredential, OpenApiCredential } from "../auth/types.ts";
+import type { OpenApiCredentialProvider } from "../auth/aliyun-types.ts";
 import type { HttpDeps } from "./http.ts";
 import { BailianError } from "../errors/base.ts";
 import { CredentialError } from "../errors/credential.ts";
 import { ExitCode } from "../errors/codes.ts";
+import { getConfigPath } from "../config/paths.ts";
+import { requirePreConsoleGateway } from "../config/control-plane.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
 import {
   persistConsoleAccessToken,
@@ -17,7 +20,8 @@ interface ConsoleSessionOptions {
   baseUrl: string;
   debug?: HttpDeps["debug"];
   consoleCred?: ConsoleCredential;
-  resolveConsoleOpenApiCredential?: () => OpenApiCredential;
+  resolveConsoleOpenApiCredential?: () => OpenApiCredential | Promise<OpenApiCredential>;
+  openApiProvider?: OpenApiCredentialProvider;
   consoleRecoveryHint?: string;
 }
 
@@ -37,8 +41,11 @@ interface ConsoleTokenRefresh {
 export class ConsoleSession {
   private consoleTokenPersisted: boolean;
   private consoleRefresh?: ConsoleTokenRefresh;
+  private readonly configurationPath: string;
 
   constructor(private readonly deps: ConsoleSessionOptions) {
+    this.configurationPath =
+      deps.settings.configPath ?? getConfigPath(deps.settings.preControlPlane);
     this.consoleTokenPersisted = deps.consoleCred?.source === "config";
   }
 
@@ -46,7 +53,11 @@ export class ConsoleSession {
   withSwitchAgent(switchAgent: number): ConsoleSession {
     const session = new ConsoleSession({
       ...this.deps,
-      settings: { ...this.deps.settings, consoleSwitchAgent: switchAgent },
+      settings: {
+        ...this.deps.settings,
+        configPath: this.configurationPath,
+        consoleSwitchAgent: switchAgent,
+      },
       consoleCred: this.deps.consoleCred ? { ...this.deps.consoleCred, switchAgent } : undefined,
     });
     session.consoleTokenPersisted = this.consoleTokenPersisted;
@@ -54,19 +65,47 @@ export class ConsoleSession {
   }
 
   async request<T>(api: string, data: Record<string, unknown>): Promise<T> {
+    const { settings, consoleCred } = this.deps;
+    const pre = settings.preControlPlane;
+    if (pre && (consoleCred || this.deps.resolveConsoleOpenApiCredential)) {
+      requirePreConsoleGateway(pre, {
+        region: consoleCred?.region ?? settings.consoleRegion,
+        site: consoleCred?.site ?? settings.consoleSite,
+      });
+    }
     return this.dispatch<T>(
       (credential) =>
         callConsoleGateway(
           credential,
           this.deps.settings.timeout,
           { api, data },
-          { debug: this.deps.debug, recoveryHint: this.deps.consoleRecoveryHint },
+          {
+            debug: this.deps.debug,
+            recoveryHint: this.deps.consoleRecoveryHint,
+            preControlPlane: pre,
+          },
         ) as Promise<T>,
     );
   }
 
   /** Shared credential lifecycle: lazy issuance and expired-session refresh. */
   private async dispatch<T>(invoke: (credential: ConsoleCredential) => Promise<T>): Promise<T> {
+    if (
+      this.deps.openApiProvider &&
+      (!this.deps.consoleCred || this.deps.consoleCred.method === "aliyun-oauth")
+    ) {
+      const target =
+        this.deps.consoleCred ?? resolveCLIAccessTokenTarget(this.deps.settings, this.deps.baseUrl);
+      const cached = await this.deps.openApiProvider.getConsoleCredential(target);
+      if (
+        !cached ||
+        cached.token !== this.deps.consoleCred?.token ||
+        cached.gateway !== this.deps.consoleCred?.gateway ||
+        cached.sessionRef !== this.deps.consoleCred?.sessionRef ||
+        cached.configurationFingerprint !== this.deps.consoleCred?.configurationFingerprint
+      )
+        this.deps.consoleCred = cached;
+    }
     const credential = this.deps.consoleCred;
     if (!credential) {
       const failure = new BailianError("This command needs a console access token.", ExitCode.AUTH);
@@ -107,8 +146,17 @@ export class ConsoleSession {
       const result = await invoke(exchange.credential);
       refresh.commit ??= (async () => {
         if (this.deps.consoleCred !== previous) return;
-        if (exchange.persist)
-          await persistConsoleAccessToken(exchange.credential.token, this.deps.settings.configName);
+        if (exchange.persist) {
+          if (exchange.credential.method === "aliyun-oauth")
+            await this.deps.openApiProvider?.saveConsoleCredential(exchange.credential);
+          else
+            await persistConsoleAccessToken(
+              exchange.credential.token,
+              this.deps.settings.configName,
+              this.configurationPath,
+              previous ? { token: previous.token } : undefined,
+            );
+        }
         this.consoleTokenPersisted = exchange.persist;
         this.deps.consoleCred = exchange.credential;
       })();
@@ -123,16 +171,27 @@ export class ConsoleSession {
   private async exchangeConsoleToken(
     previous?: ConsoleCredential,
   ): Promise<ConsoleTokenExchange | null> {
-    const credential = this.deps.resolveConsoleOpenApiCredential?.();
-    const target = previous ?? resolveCLIAccessTokenTarget(this.deps.settings, this.deps.baseUrl);
+    const credential = await this.deps.resolveConsoleOpenApiCredential?.();
+    const unresolvedTarget = previous
+      ? {
+          region: previous.region,
+          site: previous.site,
+          ...(previous.switchAgent !== undefined ? { switchAgent: previous.switchAgent } : {}),
+          ...(previous.gateway !== undefined ? { gateway: previous.gateway } : {}),
+        }
+      : resolveCLIAccessTokenTarget(this.deps.settings, this.deps.baseUrl);
+    const target =
+      this.deps.openApiProvider?.resolveConsoleTarget(unresolvedTarget) ?? unresolvedTarget;
     const persist =
-      this.consoleTokenPersisted &&
-      previous?.source === "config" &&
-      (!credential || credential.source === "config");
+      credential?.method === "aliyun-oauth" ||
+      (this.consoleTokenPersisted &&
+        previous?.source === "config" &&
+        (!credential || credential.source === "config"));
     const token = await refreshAccessToken({
       identity: this.deps.identity,
       settings: {
         ...this.deps.settings,
+        configPath: this.configurationPath,
         consoleRegion: target.region,
         consoleSite: target.site,
         consoleSwitchAgent: target.switchAgent,
@@ -140,6 +199,11 @@ export class ConsoleSession {
       debug: this.deps.debug,
       baseUrl: this.deps.baseUrl,
       credential,
+      modelStudioHost: this.deps.openApiProvider?.resolveHost(
+        `modelstudio.${target.region}.aliyuncs.com`,
+        credential,
+        "console",
+      ),
       persist: false,
       // Each waiting caller validates by executing its own business request.
       validateToken: async () => {},
@@ -150,6 +214,13 @@ export class ConsoleSession {
         ...target,
         token,
         source: credential?.source ?? previous?.source ?? "config",
+        ...(credential?.method === "aliyun-oauth"
+          ? {
+              method: "aliyun-oauth" as const,
+              sessionRef: credential.sessionRef,
+              configurationFingerprint: credential.configurationFingerprint,
+            }
+          : {}),
       },
       persist,
     };

@@ -9,6 +9,7 @@ export {
   anonymousConsoleCall,
   callConsoleGateway,
   effectiveConsoleGatewayConfig,
+  resolveConsoleGatewayOrigin,
 } from "./gateway.ts";
 export type {
   ModelListParams,

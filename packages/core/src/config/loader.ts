@@ -1,7 +1,20 @@
 import type { OutputDiagnostic } from "../types/output.ts";
-import { readFileSync, writeFileSync, renameSync, existsSync } from "fs";
+import {
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  existsSync,
+  openSync,
+  closeSync,
+  fsyncSync,
+  unlinkSync,
+} from "fs";
+import { randomUUID } from "node:crypto";
+import { dirname } from "node:path";
+import { withFileLock } from "../utils/file-lock.ts";
 import { CONFIG_FILE_KEYS, parseConfigFile, type ConfigFile, type Settings } from "./schema.ts";
-import { ensureConfigDir, getConfigPath } from "./paths.ts";
+import { ensureConfigDir, getConfigPath, isPreConfigPath } from "./paths.ts";
+import type { PreControlPlane } from "./control-plane.ts";
 import { detectOutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
@@ -10,6 +23,15 @@ import { validateTimeout } from "./validation.ts";
 
 const CONFIG_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const ACTIVE_CONFIG_KEY = "active_config";
+const CONTROL_ENVIRONMENT_KEY = "control_environment";
+
+function isReservedConfigKey(key: string): boolean {
+  return (
+    key === ACTIVE_CONFIG_KEY ||
+    key === CONTROL_ENVIRONMENT_KEY ||
+    (CONFIG_FILE_KEYS as readonly string[]).includes(key)
+  );
+}
 
 function isConfigBlock(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -29,7 +51,7 @@ export function normalizeConfigName(name?: unknown): string | undefined {
       "Use letters, numbers, '-' or '_', starting with a letter or number.",
     );
   }
-  if ((CONFIG_FILE_KEYS as readonly string[]).includes(name) || name === ACTIVE_CONFIG_KEY) {
+  if (isReservedConfigKey(name)) {
     throw new BailianError(
       `Invalid config name "${name}". It conflicts with a config key.`,
       ExitCode.USAGE,
@@ -38,30 +60,48 @@ export function normalizeConfigName(name?: unknown): string | undefined {
   return name;
 }
 
-/** 读完整 config.json 原始对象（不经过 `parseConfigFile` 过滤），保留其他命名配置 block。 */
+function configEnvironmentMismatch(path: string): BailianError {
+  return new BailianError(
+    `Config file does not match the selected control-plane environment: ${path}. / 配置文件与当前控制面环境不匹配：${path}。`,
+    ExitCode.USAGE,
+  );
+}
+
+function assertConfigEnvironment(raw: unknown, path: string): void {
+  if (isPreConfigPath(path)) {
+    if (!isConfigBlock(raw) || raw[CONTROL_ENVIRONMENT_KEY] !== "pre") {
+      throw configEnvironmentMismatch(path);
+    }
+  } else if (isConfigBlock(raw) && Object.hasOwn(raw, CONTROL_ENVIRONMENT_KEY)) {
+    throw configEnvironmentMismatch(path);
+  }
+}
+
+/** 读完整配置原始对象（不经过 `parseConfigFile` 过滤），保留其他命名配置 block。 */
 function readRawConfigObject(
+  path: string,
   onWarning?: (warning: OutputDiagnostic) => void,
 ): Record<string, unknown> {
-  const path = getConfigPath();
-  if (!existsSync(path)) return {};
+  let raw: unknown;
   try {
-    const raw = JSON.parse(readFileSync(path, "utf-8")) as unknown;
-    return raw && typeof raw === "object" && !Array.isArray(raw)
-      ? (raw as Record<string, unknown>)
-      : {};
-  } catch (err) {
-    const e = err as Error;
-    if (e instanceof SyntaxError || e.message.includes("JSON")) {
-      onWarning?.({
-        code: "CONFIG_CORRUPTED",
-        message: {
-          "en-US": "Config file is corrupted; using defaults.",
-          "zh-CN": "配置文件已损坏，将使用默认配置。",
-        },
-      });
+    raw = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return isPreConfigPath(path) ? { [CONTROL_ENVIRONMENT_KEY]: "pre" } : {};
     }
+    if (!(error instanceof SyntaxError)) throw error;
+    if (isPreConfigPath(path)) throw configEnvironmentMismatch(path);
+    onWarning?.({
+      code: "CONFIG_CORRUPTED",
+      message: {
+        "en-US": "Config file is corrupted; using defaults.",
+        "zh-CN": "配置文件已损坏，将使用默认配置。",
+      },
+    });
     return {};
   }
+  assertConfigEnvironment(raw, path);
+  return isConfigBlock(raw) ? raw : {};
 }
 
 /** 读取顶层激活元数据；按需校验命名 Profile 必须实际存在。 */
@@ -86,8 +126,8 @@ function readRawConfigBlock(raw: Record<string, unknown>, configName?: string): 
   return isConfigBlock(block) ? block : {};
 }
 
-export function readConfigFile(configName?: string): ConfigFile {
-  const raw = readRawConfigObject();
+export function readConfigFile(configName?: string, path = getConfigPath()): ConfigFile {
+  const raw = readRawConfigObject(path);
   return parseConfigFile(readRawConfigBlock(raw, configName));
 }
 
@@ -95,29 +135,55 @@ export function readConfigFile(configName?: string): ConfigFile {
 export async function writeConfigFile(
   data: Record<string, unknown>,
   configName?: string,
-  options: { activate?: boolean } = {},
+  options: { activate?: boolean; path?: string } = {},
 ): Promise<void> {
-  const raw = readRawConfigObject();
-  if (configName) {
-    raw[configName] = data;
-  } else {
-    for (const key of Object.keys(raw)) {
-      if ((CONFIG_FILE_KEYS as readonly string[]).includes(key)) delete raw[key];
-    }
-    Object.assign(raw, data);
-  }
-  if (options.activate) {
-    raw[ACTIVE_CONFIG_KEY] = configName ?? "default";
-  }
-  await writeRawConfigObject(raw);
+  await mutateConfigFile(() => data as ConfigFile, configName, options);
 }
 
-async function writeRawConfigObject(raw: Record<string, unknown>): Promise<void> {
-  await ensureConfigDir();
-  const path = getConfigPath();
-  const tmp = path + ".tmp";
-  writeFileSync(tmp, JSON.stringify(raw, null, 2) + "\n", { mode: 0o600 });
-  renameSync(tmp, path);
+export async function mutateConfigFile(
+  update: (current: ConfigFile) => ConfigFile | undefined,
+  configName?: string,
+  options: { activate?: boolean; path?: string } = {},
+): Promise<boolean> {
+  const path = options.path ?? getConfigPath();
+  if (configName === CONTROL_ENVIRONMENT_KEY) normalizeConfigName(configName);
+  await ensureConfigDir(dirname(path));
+  return withFileLock(`${path}.lock`, async () => {
+    const raw = readRawConfigObject(path);
+    const next = update(parseConfigFile(readRawConfigBlock(raw, configName)));
+    if (next === undefined) return false;
+    if (Object.hasOwn(next, CONTROL_ENVIRONMENT_KEY)) {
+      throw new BailianError(
+        "control_environment is reserved config metadata. / control_environment 是保留的配置元数据。",
+        ExitCode.USAGE,
+      );
+    }
+    if (configName) raw[configName] = next;
+    else {
+      for (const key of CONFIG_FILE_KEYS) delete raw[key];
+      Object.assign(raw, next);
+    }
+    if (options.activate) raw[ACTIVE_CONFIG_KEY] = configName ?? "default";
+    writeRawConfigObject(raw, path);
+    return true;
+  });
+}
+
+function writeRawConfigObject(raw: Record<string, unknown>, path: string): void {
+  assertConfigEnvironment(raw, path);
+  const temporaryPath = `${path}.${randomUUID()}.tmp`;
+  const handle = openSync(temporaryPath, "wx", 0o600);
+  try {
+    try {
+      writeFileSync(handle, JSON.stringify(raw, null, 2) + "\n");
+      fsyncSync(handle);
+    } finally {
+      closeSync(handle);
+    }
+    renameSync(temporaryPath, path);
+  } finally {
+    if (existsSync(temporaryPath)) unlinkSync(temporaryPath);
+  }
 }
 
 /** 全量配置快照：顶层默认配置 + 各命名 profile。 */
@@ -132,14 +198,13 @@ export interface ConfigProfiles {
 
 /**
  * 读取全部 profile：顶层默认配置与各命名 block。
- * 命名 block = raw 中不属于 `CONFIG_FILE_KEYS`、且值为普通对象的项。
+ * 命名 block = raw 中不属于默认配置字段或保留元数据、且值为普通对象的项。
  */
-export function readConfigProfiles(): ConfigProfiles {
-  const raw = readRawConfigObject();
+export function readConfigProfiles(path = getConfigPath()): ConfigProfiles {
+  const raw = readRawConfigObject(path);
   const named: Record<string, ConfigFile> = {};
   for (const [key, value] of Object.entries(raw)) {
-    if ((CONFIG_FILE_KEYS as readonly string[]).includes(key) || key === ACTIVE_CONFIG_KEY)
-      continue;
+    if (isReservedConfigKey(key)) continue;
     if (isConfigBlock(value)) {
       named[key] = parseConfigFile(value);
     }
@@ -164,31 +229,48 @@ function resolveConfigProfileActivation(raw: Record<string, unknown>, name?: unk
 }
 
 /** 校验激活目标并返回规范化展示名；不写配置。 */
-export function validateConfigProfileActivation(name?: unknown): string {
-  return resolveConfigProfileActivation(readRawConfigObject(), name);
+export function validateConfigProfileActivation(name?: unknown, path = getConfigPath()): string {
+  return resolveConfigProfileActivation(readRawConfigObject(path), name);
 }
 
 /** 将已存在的命名 Profile（或 default）设为持久化激活项。 */
-export async function activateConfigProfile(name?: unknown): Promise<string> {
-  const raw = readRawConfigObject();
-  const active = resolveConfigProfileActivation(raw, name);
-  raw[ACTIVE_CONFIG_KEY] = active;
-  await writeRawConfigObject(raw);
-  return active;
+export async function activateConfigProfile(
+  name?: unknown,
+  path = getConfigPath(),
+): Promise<string> {
+  await ensureConfigDir(dirname(path));
+  return withFileLock(`${path}.lock`, async () => {
+    const raw = readRawConfigObject(path);
+    const active = resolveConfigProfileActivation(raw, name);
+    raw[ACTIVE_CONFIG_KEY] = active;
+    writeRawConfigObject(raw, path);
+    return active;
+  });
 }
 
 /** 删除一个命名 profile block；存在才删并回写，返回是否有变更。 */
-export async function deleteConfigProfile(name?: unknown): Promise<boolean> {
+export async function deleteConfigProfile(
+  name?: unknown,
+  path = getConfigPath(),
+): Promise<boolean> {
   const configName = normalizeConfigName(name);
   if (!configName) {
     throw new BailianError("Cannot delete the default profile.", ExitCode.USAGE);
   }
-  const raw = readRawConfigObject();
-  if (!isConfigBlock(raw[configName])) return false;
-  delete raw[configName];
-  if (readStoredActiveConfigName(raw, false) === configName) raw[ACTIVE_CONFIG_KEY] = "default";
-  await writeRawConfigObject(raw);
-  return true;
+  await ensureConfigDir(dirname(path));
+  return withFileLock(`${path}.lock`, async () => {
+    const raw = readRawConfigObject(path);
+    if (!isConfigBlock(raw[configName])) return false;
+    if (parseConfigFile(raw[configName]).aliyun_oauth)
+      throw new BailianError(
+        "Remove the OAuth session before deleting this profile. / 删除此配置前请先退出 OAuth 会话。",
+        ExitCode.USAGE,
+      );
+    delete raw[configName];
+    if (readStoredActiveConfigName(raw, false) === configName) raw[ACTIVE_CONFIG_KEY] = "default";
+    writeRawConfigObject(raw, path);
+    return true;
+  });
 }
 
 /**
@@ -201,8 +283,10 @@ export interface ResolutionSources {
   env: NodeJS.ProcessEnv;
   /** 当前命名配置名(`--config <name>` 解析后);未指定或 `default` 时为 undefined。 */
   configName?: string;
-  /** 实际 config.json 路径(不受 configName 影响,一直是同一个文件)。 */
+  /** 所选环境的配置文件路径，不受 configName 影响。 */
   configPath?: string;
+  /** These sources were selected for the pre-release control plane. */
+  preControlPlane?: PreControlPlane;
 }
 
 export interface ApiKeyResolutionSourceSelection {
@@ -237,27 +321,47 @@ export function selectApiKeyResolutionSources(
   return {
     sources: {
       ...sources,
-      file: readConfigFile(),
+      file: readConfigFile(undefined, sources.configPath ?? getConfigPath(sources.preControlPlane)),
       configName: undefined,
     },
     fallbackFrom: sources.configName,
   };
 }
 
+function isInheritedControlEnvKey(name: string): boolean {
+  // Windows treats environment variable names as case-insensitive.
+  const key = name.toUpperCase();
+  return (
+    key.startsWith("BAILIAN_ACCESS_KEY_") ||
+    key.startsWith("ALIBABA_CLOUD_ACCESS_KEY_") ||
+    key === "BAILIAN_SECURITY_TOKEN" ||
+    key === "ALIBABA_CLOUD_SECURITY_TOKEN" ||
+    key === "BAILIAN_WORKSPACE_ID"
+  );
+}
+
 export function buildSources(
   flags: Partial<SourceFlags>,
   onWarning?: (warning: OutputDiagnostic) => void,
+  preControlPlane?: PreControlPlane,
 ): ResolutionSources {
-  const raw = readRawConfigObject(onWarning);
-  const configExplicit = flags.config !== undefined;
-  const activeConfigName = readStoredActiveConfigName(raw, !configExplicit);
-  const configName = configExplicit ? normalizeConfigName(flags.config) : activeConfigName;
+  const configPath = getConfigPath(preControlPlane);
+  const raw = readRawConfigObject(configPath, onWarning);
+  const configName =
+    flags.config !== undefined
+      ? normalizeConfigName(flags.config)
+      : readStoredActiveConfigName(raw, true);
   return {
     flags,
     file: parseConfigFile(readRawConfigBlock(raw, configName)),
-    env: process.env,
+    env: preControlPlane
+      ? Object.fromEntries(
+          Object.entries(process.env).filter(([name]) => !isInheritedControlEnvKey(name)),
+        )
+      : process.env,
     configName,
-    configPath: getConfigPath(),
+    configPath,
+    ...(preControlPlane ? { preControlPlane } : {}),
   };
 }
 
@@ -317,7 +421,8 @@ export function buildSettings(s: ResolutionSources): Settings {
   }
 
   return {
-    configPath: s.configPath ?? getConfigPath(),
+    ...(s.preControlPlane ? { preControlPlane: s.preControlPlane } : {}),
+    configPath: s.configPath ?? getConfigPath(s.preControlPlane),
     configName: s.configName,
     recoveryConfigName: resolveRecoveryConfigName(s),
     ...buildOutputSettings(s),

@@ -61,6 +61,63 @@ afterAll(async () => {
 });
 
 describe("e2e: auth", () => {
+  test("auth 父命令暴露 aliyun 登录且保留既有子命令", async () => {
+    const result = await runCommandHelp(AUTH_ROUTES, ["auth", "--help"]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    for (const flag of [
+      "--login",
+      "--authorization-url",
+      "--modelstudio-host",
+      "--console-gateway",
+    ])
+      expect(result.stderr).toContain(flag);
+    for (const command of ["auth login", "auth status", "auth logout"])
+      expect(result.stderr).toContain(command);
+  });
+
+  test("aliyun dry-run 仅返回配置计划与缺少的端点", async () => {
+    const result = await runCommandInProcess(AUTH_ROUTES, [
+      "auth",
+      "--login",
+      "aliyun",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const data = parseStdoutJson<{
+      method: string;
+      plan: {
+        client_id: string;
+        scope: string;
+        modelstudio_host: string;
+        console_gateway: string;
+      };
+      missing: string[];
+    }>(result.stdout);
+    expect(data.method).toBe("aliyun");
+    expect(data.plan.client_id).toBeUndefined();
+    expect(data.plan.scope).toBe("openid /internal/bailian/cli");
+    expect(data.plan.modelstudio_host).toBe("modelstudio.cn-beijing.aliyuncs.com");
+    expect(data.plan.console_gateway).toBe("https://bailian-cs.console.aliyun.com");
+    expect(data.missing).toEqual(["--authorization-url", "--client-id"]);
+  });
+
+  test("aliyun 首次登录未给授权地址时在授权前失败", async () => {
+    const result = await runCommandInProcess(AUTH_ROUTES, [
+      "auth",
+      "--login",
+      "aliyun",
+      "--output",
+      "json",
+    ]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("--authorization-url");
+    expect(result.stderr).not.toContain("--modelstudio-host");
+    expect(result.stderr).not.toContain("--console-gateway");
+  });
+
   test("auth login --help 正常退出", async () => {
     const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "login", "--help"]);
     expect(exitCode, stderr).toBe(0);

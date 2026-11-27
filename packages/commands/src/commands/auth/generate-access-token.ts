@@ -1,53 +1,41 @@
-import { defineCommand, generateCLIAccessToken, type FlagsDef } from "bailian-cli-core";
-
-const FLAGS = {
-  accessKeyId: {
-    type: "string",
-    valueHint: "<id>",
-    description: { "en-US": "Alibaba Cloud Access Key ID", "zh-CN": "阿里云 Access Key ID" },
-    required: true,
-  },
-  accessKeySecret: {
-    type: "string",
-    valueHint: "<secret>",
-    description: {
-      "en-US": "Alibaba Cloud Access Key Secret",
-      "zh-CN": "阿里云 Access Key Secret",
-    },
-    required: true,
-  },
-  securityToken: {
-    type: "string",
-    valueHint: "<token>",
-    description: {
-      "en-US": "Alibaba Cloud STS Security Token to store (optional)",
-      "zh-CN": "要保存的阿里云 STS Security Token（可选）",
-    },
-  },
-} satisfies FlagsDef;
+import { defineCommand, generateCLIAccessToken } from "bailian-cli-core";
 
 export default defineCommand({
   description: {
-    "en-US": "Generate a CLI access token using OpenAPI AK/SK",
-    "zh-CN": "使用 OpenAPI AK/SK 生成 CLI Access Token",
+    "en-US": "Generate a CLI access token using OpenAPI credentials",
+    "zh-CN": "使用 OpenAPI 凭据生成 CLI Access Token",
   },
-  auth: "none",
-  usageArgs: "--access-key-id <id> --access-key-secret <secret> --security-token <token>",
-  flags: FLAGS,
-  exampleArgs: ["--access-key-id LTAIxxxxx --access-key-secret xxxxx --security-token <token>"],
+  auth: "openapi",
+  usageArgs: "[flags]",
+  exampleArgs: ["", "--access-key-id LTAIxxxxx --access-key-secret xxxxx --security-token <token>"],
   async run(ctx) {
-    const { identity, settings, flags } = ctx;
-
-    const resp = await generateCLIAccessToken({
+    const { identity, settings } = ctx;
+    if (settings.dryRun) {
+      const pre = settings.preControlPlane
+        ? {
+            environment: "pre",
+            host: ctx.client.resolveOpenApiHost("modelstudio.cn-beijing.aliyuncs.com"),
+          }
+        : {};
+      ctx.output.result(
+        { action: "auth.generate-access-token", config: settings.configName ?? "default", ...pre },
+        {
+          text: ctx.localize({
+            "en-US":
+              "Would generate a CLI access token using the selected OpenAPI credentials without saving it.",
+            "zh-CN": "将使用所选 OpenAPI 凭据生成 CLI Access Token，不保存该令牌。",
+          }),
+        },
+      );
+      return;
+    }
+    const response = await generateCLIAccessToken({
       identity,
       settings,
       debug: (record) => ctx.output.debug(record),
       baseUrl: ctx.client.baseUrl,
-      accessKeyId: flags.accessKeyId,
-      accessKeySecret: flags.accessKeySecret,
-      securityToken: flags.securityToken || undefined,
+      client: ctx.client,
     });
-
-    ctx.output.result(resp);
+    ctx.output.result(response);
   },
 });

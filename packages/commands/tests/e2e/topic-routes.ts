@@ -5,6 +5,7 @@
 export type E2eRouteExports = Record<string, string>;
 
 export const AUTH_ROUTES: E2eRouteExports = {
+  auth: "authRoot",
   "auth login": "authLogin",
   "auth status": "authStatus",
   "auth logout": "authLogout",

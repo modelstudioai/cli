@@ -57,7 +57,7 @@ async function fetchTrainingPrice(
         },
       },
     },
-    diagnostics,
+    { ...diagnostics, preControlPlane: settings.preControlPlane },
   );
   const responseData = unwrapResponse(result as Record<string, unknown>);
   const list = (responseData.list as Record<string, unknown>[]) ?? [];

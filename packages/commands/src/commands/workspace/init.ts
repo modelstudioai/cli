@@ -2,14 +2,13 @@ import {
   defineCommand,
   BailianError,
   ExitCode,
-  generateCLIAccessToken,
-  callConsoleGateway,
+  PRE_BAILIAN_CONTROL_HOST,
+  PRE_MODEL_STUDIO_HOST,
   effectiveConsoleGatewayConfig,
+  requirePreConsoleGateway,
   createBailianControlUser,
   listBailianControlWorkspaces,
   resetBailianControlPolicies4Agent,
-  type ConsoleGatewayTarget,
-  type FlagsDef,
   type CommandContext,
 } from "bailian-cli-core";
 
@@ -20,30 +19,6 @@ const API = {
   commodityOrderInfo: "zeldaEasy.bailian-commerce.bill.postpaidCommodityOrderInfo",
   buyCommodity: "zeldaEasy.bailian-commerce.bill.buyPostpaidCommodity",
 } as const;
-
-const FLAGS = {
-  accessKeyId: {
-    type: "string",
-    valueHint: "<id>",
-    description: { "en-US": "Alibaba Cloud Access Key ID", "zh-CN": "阿里云 Access Key ID" },
-  },
-  accessKeySecret: {
-    type: "string",
-    valueHint: "<secret>",
-    description: {
-      "en-US": "Alibaba Cloud Access Key Secret",
-      "zh-CN": "阿里云 Access Key Secret",
-    },
-  },
-  securityToken: {
-    type: "string",
-    valueHint: "<token>",
-    description: {
-      "en-US": "Alibaba Cloud STS Security Token (optional)",
-      "zh-CN": "阿里云 STS Security Token（可选）",
-    },
-  },
-} satisfies FlagsDef;
 
 const POLL_INTERVAL_MS = 1000;
 const MAX_POLL_ATTEMPTS = 20;
@@ -80,15 +55,31 @@ export default defineCommand({
     "en-US": "Initialize Bailian workspace and activate postpaid services",
     "zh-CN": "初始化百炼 Workspace 并开通后付费服务",
   },
-  auth: "none",
-  usageArgs: "--access-key-id <id> --access-key-secret <secret> [--security-token <token>]",
-  flags: FLAGS,
-  exampleArgs: ["--access-key-id LTAIxxxxx --access-key-secret xxxxx"],
+  auth: "openapi",
+  usageArgs: "[flags]",
+  exampleArgs: ["", "--access-key-id LTAIxxxxx --access-key-secret xxxxx"],
   async run(ctx) {
-    const { settings, flags } = ctx;
+    const { settings } = ctx;
+    const pre = settings.preControlPlane;
+    const gateway = effectiveConsoleGatewayConfig(settings);
+    const consoleTarget = { region: gateway.consoleRegion, site: gateway.consoleSite };
 
     if (settings.dryRun) {
+      const preGateway = pre?.consoleGateway
+        ? requirePreConsoleGateway(pre, consoleTarget)
+        : undefined;
       ctx.output.result({
+        ...(pre
+          ? {
+              environment: "pre",
+              endpoints: {
+                modelstudio_host: PRE_MODEL_STUDIO_HOST,
+                bailiancontrol_host: PRE_BAILIAN_CONTROL_HOST,
+                ...(preGateway ? { console_gateway: preGateway } : {}),
+              },
+              missing: preGateway ? [] : ["BAILIAN_PRE_CONSOLE_GATEWAY"],
+            }
+          : {}),
         apis: [
           {
             step: 0,
@@ -140,45 +131,14 @@ export default defineCommand({
       return;
     }
 
-    const { accessKeyId, accessKeySecret } = flags;
-    if (!accessKeyId || !accessKeySecret) {
-      throw new BailianError(
-        "workspace init requires --access-key-id and --access-key-secret.",
-        ExitCode.USAGE,
-      );
+    // Both domains must be routable before initSpace, OpenAPI writes, or purchases.
+    if (pre) {
+      requirePreConsoleGateway(pre, consoleTarget);
+      ctx.client.resolveOpenApiHost(PRE_MODEL_STUDIO_HOST);
     }
-    const securityToken = flags.securityToken || undefined;
-
-    // Step 0: Exchange AK/SK for a temporary CLI access token used by console calls.
-    const gateway = effectiveConsoleGatewayConfig(settings);
-    const tokenResp = await generateCLIAccessToken({
-      identity: ctx.identity,
-      settings: { ...settings, consoleRegion: gateway.consoleRegion },
-      debug: (diagnostic) => ctx.output.debug(diagnostic),
-      baseUrl: ctx.client.baseUrl,
-      accessKeyId,
-      accessKeySecret,
-      securityToken,
-    });
-    const accessToken: string | undefined = tokenResp.cliAccessToken;
-    if (!accessToken) {
-      throw new BailianError("Failed to generate CLI access token from AK/SK.", ExitCode.GENERAL);
-    }
-
-    const target: ConsoleGatewayTarget = {
-      region: gateway.consoleRegion,
-      site: gateway.consoleSite,
-      ...(gateway.consoleSwitchAgent != null ? { switchAgent: gateway.consoleSwitchAgent } : {}),
-      token: accessToken,
-    };
-
+    ctx.client.resolveOpenApiHost(`bailiancontrol.${gateway.consoleRegion}.aliyuncs.com`);
     const callApi = (api: string, data: Record<string, unknown> = {}) =>
-      callConsoleGateway(
-        target,
-        settings.timeout,
-        { api, data },
-        { debug: (diagnostic) => ctx.output.debug(diagnostic) },
-      );
+      ctx.client.console(api, data);
 
     // Step 1: Check login info
     ctx.output.info({
@@ -209,9 +169,7 @@ export default defineCommand({
       debug: (diagnostic: Parameters<typeof ctx.output.debug>[0]) => ctx.output.debug(diagnostic),
       baseUrl: ctx.client.baseUrl,
       regionId: gateway.consoleRegion,
-      accessKeyId,
-      accessKeySecret,
-      securityToken,
+      client: ctx.client,
     };
 
     try {

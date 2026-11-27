@@ -88,6 +88,11 @@ export function resolveApiKey(s: ResolutionSources): ApiKeyCredential {
 
 /** Console-domain credential from sources — access token + 连接目标(flag > file > 默认)。 */
 export function resolveConsole(s: ResolutionSources): ConsoleCredential {
+  if (s.file.aliyun_oauth?.console_enabled)
+    throw new CredentialError(
+      "aliyun-oauth-session",
+      "Console credentials are managed by the Aliyun OAuth session. / 控制台凭据由阿里云 OAuth 会话管理。",
+    );
   const token = s.file.access_token?.trim();
   if (!token) {
     throw new CredentialError("missing-console-token", "No console access token found.");
@@ -123,6 +128,12 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
     "BAILIAN",
   );
   if (envCred) return envCred;
+
+  if (s.file.aliyun_oauth?.openapi_enabled)
+    throw new CredentialError(
+      "aliyun-oauth-session",
+      "OpenAPI credentials are managed by the Aliyun OAuth session. / OpenAPI 凭据由阿里云 OAuth 会话管理。",
+    );
 
   const configCred = resolveOpenApiPair(
     "config",
@@ -195,6 +206,7 @@ function openApiPairHint(source: OpenApiCredential["source"], envPrefix: string)
 /** Full auth snapshot from sources — what would resolve per domain (or undefined). */
 export function describeAuthState(s: ResolutionSources): AuthState {
   const state: AuthState = {};
+  if (s.file.aliyun_oauth) state.aliyunOAuth = s.file.aliyun_oauth;
   try {
     state.apiKey = resolveApiKey(s);
   } catch {

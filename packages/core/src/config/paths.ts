@@ -1,23 +1,30 @@
 import { homedir } from "os";
-import { join } from "path";
+import { basename, join } from "path";
+import type { PreControlPlane } from "./control-plane.ts";
 
 const CONFIG_DIR_NAME = ".bailian";
+const PRE_CONFIG_FILE_NAME = "control-pre.json";
 
 export function getConfigDir(): string {
   if (process.env.BAILIAN_CONFIG_DIR) return process.env.BAILIAN_CONFIG_DIR;
   return join(homedir(), CONFIG_DIR_NAME);
 }
 
-export function getConfigPath(): string {
-  return join(getConfigDir(), "config.json");
+export function getConfigPath(preControlPlane?: PreControlPlane): string {
+  const dir = getConfigDir();
+  return preControlPlane ? join(dir, "pre", PRE_CONFIG_FILE_NAME) : join(dir, "config.json");
+}
+
+/** The reserved basename also identifies a pre-release file passed by explicit path. */
+export function isPreConfigPath(path: string): boolean {
+  return basename(path) === PRE_CONFIG_FILE_NAME;
 }
 
 export function getCredentialsPath(): string {
   return join(getConfigDir(), "credentials.json");
 }
 
-export async function ensureConfigDir(): Promise<void> {
-  const dir = getConfigDir();
+export async function ensureConfigDir(dir = getConfigDir()): Promise<void> {
   const fs = await import("fs/promises");
   await fs.mkdir(dir, { recursive: true, mode: 0o700 });
   // `mkdir`'s `mode` only applies to directories it creates (and is masked by

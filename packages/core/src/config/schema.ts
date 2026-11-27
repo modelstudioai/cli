@@ -1,4 +1,7 @@
 import { normalizeModelBaseUrl } from "./model-base-url.ts";
+import { parseAliyunOAuthProfile } from "../auth/aliyun-config.ts";
+import type { AliyunOAuthProfile } from "../auth/aliyun-types.ts";
+import type { PreControlPlane } from "./control-plane.ts";
 
 export const REGIONS = {
   cn: "https://dashscope.aliyuncs.com",
@@ -25,6 +28,7 @@ export interface ConfigFile {
   api_key?: string;
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
+  aliyun_oauth?: AliyunOAuthProfile;
   /** Alibaba Cloud OpenAPI AccessKey ID from `bl auth login --open-api`. */
   access_key_id?: string;
   /** Alibaba Cloud OpenAPI AccessKey secret from `bl auth login --open-api`. */
@@ -57,6 +61,7 @@ export const CONFIG_FILE_KEYS = [
   "language",
   "api_key",
   "access_token",
+  "aliyun_oauth",
   "access_key_id",
   "access_key_secret",
   "security_token",
@@ -125,6 +130,7 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const obj = raw as Record<string, unknown>;
   const out: ConfigFile = {};
+  if (obj.aliyun_oauth !== undefined) out.aliyun_oauth = parseAliyunOAuthProfile(obj.aliyun_oauth);
 
   if (
     typeof obj.language === "string" &&
@@ -218,6 +224,8 @@ export interface Identity {
  * 真实调用走 ConsoleCredential(同链解析,受控重叠)。
  */
 export interface Settings {
+  /** Control-plane routing only; model configuration may still come from the production file. */
+  preControlPlane?: PreControlPlane;
   configPath?: string;
   configName?: string;
   /**

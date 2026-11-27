@@ -56,7 +56,7 @@ export default defineCommand({
 
     if (settings.dryRun) {
       const { endpoint, queryParams: query } = prepareTokenPlanRequest(
-        ctx.client.baseUrl,
+        ctx.client,
         API_PATH,
         queryParams,
       );
@@ -66,7 +66,6 @@ export default defineCommand({
 
     const data = await callTokenPlanApi<CreateTokenPlanKeyResponse>({
       client: ctx.client,
-      baseUrl: ctx.client.baseUrl,
       action: API_ACTION,
       path: API_PATH,
       method: "POST",

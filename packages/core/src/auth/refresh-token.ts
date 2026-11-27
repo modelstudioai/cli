@@ -1,9 +1,11 @@
 import type { HttpDeps } from "../client/http.ts";
 import type { Identity, Settings } from "../config/schema.ts";
+import { validatePreConsoleScope } from "../config/control-plane.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { callConsoleGateway, type ConsoleGatewayTarget } from "../console/gateway.ts";
-import { readConfigFile, writeConfigFile } from "../config/loader.ts";
+import { readConfigFile, mutateConfigFile } from "../config/loader.ts";
+import { getConfigPath } from "../config/paths.ts";
 import { Client } from "../client/client.ts";
 import type { OpenApiCredential } from "./types.ts";
 
@@ -16,11 +18,22 @@ const MODEL_STUDIO_HOSTS = new Map([
   ["ap-southeast-1", "modelstudio.ap-southeast-1.aliyuncs.com"],
 ]);
 
+export function resolveModelStudioHost(region: string): string | undefined {
+  return MODEL_STUDIO_HOSTS.get(region);
+}
+
 /** Console 目标优先；仅在地域缺省时从已知模型域名推导，不猜测未知站点。 */
 export function resolveCLIAccessTokenTarget(
-  settings: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent">,
+  settings: Pick<
+    Settings,
+    "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "preControlPlane"
+  >,
   baseUrl: string,
 ): Omit<ConsoleGatewayTarget, "token"> {
+  if (settings.preControlPlane) {
+    validatePreConsoleScope({ region: settings.consoleRegion, site: settings.consoleSite });
+    return { region: "cn-beijing", site: "domestic", switchAgent: settings.consoleSwitchAgent };
+  }
   let region = settings.consoleRegion;
   if (!region) {
     let hostname: string | undefined;
@@ -60,7 +73,7 @@ export async function validateConsoleAccessToken(
     target,
     settings.timeout,
     { api: "zeldaEasy.cornerstone-portal.cs-console.loginInfo", data: {} },
-    diagnostics,
+    { ...diagnostics, preControlPlane: settings.preControlPlane },
   )) as { data?: { success?: boolean } } | null;
   if (response?.data?.success !== true) {
     throw new BailianError(
@@ -72,27 +85,42 @@ export async function validateConsoleAccessToken(
   }
 }
 
-export async function generateCLIAccessToken(opts: {
+export type GenerateCLIAccessTokenOptions = {
   identity: Identity;
   settings: Settings;
   debug?: HttpDeps["debug"];
   baseUrl: string;
-  accessKeyId: string;
-  accessKeySecret: string;
-  securityToken?: string;
-}) {
+  modelStudioHost?: string;
+} & (
+  | { client: Client; accessKeyId?: never; accessKeySecret?: never; securityToken?: never }
+  | {
+      client?: undefined;
+      accessKeyId: string;
+      accessKeySecret: string;
+      securityToken?: string;
+    }
+);
+
+export async function generateCLIAccessToken(opts: GenerateCLIAccessTokenOptions) {
   const { identity, settings, baseUrl, accessKeyId, accessKeySecret, securityToken } = opts;
 
-  const client = new Client({
-    identity,
-    settings,
-    debug: opts.debug,
-    baseUrl,
-    openApiCred: { accessKeyId, accessKeySecret, securityToken, source: "flag" },
-  });
+  const client =
+    opts.client ??
+    new Client({
+      identity,
+      settings,
+      debug: opts.debug,
+      baseUrl,
+      openApiCred: {
+        accessKeyId: accessKeyId!,
+        accessKeySecret: accessKeySecret!,
+        securityToken,
+        source: "flag",
+      },
+    });
 
   const target = resolveCLIAccessTokenTarget(settings, baseUrl);
-  const host = MODEL_STUDIO_HOSTS.get(target.region)!;
+  const host = opts.modelStudioHost ?? resolveModelStudioHost(target.region)!;
 
   const response = await client.openApiQueryJson<{ cliAccessToken?: unknown; Success?: boolean }>({
     host,
@@ -124,11 +152,18 @@ export async function refreshAccessToken(opts: {
   validateToken?: (token: string) => Promise<void>;
   /** Already selected by the shared credential chain; legacy callers use the selected config. */
   credential?: OpenApiCredential;
+  modelStudioHost?: string;
   /** Defaults to persistence only for local config credentials; temporary credentials stay in memory. */
   persist?: boolean;
 }): Promise<string | null> {
   const configName = opts.settings.configName;
-  const config = opts.credential ? undefined : readConfigFile(configName);
+  const configurationPath =
+    opts.settings.configPath ?? getConfigPath(opts.settings.preControlPlane);
+  const config =
+    !opts.credential ||
+    (opts.credential.source === "config" && opts.credential.method !== "aliyun-oauth")
+      ? readConfigFile(configName, configurationPath)
+      : undefined;
   const accessKeyId = opts.credential?.accessKeyId ?? config?.access_key_id;
   const accessKeySecret = opts.credential?.accessKeySecret ?? config?.access_key_secret;
   if (!accessKeyId || !accessKeySecret) return null;
@@ -143,6 +178,7 @@ export async function refreshAccessToken(opts: {
     accessKeyId,
     accessKeySecret,
     securityToken: opts.credential ? opts.credential.securityToken : config?.security_token,
+    modelStudioHost: opts.modelStudioHost,
   });
 
   const token = resp.cliAccessToken;
@@ -156,15 +192,46 @@ export async function refreshAccessToken(opts: {
     );
   }
 
-  const persist = opts.persist ?? (!opts.credential || opts.credential.source === "config");
-  if (persist) await persistConsoleAccessToken(token, configName);
+  const persist =
+    opts.credential?.method !== "aliyun-oauth" &&
+    (opts.persist ?? (!opts.credential || opts.credential.source === "config"));
+  if (persist)
+    await persistConsoleAccessToken(
+      token,
+      configName,
+      configurationPath,
+      config
+        ? {
+            token: config.access_token,
+            accessKeyId: config.access_key_id,
+            accessKeySecret: config.access_key_secret,
+          }
+        : undefined,
+    );
 
   return token;
 }
 
 /** Called only after a successful Console validation or business request. */
-export async function persistConsoleAccessToken(token: string, configName?: string): Promise<void> {
-  const existing = readConfigFile(configName) as Record<string, unknown>;
-  existing.access_token = token;
-  await writeConfigFile(existing, configName);
+export async function persistConsoleAccessToken(
+  token: string,
+  configName?: string,
+  path = getConfigPath(),
+  expected?: { token?: string; accessKeyId?: string; accessKeySecret?: string },
+): Promise<void> {
+  await mutateConfigFile(
+    (current) => {
+      if (
+        expected &&
+        (current.access_token !== expected.token ||
+          (expected.accessKeyId !== undefined && current.access_key_id !== expected.accessKeyId) ||
+          (expected.accessKeySecret !== undefined &&
+            current.access_key_secret !== expected.accessKeySecret))
+      )
+        return undefined;
+      return { ...current, access_token: token };
+    },
+    configName,
+    { path },
+  );
 }

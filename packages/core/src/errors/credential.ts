@@ -8,7 +8,11 @@ export type CredentialFailure =
   | "missing-openapi-pair"
   | "incomplete-openapi-flag"
   | "incomplete-openapi-env"
-  | "incomplete-openapi-config";
+  | "incomplete-openapi-config"
+  | "aliyun-oauth-session"
+  | "missing-aliyun-session"
+  | "aliyun-refresh-uncertain"
+  | "changed-openapi-identity";
 
 /** Local credential failure facts; CLI recovery instructions belong to the host. */
 export class CredentialError extends BailianError {

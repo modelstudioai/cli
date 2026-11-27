@@ -1,9 +1,11 @@
 import { CredentialError } from "../errors/credential.ts";
+import { normalizeOAuthUrl } from "../auth/aliyun-config.ts";
 import { debugRequest, debugResponse } from "../client/diagnostics.ts";
 import type { HttpDeps } from "../client/http.ts";
 import { httpTransport } from "../client/transport.ts";
 import type { Settings } from "../config/schema.ts";
-import { BailianError } from "../errors/base.ts";
+import { requirePreConsoleGateway, type PreControlPlane } from "../config/control-plane.ts";
+import { BailianError, UsageError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 
 const GATEWAY_PRODUCT = "sfm_bailian";
@@ -42,23 +44,43 @@ function resolveGateway(region: string, site: ConsoleSite): ConsoleGatewayInfo {
   return REGION_GATEWAYS[region]?.[site] ?? REGION_GATEWAYS["cn-beijing"]![site];
 }
 
+export function resolveConsoleGatewayOrigin(
+  region: string,
+  site: ConsoleSite,
+  pre?: PreControlPlane,
+): string {
+  return pre
+    ? requirePreConsoleGateway(pre, { region, site })
+    : `https://${resolveGateway(region, site).csGateway}`;
+}
+
 /**
  * Resolved console gateway settings (same defaults as {@link callConsoleGateway}).
  * 参数只需 settings 的 console 三元组;dry-run 展示分支直接传 settings。
  */
 export function effectiveConsoleGatewayConfig(
-  config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent">,
+  config: Pick<
+    Settings,
+    "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "preControlPlane"
+  >,
 ): {
   consoleRegion: string;
   consoleSite: ConsoleSite;
   consoleSwitchAgent?: number;
+  environment?: "pre";
+  consoleGateway?: string | null;
 } {
   const consoleRegion = config.consoleRegion ?? "cn-beijing";
   const consoleSite = config.consoleSite ?? "domestic";
   const consoleSwitchAgent = config.consoleSwitchAgent;
-  return consoleSwitchAgent != null
-    ? { consoleRegion, consoleSite, consoleSwitchAgent }
-    : { consoleRegion, consoleSite };
+  return {
+    consoleRegion,
+    consoleSite,
+    ...(consoleSwitchAgent != null ? { consoleSwitchAgent } : {}),
+    ...(config.preControlPlane
+      ? { environment: "pre", consoleGateway: config.preControlPlane.consoleGateway ?? null }
+      : {}),
+  };
 }
 
 export interface ConsoleGatewayRequest {
@@ -75,7 +97,10 @@ export type ConsoleCall = (api: string, data: Record<string, unknown>) => Promis
  * as `listFoundationModels` — no console login required.
  */
 export function anonymousConsoleCall(
-  config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout">,
+  config: Pick<
+    Settings,
+    "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout" | "preControlPlane"
+  >,
   options: Pick<HttpDeps, "debug"> & { recoveryHint?: string } = {},
 ): ConsoleCall {
   const eff = effectiveConsoleGatewayConfig(config);
@@ -84,7 +109,7 @@ export function anonymousConsoleCall(
       { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
       config.timeout,
       { api, data },
-      options,
+      { ...options, preControlPlane: config.preControlPlane },
     );
 }
 
@@ -126,6 +151,7 @@ function buildGatewayParams(
  * ConsoleCredential;公共目录类 API(如 advisor 的模型目录)可不带 token 匿名调用。
  */
 export interface ConsoleGatewayTarget {
+  gateway?: string;
   region: string;
   site: ConsoleSite;
   switchAgent?: number;
@@ -136,10 +162,21 @@ export async function callConsoleGateway(
   target: ConsoleGatewayTarget,
   timeoutSec: number,
   { api, data }: ConsoleGatewayRequest,
-  options: Pick<HttpDeps, "debug"> & { recoveryHint?: string } = {},
+  options: Pick<HttpDeps, "debug"> & {
+    recoveryHint?: string;
+    preControlPlane?: PreControlPlane;
+  } = {},
 ): Promise<unknown> {
   const resolved = resolveGateway(target.region, target.site);
-  const gatewayBase = `https://${resolved.csGateway}`;
+  const explicitGateway = target.gateway ? normalizeOAuthUrl(target.gateway, true) : undefined;
+  const pre = options.preControlPlane;
+  const gatewayBase = pre
+    ? requirePreConsoleGateway(pre, target)
+    : (explicitGateway ?? resolveConsoleGatewayOrigin(target.region, target.site));
+  if (pre && explicitGateway && explicitGateway !== gatewayBase)
+    throw new UsageError(
+      "The Console gateway does not match the pre-release route. / 控制台网关与预发路由不匹配。",
+    );
   const action = resolved.action;
 
   const params = buildGatewayParams(api, data, target.switchAgent);
@@ -159,6 +196,7 @@ export async function callConsoleGateway(
     method: "POST",
     headers,
     body: body.toString(),
+    ...(pre || target.gateway ? { redirect: "error" as const } : {}),
     signal: AbortSignal.timeout(timeoutMs),
   });
 

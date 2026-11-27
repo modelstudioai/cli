@@ -17,18 +17,24 @@ function bailianControlHost(regionId: string): string {
 }
 
 /** Shared inputs for every BailianControl OpenAPI call (AK/SK passed explicitly). */
-export interface BailianControlAuth {
+export type BailianControlAuth = {
   identity: Identity;
   settings: Settings;
   baseUrl: string;
   regionId: string;
-  accessKeyId: string;
-  accessKeySecret: string;
-  securityToken?: string;
   debug?: HttpDeps["debug"];
-}
+} & (
+  | { client: Client; accessKeyId?: never; accessKeySecret?: never; securityToken?: never }
+  | {
+      client?: undefined;
+      accessKeyId: string;
+      accessKeySecret: string;
+      securityToken?: string;
+    }
+);
 
 function bailianControlClient(auth: BailianControlAuth): Client {
+  if (auth.client) return auth.client;
   return new Client({
     identity: auth.identity,
     settings: auth.settings,

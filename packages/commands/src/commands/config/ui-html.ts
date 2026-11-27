@@ -544,7 +544,7 @@ const PAGE_HTML = `<!doctype html>
     <section id="view-profiles" class="view">
       <div class="view-head">
         <h2 class="view-title"><span class="grad">Config</span></h2>
-        <p class="view-sub">Credentials and default models. The active profile (marked with a star) is used by every bl command. Click a profile to edit its settings.</p>
+        <p class="view-sub">Credentials and default models. Commands that read this configuration file use the active profile (marked with a star). Click a profile to edit its settings.</p>
       </div>
       <div id="profileList" class="grid"></div>
     </section>

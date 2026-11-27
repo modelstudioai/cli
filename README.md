@@ -190,9 +190,36 @@ Synchronous Batch Chat is non-streaming; explicit realtime/international/Token P
 
 ## Authentication
 
-### Console Login (OAuth, Recommended)
+### Aliyun OAuth
 
-Required for console capability commands (model list, flow-agent list, MCP list, workspace, usage queries, rate-limit increases, direct console calls). It can create an ordinary API key when needed. Token Plan and other subscription plans cannot use `--console`; use the API Key login below.
+`bl auth --login aliyun` uses authorization code + PKCE, exchanges OAuth credentials for STS, and uses STS to obtain the Bailian Console token and sign OpenAPI requests. For a first online login, provide the confirmed production application ID and authorization URL:
+
+```bash
+bl auth --login aliyun --config aliyun \
+  --client-id <PRODUCTION_APPLICATION_ID> \
+  --authorization-url <CONFIRMED_AUTHORIZATION_URL>
+```
+
+Register `http://127.0.0.1:12345/oauth/callback` as the IAM redirect URI. NativeApp loopback callbacks allow a random port, but the scheme, host and path must match. The CLI accepts only `/oauth/callback`, not the root path or an extra trailing `/`.
+
+Online endpoints resolve in the order explicit flags > selected Profile > defaults. Later logins can reuse the saved application ID and endpoints. `--no-browser` prints the URL and still waits for a callback on the same machine. `--dry-run` previews the plan without opening a browser, reading credential files or exchanging credentials.
+
+#### Domestic pre-release control plane
+
+Set `BAILIAN_PRE=1` (or `true`) to select the domestic `cn-beijing` control plane. Unset, empty, `0` or `false` selects the online environment. Pre-release Profiles live under a separate `pre/` config directory and do not inherit online Console credentials or general AK/SK environment variables. DashScope inference keeps its existing connection and Profile selection.
+
+```bash
+BAILIAN_PRE=1 bl auth --login aliyun --dry-run
+BAILIAN_PRE=1 bl auth status
+```
+
+Supported OAuth and OpenAPI routes are selected automatically. Confirm the pre-release CLI gateway protocol before supplying `BAILIAN_PRE_CONSOLE_GATEWAY`. Native Console browser login also requires a confirmed login and callback origin via `BAILIAN_PRE_CONSOLE_ORIGIN`. The CLI does not change hosts or proxy configuration. Unsupported regions and management services do not fall back to online endpoints.
+
+Aliyun OAuth credentials are stored as **plaintext** in a separate `oauth/<session_ref>.json` file under the CLI config directory, not in the main config. Writes are atomic; the cache directory and files use `0700` and `0600` on Unix, and Windows requires private ACLs. No Keychain or system credential service is used. Keep this directory private and out of shared backups. Sign in again if you used the previous encrypted format; it is not migrated. OAuth refresh and STS renewal are shared across Console and OpenAPI calls. `auth status` only describes configured credentials; it does not validate or refresh them. Full `auth logout` or `auth logout --aliyun` revokes the RT; partial `--console`/`--open-api` logout disables only that domain. OAuth login preserves existing API keys and does not provision inference keys, initialize workspaces, modify hosts/proxies, or activate paid services.
+
+### Console Browser Login (Recommended)
+
+Console capability commands (model list, flow-agent list, MCP list, workspace, usage queries, rate-limit increases, direct console calls) can use this browser login or Aliyun OAuth above. Browser login can create an ordinary API key when needed. Token Plan and other subscription plans cannot use `--console` for inference; use the API Key login below.
 
 ```bash
 bl auth login --console
@@ -228,7 +255,7 @@ Get an ordinary key from the [DashScope Console](https://bailian.console.aliyun.
 
 ### Alibaba Cloud OpenAPI AK/SK
 
-Token Plan seat and member management requires an Alibaba Cloud AccessKey. Get yours from the [RAM Console](https://ram.console.aliyun.com/manage/ak).
+Token Plan seat and member management requires OpenAPI credentials: an Alibaba Cloud AccessKey/STS pair or an Aliyun OAuth session. Get yours from the [RAM Console](https://ram.console.aliyun.com/manage/ak).
 
 > Recommended: create a RAM sub-account with minimum privileges instead of using the root account's AK/SK.
 

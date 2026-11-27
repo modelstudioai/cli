@@ -48,7 +48,25 @@ function recoveryCommand(commandPrefix: string, args: string, configName?: strin
 }
 
 /** Complete recovery text supplied before Console errors can be wrapped by commands. */
-export function consoleRecoveryHint(commandPrefix: string, configName?: string): string {
+export function aliyunRecoveryHint(
+  commandPrefix: string,
+  configName?: string,
+  localize: Localize = english,
+): string {
+  const command = recoveryCommand(commandPrefix, "auth --login aliyun", configName);
+  return localize({
+    "en-US": `Run \`${command}\` to sign in to Aliyun again.`,
+    "zh-CN": `请运行 \`${command}\` 重新登录阿里云。`,
+  });
+}
+
+export function consoleRecoveryHint(
+  commandPrefix: string,
+  configName?: string,
+  aliyun = false,
+  localize: Localize = english,
+): string {
+  if (aliyun) return aliyunRecoveryHint(commandPrefix, configName, localize);
   return `Run \`${recoveryCommand(commandPrefix, "auth login --console", configName)}\` to sign in or refresh your console session.`;
 }
 
@@ -110,6 +128,21 @@ export function errorHint(
   let hint = error.hint;
   if (error instanceof CredentialError) {
     switch (error.reason) {
+      case "changed-openapi-identity":
+        return localize({
+          "en-US":
+            "Credentials or endpoints changed during this command; rerun it using the intended profile.",
+          "zh-CN": "命令执行期间凭据或端点已变更，请使用目标配置重新执行。",
+        });
+      case "aliyun-oauth-session":
+      case "missing-aliyun-session":
+      case "aliyun-refresh-uncertain":
+        return options.hasCommand?.("auth")
+          ? aliyunRecoveryHint(commandPrefix, configName, localize)
+          : localize({
+              "en-US": "Use the CLI that manages this profile to sign in to Aliyun again.",
+              "zh-CN": "请使用管理此配置的 CLI 重新登录阿里云。",
+            });
       case "missing-api-key":
         hint = `Set DASHSCOPE_API_KEY, pass --api-key, or run \`${recoveryCommand(commandPrefix, "auth login", configName)}\`.`;
         break;

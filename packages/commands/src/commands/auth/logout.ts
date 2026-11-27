@@ -1,4 +1,16 @@
-import { defineCommand } from "bailian-cli-core";
+import { defineCommand, type AuthStore } from "bailian-cli-core";
+
+type LogoutScope = Parameters<AuthStore["logout"]>[0];
+
+export async function logoutStoredAuth(store: AuthStore, scope: LogoutScope, pre: boolean) {
+  if (!pre || scope !== "all") return store.logout(scope);
+
+  // Use only the bound control-plane store and leave all model settings intact.
+  const clearedOAuth = await store.logout("aliyun");
+  const clearedConsole = await store.logout("console");
+  const clearedOpenApi = await store.logout("openapi");
+  return clearedOAuth || clearedConsole || clearedOpenApi;
+}
 
 export default defineCommand({
   description: {
@@ -6,8 +18,23 @@ export default defineCommand({
     "zh-CN": "清除已保存的凭证；完整退出还会清除模型 Base URL",
   },
   auth: "none",
-  usageArgs: "[--console | --open-api] [--dry-run]",
+  usageArgs: "[--console | --open-api | --aliyun] [--dry-run]",
+  notes: [
+    {
+      "en-US":
+        "Full logout or --aliyun revokes the OAuth refresh token. Partial Console/OpenAPI logout disables only that domain. Pre-release logout leaves model and production credentials intact.",
+      "zh-CN":
+        "完整退出或 --aliyun 会撤销 OAuth 刷新令牌；仅退出 Console/OpenAPI 时只停用对应鉴权域。预发退出不会清除模型或线上凭证。",
+    },
+  ],
   flags: {
+    aliyun: {
+      type: "switch",
+      description: {
+        "en-US": "Revoke and remove only the Aliyun OAuth session",
+        "zh-CN": "仅撤销并移除阿里云 OAuth 会话",
+      },
+    },
     console: {
       type: "switch",
       description: {
@@ -23,27 +50,59 @@ export default defineCommand({
       },
     },
   },
-  exampleArgs: ["", "--console", "--open-api", "--dry-run"],
-  validate: (f) =>
-    f.console && f.openApi ? "Use only one scope: --console or --open-api" : undefined,
+  exampleArgs: ["", "--console", "--open-api", "--aliyun", "--dry-run"],
+  validate: (flags) =>
+    [flags.console, flags.openApi, flags.aliyun].filter(Boolean).length > 1
+      ? {
+          "en-US": "Use only one scope: --console, --open-api or --aliyun",
+          "zh-CN": "只能选择一个范围：--console、--open-api 或 --aliyun",
+        }
+      : undefined,
   async run(ctx) {
     const { settings, flags } = ctx;
+    const pre = settings.preControlPlane !== undefined;
+    const controlPlane = pre ? { environment: "pre" } : {};
+    const environmentLine = pre
+      ? [ctx.localize({ "en-US": "Control plane: pre-release", "zh-CN": "控制面：预发" })]
+      : [];
     const store = ctx.authStore;
     const stored = store.stored();
 
-    const scope = flags.console ? "console" : flags.openApi ? "openapi" : "all";
+    const scope = flags.console
+      ? "console"
+      : flags.openApi
+        ? "openapi"
+        : flags.aliyun
+          ? "aliyun"
+          : "all";
     const hasStoredAuth =
       scope === "console"
         ? stored.console
         : scope === "openapi"
           ? stored.openapi
-          : !!(stored.apiKey || stored.console || stored.openapi || stored.baseUrl);
+          : scope === "aliyun"
+            ? !!stored.aliyunOAuth
+            : !!(
+                stored.console ||
+                stored.openapi ||
+                stored.aliyunOAuth ||
+                (!pre && (stored.apiKey || stored.baseUrl))
+              );
+    const credentialFields =
+      "access_token / access_key_id / access_key_secret / security_token / aliyun_oauth";
     const fields =
       scope === "console"
         ? "access_token"
         : scope === "openapi"
           ? "access_key_id / access_key_secret / security_token"
-          : "api_key / base_url / access_token / access_key_id / access_key_secret / security_token";
+          : scope === "aliyun"
+            ? ctx.localize({
+                "en-US": "aliyun_oauth / local OAuth session",
+                "zh-CN": "aliyun_oauth / 本地 OAuth 会话",
+              })
+            : pre
+              ? credentialFields
+              : `api_key / base_url / ${credentialFields}`;
     const empty =
       scope === "console"
         ? {
@@ -55,10 +114,20 @@ export default defineCommand({
               "en-US": "No OpenAPI AK/SK credentials to clear.",
               "zh-CN": "没有可清除的 OpenAPI AK/SK 凭证。",
             }
-          : {
-              "en-US": "No credentials or model Base URL to clear.",
-              "zh-CN": "没有可清除的凭证或模型 Base URL。",
-            };
+          : scope === "aliyun"
+            ? {
+                "en-US": "No Aliyun OAuth session to clear.",
+                "zh-CN": "没有可清除的阿里云 OAuth 会话。",
+              }
+            : pre
+              ? {
+                  "en-US": "No pre-release control-plane credentials to clear.",
+                  "zh-CN": "没有可清除的预发控制面凭证。",
+                }
+              : {
+                  "en-US": "No credentials or model Base URL to clear.",
+                  "zh-CN": "没有可清除的凭证或模型 Base URL。",
+                };
     if (settings.dryRun) {
       ctx.output.result(
         {
@@ -67,9 +136,11 @@ export default defineCommand({
           would_clear: hasStoredAuth,
           config: settings.configName ?? "default",
           config_file: store.path,
+          ...controlPlane,
         },
         {
           text: [
+            ...environmentLine,
             ctx.localize(
               hasStoredAuth
                 ? {
@@ -84,8 +155,9 @@ export default defineCommand({
       );
       return;
     }
-    const cleared = await store.logout(scope);
+    const cleared = await logoutStoredAuth(store, scope, pre);
     const lines = [
+      ...environmentLine,
       ctx.localize(
         cleared
           ? {
@@ -116,6 +188,7 @@ export default defineCommand({
         cleared,
         config: settings.configName ?? "default",
         config_file: store.path,
+        ...controlPlane,
       },
       { text: lines.join("\n") },
     );

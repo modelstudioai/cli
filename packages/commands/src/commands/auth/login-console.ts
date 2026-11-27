@@ -5,6 +5,9 @@ import {
   formatCommand,
   BailianError,
   ExitCode,
+  effectiveConsoleGatewayConfig,
+  requirePreConsoleGateway,
+  requirePreConsoleOrigin,
   validateConsoleAccessToken,
   type ConsoleGatewayTarget,
   type CommandOutput,
@@ -46,6 +49,15 @@ const CONSOLE_ORIGINS: Record<string, string> = {
 
 export function resolveConsoleOrigin(site?: string): string {
   return (site && CONSOLE_ORIGINS[site]) || CONSOLE_ORIGINS.domestic!;
+}
+
+type ConsoleLoginTarget = Omit<ConsoleGatewayTarget, "token">;
+
+/** Pre-release Console defaults are independent of the model Base URL. */
+export function resolveConsoleLoginTarget(settings: Settings): ConsoleLoginTarget {
+  const { consoleRegion, consoleSite, consoleSwitchAgent } =
+    effectiveConsoleGatewayConfig(settings);
+  return { region: consoleRegion, site: consoleSite, switchAgent: consoleSwitchAgent };
 }
 
 function readBodyBounded(req: http.IncomingMessage): Promise<string> {
@@ -380,8 +392,12 @@ function listenServerOnFreeLocalPort(server: http.Server): Promise<number> {
 /** 人工导入只接受管道中的原始 token，不把凭证放进 argv 或终端回显。 */
 export async function runConsoleTokenLogin(
   deps: LoginDeps,
-  target: Omit<ConsoleGatewayTarget, "token">,
+  target: ConsoleLoginTarget,
 ): Promise<void> {
+  const pre = deps.settings.preControlPlane;
+  const validationTarget = pre
+    ? { ...target, gateway: requirePreConsoleGateway(pre, target) }
+    : target;
   const input = process.stdin;
   if (input.isTTY) {
     throw new BailianError(
@@ -421,7 +437,7 @@ export async function runConsoleTokenLogin(
       ExitCode.USAGE,
     );
   }
-  await validateConsoleAccessToken({ ...target, token }, deps.settings, {
+  await validateConsoleAccessToken({ ...validationTarget, token }, deps.settings, {
     debug: deps.output.debug,
   });
   await deps.authStore.login({
@@ -431,11 +447,34 @@ export async function runConsoleTokenLogin(
   });
 }
 
-export async function runConsoleLogin(
+type ConsoleBrowserOptions = { needApiKey?: boolean; noBrowser?: boolean };
+
+export function runConsoleLogin(
+  consoleOrigin: string | undefined,
+  deps: LoginDeps,
+  opts?: ConsoleBrowserOptions,
+): Promise<void> {
+  const pre = deps.settings.preControlPlane;
+  if (!pre) {
+    return waitForConsoleLogin(
+      consoleOrigin ?? resolveConsoleOrigin(deps.settings.consoleSite),
+      deps,
+      opts,
+    );
+  }
+  const target = resolveConsoleLoginTarget(deps.settings);
+  const origin = requirePreConsoleOrigin(pre, target);
+  const gateway = requirePreConsoleGateway(pre, target);
+  return waitForConsoleLogin(origin, deps, opts, { ...target, gateway });
+}
+
+async function waitForConsoleLogin(
   consoleOrigin: string,
   deps: LoginDeps,
-  opts?: { needApiKey?: boolean; noBrowser?: boolean },
+  opts?: ConsoleBrowserOptions,
+  preTarget?: ConsoleLoginTarget,
 ): Promise<void> {
+  const needApiKey = !preTarget && opts?.needApiKey;
   const state = randomBytes(16).toString("hex");
   let callbackError: unknown;
   let savedSessionWithoutApiKey = false;
@@ -509,27 +548,56 @@ export async function runConsoleLogin(
         return;
       }
 
+      if (
+        preTarget &&
+        ((consoleSite && consoleSite !== preTarget.site) ||
+          (consoleRegion && consoleRegion !== preTarget.region))
+      ) {
+        res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end(
+          localizeLogin(deps, {
+            "en-US": "Callback does not match the pre-release Console login target.\n",
+            "zh-CN": "回调与预发控制台登录目标不匹配。\n",
+          }),
+        );
+        return;
+      }
+
       savingCredentials = true;
       clearTimeout(timer);
       try {
-        const callbackPatch: AuthPersistPatch = {
-          access_token: accessToken || undefined,
-          console_site: (consoleSite || undefined) as ConfigFile["console_site"],
-          console_region: consoleRegion || undefined,
-          console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
-          workspace_id: workspaceId || undefined,
-        };
-        if (apiKey) {
-          await persistApiKey(deps, apiKey, {
-            persistBaseUrl: baseUrl || undefined,
-            persistPatch: callbackPatch,
+        if (preTarget) {
+          await validateConsoleAccessToken({ ...preTarget, token: accessToken }, deps.settings, {
+            debug: deps.output.debug,
+          });
+          // The browser cannot move the credential off the original Console target or set model config.
+          await deps.authStore.login({
+            access_token: accessToken,
+            console_site: preTarget.site,
+            console_region: preTarget.region,
+            console_switch_agent: preTarget.switchAgent,
+            workspace_id: workspaceId || undefined,
           });
         } else {
-          await deps.authStore.login({
-            ...callbackPatch,
-            base_url: baseUrl || undefined,
-          });
-          savedSessionWithoutApiKey = true;
+          const callbackPatch: AuthPersistPatch = {
+            access_token: accessToken,
+            console_site: (consoleSite || undefined) as ConfigFile["console_site"],
+            console_region: consoleRegion || undefined,
+            console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
+            workspace_id: workspaceId || undefined,
+          };
+          if (apiKey) {
+            await persistApiKey(deps, apiKey, {
+              persistBaseUrl: baseUrl || undefined,
+              persistPatch: callbackPatch,
+            });
+          } else {
+            await deps.authStore.login({
+              ...callbackPatch,
+              base_url: baseUrl || undefined,
+            });
+            savedSessionWithoutApiKey = true;
+          }
         }
         savedCredentials = true;
       } catch (error: unknown) {
@@ -573,7 +641,7 @@ export async function runConsoleLogin(
   }
 
   let loginUrl = `${consoleOrigin}/console-login?notice=127.0.0.1:${port}?state=${encodeURIComponent(state)}`;
-  if (opts?.needApiKey) {
+  if (needApiKey) {
     loginUrl += "&needapikey=true";
   }
 
@@ -642,7 +710,7 @@ export async function runConsoleLogin(
     );
   }
 
-  if (opts?.needApiKey && savedSessionWithoutApiKey) {
+  if (needApiKey && savedSessionWithoutApiKey) {
     deps.output.warning({
       message: {
         "en-US": `Saved the console session only. Model commands still need an API key: ${formatCommand(deps.identity, "auth login --console")}, or ${formatCommand(deps.identity, "auth login --api-key <key>")}`,

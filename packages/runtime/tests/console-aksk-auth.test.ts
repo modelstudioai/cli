@@ -1,17 +1,22 @@
 import { afterEach, expect, test, vi } from "vite-plus/test";
-import { buildIsolatedCliEnv, withIsolatedHome } from "e2e/isolation";
+import { buildIsolatedCliEnv, withIsolatedHome, enterIsolatedHome } from "e2e/isolation";
 import { runInProcess } from "e2e/in-process";
 import {
   Client,
   defineCommand,
   CredentialError,
+  ExitCode,
   buildSettings,
   describeAuthState,
   httpTransport,
   readConfigFile,
   writeConfigFile,
+  getConfigPath,
+  readConfigProfiles,
+  makeAuthStore,
   type ConfigFile,
   type ResolutionSources,
+  type LocalizedText,
 } from "bailian-cli-core";
 import { authStage, type RunContext } from "../src/middleware.ts";
 import { createOutputReporter } from "../src/output/reporter.ts";
@@ -43,6 +48,7 @@ async function context(
     identity,
     settings,
     sources,
+    localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
     command: {
       auth: "console",
       ...(prepared
@@ -101,6 +107,53 @@ function backend(
   };
 }
 
+test("missing pre-release Console routing never reuses an online token or interrupts the model path", async () => {
+  await withIsolatedHome(async () => {
+    const original = await context({
+      api_key: "fixture-model-key",
+      access_token: "fixture-online-console",
+    });
+    const ctx: RunContext = {
+      ...original,
+      path: ["fixture", "inference"],
+      command: defineCommand({
+        auth: "apiKey",
+        optionalConsole: true,
+        description: "Fixture",
+        run: async () => {},
+      }),
+      settings: { ...original.settings, preControlPlane: {} },
+      controlSources: {
+        flags: {},
+        file: {},
+        env: {},
+        preControlPlane: {},
+        configPath: getConfigPath({}),
+      },
+    };
+    const warning = vi.spyOn(ctx.output, "warning").mockImplementation(() => {});
+    const fetch = vi
+      .spyOn(httpTransport, "fetch")
+      .mockResolvedValue(Response.json({ result: "fixture" }));
+    await authStage(ctx, async () => {
+      await expect(ctx.client.console("fixture.catalog", {})).rejects.toMatchObject({
+        exitCode: ExitCode.AUTH,
+      });
+      await expect(ctx.client.requestJson({ path: "/fixture/model" })).resolves.toEqual({
+        result: "fixture",
+      });
+    });
+    expect(warning).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "PRE_CONSOLE_UNAVAILABLE" }),
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]?.[0]).toBe("https://dashscope.aliyuncs.com/fixture/model");
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get("authorization")).toBe(
+      "Bearer fixture-model-key",
+    );
+  });
+});
+
 test.each([
   {
     name: "bailian-env",
@@ -145,6 +198,118 @@ test.each([
     });
   },
 );
+
+test("mixed OpenAPI commands derive Console credentials from their primary identity", async () => {
+  await withIsolatedHome(async () => {
+    const original = await context(
+      { access_token: "console-a", access_key_id: "account-a", access_key_secret: "secret-a" },
+      {},
+      { accessKeyId: "account-b", accessKeySecret: "secret-b" },
+    );
+    const ctx = { ...original, command: { ...original.command, auth: "openapi" as const } };
+    const calls: Array<{ url: URL; headers: Headers }> = [];
+    vi.spyOn(httpTransport, "fetch").mockImplementation(async (input, init) => {
+      const url = new URL(input instanceof Request ? input.url : input);
+      const headers = new Headers(init?.headers);
+      calls.push({ url, headers });
+      if (url.pathname === "/modelstudio/cli/generateAccessToken")
+        return Response.json({ cliAccessToken: "console-b" });
+      if (url.pathname === "/cli/api.json")
+        return Response.json({ data: { success: true, uid: "account-b" } });
+      return Response.json({ Success: true });
+    });
+    await authStage(ctx, async () => {
+      await ctx.client.console("login.info", {});
+      await ctx.client.openApiQueryJson({
+        host: "modelstudio.cn-beijing.aliyuncs.com",
+        path: "/fixture/openapi",
+        action: "FixtureRead",
+        version: "2026-02-10",
+        method: "POST",
+        queryParams: {},
+      });
+    });
+    expect(calls).toHaveLength(3);
+    expect(
+      calls
+        .filter((call) => call.url.pathname !== "/cli/api.json")
+        .every((call) => call.headers.get("authorization")?.includes("Credential=account-b")),
+    ).toBe(true);
+    expect(
+      calls.find((call) => call.url.pathname === "/cli/api.json")!.headers.get("authorization"),
+    ).toBe("Bearer console-b");
+    expect(calls.every((call) => call.headers.get("authorization") !== "Bearer console-a")).toBe(
+      true,
+    );
+  });
+});
+
+test("static Console refresh remains bound to the original directory", async () => {
+  await withIsolatedHome(async () => {
+    const ctx = await context({
+      access_token: "old-token",
+      access_key_id: "local-ak",
+      access_key_secret: "local-sk",
+    });
+    const originalPath = getConfigPath();
+    let another: ReturnType<typeof enterIsolatedHome> | undefined;
+    try {
+      backend({
+        gateway: async (_url, headers) => {
+          if (headers.get("authorization") === "Bearer old-token")
+            return Response.json({
+              data: { success: false, errorCode: "BailianGateway.Login.NotLogined" },
+            });
+          another = enterIsolatedHome();
+          await writeConfigFile({ access_token: "other-directory-token" });
+          return Response.json({ data: { success: true } });
+        },
+      });
+      await authStage(ctx, () => ctx.client.console("test.api", {}).then(() => {}));
+      expect(readConfigFile().access_token).toBe("other-directory-token");
+      expect(readConfigProfiles().named.selected).toBeUndefined();
+      expect(readConfigFile("selected", originalPath).access_token).toBe("fresh-token");
+    } finally {
+      another?.restore();
+    }
+  });
+});
+
+test("a late static Console refresh cannot restore a logged-out token", async () => {
+  await withIsolatedHome(async () => {
+    const ctx = await context({
+      access_token: "old-token",
+      access_key_id: "local-ak",
+      access_key_secret: "local-sk",
+    });
+    let entered!: () => void;
+    let release!: () => void;
+    const freshEntered = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const freshRelease = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    backend({
+      gateway: async (_url, headers) => {
+        if (headers.get("authorization") === "Bearer old-token")
+          return Response.json({
+            data: { success: false, errorCode: "BailianGateway.Login.NotLogined" },
+          });
+        entered();
+        await freshRelease;
+        return Response.json({ data: { success: true } });
+      },
+    });
+    const request = authStage(ctx, () => ctx.client.console("test.api", {}).then(() => {}));
+    await freshEntered;
+    await makeAuthStore(ctx.sources).logout("all");
+    release();
+    await request;
+    expect(readConfigFile("selected").access_token).toBeUndefined();
+    expect(readConfigFile("selected").access_key_id).toBeUndefined();
+  });
+});
 
 test("existing token is used without resolving unused partial AK/SK", async () => {
   await withIsolatedHome(async () => {

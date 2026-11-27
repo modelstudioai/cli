@@ -70,6 +70,19 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - `--console --token-stdin` 与 `--no-browser` 互斥，必须显式指定 `--console-region`；只接受非 TTY stdin 的单个原始 token（最多 64 KiB），拒绝空输入、JSON、Bearer 前缀及多 token 输入。此分支不启动浏览器或回调服务，经目标网关 `loginInfo` 验证成功才保存 token/site/region 并激活指定 Profile；保留其他凭证，失败和 dry-run 不写入、不激活，dry-run 不读取 stdin。
 - PNA 响应头只是兼容措施，不能宣称绕过 Chrome LNA 权限或 Safari 混合内容限制。回归覆盖真实 loopback 请求、超时、浏览器启动竞态、stdin 失败不改配置及输出不泄漏 token。
 
+### 阿里云 OAuth 登录与续期
+
+- `bl auth --login aliyun` 是可执行的 `auth` 父命令，保留既有 `auth login/status/logout` 子命令；不在 runtime 改写 argv。
+- OAuth 回调仅监听 `127.0.0.1` 随机端口的 `/oauth/callback` 路径，授权请求与换票使用同一 `redirect_uri`。IAM 登记 `http://127.0.0.1:12345/oauth/callback`；NativeApp 忽略回环端口，但协议、主机和路径必须一致，不保留根路径兼容。
+- 线上首次登录必须显式配置正式 OAuth 应用 ID 和授权 URL，之后可复用选中 Profile；端点维持显式参数 > Profile > 默认地址。预发模式由 `bl` 入口解析 `BAILIAN_PRE` 后传入 core/runtime，使用独立配置路径和已确认的国内端点，不读线上控制面凭据、不隐式回退、不改 hosts/代理。Console 浏览器登录与 Bearer 网关须分别确认后显式配置；未确认的管理接口必须联网前阻断。模型域来源和 `kscli` 不受开关影响。
+- `aliyun_oauth` 仅保存端点、client_id/scope、会话引用、域激活状态及到期元数据；OAuth AT 不覆盖旧的 Console `access_token`。凭据存于配置目录下独立的 `oauth/<session_ref>.json` 明文文件，绑定会话引用，不写入主配置。Unix 校验目录 `0700` 和文件 `0600` 及所有者，Windows 校验私有 ACL；拒绝非普通文件及链接，使用同目录唯一临时文件、fsync 和原子替换。旧加密会话不迁移，需要重新登录。
+- 同一个异步 OpenAPI provider 负责 OAuth AT/RT→STS，Console 换票与 OpenAPI 签名前复用。优先级保持 flag > 百炼 env > 所选 file（静态或 OAuth）> 阿里云 env；临时来源不落盘。`describe/stored` 只读元数据，不读取凭据文件；静态 dry-run 不调用 OAuth，框架更新/遥测仍遵循原设置。
+- `/v1/exchange` 接受完整的 PascalCase 或 camelCase STS 字段，不跨两套字段拼接。两种格式均校验非空字符串凭据及未来到期时间，不输出原始响应体。
+- RT 刷新开始前保存 pending 状态；新 RT 必须安全持久化后才能继续 STS/业务请求。刷新结果不确定时不重放旧 RT；没有返回新 RT 时保留旧值。会话锁跨进程协调，配置写入使用文件锁、唯一临时文件与原子替换。
+- 会话文件绑定端点/client/scope 指纹，公开元数据被改动时须重新登录，不能把旧 RT 发往新端点；Console 缓存按 gateway/region/site/switchAgent 隔离。Console token 仍保持原业务请求成功后才保存的规则。
+- `workspace init` 是 OpenAPI 与 Console 混合命令，以 `auth: "openapi"` 校验主凭据，两类调用均经过同一个 Client；纯 Console Gateway 命令仍声明 `auth: "console"`。`auth generate-access-token` 也复用所选 OpenAPI 凭据，不再要求手工重复输入已登录的凭据。
+- 完整退出或 `--aliyun` 撤销 RT 并删除安全缓存；部分 `--console`/`--open-api` 仅停用对应域。删除有 OAuth 会话的 Profile 前必须先退出 OAuth，避免遗留无法撤销的安全缓存。重新登录替换本地引用，不把本地替换描述为服务端旧授权已撤销。
+
 ### Console token 签发与刷新
 
 - `packages/core/src/client/console-session.ts` 集中管理 Console 凭证、换票、重试、并发协调及落盘；`Client.console()` 委托给该内部模块，对外调用方式不变。

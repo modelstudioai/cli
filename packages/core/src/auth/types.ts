@@ -1,3 +1,5 @@
+import type { AliyunOAuthProfile } from "./aliyun-types.ts";
+
 /** Where a resolved credential came from (shown by `bl auth status`). */
 export type CredentialSource = "flag" | "env" | "config";
 
@@ -21,6 +23,11 @@ export interface ApiKeyCredential {
 /** Credential for the **console domain** (Bailian console gateway). An access token + region/site. */
 export interface ConsoleCredential {
   token: string;
+  gateway?: string;
+  expiresAt?: number;
+  method?: "aliyun-oauth";
+  sessionRef?: string;
+  configurationFingerprint?: string;
   region: string;
   site: "domestic" | "international";
   switchAgent?: number;
@@ -29,6 +36,10 @@ export interface ConsoleCredential {
 
 /** Credential for Alibaba Cloud OpenAPI calls signed with AK/SK. */
 export interface OpenApiCredential {
+  method?: "aliyun-oauth";
+  sessionRef?: string;
+  configurationFingerprint?: string;
+  expiresAt?: number;
   accessKeyId: string;
   accessKeySecret: string;
   securityToken?: string;
@@ -37,6 +48,7 @@ export interface OpenApiCredential {
 
 /** Full auth snapshot for display (`bl auth status`) — what would resolve per domain. */
 export interface AuthState {
+  aliyunOAuth?: AliyunOAuthProfile;
   apiKey?: ApiKeyCredential;
   console?: ConsoleCredential;
   openapi?: OpenApiCredential;
