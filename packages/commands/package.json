@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@openagentpack/sdk": "0.9.0",
+    "ajv": "catalog:",
     "bailian-cli-core": "workspace:*",
     "bailian-cli-runtime": "workspace:*",
     "boxen": "catalog:",

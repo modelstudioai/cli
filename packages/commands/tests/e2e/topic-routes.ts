@@ -3,6 +3,11 @@
  * 仅包含该 topic 测试会调用的 path，不维护全量产品 map。
  */
 export type E2eRouteExports = Record<string, string>;
+export const CONNECTOR_ROUTES: E2eRouteExports = {
+  "connector tools": "connectorTools",
+  "connector schema": "connectorSchema",
+  "connector call": "connectorCall",
+};
 
 export const AUTH_ROUTES: E2eRouteExports = {
   "auth login": "authLogin",

@@ -26,6 +26,7 @@ _Built for AI Agents. Every command works as a structured tool call._
 - **Model generation** — Full-modality generation across text, image, video, and speech, with editing and reference-based generation
 - **Asset understanding** — Parse and ask questions about images, documents, audio, and long videos
 - **App orchestration** — Call Managed Agents, agents, and workflows published on Aliyun Model Studio, wired to knowledge bases, memory, web search, and MCP tools; create, update, publish, copy, and delete agents/workflows, and edit workflow canvases from the CLI
+- **Workspace connectors** — Discover tools with `bl connector tools --query`, inspect a selected account's schema with `bl connector schema`, and execute a tool with `bl connector call`.
 - **Native MCP setup** — Register Bailian MCP servers in Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork (千问办公), Qwen Code, Gemini CLI, or Pi
 - **Training & deployment** — Prepare decision training data (local split, teacher-model generation, or fully async offline Batch), validate and upload datasets, fine-tune models (SFT/DPO/CPT), run reinforcement-learning jobs in an isolated sandbox (macOS/Linux), submit OPD distillation jobs via OpenAPI, deploy dedicated models as endpoints
 - **Batch inference** — Prepare CSV/JSONL, create and follow asynchronous Chat/Embedding tasks, download original results/errors with optional CSV, or send one synchronous Batch Chat request
