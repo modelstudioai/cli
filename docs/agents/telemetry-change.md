@@ -116,7 +116,7 @@ postinstall.js launchFirstInstallReport
          setupProxyFromEnv()（失败则直连，不让安装失败）
          tracker.ts reportFirstInstallNow
            event.ts createFirstInstallEvent
-           sink.ts remoteSink → remoteSendEvent("first_install", ...)
+           sink.ts remoteSink → 国内站 Tracker 的 sendEvent("first_install", ...)
            first-install.ts noteFirstInstallReportQueued
 ```
 
@@ -254,7 +254,7 @@ AEM 映射：
 - [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
 - [ ] 安装日只在新用户安装成功写盘后，由 `BAILIAN_FIRST_INSTALL_REPORT=1` 且参数 `--bailian-first-install-report` 进入 `reportFirstInstallNow`，事件名 `first_install`。只剩环境变量时普通命令照常执行。拉起最多等 8 秒。这条入口先 `setupProxyFromEnv()`，代理无效则直连且安装继续；并遵守 `DO_NOT_TRACK=1` 与 `telemetry: false`。命令事件只带 `installChannel`。缺失或无法识别时不创建 `install.json`，不把当前时间补进 `firstInstalledAt`。每个安装日只入队一次；入队失败不记次数，也不改由后续命令补发。`kscli` 和 bootstrap 都不发这条事件
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口
-- [ ] `remoteSink` 从调用到 `remoteSendEvent` 入队之间不得出现 `await`（flush 只排空已入队事件）
+- [ ] `remoteSink` 从调用到对应站点 Tracker 的 `sendEvent` 入队之间不得出现 `await`（flush 只排空已入队事件）
 - [ ] 测试中调用 `remoteSink` 的用例必须使用 `enterIsolatedHome()`，避免写入真实配置目录
 - [ ] 遥测发送的 DNS/HTTP/响应体必须受可取消预算控制；flush 超时必须取消在途操作，不能只停止等待，也不能修改全局 DNS/dispatcher 或强制退出宿主
 - [ ] `localSink` 在途写入须登记并由 `flushTelemetry` 等待（即使无远端 in-flight）；命令路径仍可 fire-and-forget，不得因本地写失败改退出码；用 `telemetry-sink` 单测覆盖「无远端也落盘」和「本地卡住仍按时返回」，并用 `telemetry-exit` e2e 的 `fast-run-to-exit` 子进程用例守住「远端立即响应 + `runToExit` 强制退出仍落盘」
