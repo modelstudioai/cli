@@ -45,6 +45,7 @@ export {
   isOpenApiE2EReady,
   isOssImportE2EReady,
   isSearchE2EReady,
+  isSpeechGenerateE2EReady,
   isTableKbE2EReady,
   isTableSearchE2EReady,
 } from "e2e/gating";

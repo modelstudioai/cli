@@ -6,6 +6,128 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.13.0] - 2026-11-27
+
+### 新增
+
+- **`bl finetune preset-datasets`**：新增命令，查询指定基础模型与训练类型下可混入训练的预置数据集（`--base-model`、`--training-type`、可选 `--model-version`）。结果原样保留服务端字段（`dataset_code`、`dataset_title`、`dataset_desc`）；结果为空属于成功。
+- **混合训练**：`bl finetune text create` 新增 `--augmentation-types`（预置数据集编码，按小写下发）与 `--augmentation-ratio`（按位置对应每种数据集的混合倍率，范围 0.0～2.0，两者必须同时提供）。传入 `--augmentation-types` 即开启数据增强。
+- **OSS 挂数据集**：`bl finetune text create` 的 `--datasets` / `--validations` 支持 `oss://<bucket>/<object key>` 条目，由服务端原地读取，不做本地校验、不上传，并跳过样本数预检。`--oss-region` 指定 Bucket 所在地域（默认 `cn-beijing`），原样下发。
+- **OpenAPI AccessKey 浏览器引导**：`bl auth login --open-api` 在未提供 `--access-key-id` / `--access-key-secret` 时打开控制台 AccessKey 配置页（或配合 `--no-browser` 只打印地址），并给出可粘贴的后续命令；同时提供两个 key 参数时仍按原逻辑校验并保存。`bl auth status` 在缺少 OpenAPI 凭证时会指向同一引导入口。
+
+### 变更
+
+- **`bl finetune train-options` 未知模型（BREAKING）**：目录中找不到且无动态选项的模型，原先会成功返回 `training_options: null`；现在以用法退出码 `2` 结束，stdout 为空。
+- **`bl finetune train-options` 的 status**：成功结果新增 `status`，说明 `training_options` 为 null 的原因：`configured`、`not_configured`（已在目录中确认、无动态选项）、`unverified`（目录查询失败）。
+
+### 修复
+
+- **必填超参数**：`bl finetune text create` 未指定 `n_epochs`、`batch_size` 或 `max_length` 时，按模型参数配置中的默认值补齐；创建任务接口在缺少这三项时会拒绝任务。
+- **命令输出刷盘**：进程退出前会完整刷完 stdout/stderr，管道或重定向读取较慢时不再截断输出。
+- **OpenAPI 引导后续命令**：粘贴用的 `bl auth login --open-api ...` 会保留所选 `--console-site` 与 `--config`；系统打开浏览器过慢时改为报告未能确认，而不再误报为失败。
+
+## [2.12.0] - 2026-11-25
+
+### 新增
+
+- **视频口型驱动**：新增 `bl video retalk`，根据驱动音频生成人像口型视频（固定模型 `videoretalk`，仅北京）。需提供 `--video` 与 `--audio`（URL 或本地路径）；多人输入可选 `--ref-image` / `--face-threshold`；音频长于视频时可使用 `--video-extension`。
+- **视频风格转换**：新增 `bl video style`，按 8 种预设风格转换视频（固定模型 `video-style-transform`，仅北京），通过 `--style` `0`–`7` 指定；输入为公网视频 URL；可选 `--fps`、`--animate-emotion`、`--min-len`、`--super-resolution`。基于提示词的编辑仍使用 `bl video edit`。
+
+### 变更
+
+- **默认 TTS 模型**：`bl speech synthesize` 与 Profile `default_speech_model` 的默认值改为 `qwen-audio-3.1-tts-flash`（原 `cosyvoice-v3-flash`）。音色 ID 仍与模型绑定；CosyVoice 音色需显式指定 `--model cosyvoice-v3-flash`。
+
+## [2.11.2] - 2026-11-24
+
+### 新增
+
+- **决策模型精调流水线**：决策模型的数据准备与训练全链路。
+  - `bl dataset generate` 依据 `workload.json` 业务配置合成带标注的决策训练样本。
+  - `bl dataset split` 将已标注 JSONL 切分为训练集与评估集。
+  - `bl finetune decision create` 提交决策模型精调（LoRA / efficient_sft）；`bl dataset validate` 支持决策样本格式校验。
+- **`bl finetune train-options`**：新命令，从控制台查询模型的动态训练选项（选项定义、默认值、合法组合）。`training_options: null` 表示该模型无需训练选项。`--training-type` 默认 `sft`。
+- **文本精调训练选项 flag**：`bl finetune text create` 新增 `--modality` 与 `--reasoning-mode`，适用于配置了动态训练选项的模型（如 modality 固定 vision 的模型）。
+
+### 变更
+
+- **精调参数预检**：`bl finetune params` 与 `bl finetune text create` 在控制台登录态可用时会调用一次动态训练选项接口——自动补齐选项默认值，并在提交前本地拦截非法取值或组合；无登录态时降级为 warning 并原样透传服务端。`finetune params` 的 JSON 输出新增 `precheck` 字段说明预检是否执行。
+
+## [2.11.1] - 2026-11-24
+
+### 修复
+
+- **符号链接下载目标**：文件下载会穿过符号链接写入真实文件，并保留链接本身，而不再把链接替换成普通文件。
+- **语音生成下载失败恢复**：`bl speech generate` 在音频已生成成功但落盘失败时，错误提示会带上可重新下载的地址，无需重新生成。
+
+## [2.11.0] - 2026-11-24
+
+### 新增
+
+- **语音音色命令组**：新增 `bl speech voice` 组，管理自定义音色注册。
+  - `bl speech voice clone` 用参考音频克隆音色。CosyVoice / Qwen-Audio 目标走 `voice-enrollment`，后续用 `bl speech synthesize --model <同一 target-model> --voice <id>`；Omni 目标（`qwen3.5-omni-flash` / `qwen3.5-omni-plus`，允许带日期后缀）走 `qwen-voice-enrollment`，后续用 `bl omni --model <同一 target-model> --voice <id>`；Realtime（`*-realtime`）目标在创建时会被拒绝。
+  - `bl speech voice design` 用文字描述生成 CosyVoice / Qwen-Audio 音色并本地保存一次性预览；正式试听仍用 `bl speech synthesize`。不支持 Omni 目标。
+  - `bl speech voice list` / `get` / `update` / `delete` / `preview` 管理已注册音色（`update` / `preview` / `get` 适用于 CosyVoice / Qwen-Audio；Omni 仅支持 clone / list / delete）。
+- **语音内容生成**：新增 `bl speech generate`，通过 `--text-prompt` 与可选的 `@voice1`…`@voice3` 参考音频（`--audio`，仅 WAV/MP3/OGG Opus）生成播客/对话类音频；默认北京 MaaS 端点需要 Workspace ID；不接受系统音色或已克隆 `voice` ID。
+- **Qwen-MT 翻译命令**：新增文本、图片排版与多模态文件翻译入口。
+  - `bl text translate` 用 Qwen-MT（`qwen-mt-flash` / `plus` / `lite`）翻译文本，支持 `--term` 术语对与可选流式输出。
+  - `bl image translate` 翻译图片内文字并尽量保留排版（默认 `qwen-mt-image`，可选 `qwen-mt-image-2.0`），支持等待完成或 `--async`。
+  - `bl omni translate` 用 Qwen-MT-Uni（`qwen-mt-uni`）翻译文档、图片或音频文件，支持术语表 / 敏感词等选项，以及等待完成或 `--async`。
+- **全局 `--biz-from` 参数**：所有命令支持 `--biz-from <source>`，调用方（skill/agent/产品）可声明业务来源，便于按来源统计命令调用（如 `flow-agent`）的 PV/UV。
+
+### 修复
+
+- **CLI npm 更新**：`bl update` 与自动更新改为从官方 npm registry 安装，与版本检测使用同一来源，从而避免因用户配置的镜像同步滞后而将未实际升级的安装结果报告为更新成功。
+
+## [2.10.5] - 2026-11-23
+
+### 新增
+
+- **模型路由命令组**：新增 `bl deploy router` 组，管理后付费模型路由（`plan=mr`）。
+  - `bl deploy router versions` 分页列出可用路由版本、支持策略与候选模型。
+  - `bl deploy router create` 通过 `--name`、`--route-version`、`--strategy`（`EFFECT_FIRST` / `COST_FIRST`）与 `--candidates` 创建路由；创建后立即进入 RUNNING 状态，遵循试运行 → 确认 → `--yes` 闸门。
+  - `bl deploy router list` / `get` 查询路由；`get` 会校验部署为 `plan=mr`。
+  - `bl deploy router update` 更新 RUNNING 路由的指定配置项并保留未提供字段；`--candidates` 会替换整个候选模型列表。
+  - `bl deploy router delete` 确认后永久删除路由；RUNNING 路由无需先停机。
+- **容量自动续费**：新增 `bl deploy capacity auto-renew enable` / `disable`，通过 `--cycle Day` 与 `--auto-renewal-duration` 开启或关闭单个预付费容量实例的自动续费。两者均为高风险计费操作，支持试运行预览与实例能力预检；8 小时闲时实例不支持。
+- **8 小时闲时容量**：`bl deploy capacity create` 与 `bl deploy text create --plan ptu` 支持通过 `--pricing-cycle Hour --duration 8 --auto-renewal false` 购买预付费 8 小时闲时窗口；PTU 还须显式指定 `--service-tier ptu_default`。售卖时段（北京时间 22:00–24:00）与模型支持由服务端校验。闲时实例不可变配、续订、自动续费、释放或退订，到期自动失效。
+
+### 变更
+
+- **PTU 思考输出容量**：`bl deploy text create --thinking-output-tpm` 不再在本地对 PTU 直接拒绝；是否支持由模型决定并由服务端校验。
+- **部署删除**：`bl deploy delete` 识别模型路由（`plan=mr`），允许 RUNNING 路由无需停机即可删除。
+
+## [2.10.4] - 2026-11-20
+
+### 新增
+
+- **RL 训练命令组**：新增 `bl finetune rl` 组，覆盖百炼强化学习训练的端到端链路。
+  - `bl finetune rl authorize` 检查准入白名单、服务关联角色与业务开通状态；绝不自动创建角色，角色缺失时中止并给出双语手动授权指引。`--authorize` 开通 RL 训练模式（高风险，需 `--yes`）。
+  - `bl finetune rl run` 通过 flag 或 YAML 规格提交训练任务，并打包 Rollout/Reward 函数代码；提交在托管的 OS 沙箱 Python 运行时内执行（仅 macOS/Linux）。创建任务消耗计费的 MTU 算力，遵循试运行 → 显式确认 → `--yes` 闸门；`--watch` 轮询至终态，超时不会取消云端任务。
+  - `bl finetune rl get` / `list` / `watch` / `logs` / `cancel` / `delete` 经共享的 fine-tunes 后端管理任务；`get` 原样返回完整 OpenAPI 响应（含数据集与 MTU 规格/容量）。
+- **OPD 蒸馏命令组**：新增 `bl finetune opd` 组，使用平台登记的教师模型进行纯模型在线蒸馏（`pg_opd`）。
+  - `bl finetune opd authorize` / `run` / `params` / `get` / `watch` / `logs` / `cancel` / `delete`；`run` 在计费提交前可用 `--dry-run` 预览任务规格，`params` 查询学生基座模型支持的超参数。
+- **托管运行时命令**：新增 `bl finetune runtime prepare` / `doctor` / `clean`，管理 RL/OPD 沙箱运行时。
+  - `prepare` 按受审查的多源清单下载固定版本 CPython + dashscope 运行时，逐源 SHA256 校验并带镜像回退，缓存后长期复用；受限地区可设 `BAILIAN_RL_PYTHON_MIRROR` / `BAILIAN_RL_PIP_INDEX_URL`，`BAILIAN_RL_RUNTIME` 可复用本机开发态运行时。
+  - `doctor` 验证沙箱隔离（凭据禁读、home 重定向、SDK 导入、代理出口管控），并以增强项探测宿主出站网络可达性：阻断网络的 agent 沙箱会收到降级提示与指引，而不是在提交中途失败。
+  - `clean` 回收孤儿任务目录与旧版本运行时，支持 `--dry-run` 预览；绝不触碰当前基线运行时。
+- **沙箱网络拒绝提示**：连接级网络拒绝（`EPERM` / `EACCES` / `ENETUNREACH` / `EHOSTUNREACH`）现在给出双语提示，说明执行环境（如 AI agent 沙箱）可能阻断出站网络，并引导放行网络、改在普通终端执行或设置 `HTTPS_PROXY`；运行时下载失败也会携带底层 errno。
+
+### 变更
+
+- **代理环境变量**：大写变量未设置时，小写 `http_proxy` / `https_proxy` / `no_proxy` 现在作为兜底生效；大写仍优先。
+
+## [2.10.3] - 2026-11-18
+
+### 修复
+
+- **工作空间列表**：`bl workspace list` 现在返回全部可访问的业务空间，不再只返回网关默认的第一页（10 个）。遥测、告警、日志、数据集、文件与部署命令使用的控制台工作空间解析同样覆盖第一页之外的空间。
+
+## [2.10.2] - 2026-11-17
+
+### 变更
+
+- **遥测服务关联角色**：`bl monitor delivery enable` 与 `bl log audit/inference enable` 不再自动创建服务关联角色，改为检查角色状态，缺失时以双语指引中止并指向模型可观测文档，避免静默授予跨服务权限。
+
 ## [2.10.1] - 2026-11-13
 
 ### 修复

@@ -37,6 +37,18 @@ export function isBailianE2EMediaEnabled(): boolean {
   return isBailianE2EEnabled();
 }
 
+/**
+ * `speech generate` live: media gate + API key + workspace (default MaaS host).
+ * Missing workspace must skip the suite, not early-return a green pass.
+ */
+export function isSpeechGenerateE2EReady(): boolean {
+  return (
+    isBailianE2EMediaEnabled() &&
+    isDashScopeE2EReady() &&
+    !!process.env.BAILIAN_WORKSPACE_ID?.trim()
+  );
+}
+
 /** 文生视频 / 图生视频等（耗时长，默认关闭） */
 export function isBailianE2EVideoEnabled(): boolean {
   return isBailianE2EEnabled() && process.env.BAILIAN_E2E_VIDEO === "1";

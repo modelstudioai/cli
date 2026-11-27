@@ -34,13 +34,20 @@ export default defineCommand({
       path: taskPath(taskId),
     });
 
-    // 透传服务端失败字段：FAILED 时 output.code / output.message 是排查依据；request_id 便于工单溯源。
+    // Pass through server failure fields and translation outputs for image/omni tasks.
     ctx.output.result(
       stripUndefined({
         task_id: response.output.task_id,
         task_status: response.output.task_status,
         video_url: response.output.video_url,
+        output_video_url: response.output.output_video_url,
+        image_url: response.output.image_url,
         results: response.output.results,
+        Success: response.output.Success,
+        Code: response.output.Code,
+        Message: response.output.Message,
+        RequestId: response.output.RequestId,
+        Data: response.output.Data,
         submit_time: response.output.submit_time,
         scheduled_time: response.output.scheduled_time,
         end_time: response.output.end_time,

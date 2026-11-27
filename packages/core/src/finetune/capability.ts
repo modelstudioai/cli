@@ -34,6 +34,14 @@ export const TRAINING_TYPES_CLI: readonly TrainingTypeCli[] = Object.keys(
 /** Default training type when `--training-type` is omitted. */
 export const DEFAULT_TRAINING_TYPE: TrainingTypeCli = "sft-lora";
 
+/**
+ * Catalog scope for training-capability queries. The default `listFoundationModels`
+ * catalog is inference-scoped and omits training-only base models (and their dated
+ * snapshots); scoping by `fineTune` returns the trainable universe the console
+ * training selector shows. Shared by both capability query directions.
+ */
+export const FINETUNE_CATALOG_SUPPORTS: Record<string, boolean> = { fineTune: true };
+
 /** Subset of `supports` relevant to training capability. */
 interface ModelSupports {
   sft?: boolean;
@@ -113,6 +121,11 @@ export async function fetchModelCapability(
   diagnostics: Pick<HttpDeps, "debug"> = {},
 ): Promise<ModelCapability | null> {
   // Public model catalog — anonymous gateway call, no console token needed.
-  const match = await findModelByName(anonymousConsoleCall(settings, diagnostics), modelName);
+  // Scoped to the trainable catalog so training-only base models are found too.
+  const match = await findModelByName(
+    anonymousConsoleCall(settings, diagnostics),
+    modelName,
+    FINETUNE_CATALOG_SUPPORTS,
+  );
   return match as ModelCapability | null;
 }

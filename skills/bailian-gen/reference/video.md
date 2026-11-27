@@ -7,13 +7,15 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Authentication | Description                                                                                                          |
-| ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `bl video download` | API Key        | Download a completed video by task ID                                                                                |
-| `bl video edit`     | API Key        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                               |
-| `bl video generate` | API Key        | Generate a video from text or image (wan3.0-video / wan2.6-t2v / happyhorse-1.1-i2v)                                 |
-| `bl video ref`      | API Key        | Reference-to-video generation (wan3.0-video / happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
-| `bl video task get` | API Key        | Query async task status                                                                                              |
+| Command             | Authentication | Description                                                                                                           |
+| ------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `bl video download` | API Key        | Download a completed video by task ID                                                                                 |
+| `bl video edit`     | API Key        | Edit a video with happyhorse-1.0-video-edit (prompt-based style/object edits; preset comic/ink restyle → video style) |
+| `bl video generate` | API Key        | Generate a video from text or image (wan3.0-video / wan2.6-t2v / happyhorse-1.1-i2v)                                  |
+| `bl video ref`      | API Key        | Reference-to-video generation (wan3.0-video / happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice  |
+| `bl video retalk`   | API Key        | Drive a talking-head video with audio (VideoRetalk)                                                                   |
+| `bl video style`    | API Key        | Restyle a video with 8 presets (video-style-transform); for prompt-based edit use video edit                          |
+| `bl video task get` | API Key        | Query async task status                                                                                               |
 
 ## Command details
 
@@ -47,12 +49,12 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 
 ### `bl video edit`
 
-| Field              | Value                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------- |
-| **Name**           | `video edit`                                                                           |
-| **Description**    | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.) |
-| **Authentication** | API Key                                                                                |
-| **Usage**          | `bl video edit --video <url> --prompt <text> [flags]`                                  |
+| Field              | Value                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `video edit`                                                                                                          |
+| **Description**    | Edit a video with happyhorse-1.0-video-edit (prompt-based style/object edits; preset comic/ink restyle → video style) |
+| **Authentication** | API Key                                                                                                               |
+| **Usage**          | `bl video edit --video <url> --prompt <text> [flags]`                                                                 |
 
 #### Flags
 
@@ -213,6 +215,83 @@ bl video ref --prompt "Image 1 and Image 2 have a conversation" --image a.jpg --
 
 ```bash
 bl video ref --prompt "Image 1 drinks water" --image person.jpg --watermark false
+```
+
+### `bl video retalk`
+
+| Field              | Value                                                                 |
+| ------------------ | --------------------------------------------------------------------- |
+| **Name**           | `video retalk`                                                        |
+| **Description**    | Drive a talking-head video with audio (VideoRetalk)                   |
+| **Authentication** | API Key                                                               |
+| **Usage**          | `bl video retalk --video <url-or-path> --audio <url-or-path> [flags]` |
+
+#### Flags
+
+| Flag                        | Type    | Required | Description                                                                                |
+| --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------ |
+| `--video <url-or-path>`     | string  | yes      | Input video URL or local file (mp4/avi/mov)                                                |
+| `--audio <url-or-path>`     | string  | yes      | Driving audio URL or local file (wav/mp3/aac)                                              |
+| `--ref-image <url-or-path>` | string  | no       | Optional reference face image when the video has multiple people                           |
+| `--video-extension <bool>`  | boolean | no       | Extend video by alternating reverse/forward playback when audio is longer (default: false) |
+| `--face-threshold <n>`      | number  | no       | Face match threshold 120–200 (default: 170; only with --ref-image)                         |
+| `--download <path>`         | string  | no       | Save video to this file on completion (default: <output-dir>/videos/<task_id>.mp4)         |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                       |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 15)                                                |
+| `--api-key <key>`           | string  | no       | API key                                                                                    |
+| `--base-url <url>`          | string  | no       | API base URL                                                                               |
+
+#### Notes
+
+- Fixed model videoretalk (Beijing only). Wait-mode polling uses at least 600s (--timeout lower values are raised).
+
+#### Examples
+
+```bash
+bl video retalk --video https://example.com/face.mp4 --audio https://example.com/speech.wav --download out.mp4
+```
+
+```bash
+bl video retalk --video ./face.mp4 --audio ./speech.wav --ref-image ./person.jpg --face-threshold 170
+```
+
+### `bl video style`
+
+| Field              | Value                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| **Name**           | `video style`                                                                                |
+| **Description**    | Restyle a video with 8 presets (video-style-transform); for prompt-based edit use video edit |
+| **Authentication** | API Key                                                                                      |
+| **Usage**          | `bl video style --video <url> [flags]`                                                       |
+
+#### Flags
+
+| Flag                        | Type    | Required | Description                                                                                                                                                      |
+| --------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--video <url>`             | string  | yes      | Input video public URL (local paths not supported in v1)                                                                                                         |
+| `--style <n>`               | number  | no       | Style ID 0–7 (default: 0). 0 Japanese comic, 1 American comic, 2 fresh comic, 3 3D cartoon, 4 Chinese cartoon, 5 paper art, 6 simple illustration, 7 Chinese ink |
+| `--fps <n>`                 | number  | no       | Output video FPS 15–25 (default: 15; maps to video_fps)                                                                                                          |
+| `--animate-emotion <bool>`  | boolean | no       | Animate facial emotion (server default: true)                                                                                                                    |
+| `--min-len <n>`             | number  | no       | Short-side length 540 or 720 (server default: 720; 720P costs more than 540P)                                                                                    |
+| `--super-resolution <bool>` | boolean | no       | Enable super-resolution (maps to use_SR; server default: false; with min_len=540 outputs 1080P billed as 540P)                                                   |
+| `--download <path>`         | string  | no       | Save video to this file on completion (default: <output-dir>/videos/<task_id>.mp4)                                                                               |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                                                                                             |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 15)                                                                                                                      |
+| `--api-key <key>`           | string  | no       | API key                                                                                                                                                          |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                                                                                     |
+
+#### Notes
+
+- Fixed model video-style-transform (Beijing only). Wait-mode polling uses at least 600s (--timeout lower values are raised).
+
+#### Examples
+
+```bash
+bl video style --video https://example.com/clip.mp4 --style 0 --download styled.mp4
+```
+
+```bash
+bl video style --video https://example.com/clip.mp4 --style 4 --fps 15 --min-len 540 --super-resolution true
 ```
 
 ### `bl video task get`

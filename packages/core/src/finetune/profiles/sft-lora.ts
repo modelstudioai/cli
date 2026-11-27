@@ -11,6 +11,7 @@
  * hyper-parameters, and pre-flight gates. All branching is internal —
  * `create.ts` calls the uniform profile interface without knowing the modality.
  */
+import { extname } from "path";
 import type { TrainingProfile, DataModality } from "./types.ts";
 import type { ValidateOpts, ValidationResult } from "../../dataset/validate/types.ts";
 import { validateDataset } from "../../dataset/validate/registry.ts";
@@ -128,6 +129,27 @@ export const sftLoraProfile: TrainingProfile = {
     modality: DataModality,
     opts: ValidateOpts,
   ): Promise<ValidationResult> {
+    if (modality === "decision") {
+      // Decision training data is plain JSONL ({state, questions, label,
+      // optional target}); ZIP archives belong to the media modalities.
+      if (extname(filePath).toLowerCase() !== ".jsonl") {
+        return {
+          valid: false,
+          format: "jsonl",
+          filePath,
+          errors: [
+            makeIssue(
+              "error",
+              "DECISION_UNSUPPORTED_FORMAT",
+              `Decision model training data must be a .jsonl file (got "${extname(filePath) || "(none)"}"). / 决策模型训练数据必须是 .jsonl 文件（当前为 "${extname(filePath) || "(none)"}"）。`,
+            ),
+          ],
+          warnings: [],
+          stats: {},
+        };
+      }
+      return validateDataset(filePath, { ...opts, schema: "decision" });
+    }
     if (modality === "audio") {
       // ZIP validation: structure check + JSONL content via tts schema.
       // The zip validator internally calls jsonlValidator for data.jsonl.
@@ -190,6 +212,22 @@ export const sftLoraProfile: TrainingProfile = {
     modality: DataModality,
     flags: Record<string, unknown>,
   ): Record<string, unknown> {
+    if (modality === "decision") {
+      // Decision: only the three documented knobs (n_epochs / batch_size /
+      // learning_rate). The API rejects an empty hyper_parameters block
+      // ("n_epochs is required"), so the documented defaults are always sent;
+      // valid ranges still come from the platform parameter schema (explicit
+      // overrides only, no local clamping).
+      const hp: Record<string, unknown> = {
+        n_epochs: 2,
+        batch_size: 1,
+        learning_rate: "2e-5",
+      };
+      if (flags.nEpochs !== undefined) hp.n_epochs = flags.nEpochs as number;
+      if (flags.batchSize !== undefined) hp.batch_size = flags.batchSize as number;
+      if (flags.learningRate !== undefined) hp.learning_rate = flags.learningRate as string;
+      return hp;
+    }
     if (modality === "audio") {
       // Audio: use TTS defaults, user flags override (MVP: all hardcoded).
       return { ...AUDIO_HYPER_PARAMS };
@@ -230,6 +268,12 @@ export const sftLoraProfile: TrainingProfile = {
       // batch-size pre-flight gate to avoid false rejections.
       if (gate === "batch_size") return true;
     }
+    if (modality === "decision" && gate === "batch_size") {
+      // Decision has its own sample-count rule (train/val each ≥ batch_size,
+      // or train ≥ batch_size × 10 without validation), enforced by
+      // preflightDecisionSampleGate in `finetune decision create`.
+      return true;
+    }
     return false;
   },
 
@@ -238,6 +282,11 @@ export const sftLoraProfile: TrainingProfile = {
     // (e.g. wan2.7-image-pro) and video models (e.g. wan2.5-i2v-preview) report
     // supports.sft=false in listFoundationModels but the API accepts
     // efficient_sft — skip to avoid false blocking.
-    return modality === "audio" || isImage(modality) || isVideo(modality);
+    // The decision preview model likewise reports fineTune/sft=false in the
+    // public catalog while training access is account-gated (whitelist); the
+    // server is the authority on whether the job is accepted.
+    return (
+      modality === "audio" || isImage(modality) || isVideo(modality) || modality === "decision"
+    );
   },
 };

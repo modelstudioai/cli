@@ -10,6 +10,8 @@
  * 训练侧额外要求 `label` 硬标签，`target` 是可选软标签概率分布。
  */
 import {
+  compareDecisionQuestionTables,
+  decisionQuestionTableSignature,
   inspectDecisionQuestion,
   inspectDecisionQuestionId,
   inspectDecisionQuestionTable,
@@ -19,7 +21,7 @@ import {
 } from "../../../decision/questions.ts";
 import { makeIssue } from "../common.ts";
 import type { ValidationIssue } from "../types.ts";
-import type { RecordSchemaSpec } from "./types.ts";
+import type { RecordSchemaSession, RecordSchemaSpec } from "./types.ts";
 
 const TARGET_SUM_TOLERANCE = 1e-6;
 
@@ -224,4 +226,45 @@ export const decisionSchema: RecordSchemaSpec = {
   name: "decision",
   detect: (record) => !("messages" in record) && ("questions" in record || "state" in record),
   inspect: inspectDecisionRecord,
+  createSession: createDecisionSession,
 };
+
+/**
+ * 跨记录一致性检查：微调学的是“输入 + 问题定义 → 答案”的映射，同一文件内
+ * 问题 ID、类型、instructions、criteria 必须保持一致，否则分布漂移、准确率下降、
+ * 校准失效。以首条有效记录的问题定义为基线，后续不一致报 warning（不阻断：
+ * 平台是否硬拒未实证，且采样校验可能漏检）。
+ */
+function createDecisionSession(): RecordSchemaSession {
+  let baseline: Map<string, string> | undefined;
+  let baselineLine = 0;
+  return {
+    inspect(record: Record<string, unknown>, lineNo: number): ValidationIssue[] {
+      const issues = inspectDecisionRecord(record, lineNo);
+      const signatures = decisionQuestionTableSignature(record.questions);
+      if (!signatures) return issues;
+      if (!baseline) {
+        baseline = signatures;
+        baselineLine = lineNo;
+        return issues;
+      }
+      const driftedIds = compareDecisionQuestionTables(baseline, signatures);
+      if (driftedIds.length > 0) {
+        issues.push(
+          makeIssue(
+            "warning",
+            "DECISION_QUESTION_DRIFT",
+            `Question definitions differ from line ${baselineLine} (IDs: ${driftedIds.join(", ")}). ` +
+              `Training, evaluation and online requests must keep question ID, type, instructions and criteria identical; ` +
+              `changing them requires regenerating data and retraining. / ` +
+              `问题定义与第 ${baselineLine} 行不一致（ID：${driftedIds.join(", ")}）。` +
+              `训练、评估与线上请求的问题 ID、类型、instructions、criteria 必须保持一致；` +
+              `修改定义须重新准备数据并重训。`,
+            { line: lineNo, path: "questions" },
+          ),
+        );
+      }
+      return issues;
+    },
+  };
+}

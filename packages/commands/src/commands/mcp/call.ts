@@ -65,12 +65,10 @@ export default defineCommand({
     const { serverCode, toolName } = parseTarget(flags.target);
     const toolArgs = toolArguments(flags, ctx.localize);
 
-    const previewUrl = flags.url || ctx.client.url(bailianMcpPath(serverCode));
-
     if (settings.dryRun) {
       ctx.output.result({
         server: serverCode,
-        url: previewUrl,
+        url: flags.url || ctx.client.baseUrl + bailianMcpPath(serverCode),
         tool: toolName,
         arguments: toolArgs,
       });

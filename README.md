@@ -27,7 +27,7 @@ _Built for AI Agents. Every command works as a structured tool call._
 - **Asset understanding** — Parse and ask questions about images, documents, audio, and long videos
 - **App orchestration** — Call Managed Agents, agents, and workflows published on Aliyun Model Studio, wired to knowledge bases, memory, web search, and MCP tools; create, update, publish, copy, and delete agents/workflows, and edit workflow canvases from the CLI
 - **Native MCP setup** — Register Bailian MCP servers in Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork (千问办公), Qwen Code, Gemini CLI, or Pi
-- **Training & deployment** — Validate and upload datasets, fine-tune models, deploy dedicated models as endpoints
+- **Training & deployment** — Prepare decision training data (local split, teacher-model generation, or fully async offline Batch), validate and upload datasets, fine-tune models (SFT/DPO/CPT), run reinforcement-learning jobs in an isolated sandbox (macOS/Linux), submit OPD distillation jobs via OpenAPI, deploy dedicated models as endpoints
 - **Batch inference** — Prepare CSV/JSONL, create and follow asynchronous Chat/Embedding tasks, download original results/errors with optional CSV, or send one synchronous Batch Chat request
 - **Account operations** — Login, UI-based configuration, model marketplace, usage and quota, rate-limit increases, team seat management
 - **Plan onboarding** — Connect subscription plans such as Token Plan to the CLI and common coding agents in one step
@@ -155,7 +155,7 @@ These read-only commands use Console authentication. An optional `--workspace-id
 
 ### RAG audio and video
 
-`bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode hides progress and informational messages while preserving the final result, including every JSON field. See the [command guide](docs/knowledge/knowledge-cli-guide.md).
+`bl knowledge doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode hides progress and informational messages while preserving the final result, including every JSON field. See the [command guide](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md).
 
 ## ParseX
 
@@ -250,11 +250,15 @@ Get an ordinary key from the [DashScope Console](https://bailian.console.aliyun.
 
 ### Alibaba Cloud OpenAPI AK/SK
 
-Token Plan seat and member management requires an Alibaba Cloud AccessKey. Get yours from the [RAM Console](https://ram.console.aliyun.com/manage/ak).
+Token Plan seat/member management and console token refresh need an Alibaba Cloud AccessKey. Run the setup guide, or get keys from the [RAM Console](https://ram.console.aliyun.com/manage/ak) and paste them.
 
 > Recommended: create a RAM sub-account with minimum privileges instead of using the root account's AK/SK.
 
 ```bash
+# Open the setup guide (when finished, paste your AccessKey back in the terminal)
+bl auth login --open-api
+
+# If you already have an AccessKey, configure it directly
 bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
 ```
 

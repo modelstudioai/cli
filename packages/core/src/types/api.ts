@@ -31,6 +31,14 @@ export interface ChatResponseFormat {
   };
 }
 
+/** Qwen-MT translation_options for Chat Completions. */
+export interface TranslationOptions {
+  source_lang: string;
+  target_lang: string;
+  terms?: Array<{ source: string; target: string }>;
+  domains?: string;
+}
+
 export interface ChatRequest {
   model: string;
   messages: ChatMessage[];
@@ -47,6 +55,7 @@ export interface ChatRequest {
   audio?: { voice: string; format?: string };
   stream_options?: { include_usage?: boolean };
   response_format?: ChatResponseFormat;
+  translation_options?: TranslationOptions;
 }
 
 export interface ChatChoice {
@@ -269,6 +278,35 @@ export interface DashScopeVideoEditRequest {
     prompt_extend?: boolean;
     watermark?: boolean;
     seed?: number;
+  };
+}
+
+/** VideoRetalk (bl video retalk) request body. */
+export interface DashScopeVideoRetalkRequest {
+  model: string;
+  input: {
+    video_url: string;
+    audio_url: string;
+    ref_image_url?: string;
+  };
+  parameters?: {
+    video_extension?: boolean;
+    query_face_threshold?: number;
+  };
+}
+
+/** Video style transform (bl video style) request body. */
+export interface DashScopeVideoStyleTransformRequest {
+  model: string;
+  input: {
+    video_url: string;
+  };
+  parameters?: {
+    style?: number;
+    video_fps?: number;
+    animate_emotion?: boolean;
+    min_len?: number;
+    use_SR?: boolean;
   };
 }
 
@@ -800,6 +838,47 @@ export interface DashScopeTTSStreamChunk {
   request_id?: string;
 }
 
+// ---- Audio content generation (qwen-audio-*-tts-next) ----
+
+export interface AudioGenerationReference {
+  audio_url?: string;
+  audio_data?: string;
+}
+
+export interface AudioGenerationRequest {
+  model: string;
+  input: {
+    text_prompt: string;
+    references?: AudioGenerationReference[];
+    format?: "wav" | "mp3" | "pcm";
+    sample_rate?: number;
+    channels?: number;
+    volume?: number;
+    rate?: number;
+    seed?: number;
+    enable_aigc_tag?: boolean;
+    enable_cbr?: boolean;
+    bit_rate?: number;
+    quality?: number;
+  };
+}
+
+export interface AudioGenerationResponse {
+  output: {
+    audio: {
+      url?: string;
+      data?: string;
+      id?: string;
+      expires_at?: string;
+      duration?: number;
+    };
+  };
+  usage?: Record<string, unknown>;
+  request_id?: string;
+  code?: string;
+  message?: string;
+}
+
 // ---- Speech Recognition / ASR (DashScope) ----
 
 /** Context-enhancement message for async ASR `input.context` / sync Flash `input.messages`. */
@@ -870,10 +949,58 @@ export interface DashScopeAsyncResponse {
   request_id: string;
 }
 
+/** Image translation (qwen-mt-image) request body. */
+export interface ImageTranslationRequest {
+  model: string;
+  input: {
+    image_url: string;
+    source_lang: string;
+    target_lang: string;
+    ext?: {
+      domainHint?: string;
+      terminologies?: Array<{ src: string; tgt: string }>;
+      config?: { imageSegment?: boolean };
+    };
+  };
+}
+
+/** File multimodal translation (qwen-mt-uni) request body. */
+export interface QwenMtUniRequest {
+  model: string;
+  input: {
+    fileUrl: string;
+    target_lang: string;
+    source_lang?: string;
+    ext?: {
+      format_hint?: string;
+      domainHint?: string;
+      glossary?: Array<{ src: string; tgt: string }>;
+      sensitives?: string[];
+      config?: { imageSegment?: boolean };
+    };
+  };
+}
+
+/** Business result envelope returned by qwen-mt-uni tasks. */
+export interface QwenMtUniOutputData {
+  FileType?: string;
+  TranslatedFileUrl?: string;
+  TranslatedTexts?: string | string[];
+}
+
 export interface DashScopeTaskResponse {
   output: {
     task_id: string;
-    task_status: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "UNKNOWN";
+    task_status:
+      | "PENDING"
+      | "RUNNING"
+      | "SUCCEEDED"
+      | "FAILED"
+      | "UNKNOWN"
+      | "CANCELED"
+      | "PRE-PROCESSING"
+      | "POST-PROCESSING"
+      | "SUSPENDED";
     finished?: boolean;
     task_metrics?: {
       TOTAL?: number;
@@ -892,6 +1019,16 @@ export interface DashScopeTaskResponse {
     results?: Array<{ url: string }>;
     // Video generation returns video_url
     video_url?: string;
+    // video-style-transform returns output_video_url
+    output_video_url?: string;
+    // Image translation (qwen-mt-image) returns image_url
+    image_url?: string;
+    // qwen-mt-uni business envelope (exact casing)
+    Success?: boolean;
+    Code?: number | string;
+    Message?: string;
+    RequestId?: string;
+    Data?: QwenMtUniOutputData;
     submit_time?: string;
     scheduled_time?: string;
     end_time?: string;

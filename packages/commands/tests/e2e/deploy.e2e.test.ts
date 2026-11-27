@@ -1,3 +1,5 @@
+import { createServer, type RequestListener } from "node:http";
+import type { Socket } from "node:net";
 import { fileURLToPath } from "node:url";
 import { httpTransport } from "bailian-cli-core";
 import { describe, expect, test, vi } from "vite-plus/test";
@@ -8,7 +10,7 @@ import {
   runCommandE2e,
   runCommandInProcess,
 } from "./helpers.ts";
-import { DEPLOY_ROUTES } from "./topic-routes.ts";
+import { DEPLOY_ROUTES, DEPLOY_ROUTER_ROUTES } from "./topic-routes.ts";
 
 // No files are created: isolate user config and block fetch in the child process,
 // including the runtime's background npm version check. Never load an env file.
@@ -74,6 +76,88 @@ function runReadOnlyDeploy(args: string[]) {
     "json",
     "--quiet",
   ]);
+}
+
+async function runOfflineRouter(args: string[]) {
+  const transportFetch = vi
+    .spyOn(httpTransport, "fetch")
+    .mockRejectedValue(new Error("Network disabled for deploy router E2E"));
+  const nativeFetch = vi
+    .spyOn(globalThis, "fetch")
+    .mockRejectedValue(new Error("Network disabled for deploy router E2E"));
+  try {
+    const result = await runCommandInProcess(DEPLOY_ROUTER_ROUTES, args, IN_PROCESS_ENV);
+    expect(transportFetch).not.toHaveBeenCalled();
+    expect(nativeFetch).not.toHaveBeenCalled();
+    return result;
+  } finally {
+    transportFetch.mockRestore();
+    nativeFetch.mockRestore();
+  }
+}
+
+function runReadOnlyRouter(args: string[]) {
+  return runOfflineRouter([
+    "deploy",
+    "router",
+    ...args,
+    "--api-key",
+    "e2e-dummy-key",
+    "--dry-run",
+    "--output",
+    "json",
+    "--quiet",
+  ]);
+}
+
+interface RouterRequest {
+  method: string | undefined;
+  url: string | undefined;
+  authorization: string | undefined;
+  body: string;
+}
+
+async function withRouterServer(
+  handler: RequestListener,
+  run: (url: string, requests: RouterRequest[]) => Promise<void>,
+): Promise<void> {
+  const requests: RouterRequest[] = [];
+  const sockets = new Set<Socket>();
+  const server = createServer((incoming, response) => {
+    const request: RouterRequest = {
+      method: incoming.method,
+      url: incoming.url,
+      authorization: incoming.headers.authorization,
+      body: "",
+    };
+    requests.push(request);
+    incoming.setEncoding("utf8");
+    incoming.on("data", (chunk: string) => {
+      request.body += chunk;
+    });
+    incoming.once("end", () => handler(incoming, response));
+  });
+  server.on("connection", (socket) => {
+    sockets.add(socket);
+    socket.once("close", () => sockets.delete(socket));
+  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected a local TCP server");
+    await run(`http://127.0.0.1:${address.port}`, requests);
+  } finally {
+    const closed = server.listening
+      ? new Promise<void>((resolve, reject) => {
+          server.close((error) => (error ? reject(error) : resolve()));
+        })
+      : Promise.resolve();
+    for (const socket of sockets) socket.destroy();
+    await closed;
+  }
 }
 
 test.each([
@@ -631,6 +715,16 @@ describe("e2e: deploy capacity writes (offline, no credentials)", () => {
       note: "prepaid",
     },
     {
+      path: ["capacity", "auto-renew", "enable"],
+      flags: ["--deployed-model", "--instance-id", "--cycle", "--auto-renewal-duration"],
+      note: "prepaid",
+    },
+    {
+      path: ["capacity", "auto-renew", "disable"],
+      flags: ["--deployed-model", "--instance-id", "--cycle", "--auto-renewal-duration"],
+      note: "prepaid",
+    },
+    {
       path: ["capacity", "delete"],
       flags: ["--deployed-model", "--instance-id", "--reason"],
       note: "unsubscribe",
@@ -730,6 +824,50 @@ describe("e2e: deploy capacity writes (offline, no credentials)", () => {
       },
     },
     {
+      path: ["capacity", "auto-renew", "enable"],
+      args: [
+        "--deployed-model",
+        "dep-test",
+        "--instance-id",
+        "instance-test",
+        "--cycle",
+        "Day",
+        "--auto-renewal-duration",
+        "30",
+      ],
+      expected: {
+        action: "deploy.capacity.auto-renew.enable",
+        deployed_model: "dep-test",
+        instance_id: "instance-test",
+        body: { auto_renewal: true, auto_renewal_cycle: "Day", auto_renewal_duration: 30 },
+        client_request_id: "<generated UUID>",
+        precheck: "can_enable_auto_renew",
+        wait: false,
+      },
+    },
+    {
+      path: ["capacity", "auto-renew", "disable"],
+      args: [
+        "--deployed-model",
+        "dep-test",
+        "--instance-id",
+        "instance-test",
+        "--cycle",
+        "Day",
+        "--auto-renewal-duration",
+        "30",
+      ],
+      expected: {
+        action: "deploy.capacity.auto-renew.disable",
+        deployed_model: "dep-test",
+        instance_id: "instance-test",
+        body: { auto_renewal: false, auto_renewal_cycle: "Day", auto_renewal_duration: 30 },
+        client_request_id: "<generated UUID>",
+        precheck: "can_disable_auto_renew",
+        wait: false,
+      },
+    },
+    {
       path: ["capacity", "delete"],
       args: [
         "--deployed-model",
@@ -787,6 +925,13 @@ describe("e2e: deploy capacity writes (offline, no credentials)", () => {
       args: ["--deployed-model", "dep-test", "--instance-id", "instance-test"],
       missing: "--duration",
     },
+    { path: ["capacity", "auto-renew", "enable"], args: [], missing: "--deployed-model" },
+    {
+      path: ["capacity", "auto-renew", "enable"],
+      args: ["--deployed-model", "dep-test", "--instance-id", "instance-test"],
+      missing: "--cycle",
+    },
+    { path: ["capacity", "auto-renew", "disable"], args: [], missing: "--deployed-model" },
     { path: ["capacity", "delete"], args: [], missing: "--deployed-model" },
     {
       path: ["capacity", "delete"],
@@ -836,6 +981,62 @@ describe("e2e: deploy capacity writes (offline, no credentials)", () => {
     expect(exitCode, stderr).toBe(2);
     expect(stdout.trim()).toBe("");
     expect(stderr).toMatch(/POST_PAY/);
+  });
+
+  test("capacity create previews the exact 8-hour off-peak purchase during dry-run", async () => {
+    const { stdout, stderr, exitCode } = await runReadOnlyDeploy([
+      "capacity",
+      "create",
+      "--deployed-model",
+      "dep-test",
+      "--billing-method",
+      "PRE_PAY",
+      "--pricing-cycle",
+      "Hour",
+      "--duration",
+      "8",
+      "--auto-renewal",
+      "false",
+      "--input-tpm",
+      "10000",
+      "--output-tpm",
+      "1000",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(parseStdoutJson(stdout)).toEqual({
+      action: "deploy.capacity.create",
+      deployed_model: "dep-test",
+      body: {
+        billing_method: "PRE_PAY",
+        ptu_capacity: { input_tpm: 10000, output_tpm: 1000 },
+        pre_paid_info: { pricing_cycle: "Hour", duration: 8, auto_renewal: false },
+      },
+      client_request_id: "<generated UUID>",
+      wait: false,
+    });
+    expect(stderr).not.toContain("Network disabled");
+  });
+
+  test("capacity create rejects Hour off-peak violations during dry-run", async () => {
+    const { stdout, stderr, exitCode } = await runReadOnlyDeploy([
+      "capacity",
+      "create",
+      "--deployed-model",
+      "dep-test",
+      "--billing-method",
+      "PRE_PAY",
+      "--pricing-cycle",
+      "Hour",
+      "--duration",
+      "30",
+      "--input-tpm",
+      "10000",
+      "--output-tpm",
+      "1000",
+    ]);
+    expect(exitCode, stderr).toBe(2);
+    expect(stdout.trim()).toBe("");
+    expect(stderr).toMatch(/Hour/);
   });
 
   test("capacity scale rejects --interval without --wait during dry-run", async () => {
@@ -908,6 +1109,431 @@ describe("e2e: deploy capacity writes (offline, no credentials)", () => {
       "deploy",
       ...path,
       ...args,
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(7);
+    expect(stdout.trim()).toBe("");
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+  });
+});
+
+describe("e2e: deploy router help (offline, no credentials)", () => {
+  test.each([
+    { path: ["versions"], flags: ["--page", "--page-size"], note: "model-routing" },
+    {
+      path: ["create"],
+      flags: ["--name", "--route-version", "--strategy", "--candidates"],
+      note: "postpaid",
+    },
+    { path: ["list"], flags: ["--page", "--page-size"], note: "model router" },
+    { path: ["get"], flags: ["--deployed-model"], note: "model router" },
+    {
+      path: ["update"],
+      flags: ["--deployed-model", "--route-version", "--strategy", "--candidates"],
+      note: "replace",
+    },
+    { path: ["delete"], flags: ["--deployed-model"], note: "Delete" },
+  ])("deploy router $path --help exposes flags and semantics", async ({ path, flags, note }) => {
+    const { stdout, stderr, exitCode } = await runCommandHelp(DEPLOY_ROUTER_ROUTES, [
+      "deploy",
+      "router",
+      ...path,
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stdout).toBe("");
+    for (const flag of flags) expect(stderr).toContain(flag);
+    expect(stderr.toLowerCase()).toContain(note.toLowerCase());
+    expect(stderr).toContain("--api-key");
+  });
+
+  test("deploy router create --help shows --yes (high-risk billing)", async () => {
+    const { stderr, exitCode } = await runCommandHelp(DEPLOY_ROUTER_ROUTES, [
+      "deploy",
+      "router",
+      "create",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toContain("--yes");
+  });
+
+  test("deploy router delete --help shows --yes (high-risk destructive)", async () => {
+    const { stderr, exitCode } = await runCommandHelp(DEPLOY_ROUTER_ROUTES, [
+      "deploy",
+      "router",
+      "delete",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toContain("--yes");
+  });
+
+  test("deploy router update --help does NOT show --yes (no risk)", async () => {
+    const { stderr, exitCode } = await runCommandHelp(DEPLOY_ROUTER_ROUTES, [
+      "deploy",
+      "router",
+      "update",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).not.toContain("--yes");
+  });
+});
+
+describe("e2e: deploy router dry-run (offline, no credentials)", () => {
+  test("router create --dry-run previews with fixed plan=mr and charge_type=post_paid", async () => {
+    const { stdout, stderr, exitCode } = await runReadOnlyRouter([
+      "create",
+      "--name",
+      "test-router",
+      "--route-version",
+      "v1",
+      "--strategy",
+      "EFFECT_FIRST",
+      "--candidates",
+      "qwen-plus,qwen-turbo",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      body: {
+        name: string;
+        plan: string;
+        charge_type: string;
+        routing_config: { candidate_model_ids: string[] };
+      };
+    }>(stdout);
+    expect(data.action).toBe("deploy.router.create");
+    expect(data.body.plan).toBe("mr");
+    expect(data.body.charge_type).toBe("post_paid");
+    expect(data.body.name).toBe("test-router");
+    expect(data.body.routing_config.candidate_model_ids).toEqual(["qwen-plus", "qwen-turbo"]);
+  });
+
+  test("router update --dry-run previews complete routing_config", async () => {
+    const { stdout, stderr, exitCode } = await runReadOnlyRouter([
+      "update",
+      "--deployed-model",
+      "router-test",
+      "--route-version",
+      "v2",
+      "--strategy",
+      "COST_FIRST",
+      "--candidates",
+      "qwen-max",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      plan: {
+        action: string;
+        deployed_model: string;
+        body: { routing_config: { route_model_version: string; strategy: string } };
+      };
+      risk: null;
+      notices: unknown[];
+    }>(stdout);
+    expect(data.plan.action).toBe("deploy.router.update");
+    expect(data.plan.deployed_model).toBe("router-test");
+    expect(data.plan.body.routing_config.route_model_version).toBe("v2");
+    expect(data.plan.body.routing_config.strategy).toBe("COST_FIRST");
+    expect(data.risk).toBeNull();
+    expect(data.notices).toEqual([]);
+  });
+
+  test("router delete --dry-run sends zero requests", async () => {
+    const { stdout, stderr, exitCode } = await runReadOnlyRouter([
+      "delete",
+      "--deployed-model",
+      "router-test",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(parseStdoutJson(stdout)).toEqual({
+      action: "deploy.router.delete",
+      deployed_model: "router-test",
+    });
+  });
+
+  test("router versions --dry-run previews with default pagination", async () => {
+    const { stdout, stderr, exitCode } = await runReadOnlyRouter(["versions"]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string; page: number; page_size: number }>(stdout);
+    expect(data.action).toBe("deploy.router.versions");
+    expect(data.page).toBe(1);
+    expect(data.page_size).toBe(50);
+  });
+
+  test("router list --dry-run previews with fixed plan=mr", async () => {
+    const { stdout, stderr, exitCode } = await runReadOnlyRouter(["list"]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string; plan: string }>(stdout);
+    expect(data.action).toBe("deploy.router.list");
+    expect(data.plan).toBe("mr");
+  });
+
+  test("router get --dry-run previews the deployed-model", async () => {
+    const { stdout, stderr, exitCode } = await runReadOnlyRouter([
+      "get",
+      "--deployed-model",
+      "router-test",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(parseStdoutJson(stdout)).toEqual({
+      action: "deploy.router.get",
+      deployed_model: "router-test",
+    });
+  });
+});
+
+test("router partial update uses the real Client for GET-only preview and GET then PUT execution", async () => {
+  const currentConfig = {
+    route_model_version: "v1",
+    strategy: "EFFECT_FIRST",
+    candidate_model_ids: ["old-a", "old-b"],
+    offline_model_ids: ["offline-a"],
+    future_field: { enabled: true },
+  };
+  await withRouterServer(
+    (incoming, response) => {
+      if (incoming.method === "GET" && incoming.url === "/api/v1/deployments/router%2Flocal") {
+        response.writeHead(200, { "content-type": "application/json" }).end(
+          JSON.stringify({
+            request_id: "request-get",
+            output: { plan: "mr", status: "RUNNING", routing_config: currentConfig },
+          }),
+        );
+        return;
+      }
+      if (
+        incoming.method === "PUT" &&
+        incoming.url === "/api/v1/deployments/router%2Flocal/update"
+      ) {
+        response
+          .writeHead(200, { "content-type": "application/json" })
+          .end(JSON.stringify({ request_id: "request-put", output: { updated: true } }));
+        return;
+      }
+      response.writeHead(404).end();
+    },
+    async (baseUrl, requests) => {
+      const commonArgs = [
+        "deploy",
+        "router",
+        "update",
+        "--deployed-model",
+        "router/local",
+        "--api-key",
+        "e2e-dummy-key",
+        "--base-url",
+        baseUrl,
+        "--output",
+        "json",
+        "--quiet",
+      ];
+      const preview = await runCommandInProcess(
+        DEPLOY_ROUTER_ROUTES,
+        [...commonArgs, "--strategy", "COST_FIRST", "--dry-run"],
+        IN_PROCESS_ENV,
+      );
+      expect(preview.exitCode, preview.stderr).toBe(0);
+      expect(requests.map(({ method }) => method)).toEqual(["GET"]);
+      expect(
+        parseStdoutJson<{
+          plan: { body: { routing_config: Record<string, unknown> } };
+        }>(preview.stdout).plan.body.routing_config,
+      ).toEqual({
+        ...currentConfig,
+        strategy: "COST_FIRST",
+      });
+
+      const update = await runCommandInProcess(
+        DEPLOY_ROUTER_ROUTES,
+        [...commonArgs, "--candidates", "new-a,new-b"],
+        IN_PROCESS_ENV,
+      );
+      expect(update.exitCode, update.stderr).toBe(0);
+      expect(parseStdoutJson(update.stdout)).toEqual({
+        request_id: "request-put",
+        output: { updated: true },
+      });
+      expect(requests.map(({ method }) => method)).toEqual(["GET", "GET", "PUT"]);
+      expect(requests.map(({ url }) => url)).toEqual([
+        "/api/v1/deployments/router%2Flocal",
+        "/api/v1/deployments/router%2Flocal",
+        "/api/v1/deployments/router%2Flocal/update",
+      ]);
+      expect(requests.every(({ authorization }) => authorization === "Bearer e2e-dummy-key")).toBe(
+        true,
+      );
+      expect(JSON.parse(requests[2].body)).toEqual({
+        routing_config: {
+          ...currentConfig,
+          candidate_model_ids: ["new-a", "new-b"],
+        },
+      });
+    },
+  );
+});
+
+describe.each([
+  { command: "create", resourceArgs: ["--name", "test-router"] },
+  { command: "update", resourceArgs: ["--deployed-model", "router-test"] },
+])("e2e: router $command candidate lists (offline)", ({ command, resourceArgs }) => {
+  test.each([
+    { candidates: "qwen-plus", expected: ["qwen-plus"] },
+    { candidates: "qwen-plus,qwen-turbo", expected: ["qwen-plus", "qwen-turbo"] },
+    { candidates: " qwen-plus , qwen-turbo ", expected: ["qwen-plus", "qwen-turbo"] },
+    { candidates: "qwen-plus,qwen-plus,qwen-turbo", expected: ["qwen-plus", "qwen-turbo"] },
+  ])("parses --candidates $candidates", async ({ candidates, expected }) => {
+    const { stdout, stderr, exitCode } = await runReadOnlyRouter([
+      command,
+      ...resourceArgs,
+      "--route-version",
+      "v1",
+      "--strategy",
+      "EFFECT_FIRST",
+      "--candidates",
+      candidates,
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const result = parseStdoutJson<{
+      body?: { routing_config: { candidate_model_ids: string[] } };
+      plan?: { body: { routing_config: { candidate_model_ids: string[] } } };
+    }>(stdout);
+    expect((result.body ?? result.plan?.body)?.routing_config.candidate_model_ids).toEqual(
+      expected,
+    );
+  });
+
+  test.each(["", " ", ",qwen-plus", "qwen-plus,", "qwen-plus,,qwen-turbo"])(
+    "rejects empty entries in --candidates %j",
+    async (candidates) => {
+      const { stdout, stderr, exitCode } = await runReadOnlyRouter([
+        command,
+        ...resourceArgs,
+        "--route-version",
+        "v1",
+        "--strategy",
+        "EFFECT_FIRST",
+        "--candidates",
+        candidates,
+      ]);
+      expect(exitCode, stderr).toBe(2);
+      expect(stdout.trim()).toBe("");
+      expect(stderr).toContain("--candidates");
+    },
+  );
+});
+
+test("router CSV dry-run matches the network-blocked subprocess", async () => {
+  const args = [
+    "deploy",
+    "router",
+    "create",
+    "--name",
+    "test-router",
+    "--route-version",
+    "v1",
+    "--strategy",
+    "EFFECT_FIRST",
+    "--candidates",
+    " qwen-plus ,qwen-turbo,qwen-plus ",
+    "--api-key",
+    "e2e-dummy-key",
+    "--dry-run",
+    "--output",
+    "json",
+    "--quiet",
+  ];
+  const inProcess = await runOfflineRouter(args);
+  const subprocess = await runCommandE2e(DEPLOY_ROUTER_ROUTES, args, {
+    ...IN_PROCESS_ENV,
+    NODE_OPTIONS: READ_ONLY_ENV.NODE_OPTIONS,
+  });
+  expect(subprocess.exitCode, subprocess.stderr).toBe(0);
+  expect(inProcess).toEqual(subprocess);
+});
+
+describe("e2e: deploy router missing required flags (offline)", () => {
+  test.each([
+    {
+      path: ["create"],
+      args: ["--route-version", "v1", "--strategy", "EFFECT_FIRST", "--candidates", "qwen"],
+      missing: "--name",
+    },
+    {
+      path: ["create"],
+      args: ["--name", "r", "--strategy", "EFFECT_FIRST", "--candidates", "qwen"],
+      missing: "--route-version",
+    },
+    {
+      path: ["create"],
+      args: ["--name", "r", "--route-version", "v1", "--candidates", "qwen"],
+      missing: "--strategy",
+    },
+    {
+      path: ["create"],
+      args: ["--name", "r", "--route-version", "v1", "--strategy", "EFFECT_FIRST"],
+      missing: "--candidates",
+    },
+    {
+      path: ["update"],
+      args: ["--route-version", "v1", "--strategy", "COST_FIRST", "--candidates", "qwen"],
+      missing: "--deployed-model",
+    },
+    {
+      path: ["update"],
+      args: ["--deployed-model", "router-test"],
+      missing: "--route-version",
+    },
+    { path: ["delete"], args: [], missing: "--deployed-model" },
+    { path: ["get"], args: [], missing: "--deployed-model" },
+  ])("deploy router $path requires $missing", async ({ path, args, missing }) => {
+    const { stdout, stderr, exitCode } = await runReadOnlyRouter([...path, ...args]);
+    expect(exitCode, stderr).toBe(2);
+    expect(stdout.trim()).toBe("");
+    expect(stderr).toContain(missing);
+  });
+});
+
+describe("e2e: deploy router high-risk confirmation", () => {
+  test("router create without --yes requires confirmation (7)", async () => {
+    const { stdout, stderr, exitCode } = await runOfflineRouter([
+      "deploy",
+      "router",
+      "create",
+      "--name",
+      "test-router",
+      "--route-version",
+      "v1",
+      "--strategy",
+      "EFFECT_FIRST",
+      "--candidates",
+      "qwen-plus",
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(7);
+    expect(stdout.trim()).toBe("");
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+  });
+
+  test("router delete without --yes requires confirmation (7)", async () => {
+    const { stdout, stderr, exitCode } = await runOfflineRouter([
+      "deploy",
+      "router",
+      "delete",
+      "--deployed-model",
+      "router-test",
       "--api-key",
       "e2e-dummy-key",
       "--output",

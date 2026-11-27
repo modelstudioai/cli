@@ -20,6 +20,7 @@ import {
   CredentialError,
   formatCommand,
   Client,
+  createRequestSignals,
   DEFAULT_LANGUAGE,
   isModelConnectionSourceMismatch,
   resolveApiKey,
@@ -28,6 +29,7 @@ import {
   readCaller,
   resolveModelBaseUrlState,
   resolveModelConnectionProvenance,
+  resolveTelemetrySite,
   selectApiKeyResolutionSources,
   trackCommandExecution,
 } from "bailian-cli-core";
@@ -192,6 +194,12 @@ export const authStage: Middleware = async (ctx, next) => {
   const base = {
     identity: ctx.identity,
     settings,
+    // One record per command run. Every Client built from `base` — including
+    // the derived one from `withConsoleSwitchAgent()` — shares it, so the
+    // origins and service planes a command touched stay visible to
+    // `telemetryStage`, which sits outside this stage and reads the Client
+    // attached to the run context.
+    requestSignals: createRequestSignals(),
     // Console credentials do not fall back; keep the selected profile pin.
     consoleRecoveryHint: consoleRecoveryHint(
       formatCommand(ctx.identity),
@@ -300,6 +308,15 @@ export const telemetryStage: Middleware = (ctx, next) => {
       settings: ctx.settings,
       authMethod: ctx.command.auth,
       caller: readCaller(process.env),
+      resolveSite: () =>
+        resolveTelemetrySite({
+          auth: ctx.command.auth,
+          consoleSite: ctx.settings.consoleSite,
+          productSite: ctx.client.productSite,
+          lastResolvedOrigin: ctx.client.lastResolvedOrigin,
+          baseUrl: ctx.client.baseUrl,
+          baseUrlIsDefault: ctx.client.baseUrlIsDefault,
+        }),
     },
     ctx.path,
     ctx.flags,

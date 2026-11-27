@@ -1,7 +1,7 @@
 ---
 name: bailian-cli
 metadata:
-  version: "2.10.2"
+  version: "2.13.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -11,11 +11,14 @@ description: >-
   云端 Skill 检索与详情（bl skill search|get），Agent Skill 安装/列表/更新/卸载（bl skill add|list|update|remove，百炼 skill registry）。
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
   共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
-  家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/训练数据集 → bailian-finetune；
+  家族路由：生图/生视频/配音/语音合成/转写/图片翻译/文档翻译/PDF 翻译 → bailian-gen；精调/微调/训练/训练数据集 → bailian-finetune；
+  百炼模型智能路由（智能选模、smart routing / model routing）、吞吐预留（PTU）、ModelCode 容量购买与扩缩容 → bailian-finetune；
   agents.yaml 托管 Agent → bailian-managed-agent；Sandbox 实例与模版 → bailian-sandbox；
   个人长期记忆与应用记忆资源 → bailian-memory；个人历史资料辅助任务、资料接入与知识库管理 → bailian-knowledge；
   联网搜索路由（默认模型搜索 vs 显式 `--mode mcp` + 兜底）→ bailian-web-search。
-  不要用于普通问答、编程、写作、翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务（普通问答、编程、写作、翻译、摘要、泛搜索不触发）。
+  点名百炼 / Qwen-MT / `bl text translate` 的专用文本翻译走本技能。
+  不要用于普通问答、编程、写作、宿主能直接完成的纯文本翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务
+  （普通问答、编程、写作、宿主可完成的纯文本翻译、摘要、泛搜索不触发）。
   未命名用量/额度问题：先问用户使用哪个产品，再运行 `bl usage` / `bl quota` 查询。
 ---
 
@@ -31,9 +34,9 @@ BAILIAN_CALLER_TYPE=agent BAILIAN_CALLER_NAME=codex BAILIAN_SKILL_NAME=bailian-c
 
 > **Family hub** — This skill owns Bailian resource commands and the hub `reference/` (apps, usage, auth, config, …).
 > Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `bl skill init`).
-> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-sandbox` (Sandbox lifecycle) · `bailian-web-search` (web search routing) · `bailian-knowledge` (personal documents in everyday tasks and knowledge workflows).
+> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media / image·doc·PDF translation) · `bailian-finetune` (training) · `bailian-opd` (guided end-to-end OPD distillation workflow) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-sandbox` (Sandbox lifecycle) · `bailian-web-search` (web search routing) · `bailian-knowledge` (personal documents in everyday tasks and knowledge workflows).
 > Tasks that need the user’s own historical documents belong to `bailian-knowledge`; ordinary writing does not itself select a cloud provider.
-> Do not invoke it for ordinary reasoning, coding, writing, translation, summarization, generic research, or image understanding the host agent can complete directly.
+> Do not invoke it for ordinary reasoning, coding, writing, host-capable plain-text translation, summarization, generic research, or image understanding the host agent can complete directly. Named Bailian / Qwen-MT / `bl text translate` text translation stays here; image / document / PDF translation → `bailian-gen`.
 >
 > **Install (supported):** `bl skill init`
 
@@ -69,6 +72,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | User intent                                           | Command                                                                                                        | Notes                                                                                                                                                                          |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Explicit Bailian model chat / text execution          | `bl text chat`                                                                                                 | Default `qwen3.8-max`                                                                                                                                                          |
+| Dedicated text translation (Qwen-MT)                  | `bl text translate --target-lang <English name>`                                                               | Default `qwen-mt-flash`; language names are English full names (`Chinese`/`English`), not `zh`/`en`; only user messages; see `reference/text.md`                               |
 | 百炼异步文件批量推理 / CSV 转换                       | `bl batch convert` / `create` / `list` / `get` / `cancel` / `download`                                         | CSV → JSONL → 异步任务 → 原始结果，可额外导出 CSV；格式样例见 `reference/batch.md`                                                                                             |
 | 百炼单次同步 Batch Chat                               | `bl text chat --batch`                                                                                         | 等待单次响应，不创建任务 ID；messages-file 是同一请求的对话上下文，边界见 `reference/text.md`                                                                                  |
 | Typed decision model inference                        | `bl decision`                                                                                                  | Workspace endpoint; returns `choice` / `noul` / `score` values and probabilities, not generated text                                                                           |
@@ -107,6 +111,9 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Switch CLI Help / Quick Start language                | `bl config set --key language --value zh-CN`                                                                   | Use `en-US` to switch back; follows the active config profile                                                                                                                  |
 | Image / video / speech / omni / vision                | → skill `bailian-gen`                                                                                          | Fallback: `bl image\|video\|speech\|omni\|vision --help`                                                                                                                       |
 | Training dataset / fine-tune / deploy                 | → skill `bailian-finetune`                                                                                     | Fallback: `bl dataset\|finetune\|deploy --help`                                                                                                                                |
+| 百炼模型智能路由 / smart routing / model routing      | → skill `bailian-finetune`                                                                                     | 独立于精调流程；fallback: `bl deploy router --help`。                                                                                                                          |
+| 吞吐预留（PTU）/ ModelCode 容量购买与扩缩容           | → skill `bailian-finetune`                                                                                     | 独立于精调流程；包括容量查询、购买、扩缩容、续费、释放、退订与溢出策略；fallback: `bl deploy --help`。                                                                         |
+| Guided end-to-end OPD distillation workflow           | → skill `bailian-opd`                                                                                          | Authorize → validate → preflight → consent → submit → wait; fallback: `bl finetune opd --help`                                                                                 |
 | agents.yaml IaC / managed-agent sessions              | → skill `bailian-managed-agent`                                                                                | Fallback: `bl managed-agent --help`; `apply`/`destroy` need `--yes` after `plan`                                                                                               |
 | Bailian Sandbox instance / template lifecycle         | → skill `bailian-sandbox`                                                                                      | Fallback: `bl sandbox --help`                                                                                                                                                  |
 | Web search (mode-aware routing)                       | → skill `bailian-web-search`                                                                                   | Default model mode vs explicit `--mode mcp` + fallback; fallback: `bl search web --help`                                                                                       |

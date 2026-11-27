@@ -1,13 +1,13 @@
 import { BailianError, ExitCode, mapApiError, resolveRecoveryConfigName } from "bailian-cli-core";
 import { expect, test, vi } from "vite-plus/test";
-import { errorHint, handleError } from "../src/error-handler.ts";
+import { errorHint, handleError, normalizeError } from "../src/error-handler.ts";
 import { createOutputReporter } from "../src/output/reporter.ts";
 import { ConfirmationRequiredError } from "../src/confirm.ts";
 
 const blHasCommand = (path: string) => path === "usage free" || path === "usage freetier";
 const kscliHasCommand = () => false;
 
-function render(
+async function render(
   error: unknown,
   output: "text" | "json" = "json",
   options: {
@@ -34,7 +34,7 @@ function render(
     throw new Error(`process.exit:${code ?? 0}`);
   });
   try {
-    expect(() => handleError(error, reporter)).toThrow(/process.exit:/);
+    await expect(handleError(error, reporter)).rejects.toThrow(/process.exit:/);
   } finally {
     exit.mockRestore();
   }
@@ -47,11 +47,11 @@ const FREE_TIER_MESSAGE =
 const FREE_QUOTA_MESSAGE =
   'Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the "use free tier only" mode in the management console.';
 
-test("handleError: fetch failed JSON includes cause.code from errno", () => {
+test("handleError: fetch failed JSON includes cause.code from errno", async () => {
   const cause = Object.assign(new Error("getaddrinfo ENOTFOUND example.invalid"), {
     code: "ENOTFOUND",
   });
-  const stderr = render(new TypeError("fetch failed", { cause }));
+  const stderr = await render(new TypeError("fetch failed", { cause }));
   expect(stderr.trim().split("\n")).toHaveLength(1);
   expect(JSON.parse(stderr).error).toMatchObject({
     code: ExitCode.NETWORK,
@@ -59,41 +59,60 @@ test("handleError: fetch failed JSON includes cause.code from errno", () => {
   });
 });
 
-test("handleError: fetch without nested cause still maps to NETWORK", () => {
-  const payload = JSON.parse(render(new TypeError("fetch failed"))).error;
+test("handleError: fetch without nested cause still maps to NETWORK", async () => {
+  const payload = JSON.parse(await render(new TypeError("fetch failed"))).error;
   expect(payload.code).toBe(ExitCode.NETWORK);
   expect(payload.message).toContain("unknown cause");
   expect(payload.cause).toEqual({ message: "fetch failed" });
 });
 
-test("handleError: confirmation preserves its structured subtype and guidance", () => {
+test("handleError: 沙箱拒绝 errno（EPERM）hint 引导放行网络而非换镜像", async () => {
+  const cause = Object.assign(new Error("connect EPERM 1.2.3.4:443"), { code: "EPERM" });
+  const payload = JSON.parse(await render(new TypeError("fetch failed", { cause }))).error;
+  expect(payload.code).toBe(ExitCode.NETWORK);
+  expect(payload.message).toContain("EPERM");
+  expect(payload.hint).toContain("agent sandbox");
+  expect(payload.hint).toContain("HTTPS_PROXY");
+});
+
+test("normalizeError: 沙箱拒绝 hint 中文本地化", () => {
+  const cause = Object.assign(new Error("connect ENETUNREACH"), { code: "ENETUNREACH" });
+  const normalized = normalizeError(new TypeError("fetch failed", { cause }), "bl", (text) =>
+    typeof text === "string" ? text : text["zh-CN"],
+  );
+  expect(normalized.exitCode).toBe(ExitCode.NETWORK);
+  expect(normalized.hint).toContain("沙箱");
+  expect(normalized.hint).toContain("HTTPS_PROXY");
+});
+
+test("handleError: confirmation preserves its structured subtype and guidance", async () => {
   const confirmation = new ConfirmationRequiredError({
     message: "Permanent deletion.",
     hint: "Add --yes to continue.",
   });
-  expect(JSON.parse(render(confirmation))).toEqual(confirmation.toJSON());
-  const text = render(confirmation, "text");
+  expect(JSON.parse(await render(confirmation))).toEqual(confirmation.toJSON());
+  const text = await render(confirmation, "text");
   expect(text).toContain("Add --yes to continue.");
   expect(text).not.toContain("Risk:");
 });
 
-test("model-auth guidance uses the invocation binary and does not leak into console errors", () => {
-  const auth = JSON.parse(render(new BailianError("No key", ExitCode.AUTH))).error;
+test("model-auth guidance uses the invocation binary and does not leak into console errors", async () => {
+  const auth = JSON.parse(await render(new BailianError("No key", ExitCode.AUTH))).error;
   expect(auth.hint).toContain("kscli auth status");
   const consoleError = new BailianError(
     "No console token",
     ExitCode.AUTH,
     "Run kscli auth login --console",
   );
-  expect(JSON.parse(render(consoleError))).toEqual(consoleError.toJSON());
+  expect(JSON.parse(await render(consoleError))).toEqual(consoleError.toJSON());
 });
 
-test("free-tier hint appends for AllocationQuota.FreeTierOnly when product supports usage", () => {
+test("free-tier hint appends for AllocationQuota.FreeTierOnly when product supports usage", async () => {
   const error = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, undefined, {
     api: { httpStatus: 403, apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
+    await render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.code).toBe(ExitCode.GENERAL);
   expect(payload.message).toBe(FREE_TIER_MESSAGE);
@@ -101,7 +120,7 @@ test("free-tier hint appends for AllocationQuota.FreeTierOnly when product suppo
   expect(payload.hint).toContain("bl usage freetier --off --model <model>");
   expect(payload.hint).not.toContain("--yes");
   expect(payload.hint).not.toContain("--all");
-  const text = render(error, "text", { commandPrefix: "bl", hasCommand: blHasCommand });
+  const text = await render(error, "text", { commandPrefix: "bl", hasCommand: blHasCommand });
   expect(text).toContain("Hint:");
   expect(text).toContain("usage freetier --off");
   expect(text).not.toContain("--yes");
@@ -122,16 +141,16 @@ test("free-tier hint uses message fallback when type shadows AllocationQuota.Fre
   expect(hint).toContain("bl usage freetier --off");
 });
 
-test("OpenAI-compat Free quota exhausted copy matches via use free tier only phrase", () => {
+test("OpenAI-compat Free quota exhausted copy matches via use free tier only phrase", async () => {
   const error = new BailianError(FREE_QUOTA_MESSAGE, ExitCode.GENERAL);
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
+    await render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.hint).toContain("bl usage freetier --off --model <model>");
   expect(payload.hint).not.toContain("--yes");
 });
 
-test("insufficient_quota TPS/TPM message does not get free-tier recovery", () => {
+test("insufficient_quota TPS/TPM message does not get free-tier recovery", async () => {
   const error = new BailianError(
     "You exceeded your current quota, please check your plan and billing details.",
     ExitCode.GENERAL,
@@ -139,34 +158,34 @@ test("insufficient_quota TPS/TPM message does not get free-tier recovery", () =>
     { api: { apiCode: "insufficient_quota" } },
   );
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
+    await render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.hint).toBeUndefined();
 });
 
-test("free-tier hint is skipped when the product does not expose usage commands", () => {
+test("free-tier hint is skipped when the product does not expose usage commands", async () => {
   const error = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, undefined, {
     api: { apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "kscli", hasCommand: kscliHasCommand }),
+    await render(error, "json", { commandPrefix: "kscli", hasCommand: kscliHasCommand }),
   ).error;
   expect(payload.hint).toBeUndefined();
   expect(payload.message).toBe(FREE_TIER_MESSAGE);
 });
 
-test("free-tier hint appends after an existing hint without replacing it", () => {
+test("free-tier hint appends after an existing hint without replacing it", async () => {
   const existing = "Task id: task-demo";
   const error = new BailianError(FREE_QUOTA_MESSAGE, ExitCode.GENERAL, existing);
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
+    await render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.hint?.startsWith(existing)).toBe(true);
   expect(payload.hint).toContain("usage freetier --off");
   expect(payload.hint).not.toContain("--yes");
 });
 
-test("free-tier hint does not duplicate when existing hint already contains full recovery text", () => {
+test("free-tier hint does not duplicate when existing hint already contains full recovery text", async () => {
   const recovery = errorHint(
     new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, undefined, {
       api: { apiCode: FREE_TIER_ONLY_API_CODE },
@@ -180,30 +199,30 @@ test("free-tier hint does not duplicate when existing hint already contains full
     api: { apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
+    await render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.hint).toBe(recovery);
   expect(payload.hint?.split("usage freetier").length - 1).toBe(1);
 });
 
-test("free-tier hint still appends when existing hint only mentions usage freetier loosely", () => {
+test("free-tier hint still appends when existing hint only mentions usage freetier loosely", async () => {
   const existing = "Already guided: bl usage freetier --off --model demo";
   const error = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, existing, {
     api: { apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const payload = JSON.parse(
-    render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
+    await render(error, "json", { commandPrefix: "bl", hasCommand: blHasCommand }),
   ).error;
   expect(payload.hint?.startsWith(existing)).toBe(true);
   expect(payload.hint?.split("usage freetier").length - 1).toBe(2);
 });
 
-test("recovery hints append --config when a named profile is active", () => {
+test("recovery hints append --config when a named profile is active", async () => {
   const freeTier = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, undefined, {
     api: { httpStatus: 403, apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const freeTierHint = JSON.parse(
-    render(freeTier, "json", {
+    await render(freeTier, "json", {
       commandPrefix: "bl",
       hasCommand: blHasCommand,
       configName: "prod",
@@ -213,7 +232,7 @@ test("recovery hints append --config when a named profile is active", () => {
   expect(freeTierHint).toContain("bl usage freetier --off --model <model> --config prod");
 
   const authHint = JSON.parse(
-    render(new BailianError("No key", ExitCode.AUTH), "json", {
+    await render(new BailianError("No key", ExitCode.AUTH), "json", {
       commandPrefix: "bl",
       configName: "prod",
     }),
@@ -222,7 +241,7 @@ test("recovery hints append --config when a named profile is active", () => {
   expect(authHint).toContain("bl auth status --config prod");
 
   const timeoutHint = JSON.parse(
-    render(Object.assign(new Error("timed out"), { name: "TimeoutError" }), "json", {
+    await render(Object.assign(new Error("timed out"), { name: "TimeoutError" }), "json", {
       commandPrefix: "bl",
       configName: "prod",
     }),
@@ -231,15 +250,15 @@ test("recovery hints append --config when a named profile is active", () => {
   expect(timeoutHint).toContain("bl auth status --config prod");
 });
 
-test("recovery hints omit --config for the implicit default profile", () => {
+test("recovery hints omit --config for the implicit default profile", async () => {
   const payload = JSON.parse(
-    render(new BailianError("No key", ExitCode.AUTH), "json", { commandPrefix: "bl" }),
+    await render(new BailianError("No key", ExitCode.AUTH), "json", { commandPrefix: "bl" }),
   ).error;
   expect(payload.hint).toContain("bl auth status");
   expect(payload.hint).not.toContain("--config");
 });
 
-test("recovery hints keep explicit --config default when active profile is named", () => {
+test("recovery hints keep explicit --config default when active profile is named", async () => {
   // Loader normalizes explicit default to undefined; resolveRecoveryConfigName must restore it.
   expect(resolveRecoveryConfigName({ flags: { config: "default" }, configName: undefined })).toBe(
     "default",
@@ -249,7 +268,7 @@ test("recovery hints keep explicit --config default when active profile is named
   expect(resolveRecoveryConfigName({ flags: {}, configName: undefined })).toBeUndefined();
 
   const hint = JSON.parse(
-    render(new BailianError("No key", ExitCode.AUTH), "json", {
+    await render(new BailianError("No key", ExitCode.AUTH), "json", {
       commandPrefix: "bl",
       configName: "default",
     }),
@@ -258,12 +277,12 @@ test("recovery hints keep explicit --config default when active profile is named
   expect(hint).toContain("bl auth status --config default");
 });
 
-test("setRecoveryConfigName retargets free-tier and missing-api-key hints to default", () => {
+test("setRecoveryConfigName retargets free-tier and missing-api-key hints to default", async () => {
   const freeTier = new BailianError(FREE_TIER_MESSAGE, ExitCode.GENERAL, undefined, {
     api: { httpStatus: 403, apiCode: FREE_TIER_ONLY_API_CODE },
   });
   const freeTierHint = JSON.parse(
-    render(
+    await render(
       freeTier,
       "json",
       { commandPrefix: "bl", hasCommand: blHasCommand, configName: "prod" },
@@ -274,7 +293,7 @@ test("setRecoveryConfigName retargets free-tier and missing-api-key hints to def
   expect(freeTierHint).not.toContain("--config prod");
 
   const authHint = JSON.parse(
-    render(
+    await render(
       new BailianError("No key", ExitCode.AUTH),
       "json",
       { commandPrefix: "bl", configName: "prod" },

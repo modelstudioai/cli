@@ -31,8 +31,20 @@ import type { ValidateOpts, ValidationResult } from "../../dataset/validate/type
  * Wan kf2v). Profiles can branch on subtypes to adjust hyper-parameter defaults
  * or cross-check the chosen `--model`. Callers that don't care about a subtype
  * can normalise `"image-i2i"` → `"image"` and `"video-kf2v"` → `"video"`.
+ *
+ * `"decision"` is the decision-model training data (`{state, questions}` JSONL
+ * with `label` / optional `target`). Like text it is plain `.jsonl`, but the
+ * record schema and sample-count rules differ, so it is a distinct modality
+ * fixed by the `finetune decision create` subcommand.
  */
-export type DataModality = "text" | "audio" | "image" | "image-i2i" | "video" | "video-kf2v";
+export type DataModality =
+  | "text"
+  | "audio"
+  | "image"
+  | "image-i2i"
+  | "video"
+  | "video-kf2v"
+  | "decision";
 
 /**
  * A training profile. One per `--training-type` CLI value.

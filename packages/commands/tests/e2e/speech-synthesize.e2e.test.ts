@@ -71,6 +71,49 @@ describe("e2e: speech synthesize", () => {
     expect(data.request?.input?.format).toBe("mp3");
   });
 
+  // No --model and Profile without default_speech_model → built-in fallback.
+  test("未传 --model 且 Profile 未配置 TTS 默认时解析为 qwen-audio-3.1-tts-flash", async () => {
+    const configDir = makeE2eOutputDir("speech-synthesize-builtin-fallback");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        default: {
+          api_key: "sk-e2e-placeholder",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SPEECH_ROUTES,
+      [
+        "speech",
+        "synthesize",
+        "--config",
+        "default",
+        "--voice",
+        "longanlingxin_v3.1",
+        "--text",
+        "内置 TTS 默认模型测试",
+        "--dry-run",
+        "--output",
+        "json",
+        "--quiet",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; input?: { voice?: string } };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen-audio-3.1-tts-flash");
+    expect(data.request?.input?.voice).toBe("longanlingxin_v3.1");
+  });
+
   test("speech synthesize 流式模式未显式传 format 时保持 PCM", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
       "speech",
@@ -142,6 +185,29 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "cosyvoice-v3-flash",
         "--voice",
         "longxiaochun_v3",
+        "--text",
+        "端到端语音测试",
+        "--out",
+        outMp3,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ saved?: string; audio_url?: string }>(stdout);
+      expect(data.saved).toBe(outMp3);
+      expect(data.audio_url?.length ?? 0).toBeGreaterThan(0);
+    }, 180_000);
+
+    test("【qwen-audio-3.1-tts-flash】语音合成", async () => {
+      const outDir = makeE2eOutputDir("speech-synthesize-qwen-audio-31-flash");
+      const outMp3 = join(outDir, "e2e-tts-3.1-flash.mp3");
+      const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+        "speech",
+        "synthesize",
+        "--model",
+        "qwen-audio-3.1-tts-flash",
+        "--voice",
+        "longanlingxin_v3.1",
         "--text",
         "端到端语音测试",
         "--out",

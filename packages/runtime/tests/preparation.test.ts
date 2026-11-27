@@ -156,7 +156,7 @@ test("human confirmation output includes the actual plan and notices", async () 
   try {
     await runCommandStage(context, async () => {});
   } catch (error) {
-    expect(() =>
+    await expect(
       handleError(
         error,
         createOutputReporter({
@@ -164,7 +164,7 @@ test("human confirmation output includes the actual plan and notices", async () 
           commandPrefix: "fixture",
         }),
       ),
-    ).toThrow("exit-confirmation");
+    ).rejects.toThrow("exit-confirmation");
   }
   expect(output.join("")).toContain("creates");
   expect(output.join("")).toContain("index");

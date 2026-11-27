@@ -8,7 +8,8 @@ export interface ProxyEnv {
 }
 
 function pick(env: NodeJS.ProcessEnv, key: string): string | undefined {
-  const value = env[key]?.trim();
+  // 大写优先，小写兜底（macOS/Linux 习惯设 https_proxy 等小写变量）。
+  const value = (env[key] ?? env[key.toLowerCase()])?.trim();
   return value || undefined;
 }
 

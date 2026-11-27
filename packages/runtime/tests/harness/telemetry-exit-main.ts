@@ -4,8 +4,12 @@ import { performance } from "node:perf_hooks";
 import { httpTransport } from "../../../core/src/client/transport.ts";
 
 const [mode, origin, dnsServer, tlsOrigin] = process.argv.slice(2);
+// "fast-run-to-exit" reuses the immediate-response endpoint but leaves through
+// runToExit's forced process.exit instead of the natural event-loop exit.
+const forceExit = mode === "fast-run-to-exit";
+const remoteMode = forceExit ? "fast" : mode;
 // Detect the old independent DNS preflight without touching system DNS.
-if (mode === "dns") {
+if (remoteMode === "dns") {
   const resolver = new dns.Resolver({ timeout: 30_000, tries: 1 });
   resolver.setServers([dnsServer!]);
   dns.resolve = resolver.resolve.bind(resolver);
@@ -22,8 +26,18 @@ const redirectTelemetry = (fetcher: typeof fetch): typeof fetch =>
     if (!url.startsWith("https://gm.mmstat.com/")) {
       throw new Error("Unexpected telemetry target");
     }
+    if (forceExit) {
+      // Synthetic microtask-resolved response: the remote send drains as fast
+      // as possible without any socket round-trip, maximizing the race between
+      // "flush sees nothing pending" and the still-queued local JSONL write.
+      // Without this, loopback latency lets the old fire-and-forget write win.
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
     return fetcher(
-      new URL(mode === "dns" ? "/fast" : `/${mode}`, mode?.startsWith("tls") ? tlsOrigin : origin),
+      new URL(
+        remoteMode === "dns" ? "/fast" : `/${remoteMode}`,
+        remoteMode?.startsWith("tls") ? tlsOrigin : origin,
+      ),
       options,
     );
   }) as typeof fetch;
@@ -36,9 +50,9 @@ if (process.versions.bun) {
   transport.fetch = redirectTelemetry(transport.fetch);
 }
 
-const { createCli } = await import("../../src/create-cli.ts");
+const { createCli, runToExit } = await import("../../src/create-cli.ts");
 let outputCompletedAt = 0;
-await createCli(
+const cli = createCli(
   {
     probe: {
       description: "Telemetry exit fixture",
@@ -55,7 +69,14 @@ await createCli(
     clientName: "telemetry-fixture",
     npmPackage: "telemetry-fixture",
   },
-).run(["probe", "--output", "json"]);
+);
+if (forceExit) {
+  // runToExit force-exits once tracked stdout/stderr flush; the in-flight
+  // local telemetry write must survive that exit.
+  await runToExit(cli, ["probe", "--output", "json"]);
+  throw new Error("runToExit returned without exiting the process");
+}
+await cli.run(["probe", "--output", "json"]);
 const outputToRunMs = performance.now() - outputCompletedAt;
 
 // Inspect closure while this process is still alive: exit must not hide a leak.

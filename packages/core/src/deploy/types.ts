@@ -5,6 +5,44 @@
  * preserved verbatim — callers decide how to surface fields).
  */
 
+/** Model-routing optimization strategy. */
+export type ModelRoutingStrategy = "EFFECT_FIRST" | "COST_FIRST";
+
+/** Model-routing configuration used by create, update and deployment responses. */
+export interface ModelRoutingConfig {
+  route_model_version: string;
+  strategy: ModelRoutingStrategy;
+  candidate_model_ids: string[];
+  offline_model_ids?: string[];
+  [key: string]: unknown;
+}
+
+/** A model-routing version record returned by the platform. */
+export interface ModelRoutingVersion {
+  route_model_version?: string;
+  supported_strategies?: ModelRoutingStrategy[];
+  supported_candidate_model_ids?: string[];
+  offline_model_ids?: string[];
+  [key: string]: unknown;
+}
+
+/** GET /api/v1/deployments/model-routing/versions response. */
+export interface ModelRoutingVersionsPage {
+  route_model_versions?: ModelRoutingVersion[];
+  total?: number;
+  total_page?: number;
+  page_no?: number;
+  page_size?: number;
+  [key: string]: unknown;
+}
+
+export interface ListModelRoutingVersionsResponse {
+  request_id?: string;
+  output?: ModelRoutingVersionsPage;
+  data?: ModelRoutingVersionsPage;
+  [key: string]: unknown;
+}
+
 /** A single deployment record as returned by the platform. */
 export interface Deployment {
   /** Unique deployed-model identifier — used as the `model` parameter when invoking the deployed model. */
@@ -17,8 +55,10 @@ export interface Deployment {
   base_model?: string;
   /** PENDING | RUNNING | STOPPED | FAILED */
   status?: string;
-  /** Billing plan: mu | cu | ptu | lora (Token-billed). */
+  /** Billing plan: mu | cu | ptu | lora | mr (model routing). */
   plan?: string;
+  /** Model-routing configuration for plan=mr. */
+  routing_config?: ModelRoutingConfig;
   /** Spec descriptor for MU plan, e.g. "MU1". */
   model_unit_spec?: string;
   /** Charge type, e.g. "post_paid". */
@@ -62,17 +102,21 @@ export interface ReservationCapacity {
   input_tpm?: number;
   /** Output capacity in kTPM; zero is valid. */
   output_tpm?: number;
+  /** Thinking-output capacity in kTPM; only some models support it, validated server-side. */
+  thinking_output_tpm?: number;
   [key: string]: unknown;
 }
 
 /** Prepaid purchase and renewal configuration returned by queries. */
 export interface PrePaidInfo {
-  /** Purchase / renewal duration in days. */
+  /** Day (default) | Hour; Hour is the 8-hour off-peak window, prepaid ptu_default only. */
+  pricing_cycle?: "Day" | "Hour";
+  /** Purchase / renewal duration in days (Day), or exactly 8 (Hour). */
   duration?: number;
   auto_renewal?: boolean;
-  /** Automatic renewal duration in days. */
+  /** Automatic renewal duration in days; not sent for Hour. */
   auto_renewal_duration?: number;
-  /** Renewal cycle unit, e.g. Day. */
+  /** Renewal cycle unit, e.g. Day; not sent for Hour. */
   auto_renewal_cycle?: string;
   [key: string]: unknown;
 }
@@ -94,9 +138,12 @@ export interface CapacityInstance {
   /** Pending target, not effective capacity; may be absent or null in a stable state. */
   target_capacity?: ReservationCapacity | null;
   pre_paid_info?: PrePaidInfo;
+  gmt_effective?: string;
   gmt_expired?: string;
   can_scale?: boolean;
   can_renew?: boolean;
+  can_enable_auto_renew?: boolean;
+  can_disable_auto_renew?: boolean;
   can_delete?: boolean;
   fail_reason?: string;
   gmt_created?: string;
@@ -110,7 +157,7 @@ export interface CapacityOperation {
   operation_id?: string;
   /** Original operation request ID, distinct from the query response's request_id. */
   request_id?: string;
-  /** CREATE | SCALE | RENEW | DELETE | STOP | REFUND | future operation types. */
+  /** CREATE | SCALE | RENEW | AUTO_RENEW | DELETE | STOP | REFUND | future operation types. */
   operation_type?: string;
   /** PROCESSING | SUCCEEDED | FAILED | future operation states. */
   operation_status?: string;
@@ -196,7 +243,7 @@ export interface CreateDeploymentRequest {
   model_name: string;
   /** Optional display name; PTU creation generates one when omitted. */
   name?: string;
-  /** Required. Billing plan: mu | cu | ptu | lora. CLI defaults to "lora". */
+  /** Required. Billing plan: mu | cu | ptu | lora | mr. CLI defaults to "lora". */
   plan: string;
   /** Required for PTU creation; distinct from instance billing_method. */
   charge_type?: "pre_paid" | "post_paid";
@@ -221,6 +268,19 @@ export interface CreateDeploymentRequest {
   [k: string]: unknown;
 }
 
+/** POST /api/v1/deployments request body for a model router. */
+export interface CreateModelRouterRequest {
+  name: string;
+  plan: "mr";
+  charge_type: "post_paid";
+  routing_config: ModelRoutingConfig;
+}
+
+/** PUT /api/v1/deployments/{deployed_model}/update request body for a model router. */
+export interface UpdateModelRouterRequest {
+  routing_config: ModelRoutingConfig;
+}
+
 /**
  * AIGC generation config — used when deploying fine-tuned Wan video (i2v/kf2v)
  * LoRA models. Controls how prompts are applied at inference time:
@@ -241,7 +301,7 @@ export interface PtuCapacity {
   input_tpm?: number;
   /** Output capacity in kTPM. */
   output_tpm?: number;
-  /** @deprecated Current reservation models do not support separate thinking-output capacity. */
+  /** Thinking-output capacity in kTPM; only some models support it, validated server-side. */
   thinking_output_tpm?: number;
 }
 
@@ -336,6 +396,16 @@ export interface RenewCapacityInstanceRequest {
   /** Required to be true when changing capacity; defaults to false on the service. */
   is_change?: boolean;
   ptu_capacity?: ReservationCapacity;
+}
+
+/** PUT /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}/auto-renew body. */
+export interface UpdateCapacityAutoRenewRequest {
+  /** true enables automatic renewal; false disables it. */
+  auto_renewal: boolean;
+  /** The service currently accepts only "Day" (case-sensitive). */
+  auto_renewal_cycle: string;
+  /** Days renewed per automatic cycle, positive integer. */
+  auto_renewal_duration: number;
 }
 
 /** PUT /api/v1/deployments/{deployed_model}/update-overflowstrategy response. */

@@ -15,12 +15,17 @@
  *   5. Write ~/.bailian/wiki-sync-state.json
  *   6. Write ~/.bailian/skills/skill-lock.json record (same ledger as bl skill)
  *
+ * Before any of that, a global npm install records ~/.bailian/install.json once.
+ * A new user's file is followed by one first_install report. Wiki download failure
+ * must not remove the file, and a failure to write or report it must not fail npm install.
+ *
  * Design constraints:
  *   - Unconditional overwrite: every install fully replaces, no version comparison
  *   - Silent failure: any step failure → console.warn → process.exit(0), never blocks install
  *   - Standalone implementation: does not import bailian-cli-core, avoiding ESM path issues after bundling
  *   - Depends on Node built-in modules + tar-stream (consistent with sync.ts / publisher skills-publish.mjs)
  */
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -30,12 +35,14 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createBrotliDecompress } from "node:zlib";
@@ -52,6 +59,19 @@ const LEGACY_ASSET_NAME = "skill.tar.br";
 /** Same strict shape check as core registry.ts: only a valid object name may enter the URL */
 const OBJECT_FILE_RE = /^sha256-[0-9a-f]{64}\.tar\.br$/;
 
+const INSTALL_RECORD_FILE = "install.json";
+const INSTALL_CHANNEL = "npm";
+/** Same prior-use files the binary installer treats as an existing machine. */
+const EXISTING_INSTALL_MARKERS = [
+  "config.json",
+  "credentials.json",
+  "telemetry-uid",
+  "telemetry.jsonl",
+  "wiki-sync-state.json",
+  "install-method",
+  "install-method.bailian-cli",
+];
+
 const INDEX_TIMEOUT_MS = 3000;
 const DOWNLOAD_TIMEOUT_MS = 30000;
 const WINDOWS_LEGACY_MAX_PATH = 259;
@@ -59,6 +79,102 @@ const WINDOWS_LEGACY_MAX_PATH = 259;
 function getConfigDir() {
   if (process.env.BAILIAN_CONFIG_DIR) return process.env.BAILIAN_CONFIG_DIR;
   return join(homedir(), CONFIG_DIR_NAME);
+}
+
+function isGlobalNpmInstall() {
+  return process.env.npm_config_global === "true";
+}
+
+function readOwnPackageVersion() {
+  try {
+    const packagePath = join(dirname(fileURLToPath(import.meta.url)), "package.json");
+    const parsed = JSON.parse(readFileSync(packagePath, "utf8"));
+    return typeof parsed.version === "string" ? parsed.version.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+function machineAlreadyUsed(configDir) {
+  return EXISTING_INSTALL_MARKERS.some((name) => existsSync(join(configDir, name)));
+}
+
+function launchFirstInstallReport() {
+  try {
+    const entry = join(dirname(fileURLToPath(import.meta.url)), "dist", "bailian.mjs");
+    if (!existsSync(entry)) return;
+    spawnSync(process.execPath, [entry, "--bailian-first-install-report"], {
+      env: { ...process.env, BAILIAN_FIRST_INSTALL_REPORT: "1" },
+      timeout: 8000,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+  } catch {
+    /* reporting must not fail npm install */
+  }
+}
+
+/**
+ * Write install.json once, before wiki state exists.
+ * Global installs only. DO_NOT_TRACK=1 writes nothing.
+ * An existing or unreadable file is left untouched so an upgrade cannot become today's install.
+ * A newly written first install then launches one first_install report.
+ */
+export function recordNpmInstall(options = {}) {
+  const launch = options.launchFirstInstallReport ?? launchFirstInstallReport;
+  let reportNewInstall = false;
+  try {
+    if (process.env.DO_NOT_TRACK === "1") return;
+    if (!isGlobalNpmInstall()) return;
+
+    const configDir = getConfigDir();
+    const recordPath = join(configDir, INSTALL_RECORD_FILE);
+    if (existsSync(recordPath)) return;
+
+    const observedAt = new Date().toISOString();
+    const existing = machineAlreadyUsed(configDir);
+    const firstVersion = readOwnPackageVersion();
+    if (!existing && !firstVersion) return;
+
+    const record = existing
+      ? {
+          version: 1,
+          observed_at: observedAt,
+          install_channel: INSTALL_CHANNEL,
+        }
+      : {
+          version: 1,
+          first_installed_at: observedAt,
+          observed_at: observedAt,
+          first_version: firstVersion,
+          install_channel: INSTALL_CHANNEL,
+        };
+
+    mkdirSync(configDir, { recursive: true, mode: 0o700 });
+    if (existsSync(recordPath)) return;
+
+    const temporaryPath = `${recordPath}.${process.pid}.tmp`;
+    try {
+      writeFileSync(temporaryPath, `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 });
+      if (existsSync(recordPath)) return;
+      renameSync(temporaryPath, recordPath);
+      reportNewInstall = !existing;
+    } finally {
+      try {
+        if (existsSync(temporaryPath)) rmSync(temporaryPath, { force: true });
+      } catch {
+        /* a leftover temp file is not an install failure */
+      }
+    }
+  } catch {
+    /* permission and disk errors must not fail npm install */
+  }
+  if (!reportNewInstall || process.env.npm_lifecycle_event !== "postinstall") return;
+  try {
+    launch();
+  } catch {
+    /* reporting must not fail npm install */
+  }
 }
 
 function getCatalogDir() {
@@ -285,6 +401,8 @@ function atomicSwap(tmpDir, catalogDir) {
 }
 
 async function main() {
+  recordNpmInstall();
+
   // 1. Download skills/index.json and get the wiki entry
   const index = await fetchJson(`${REGISTRY_BASE_URL}/${INDEX_KEY}`, INDEX_TIMEOUT_MS);
   const entry = index?.skills?.[WIKI_SKILL_NAME];
@@ -347,14 +465,26 @@ async function main() {
   process.stdout.write(`bailian-cli: wiki data ready (${entry.publishedAt ?? "latest"})\n`);
 }
 
-main().catch((err) => {
-  // Unconditional pass-through: install-time network/permission issues should not block npm install;
-  // sync.ts will fall back to syncing on the first `bl advisor recommend`.
-  const msg = err instanceof Error ? err.message : String(err);
-  process.stderr.write(
-    `bailian-cli: wiki data pre-download skipped (${msg}); will sync automatically on first use.\n`,
-  );
-  // Force a success exit code so a download failure never fails `npm install`.
-  // eslint-disable-next-line unicorn/no-process-exit
-  process.exit(0);
-});
+function isDirectExecution() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(entry);
+  } catch {
+    return pathToFileURL(entry).href === import.meta.url;
+  }
+}
+
+if (isDirectExecution()) {
+  main().catch((err) => {
+    // Unconditional pass-through: install-time network/permission issues should not block npm install;
+    // sync.ts will fall back to syncing on the first `bl advisor recommend`.
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(
+      `bailian-cli: wiki data pre-download skipped (${msg}); will sync automatically on first use.\n`,
+    );
+    // Force a success exit code so a download failure never fails `npm install`.
+    // eslint-disable-next-line unicorn/no-process-exit
+    process.exit(0);
+  });
+}

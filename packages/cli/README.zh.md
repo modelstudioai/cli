@@ -26,7 +26,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **素材理解** — 图像、文档、音频、长视频的解析与问答
 - **应用编排** — 调用百炼已发布的 Managed Agent、智能体和工作流，接入知识库、记忆库、联网搜索与 MCP 工具；并可在命令行创建/更新/发布/复制/删除智能体与工作流、编辑工作流画布
 - **原生 MCP 接入** — 将百炼 MCP 服务注册到 Codex、Claude Code、Cursor、Qoder、Qoder Work、千问办公（QwenWork）、Qwen Code、Gemini CLI 或 Pi
-- **模型训推** — 数据集校验上传、模型精调、专属模型部署上线
+- **模型训推** — 决策训练数据准备（本地切分 / teacher 模型生成 / 全异步离线 Batch）、数据集校验上传、模型精调（SFT/DPO/CPT）、在隔离沙箱内执行强化学习（RL）训练（macOS/Linux）、通过 OpenAPI 提交 OPD 蒸馏训练、专属模型部署上线
 - **批量推理** — CSV/JSONL 构造、异步 Chat/Embedding 任务创建与跟踪、原始结果/错误下载及可选 CSV，或同步单请求 Batch Chat
 - **账号运维** — 授权登录、界面化配置、模型市场、用量与额度、限流提额、团队席位管理
 - **套餐接入** — 支持 Token Plan 等订阅计划一键接到 CLI 和常见 Coding Agent
@@ -154,7 +154,7 @@ bl deploy instances --page 1 --page-size 10 --output json
 
 ### RAG 音视频接入
 
-`bl knowledge doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 只隐藏进度和过程提示，保留最终结果及完整 JSON 字段。参阅 [命令指南](docs/knowledge/knowledge-cli-guide.md)。
+`bl knowledge doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 只隐藏进度和过程提示，保留最终结果及完整 JSON 字段。参阅 [命令指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md)。
 
 ## ParseX
 
@@ -249,11 +249,15 @@ bl auth login --api-key <API_KEY>
 
 ### 阿里云 OpenAPI AK/SK
 
-Token Plan 的席位与成员管理需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
+Token Plan 的席位与成员管理、以及控制台会话换票需要阿里云 AccessKey。可先运行引导获取，或前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取后粘贴。
 
 > 建议：创建 RAM 子账号并授予最小权限，避免使用主账号 AK/SK。
 
 ```bash
+# 打开引导页（按照引导完成操作后，回到命令行粘贴 AccessKey）
+bl auth login --open-api
+
+# 若已有 AccessKey，直接配置
 bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
 ```
 

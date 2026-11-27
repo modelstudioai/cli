@@ -1,9 +1,7 @@
 import {
-  formatCommand,
   defineCommand,
   createFineTune,
   getFineTuneParams,
-  uploadDataset,
   detectModality,
   getProfile,
   fetchModelCapability,
@@ -11,204 +9,60 @@ import {
   preflightBatchSizeGate,
   validateFineTuneHyperParameterOverrides,
   getFineTuneHyperParameterDefaultNumber,
-  isTrainingTypeCli,
-  TRAINING_TYPES_CLI,
   DEFAULT_TRAINING_TYPE,
-  formatIssue,
+  preflightDecisionSampleGate,
+  readDecisionQuestionSignature,
+  compareDecisionQuestionTables,
   BailianError,
   ExitCode,
+  buildOssMountDataset,
+  DEFAULT_OSS_MOUNT_REGION,
+  isOssMountToken,
+  parseOssMountUri,
   type HttpDeps,
   type CommandContext,
   type CreateFineTuneRequest,
+  type FineTuneDatasetDescriptor,
   type FineTuneHyperParameters,
   type FineTuneHyperParameterIssue,
-  type DatasetFile,
-  type TrainingProfile,
   type DataModality,
+  type FineTuneParamHyperParam,
   type FlagsDef,
+  type LocalizedText,
+  type ParsedFlags,
 } from "bailian-cli-core";
-import { existsSync, statSync } from "fs";
-import { basename } from "path";
+import {
+  analyzeDatasetTokens,
+  isLocalPath,
+  splitDatasetEntries,
+  uploadResolvedLocal,
+  type AnalyzeDatasetOptions,
+  type ResolvedDataset,
+} from "./dataset-input.ts";
+import {
+  preflightTrainOptions,
+  resolveTrainingTypeCli,
+  trainOptionFlags,
+  trainingTypeFlag,
+  type HelpClause,
+} from "./train-options-shared.ts";
 
-/**
- * A `--datasets` / `--validations` token is treated as a local file to upload
- * when it resolves to an existing file on disk; otherwise it is forwarded
- * verbatim as a previously-uploaded file-id (the `file-xxx` shape returned by
- * `dataset upload`). This lets users skip the manual upload step:
- * `--datasets ./train.jsonl` uploads then trains in one shot.
- */
-function isLocalPath(token: string): boolean {
-  return existsSync(token) && statSync(token).isFile();
-}
-
-interface ResolvedDataset {
-  /**
-   * Tokens in input order. Local paths are kept as-is here (a placeholder
-   * until `uploadResolvedLocal` swaps them for real file-ids); bare file-ids
-   * pass through untouched. In dry-run the paths stay (the previewed body
-   * reflects exactly what the user typed).
-   */
-  fileIds: string[];
-  /** Local paths in input order, for the deferred upload step. */
-  localPaths: string[];
-  /** In-hand size for the first local token, if known (local statSync). */
-  firstSize?: number;
-  /**
-   * Total training-sample count across local tokens, when known. Sourced from
-   * `validateDataset`'s `stats.totalRecords` (summed per token). Undefined when
-   * any token is a bare file-id (no local file to count) or in dry-run — the
-   * pre-submit batch-size gate only fires when this is known, so file-id flows
-   * fall through to the platform rather than risk a false positive.
-   */
-  recordCount?: number;
-}
-
-/**
- * Analyze a comma-separated `--datasets` / `--validations` value WITHOUT
- * uploading: bare file-ids pass through; local paths are validated through the
- * same pipeline as `dataset upload` (so structural errors surface here),
- * their sample count and size are captured for the pre-submit gate, and the
- * path itself is recorded in `localPaths` for a later, deferred upload.
- *
- * Splitting analysis from upload lets the batch-size gate fire before any
- * network call — a doomed job (too few samples) is rejected without burning an
- * upload, and is offline-testable. In dry-run mode local paths are not
- * validated (the preview never touches the network or the disk beyond stat).
- */
-async function analyzeDatasetTokens(
-  context: Pick<CommandContext, "settings" | "identity" | "output">,
-  raw: string,
-  label: string,
-  profile: TrainingProfile,
-  modality: DataModality,
-  model: string,
-  /** Pre-detected modality for a known path (avoids re-opening the file). */
-  knownModality?: { path: string; modality: DataModality },
-): Promise<ResolvedDataset> {
-  const { settings } = context;
-  const tokens = raw
-    .split(",")
-    .map((token) => token.trim())
-    .filter(Boolean);
-  if (tokens.length === 0) {
-    throw new BailianError(`--${label} must contain at least one entry.`, ExitCode.USAGE);
-  }
-
-  const fileIds: string[] = [];
-  const localPaths: string[] = [];
-  let firstSize: number | undefined;
-  let recordCount: number | undefined;
-  // A file-id token has no local file to count, so the total sample count is
-  // only knowable when every token is a local path. Once any file-id is seen,
-  // flip to unknown and stop accumulating to avoid an undercount that could
-  // trip the batch-size gate falsely.
-  let recordCountKnown = true;
-
-  for (const token of tokens) {
-    if (!isLocalPath(token)) {
-      fileIds.push(token);
-      recordCountKnown = false;
-      continue;
-    }
-
-    fileIds.push(token);
-    localPaths.push(token);
-
-    if (settings.dryRun) continue;
-
-    // The command's modality is authoritative; each local file is validated
-    // under that modality's schema. Reuse the caller's pre-detected modality
-    // when available to avoid opening the same file twice (matters for large
-    // ZIPs).
-    const tokenModality =
-      knownModality && knownModality.path === token ? knownModality.modality : modality;
-
-    // Local path → validate through the profile. The profile internally routes
-    // to the correct validator based on modality. Upload is deferred to
-    // `uploadResolvedLocal` so the gate can run first. `model` is forwarded for
-    // schema-agnostic cross-checks.
-    const result = await profile.validate(token, tokenModality, { model });
-    if (!result.valid) {
-      const lines = [
-        `Dataset validation failed for ${token}`,
-        ...result.errors.slice(0, 10).map(formatIssue),
-      ];
-      if (result.errors.length > 10) {
-        lines.push(`  … and ${result.errors.length - 10} more error(s).`);
-      }
-      lines.push(
-        "",
-        `Hint: re-run \`${formatCommand(context.identity, "dataset validate --file <path>")}\` for the full report,`,
-        `      or upload manually with \`${formatCommand(context.identity, "dataset upload --no-validate")}\` and`,
-        "      pass the resulting file-id here.",
-      );
-      throw new BailianError(lines.join("\n"), ExitCode.GENERAL);
-    }
-    if (result.warnings.length > 0) {
-      context.output.warning({
-        code: "DATASET_VALIDATION_WARNINGS",
-        message: {
-          "en-US": `Dataset validation passed with ${result.warnings.length} warning(s) for ${token}.`,
-          "zh-CN": `${token} 数据集校验通过，共 ${result.warnings.length} 条警告。`,
-        },
-        details: { file: token, warnings: result.warnings },
-      });
-    }
-
-    // Accumulate the sample count so the caller can pre-flight the batch-size
-    // gate before submitting. `totalRecords` is set by the jsonl validator as
-    // (non-blank lines); undefined stats fall back to "unknown" (no gate).
-    const tokenRecords = result.stats.totalRecords;
-    if (typeof tokenRecords === "number") {
-      recordCount = (recordCount ?? 0) + tokenRecords;
-    }
-    if (firstSize === undefined) firstSize = statSync(token).size;
-  }
-
-  return {
-    fileIds,
-    localPaths,
-    firstSize,
-    recordCount: recordCountKnown ? recordCount : undefined,
-  };
-}
-
-/**
- * Upload each local path recorded in `resolved.localPaths`, swapping the
- * placeholder path entries in `resolved.fileIds` for the returned file-ids.
- * Returns the uploaded file records. No-op in dry-run. Validation already
- * happened in `analyzeDatasetTokens`, so this is pure upload.
- */
-async function uploadResolvedLocal(
-  context: Pick<CommandContext, "client" | "output">,
-  resolved: ResolvedDataset,
-  purpose: string,
-  label: string,
-): Promise<DatasetFile[]> {
-  const { client } = context;
-  const uploaded: DatasetFile[] = [];
-  for (const [index, token] of resolved.fileIds.entries()) {
-    if (!isLocalPath(token)) continue;
-    const file: DatasetFile = await uploadDataset(client, { filePath: token, purpose });
-    if (!file.file_id) {
-      throw new BailianError(
-        `Upload of ${token} succeeded but no file_id was returned.`,
-        ExitCode.GENERAL,
-      );
-    }
-    uploaded.push(file);
-    resolved.fileIds[index] = file.file_id;
-    context.output.info({
-      "en-US": `Uploaded ${basename(token)} → ${file.file_id} (auto from --${label})`,
-      "zh-CN": `已上传 ${basename(token)} → ${file.file_id}（来自 --${label}）`,
-    });
-  }
-  return uploaded;
-}
+/** How `finetune text create` phrases the CLI-to-server training-type mapping. */
+const CREATE_TRAINING_TYPE_MAPPING: HelpClause = {
+  "en-US":
+    "Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full)",
+  "zh-CN": "在接口边界转换为服务端值（例如 sft-lora -> efficient_sft、dpo -> dpo_full）",
+};
 
 /** The modality a `finetune <modality> create` subcommand is bound to. */
-type CommandModality = "text" | "audio" | "image" | "video";
+type CommandModality = "text" | "audio" | "image" | "video" | "decision";
 
+/**
+ * Explicit hyper-parameter overrides to check against the model's parameter
+ * schema. Mixed-training parameters (data_augmentation / augmentation_types /
+ * augmentation_ratio) are deliberately absent: they are documented on the
+ * create API but missing from the schema, so the server stays the authority.
+ */
 function explicitHyperParameterOverrides(
   commandModality: CommandModality,
   flags: Record<string, unknown>,
@@ -219,6 +73,8 @@ function explicitHyperParameterOverrides(
       batchSize: "batch_size",
       learningRate: "learning_rate",
       maxLength: "max_length",
+      modality: "modality",
+      reasoningMode: "reasoning_mode",
       evalSteps: "eval_steps",
       loraAlpha: "lora_alpha",
       loraDropout: "lora_dropout",
@@ -229,10 +85,14 @@ function explicitHyperParameterOverrides(
       saveSteps: "save_steps",
       split: "split",
       maxSplitValDatasetSample: "max_split_val_dataset_sample",
-      dataAugmentation: "data_augmentation",
     },
     image: { learningRate: "learning_rate" },
     video: {
+      nEpochs: "n_epochs",
+      batchSize: "batch_size",
+      learningRate: "learning_rate",
+    },
+    decision: {
       nEpochs: "n_epochs",
       batchSize: "batch_size",
       learningRate: "learning_rate",
@@ -244,13 +104,148 @@ function explicitHyperParameterOverrides(
   for (const [flagName, parameterName] of Object.entries(mappings[commandModality])) {
     const value = flags[flagName];
     if (value !== undefined) {
-      overrides[parameterName] = flagName === "dataAugmentation" ? value === "true" : value;
+      overrides[parameterName] = value;
     }
   }
   return overrides;
 }
 
-function formatHyperParameterIssue(
+/**
+ * Cross-flag rules for mixed training. Runs in `validate`, before auth and
+ * dataset analysis, so an invalid pair never reaches the network.
+ */
+function validateMixedTrainingFlags(
+  flags: ParsedFlags<typeof TEXT_FLAGS>,
+): LocalizedText | undefined {
+  if (flags.augmentationTypes === undefined && flags.augmentationRatio === undefined) {
+    return undefined;
+  }
+  if (flags.augmentationTypes === undefined || flags.augmentationRatio === undefined) {
+    return {
+      "en-US": "--augmentation-types and --augmentation-ratio must be provided together.",
+      "zh-CN": "--augmentation-types 与 --augmentation-ratio 必须同时提供。",
+    };
+  }
+  if (flags.dataAugmentation === "false") {
+    return {
+      "en-US": "--augmentation-types cannot be combined with --data-augmentation false.",
+      "zh-CN": "--augmentation-types 不能与 --data-augmentation false 同时使用。",
+    };
+  }
+  const codes = splitCsv(flags.augmentationTypes);
+  const ratios = splitCsv(flags.augmentationRatio);
+  if (codes.includes("") || ratios.includes("")) {
+    return {
+      "en-US": "--augmentation-types / --augmentation-ratio must not contain empty items.",
+      "zh-CN": "--augmentation-types / --augmentation-ratio 不能包含空项。",
+    };
+  }
+  if (codes.length !== ratios.length) {
+    return {
+      "en-US": `--augmentation-ratio must give one ratio per --augmentation-types entry (${codes.length} types, ${ratios.length} ratios).`,
+      "zh-CN": `--augmentation-ratio 须与 --augmentation-types 逐项对应（${codes.length} 项，${ratios.length} 个倍率）。`,
+    };
+  }
+  for (const ratio of ratios) {
+    const numeric = Number(ratio);
+    if (!Number.isFinite(numeric) || numeric < 0 || numeric > 2) {
+      return {
+        "en-US": `--augmentation-ratio "${ratio}" must be within [0, 2].`,
+        "zh-CN": `--augmentation-ratio "${ratio}" 必须在 0.0~2.0 之间。`,
+      };
+    }
+  }
+  return undefined;
+}
+
+function splitCsv(raw: string): string[] {
+  return raw.split(",").map((item) => item.trim());
+}
+
+/**
+ * `oss://` entries of --datasets / --validations, checked in `validate` before
+ * auth: the data is not on disk, so this shape check is the only local check a
+ * mount gets. The bucket and key themselves are judged by the server.
+ */
+function validateOssMountEntries(flags: ParsedFlags<typeof TEXT_FLAGS>): LocalizedText | undefined {
+  for (const flagName of ["datasets", "validations"] as const) {
+    const raw = flags[flagName];
+    if (raw === undefined) continue;
+    for (const entry of splitDatasetEntries(raw)) {
+      if (!isOssMountToken(entry)) continue;
+      const mount = parseOssMountUri(entry);
+      if (!mount.valid) {
+        return {
+          "en-US": `--${flagName} entry "${entry}" ${mount.reason["en-US"]}`,
+          "zh-CN": `--${flagName} 条目 "${entry}" ${mount.reason["zh-CN"]}`,
+        };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Dataset entries of one field: file-ids first, then mounts. The order across
+ * the two kinds carries no meaning.
+ */
+function datasetEntries(resolved: ResolvedDataset, region: string): FineTuneDatasetDescriptor[] {
+  return [
+    ...resolved.fileIds.map((fileId) => ({
+      data_source_type: "file_id" as const,
+      file_id: fileId,
+    })),
+    ...resolved.ossMounts.map((location) => buildOssMountDataset(location, region)),
+  ];
+}
+
+/**
+ * Mixed training. `augmentation_types` names the preset datasets to mix in
+ * and `augmentation_ratio` gives one ratio per type; the server is the
+ * authority for both. Codes are sent lowercased: the preset-datasets API
+ * returns e.g. `mix_V2` while the documented API values are lowercase.
+ * Cross-flag rules were already enforced by `validateMixedTrainingFlags`.
+ */
+function applyDataAugmentation(hp: FineTuneHyperParameters, flags: Record<string, unknown>): void {
+  const typesRaw =
+    typeof flags.augmentationTypes === "string" ? flags.augmentationTypes : undefined;
+  const ratiosRaw =
+    typeof flags.augmentationRatio === "string" ? flags.augmentationRatio : undefined;
+  if (typesRaw === undefined || ratiosRaw === undefined) {
+    if (flags.dataAugmentation !== undefined)
+      hp.data_augmentation = flags.dataAugmentation === "true";
+    return;
+  }
+  hp.data_augmentation = true;
+  hp.augmentation_types = splitCsv(typesRaw)
+    .map((code) => code.toLowerCase())
+    .join(",");
+  hp.augmentation_ratio = splitCsv(ratiosRaw).join(",");
+}
+
+/**
+ * The create API requires these (they drive the training cost) and rejects the
+ * job when one is missing.
+ */
+const COST_REQUIRED_HYPER_PARAMETERS = ["n_epochs", "batch_size", "max_length"] as const;
+
+/**
+ * Fill a cost-driving parameter the user omitted with the model's schema
+ * default. A parameter the schema lists without a usable default, or omits
+ * entirely, is left alone for the server to judge; no value is invented here.
+ */
+function applySchemaDefaultHyperParameters(
+  hp: FineTuneHyperParameters,
+  parameterSchema: FineTuneParamHyperParam[],
+): void {
+  for (const parameterName of COST_REQUIRED_HYPER_PARAMETERS) {
+    if (hp[parameterName] !== undefined) continue;
+    const defaultValue = getFineTuneHyperParameterDefaultNumber(parameterSchema, parameterName);
+    if (defaultValue !== undefined) hp[parameterName] = defaultValue;
+  }
+}
+
+export function formatHyperParameterIssue(
   context: Pick<CommandContext, "localize">,
   issue: FineTuneHyperParameterIssue,
 ): string {
@@ -350,6 +345,37 @@ const COMMON_FLAGS = {
  */
 const TEXT_FLAGS = {
   ...COMMON_FLAGS,
+  // Text alone can mount a dataset from OSS, so its data flags say so.
+  datasets: {
+    ...COMMON_FLAGS.datasets,
+    valueHint: "<ids|paths|oss://...>",
+    description: {
+      "en-US":
+        "Comma-separated dataset file IDs, local paths (.jsonl) or OSS mounts (oss://<bucket>/<object key>). Local paths are uploaded (validated) first, then their file-ids are used. An OSS mount is read in place by the service, so it is not validated or uploaded here",
+      "zh-CN":
+        "数据集文件 ID、本地路径（.jsonl）或 OSS 挂载（oss://<bucket>/<object key>），以逗号分隔。本地路径会先验证并上传，再使用对应的 file-id。OSS 挂载由服务端原地读取，CLI 不做本地校验和上传",
+    },
+  },
+  validations: {
+    ...COMMON_FLAGS.validations,
+    valueHint: "<ids|paths|oss://...>",
+    description: {
+      "en-US":
+        "Comma-separated validation dataset file IDs, local paths or OSS mounts (oss://<bucket>/<object key>), handled like --datasets",
+      "zh-CN":
+        "验证数据集文件 ID、本地路径或 OSS 挂载（oss://<bucket>/<object key>），以逗号分隔，处理方式与 --datasets 相同",
+    },
+  },
+  ossRegion: {
+    type: "string",
+    valueHint: "<region>",
+    description: {
+      "en-US":
+        "Region ID of the OSS buckets mounted by the oss:// entries of --datasets / --validations (default: cn-beijing); sent as given, whether the service can mount from it is judged by the service",
+      "zh-CN":
+        "--datasets / --validations 中 oss:// 条目所在 OSS Bucket 的地域 ID（默认：cn-beijing）；原样下发，能否挂载由服务端判断",
+    },
+  },
   jobName: {
     type: "string",
     valueHint: "<value>",
@@ -435,21 +461,36 @@ const TEXT_FLAGS = {
   },
   dataAugmentation: {
     type: "string",
-    valueHint: "<value>",
+    valueHint: "<true|false>",
     description: {
-      "en-US": "Mix platform training data (true or false)",
-      "zh-CN": "是否混入平台训练数据（true 或 false）",
+      "en-US":
+        "Mix platform preset training data into the job (true or false). Only honored for sft and sft-lora; turned on automatically by --augmentation-types",
+      "zh-CN":
+        "是否混入平台预置训练数据（true 或 false）。仅 sft 与 sft-lora 生效；传 --augmentation-types 时自动开启",
     },
     choices: ["true", "false"] as const,
   },
-  trainingType: {
+  augmentationTypes: {
     type: "string",
-    valueHint: "<t>",
+    valueHint: "<code,...>",
     description: {
-      "en-US": `Training type: ${TRAINING_TYPES_CLI.join(" | ")} (default: ${DEFAULT_TRAINING_TYPE}). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full).`,
-      "zh-CN": `训练类型：${TRAINING_TYPES_CLI.join(" | ")}（默认：${DEFAULT_TRAINING_TYPE}）。在接口边界转换为服务端值（例如 sft-lora -> efficient_sft、dpo -> dpo_full）。`,
+      "en-US":
+        "Preset datasets to mix in, comma-separated. Codes come from finetune preset-datasets and are sent lowercased (e.g. mix_V2 -> mix_v2). Requires --augmentation-ratio",
+      "zh-CN":
+        "要混入的预置数据集，以逗号分隔。编码来自 finetune preset-datasets，按小写下发（例如 mix_V2 -> mix_v2）。需与 --augmentation-ratio 同时使用",
     },
   },
+  augmentationRatio: {
+    type: "string",
+    valueHint: "<r,...>",
+    description: {
+      "en-US":
+        "Mix ratio per preset dataset, comma-separated and positionally matching --augmentation-types; each is 0.0~2.0 of the training data volume",
+      "zh-CN":
+        "每种预置数据集的混合倍率，以逗号分隔并与 --augmentation-types 按位置对应；每项为训练数据量的 0.0~2.0 倍",
+    },
+  },
+  trainingType: trainingTypeFlag(DEFAULT_TRAINING_TYPE, CREATE_TRAINING_TYPE_MAPPING),
   nEpochs: {
     type: "number",
     valueHint: "<n>",
@@ -479,6 +520,20 @@ const TEXT_FLAGS = {
     valueHint: "<n>",
     description: { "en-US": "Max sequence length", "zh-CN": "最大序列长度" },
   },
+  ...trainOptionFlags({
+    modality: {
+      "en-US":
+        "Training-option modality sent as hyper_parameters.modality (not the dataset format fixed by this subcommand). Only for models with dynamic train options; valid values come from the model's parameter schema.",
+      "zh-CN":
+        "训练选项模态，作为 hyper_parameters.modality 发送（与本子命令固定的数据格式无关）。仅适用于配置了动态训练选项的模型；合法值以该模型的参数配置为准。",
+    },
+    reasoningMode: {
+      "en-US":
+        "Reasoning mode sent as hyper_parameters.reasoning_mode. Only for models with dynamic train options; valid values come from the model's parameter schema.",
+      "zh-CN":
+        "思考模式，作为 hyper_parameters.reasoning_mode 发送。仅适用于配置了动态训练选项的模型；合法值以该模型的参数配置为准。",
+    },
+  }),
 } satisfies FlagsDef;
 
 /**
@@ -522,7 +577,7 @@ const IMAGE_FLAGS = {
 } satisfies FlagsDef;
 
 const TEXT_USAGE =
-  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--job-name <name>] [--priority <L0|L1|L2|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
+  "--base-model <model> --datasets <id|path|oss://...,...> [--validations <id|path|oss://...,...>] [--oss-region <region>] [--job-name <name>] [--priority <L0|L1|L2|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>] [--data-augmentation <true|false>] [--augmentation-types <code,...>] [--augmentation-ratio <r,...>] [--modality <text|vision>] [--reasoning-mode <instruct|thinking>]";
 
 const AUDIO_USAGE =
   "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
@@ -564,6 +619,51 @@ const VIDEO_FLAGS = {
 const VIDEO_USAGE =
   "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>]";
 
+/**
+ * Decision flags: the decision model only supports efficient_sft (LoRA
+ * high-efficiency training) and exactly three hyper-parameters. No
+ * --training-type is exposed (the method is fixed); defaults and valid ranges
+ * come from the platform parameter schema, so the flags carry no local clamps.
+ */
+const DECISION_FLAGS = {
+  ...COMMON_FLAGS,
+  jobName: {
+    type: "string",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Training job display name (job_name)",
+      "zh-CN": "训练任务显示名称（job_name）",
+    },
+  },
+  nEpochs: {
+    type: "number",
+    valueHint: "<n>",
+    description: {
+      "en-US": "Number of epochs (default: 2)",
+      "zh-CN": "训练轮数（默认：2）",
+    },
+  },
+  batchSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: {
+      "en-US": "Samples per training batch (default: 1)",
+      "zh-CN": "每个训练批次的样本数（默认：1）",
+    },
+  },
+  learningRate: {
+    type: "string",
+    valueHint: "<str>",
+    description: {
+      "en-US": 'Learning rate as a string to preserve precision (default: "2e-5")',
+      "zh-CN": '以字符串形式指定学习率以保留精度（默认："2e-5"）',
+    },
+  },
+} satisfies FlagsDef;
+
+const DECISION_USAGE =
+  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--job-name <name>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>]";
+
 const COMMON_NOTES = [
   {
     "en-US": "Creating a job uploads any local datasets and consumes training quota.",
@@ -597,9 +697,9 @@ const TEXT_NOTES = [
   },
   {
     "en-US":
-      "Before upload, the command queries the selected model and training type's parameter schema. Explicit overrides must satisfy its editability, type, enum, range, and step constraints; omitted values use platform defaults.",
+      "Before upload, the command queries the selected model and training type's parameter schema. Explicit overrides must satisfy its editability, type, enum, range, and step constraints. The create API requires n_epochs, batch_size and max_length: an omitted one is filled from the schema's default (query it with the finetune params command); every other omitted value uses the platform default.",
     "zh-CN":
-      "上传前会查询所选模型和训练类型的参数配置。显式覆盖值必须满足可编辑性、类型、枚举、范围和步长约束；未指定项使用平台默认值。",
+      "上传前会查询所选模型和训练类型的参数配置。显式覆盖值必须满足可编辑性、类型、枚举、范围和步长约束。创建任务 API 要求 n_epochs、batch_size、max_length 必填：未指定时按参数配置中的默认值补齐（可用 finetune params 命令查询）；其余未指定项使用平台默认值。",
   },
   {
     "en-US": "Learning rate is forwarded as a string to avoid JSON-number precision loss.",
@@ -610,6 +710,24 @@ const TEXT_NOTES = [
       "Pre-submit gate: if the training dataset's sample count is not greater than batch_size, the job is rejected before upload or quota consumption (the platform would otherwise fail ~10 min in, after data processing).",
     "zh-CN":
       "提交前检查：如果训练数据集的样本数不大于 batch_size，会在上传或消耗额度前拒绝任务（否则平台会在数据处理约 10 分钟后才失败）。",
+  },
+  {
+    "en-US":
+      "--modality / --reasoning-mode are training options forwarded as hyper_parameters entries, independent of the dataset format fixed by the subcommand. Models with dynamic train options require them to resolve the parameter schema (e.g. a vision-only CPT base needs --modality vision); models without dynamic options reject them. Invalid combinations are rejected by the server and surfaced as-is.",
+    "zh-CN":
+      "--modality / --reasoning-mode 是训练选项，作为 hyper_parameters 条目发送，与子命令固定的数据格式无关。配置了动态训练选项的模型需要它们才能解析参数配置（例如仅支持视觉训练的 CPT 基座需要 --modality vision）；未配置动态选项的模型会拒绝这两个 flag。非法组合由服务端拒绝并原样透传错误。",
+  },
+  {
+    "en-US":
+      "Mixed training: --data-augmentation turns it on; --augmentation-types selects preset datasets (list them with finetune preset-datasets; codes are sent lowercased, e.g. mix_V2 -> mix_v2) and --augmentation-ratio gives one ratio (0.0~2.0) per type, positionally. Passing types turns data_augmentation on. These three are documented on the create API but absent from the model's parameter schema, so they are not part of the schema check; whether the selected model and training type honors them is decided by the server (documented for sft and sft-lora), and mixed data is billed as training tokens.",
+    "zh-CN":
+      "混合训练：--data-augmentation 开启；--augmentation-types 选择预置数据集（用 finetune preset-datasets 查询，编码按小写下发，例如 mix_V2 -> mix_v2），--augmentation-ratio 按位置给出每种数据集的混合倍率（0.0~2.0）。传 --augmentation-types 时自动开启 data_augmentation。这三个参数在创建任务的 API 文档中有说明，但不在模型返回的参数配置里，因此不参与参数配置校验；是否对所选模型和训练类型生效以服务端为准（文档为 sft 与 sft-lora），混入的数据按训练 Token 计费。",
+  },
+  {
+    "en-US":
+      "OSS mount: an oss://<bucket>/<object key> entry of --datasets / --validations is read in place, so it skips local validation, upload and the sample-count pre-check. Upload the uncompressed dataset folder to OSS as-is (a zip cannot be mounted) and, for a multi-file dataset, point at its data.jsonl. Every oss:// entry shares --oss-region. A request with an OSS mount sends training_datasets / validation_datasets instead of training_file_ids / validation_file_ids.",
+    "zh-CN":
+      "OSS 挂载：--datasets / --validations 中的 oss://<bucket>/<object key> 条目由服务端原地读取，因此不做本地校验、不上传，也跳过样本数预检。请将未压缩的数据集文件夹原样上传到 OSS（zip 无法挂载）；多文件数据集指向其 data.jsonl。所有 oss:// 条目共用 --oss-region。含 OSS 挂载的请求以 training_datasets / validation_datasets 下发，不再使用 training_file_ids / validation_file_ids。",
   },
 ];
 
@@ -679,14 +797,10 @@ async function runCreate<F extends FlagsDef>(
   // enforce the right record schema (DPO jobs require chosen/rejected on
   // every record). Whitelist is the single source of truth in core
   // (TRAINING_TYPES_CLI); any other value is rejected up-front.
-  const trainingType = (flags.trainingType as string | undefined) || DEFAULT_TRAINING_TYPE;
-  if (!isTrainingTypeCli(trainingType)) {
-    throw new BailianError(
-      `--training-type "${trainingType}" is not supported.`,
-      ExitCode.USAGE,
-      `Supported values: ${TRAINING_TYPES_CLI.join(", ")} (default: ${DEFAULT_TRAINING_TYPE}).`,
-    );
-  }
+  const trainingType = resolveTrainingTypeCli(
+    flags.trainingType as string | undefined,
+    DEFAULT_TRAINING_TYPE,
+  );
 
   // Profile: single source of truth for how this training type behaves
   // (validation rules, hyper-parameters, gates, capability check).
@@ -717,6 +831,10 @@ async function runCreate<F extends FlagsDef>(
     if (detected === "video-kf2v") modality = "video-kf2v";
   }
 
+  // Only text can carry a mount: its request switches to the dataset entries
+  // that hold one. Other modalities keep the flat file-id fields, so analyze
+  // rejects an oss:// entry there before any request is made.
+  const datasetOptions: AnalyzeDatasetOptions = { ossMount: commandModality === "text" };
   const training = await analyzeDatasetTokens(
     ctx,
     datasetsRaw,
@@ -725,6 +843,7 @@ async function runCreate<F extends FlagsDef>(
     modality,
     model,
     firstLocalPath ? { path: firstLocalPath, modality } : undefined,
+    datasetOptions,
   );
   const trainingFileIds = training.fileIds;
 
@@ -736,6 +855,8 @@ async function runCreate<F extends FlagsDef>(
         profile,
         modality,
         model,
+        undefined,
+        datasetOptions,
       )
     : undefined;
   const validationFileIds = validation?.fileIds;
@@ -752,6 +873,8 @@ async function runCreate<F extends FlagsDef>(
 
   if (commandModality === "text") {
     const extraParameters: Record<string, string> = {
+      modality: "modality",
+      reasoningMode: "reasoning_mode",
       evalSteps: "eval_steps",
       loraAlpha: "lora_alpha",
       loraDropout: "lora_dropout",
@@ -811,8 +934,7 @@ async function runCreate<F extends FlagsDef>(
         ExitCode.USAGE,
       );
     }
-    if (flags.dataAugmentation !== undefined)
-      hp.data_augmentation = flags.dataAugmentation === "true";
+    applyDataAugmentation(hp, flags);
     if (hp.save_strategy === "steps" && hp.save_steps === undefined) {
       throw new BailianError(
         "save_strategy=steps requires --save-steps. / 按步保存时必须指定 --save-steps。",
@@ -821,10 +943,37 @@ async function runCreate<F extends FlagsDef>(
     }
   }
 
+  // Best-effort console precheck for dynamic train options: validate the
+  // combination and complete omitted options from the model defaults, so
+  // dynamic-option models work even without explicit flags. A missing console
+  // session degrades to a warning and leaves the user options unchanged.
+  if (commandModality === "text") {
+    const userTrainOptions: Record<string, string> = {};
+    if (typeof hp.modality === "string") userTrainOptions.modality = hp.modality;
+    if (typeof hp.reasoning_mode === "string") userTrainOptions.reasoning_mode = hp.reasoning_mode;
+    const resolved = await preflightTrainOptions(
+      ctx,
+      model,
+      profile.serverTrainingType,
+      userTrainOptions,
+    );
+    for (const [optionName, optionValue] of Object.entries(resolved.context)) {
+      hp[optionName] = optionValue;
+    }
+  }
+
+  // Dynamic train options (modality / reasoning_mode) double as the schema
+  // query context: models with dynamic options return an empty schema unless
+  // hyper_parameters carries the selected options.
+  const trainOptions: Record<string, string> = {};
+  if (typeof hp.modality === "string") trainOptions.modality = hp.modality;
+  if (typeof hp.reasoning_mode === "string") trainOptions.reasoning_mode = hp.reasoning_mode;
+
   const parameterResponse = await getFineTuneParams(ctx.client, {
     inputModel: model,
     trainingType: profile.serverTrainingType,
     paramType: "hyper",
+    trainOptions,
     workspaceId: settings.workspaceId,
   });
   const parameterSchema = parameterResponse.output?.hyper_params;
@@ -836,8 +985,10 @@ async function runCreate<F extends FlagsDef>(
       }),
       ExitCode.GENERAL,
       ctx.localize({
-        "en-US": "The dataset was not uploaded and the training job was not submitted.",
-        "zh-CN": "数据集未上传，训练任务未提交。",
+        "en-US":
+          "The dataset was not uploaded and the training job was not submitted. If this model has dynamic train options, pass --modality / --reasoning-mode (query valid values with the finetune params command first).",
+        "zh-CN":
+          "数据集未上传，训练任务未提交。若该模型配置了动态训练选项，请传入 --modality / --reasoning-mode（合法值可先用 finetune params 命令查询）。",
       }),
     );
   }
@@ -857,6 +1008,12 @@ async function runCreate<F extends FlagsDef>(
     );
   }
 
+  // Runs after override validation so an invalid explicit value still fails
+  // first, and before the dry-run snapshot so the preview shows what is sent.
+  if (commandModality === "text") {
+    applySchemaDefaultHyperParameters(hp, parameterSchema);
+  }
+
   if (
     !settings.dryRun &&
     training.recordCount !== undefined &&
@@ -873,6 +1030,50 @@ async function runCreate<F extends FlagsDef>(
       });
       if (!gate.ok && gate.issue) {
         throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
+      }
+    }
+  }
+
+  // Decision-specific pre-flight: the sample-count rule (train/val each ≥
+  // batch_size with a separate validation set, otherwise train ≥ batch_size ×
+  // 10) replaces the generic gate above, and the training/validation question
+  // definitions must match. Both only run on local data outside dry-run; bare
+  // file-id counts are unknown and fall through to the platform.
+  if (commandModality === "decision" && !settings.dryRun) {
+    if (training.recordCount !== undefined || validation?.recordCount !== undefined) {
+      const effectiveBatchSize =
+        typeof hp.batch_size === "number"
+          ? hp.batch_size
+          : getFineTuneHyperParameterDefaultNumber(parameterSchema, "batch_size");
+      if (effectiveBatchSize !== undefined) {
+        const gate = preflightDecisionSampleGate({
+          hasValidation: Boolean(flags.validations),
+          trainingRecordCount: training.recordCount,
+          validationRecordCount: validation?.recordCount,
+          batchSize: effectiveBatchSize,
+        });
+        if (!gate.ok && gate.issue) {
+          throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
+        }
+      }
+    }
+    const trainingPath = training.localPaths[0];
+    const validationPath = validation?.localPaths[0];
+    if (trainingPath && validationPath) {
+      const trainingSignature = await readDecisionQuestionSignature(trainingPath);
+      const validationSignature = await readDecisionQuestionSignature(validationPath);
+      if (trainingSignature && validationSignature) {
+        const driftedIds = compareDecisionQuestionTables(trainingSignature, validationSignature);
+        if (driftedIds.length > 0) {
+          ctx.output.warning({
+            code: "DECISION_QUESTION_DEFINITION_MISMATCH",
+            message: {
+              "en-US": `Training and validation question definitions differ (IDs: ${driftedIds.join(", ")}). Keep question ID, type, instructions and criteria identical across training, evaluation and online requests; changing them requires regenerating data and retraining.`,
+              "zh-CN": `训练集与验证集的问题定义不一致（ID：${driftedIds.join(", ")}）。训练、评估与线上请求的问题 ID、类型、instructions、criteria 必须保持一致；修改定义须重新准备数据并重训。`,
+            },
+            details: { questions: driftedIds },
+          });
+        }
       }
     }
   }
@@ -919,14 +1120,23 @@ async function runCreate<F extends FlagsDef>(
     }
   }
 
+  // A mount cannot travel in the flat file-id fields, so a request with one
+  // uses the dataset entries for both fields. Every other request keeps the
+  // flat form it has always sent.
+  const ossRegion = (flags.ossRegion as string | undefined) ?? DEFAULT_OSS_MOUNT_REGION;
+  const mountsOss = training.ossMounts.length > 0 || (validation?.ossMounts.length ?? 0) > 0;
   const body: CreateFineTuneRequest = {
     model,
-    training_file_ids: trainingFileIds,
+    ...(mountsOss
+      ? { training_datasets: datasetEntries(training, ossRegion) }
+      : { training_file_ids: trainingFileIds }),
     // Profile maps the CLI training type to the server value at the boundary.
     training_type: profile.serverTrainingType,
     hyper_parameters: hp,
   };
-  if (validationFileIds && validationFileIds.length > 0) {
+  if (mountsOss) {
+    if (validation) body.validation_datasets = datasetEntries(validation, ossRegion);
+  } else if (validationFileIds && validationFileIds.length > 0) {
     body.validation_file_ids = validationFileIds;
   }
   if (typeof flags.jobName === "string") body.job_name = flags.jobName;
@@ -966,6 +1176,7 @@ export const finetuneTextCreate = defineCommand({
     "zh-CN": "创建文本模型微调任务（sft | sft-lora | dpo | dpo-lora | cpt）",
   },
   auth: "apiKey",
+  optionalConsole: true,
   usageArgs: TEXT_USAGE,
   flags: TEXT_FLAGS,
   exampleArgs: [
@@ -975,11 +1186,15 @@ export const finetuneTextCreate = defineCommand({
     "--base-model qwen3-8b --datasets file-aaa,./extra.jsonl",
     "--base-model qwen3-8b --datasets ./train.jsonl --training-type sft",
     "--base-model qwen3-8b --datasets ./jev-train.jsonl --job-name jev-train-v1 --priority L0 --lora-rank 8 --lora-alpha 16 --lora-dropout 0.1 --lr-scheduler-type linear --eval-steps 50 --save-strategy epoch --save-total-limit 3 --split 0.9 --max-split-val-dataset-sample 1000 --data-augmentation false --dry-run",
+    "--base-model qwen3-8b --datasets ./train.jsonl --training-type sft-lora --augmentation-types mix_V2 --augmentation-ratio 0.5",
     '--base-model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
+    "--base-model qwen3.6-plus-base-2026-04-02 --datasets file-xxx --training-type cpt --modality vision --reasoning-mode instruct",
     "--base-model qwen3-8b --datasets file-xxx --output json",
+    "--base-model qwen3-8b --datasets oss://my-bucket/datasets/train/data.jsonl --oss-region cn-beijing",
     "--base-model qwen3-8b --datasets file-xxx --dry-run",
   ],
   notes: TEXT_NOTES,
+  validate: (flags) => validateOssMountEntries(flags) ?? validateMixedTrainingFlags(flags),
   run: (ctx) => runCreate("text", ctx),
 });
 
@@ -1062,4 +1277,66 @@ export const finetuneVideoCreate = defineCommand({
   ],
   notes: VIDEO_NOTES,
   run: (ctx) => runCreate("video", ctx),
+});
+
+const DECISION_NOTES = [
+  ...COMMON_NOTES,
+  {
+    "en-US":
+      "Training data is JSONL: each record carries an input state and a question table. Every question needs a hard label (choice: an option name; noul: true/false; score: a 0-based level index) and may carry a target soft-label distribution covering all options, with probabilities in [0, 1] summing to 1.",
+    "zh-CN":
+      "训练数据为 JSONL：每条记录包含输入 state 与问题表 questions。每个问题必填硬标签 label（choice：选项名；noul：true/false；score：从 0 开始的档位下标），可选软标签 target 须覆盖全部选项、概率在 [0, 1] 之间且合计为 1。",
+  },
+  {
+    "en-US":
+      'Decision fine-tuning always runs efficient_sft (LoRA high-efficiency training); full-parameter training is not available. Only n_epochs / batch_size / learning_rate are overridable; omitted values are sent with the documented defaults (2 / 1 / "2e-5") because the API requires them in the request body.',
+    "zh-CN":
+      '决策模型微调固定使用 efficient_sft（LoRA 高效训练），不支持全参训练。仅 n_epochs / batch_size / learning_rate 可覆盖；未指定项按文档默认值（2 / 1 / "2e-5"）显式发送——API 要求请求体必须携带这些超参。',
+  },
+  {
+    "en-US":
+      "Sample-count rule: with a separate validation dataset, train and validation samples must each be at least batch_size; with training data only, samples must be at least batch_size × 10. Hundreds of samples are recommended.",
+    "zh-CN":
+      "样本数规则：单独上传验证集时，训练集与验证集样本数均不小于 batch_size；仅上传训练集时，样本数不少于 batch_size × 10。推荐准备上百条样本。",
+  },
+  {
+    "en-US":
+      "Keep question definitions (ID, type, instructions, criteria) identical across training, evaluation and online requests; changing them shifts the distribution and requires regenerating data and retraining. The CLI warns on cross-record and train/validation definition drift.",
+    "zh-CN":
+      "训练、评估与线上请求的问题定义（ID、类型、instructions、criteria）必须保持一致；修改定义会造成分布漂移，须重新准备数据并重训。CLI 会对跨记录及训练/验证集的定义漂移发出警告。",
+  },
+  {
+    "en-US":
+      "--suffix is limited to 8 characters. After training, deploy the output model and invoke it with the decision command (--model <finetuned_output>); training-only fields label/target are stripped automatically when reusing a training sample as a request file.",
+    "zh-CN":
+      "--suffix 最多 8 个字符。训练完成后部署产出模型，再用决策调用命令（--model <finetuned_output>）调用；复用训练样本作为请求文件时会自动剥离训练专用字段 label/target。",
+  },
+];
+
+/** `bl finetune decision create` — fine-tune the decision model. Datasets are `.jsonl`. */
+export const finetuneDecisionCreate = defineCommand({
+  defaultOutput: "json",
+  description: {
+    "en-US":
+      "Create a decision model fine-tune job (efficient_sft; choice/noul/score training data)",
+    "zh-CN": "创建决策模型微调任务（efficient_sft 高效训练；choice/noul/score 训练数据）",
+  },
+  auth: "apiKey",
+  usageArgs: DECISION_USAGE,
+  flags: DECISION_FLAGS,
+  exampleArgs: [
+    "--base-model decision-model-preview-2026-09-24 --datasets ./tickets.train.jsonl --validations ./tickets.development.jsonl",
+    "--base-model decision-model-preview-2026-09-24 --datasets file-xxx",
+    '--base-model decision-model-preview-2026-09-24 --datasets ./tickets.train.jsonl --n-epochs 3 --batch-size 4 --learning-rate "2e-5" --suffix mytune',
+    "--base-model decision-model-preview-2026-09-24 --datasets ./tickets.train.jsonl --dry-run",
+  ],
+  notes: DECISION_NOTES,
+  validate: (flags) => {
+    const suffix = flags.suffix as string | undefined;
+    if (suffix !== undefined && suffix.length > 8) {
+      return "--suffix must be at most 8 characters for the decision model. / 决策模型的 --suffix 最多 8 个字符。";
+    }
+    return undefined;
+  },
+  run: (ctx) => runCreate("decision", ctx),
 });

@@ -101,6 +101,11 @@ export function imageSyncPath(): string {
   return "/api/v1/services/aigc/multimodal-generation/generation";
 }
 
+/** Native multimodal generation path (OCR, qwen-mt-uni, image sync). Same as imageSyncPath. */
+export function multimodalGenerationPath(): string {
+  return imageSyncPath();
+}
+
 /** Legacy async text-to-image API (wan2.5/2.2/2.1-t2i, wanx-*-t2i). */
 export function imageText2ImagePath(): string {
   return "/api/v1/services/aigc/text2image/image-synthesis";
@@ -188,6 +193,11 @@ export function speechRecognizePath(): string {
 // ---- Hot-word Vocabulary (ASR customization) ----
 export function speechVocabularyPath(): string {
   return "/api/v1/services/audio/asr/customization";
+}
+
+// ---- Voice enrollment (TTS customization: clone / design) ----
+export function speechVoiceCustomizationPath(): string {
+  return "/api/v1/services/audio/tts/customization";
 }
 
 // ---- Memory Profile (long-term memory v2, workspace-based host) ----
@@ -333,6 +343,11 @@ export function finetuneParamsPath(): string {
   return "/api/v1/fine-tunes/fine-tunes-params";
 }
 
+/** GET /api/v1/fine-tunes/preset-datasets — preset datasets available for mixing. */
+export function finetunePresetDatasetsPath(): string {
+  return "/api/v1/fine-tunes/preset-datasets";
+}
+
 /** GET /api/v1/fine-tunes/{job_id}/basic_metrics — training metrics. */
 export function finetuneBasicMetricsPath(jobId: string): string {
   return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/basic_metrics`;
@@ -436,6 +451,11 @@ export function deploymentCapacityInstanceRenewPath(code: string, id: string): s
   return `${deploymentCapacityInstancePath(code, id)}/renew`;
 }
 
+/** PUT /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}/auto-renew */
+export function deploymentCapacityInstanceAutoRenewPath(code: string, id: string): string {
+  return `${deploymentCapacityInstancePath(code, id)}/auto-renew`;
+}
+
 /** PUT /api/v1/deployments/{deployed_model}/update-overflowstrategy */
 export function deploymentOverflowPath(code: string): string {
   return `${deploymentPath(code)}/update-overflowstrategy`;
@@ -462,6 +482,11 @@ export function deploymentUpdatePath(deployedModel: string): string {
 /** GET /api/v1/deployments/models — deployable models catalog. */
 export function deploymentsModelsPath(): string {
   return "/api/v1/deployments/models";
+}
+
+/** GET /api/v1/deployments/model-routing/versions — model-routing version catalog. */
+export function modelRoutingVersionsPath(): string {
+  return "/api/v1/deployments/model-routing/versions";
 }
 
 // ---- RAG admin plane (knowledge base / data center / service management, workspace-based host) ----

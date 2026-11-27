@@ -47,6 +47,43 @@ interface VoiceEntry {
   lang: string;
 }
 
+// qwen-audio-3.1-tts-plus system voices (official docs list only these four)
+const QWEN_AUDIO_31_TTS_PLUS_VOICES: VoiceEntry[] = [
+  { voice: "longanlingxin_v3.1", name: "龙安灵心", desc: "知心温暖音", lang: "中文/英文" },
+  { voice: "xunanchuan_v3.1", name: "许南川", desc: "沉稳男声", lang: "中文/英文" },
+  { voice: "longanhuan_v3.1", name: "龙安欢", desc: "欢脱元气女", lang: "中文/英文" },
+  { voice: "longanfengyue_v3.1", name: "龙安风悦", desc: "自然亲切音", lang: "中文/英文" },
+];
+
+// qwen-audio-3.1-tts-flash system voices (curated; full list via docs URL)
+const QWEN_AUDIO_31_TTS_FLASH_VOICES: VoiceEntry[] = [
+  // Multilingual / dialect
+  { voice: "longanlingxin_v3.1", name: "龙安灵心", desc: "知心温暖音", lang: "中文/英文" },
+  { voice: "xunanchuan_v3.1", name: "许南川", desc: "沉稳男声", lang: "中文/英文" },
+  { voice: "longanhuan_v3.1", name: "龙安欢", desc: "欢脱元气女", lang: "中文/英文" },
+  { voice: "longanfengyue_v3.1", name: "龙安风悦", desc: "自然亲切音", lang: "中文/英文" },
+  // Social companion (premium Chinese)
+  { voice: "longanyuanfei_v3.1", name: "龙安元妃", desc: "高傲妃子音", lang: "中文" },
+  { voice: "longanlingxi_v3.1", name: "龙安灵希", desc: "可爱甜美音", lang: "中文" },
+  { voice: "longanyang_v3.1", name: "龙安洋", desc: "阳光大男孩", lang: "中文" },
+  { voice: "longfeifei_v3.1", name: "龙菲菲", desc: "甜美娇气女", lang: "中文" },
+  { voice: "longyan_v3.1", name: "龙颜", desc: "温暖春风女", lang: "中文" },
+  { voice: "longcheng_v3.1", name: "龙橙", desc: "智慧青年男", lang: "中文" },
+  { voice: "longze_v3.1", name: "龙泽", desc: "温暖元气男", lang: "中文" },
+  // Kids / toys
+  { voice: "longjielidou_v3.1", name: "龙杰力豆", desc: "天真男童", lang: "中文" },
+  { voice: "longpaopao_v3.1", name: "龙泡泡", desc: "软糯可爱音", lang: "中文" },
+  { voice: "longke_v3.1", name: "龙可", desc: "懵懂童声", lang: "中文" },
+  // Character / game
+  { voice: "longhuohuo_v3.1", name: "龙火火", desc: "顽皮少年音", lang: "中文" },
+  // English
+  { voice: "loongbella_v3.1", name: "Bella", desc: "干练知性女", lang: "中文/英文" },
+  { voice: "Emily_v3.1", name: "Emily", desc: "英式女声", lang: "英文" },
+  { voice: "Eric_v3.1", name: "Eric", desc: "英式男声", lang: "英文" },
+  { voice: "Abby_v3.1", name: "Abby", desc: "美式女声", lang: "英文" },
+  { voice: "Andy_v3.1", name: "Andy", desc: "美式男声", lang: "英文" },
+];
+
 // qwen-audio-3.0-tts-plus system voices (official docs list only these two)
 const QWEN_AUDIO_30_TTS_PLUS_VOICES: VoiceEntry[] = [
   { voice: "longanlingxin", name: "龙安灵心", desc: "知心温暖音", lang: "中文/英文" },
@@ -150,6 +187,8 @@ const COSYVOICE_V3_FLASH_VOICES: VoiceEntry[] = [
 ];
 
 const MODEL_VOICES: Record<string, VoiceEntry[]> = {
+  "qwen-audio-3.1-tts-flash": QWEN_AUDIO_31_TTS_FLASH_VOICES,
+  "qwen-audio-3.1-tts-plus": QWEN_AUDIO_31_TTS_PLUS_VOICES,
   "qwen-audio-3.0-tts-plus": QWEN_AUDIO_30_TTS_PLUS_VOICES,
   "qwen-audio-3.0-tts-flash": QWEN_AUDIO_30_TTS_FLASH_VOICES,
   "cosyvoice-v3-flash": COSYVOICE_V3_FLASH_VOICES,
@@ -261,9 +300,9 @@ const SYNTHESIZE_FLAGS = {
     valueHint: "<model>",
     description: {
       "en-US":
-        "Model ID (default: configured Profile TTS model, otherwise cosyvoice-v3-flash). System voices vary by model",
+        "Model ID (default: configured Profile TTS model, otherwise qwen-audio-3.1-tts-flash). System voices vary by model",
       "zh-CN":
-        "模型 ID（默认：Profile 配置的 TTS 模型，否则为 cosyvoice-v3-flash）。系统音色因模型而异",
+        "模型 ID（默认：Profile 配置的 TTS 模型，否则为 qwen-audio-3.1-tts-flash）。系统音色因模型而异",
     },
   },
   voice: {
@@ -271,9 +310,9 @@ const SYNTHESIZE_FLAGS = {
     valueHint: "<voice>",
     description: {
       "en-US":
-        "Voice ID. Use --list-voices for the selected model (e.g. qwen-audio-3.0-tts-plus/flash, cosyvoice-v3-flash); for v3.5-flash provide a clone/design voice ID",
+        "Voice ID. Use --list-voices for the selected model (e.g. qwen-audio-3.1-tts-flash/plus, qwen-audio-3.0-tts-plus/flash, cosyvoice-v3-flash); for v3.5-flash provide a clone/design voice ID",
       "zh-CN":
-        "音色 ID。使用 --list-voices 查看所选模型的内置音色（如 qwen-audio-3.0-tts-plus/flash、cosyvoice-v3-flash）；使用 v3.5-flash 时需提供复刻/设计音色 ID",
+        "音色 ID。使用 --list-voices 查看所选模型的内置音色（如 qwen-audio-3.1-tts-flash/plus、qwen-audio-3.0-tts-plus/flash、cosyvoice-v3-flash）；使用 v3.5-flash 时需提供复刻/设计音色 ID",
     },
   },
   listVoices: {
@@ -384,11 +423,25 @@ export default defineCommand({
   usageArgs: "--text <text> [flags]",
   flags: SYNTHESIZE_FLAGS,
   exampleArgs: [
-    "--list-voices --model qwen-audio-3.0-tts-plus",
+    {
+      "en-US": "# Ordinary API Key",
+      "zh-CN": "# 普通 API Key",
+    },
+    "--list-voices --model qwen-audio-3.1-tts-flash",
     "--list-voices --model cosyvoice-v3-flash",
     {
-      "en-US": '--text "Hello, I am Qwen" --model qwen-audio-3.0-tts-plus --voice longanlingxin',
-      "zh-CN": '--text "你好，我是通义千问" --model qwen-audio-3.0-tts-plus --voice longanlingxin',
+      "en-US":
+        '--text "Hello, I am Qwen" --model qwen-audio-3.1-tts-flash --voice longanlingxin_v3.1',
+      "zh-CN":
+        '--text "你好，我是通义千问" --model qwen-audio-3.1-tts-flash --voice longanlingxin_v3.1',
+    },
+    {
+      "en-US": "# Token Plan (omit --model to use Profile default qwen-audio-3.0-tts-plus)",
+      "zh-CN": "# Token Plan（省略 --model，使用 Profile 默认 qwen-audio-3.0-tts-plus）",
+    },
+    {
+      "en-US": '--text "Hello, I am Qwen" --voice longanlingxin',
+      "zh-CN": '--text "你好，我是通义千问" --voice longanlingxin',
     },
     {
       "en-US": '--text "Hello world" --voice <voice_id> --language en',
@@ -425,6 +478,12 @@ export default defineCommand({
   notes: [
     {
       "en-US":
+        "Built-in default (when --model and Profile default_speech_model are both unset) is qwen-audio-3.1-tts-flash. Voice IDs are model-specific: keep CosyVoice voices such as longanyang only with --model cosyvoice-v3-flash; for the new default use matching IDs (e.g. longanlingxin_v3.1) via --list-voices.",
+      "zh-CN":
+        "未传 --model 且 Profile 未配置 default_speech_model 时，内置默认为 qwen-audio-3.1-tts-flash。音色 ID 与模型绑定：继续使用 CosyVoice 旧音色（如 longanyang）时请显式加 --model cosyvoice-v3-flash；使用新默认时请用匹配音色（如 longanlingxin_v3.1，可用 --list-voices 查看）。",
+    },
+    {
+      "en-US":
         'Model "auto" (via --model auto or a config default model of "auto") routes to the official Bailian MCP with a reduced parameter set; MCP-incompatible flags fail fast with a usage error instead of falling back to REST.',
       "zh-CN":
         '模型 "auto"（通过 --model auto 或将配置默认模型设为 "auto"）改走百炼官方 MCP，参数面更小；MCP 不支持的参数会直接报用法错误，而不回退 REST。',
@@ -446,7 +505,7 @@ export default defineCommand({
       return;
     }
 
-    const model = resolvedModel || "cosyvoice-v3-flash";
+    const model = resolvedModel || "qwen-audio-3.1-tts-flash";
 
     // --list-voices: print voice list for the model and exit
     if (flags.listVoices) {

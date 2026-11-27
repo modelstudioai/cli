@@ -34,10 +34,9 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const code = flags.server;
 
-    const previewUrl = flags.url || ctx.client.url(bailianMcpPath(code));
-
     if (settings.dryRun) {
-      ctx.output.result({ server: code, url: previewUrl, action: "tools/list" });
+      const url = flags.url || ctx.client.baseUrl + bailianMcpPath(code);
+      ctx.output.result({ server: code, url, action: "tools/list" });
       return;
     }
 

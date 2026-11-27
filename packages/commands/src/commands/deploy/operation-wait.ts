@@ -101,11 +101,12 @@ export async function waitForCapacityOperation(
       }
       if (operation?.operation_status === "SUCCEEDED") {
         const instanceId = operation.instance_id ?? options.fallbackInstanceId;
-        const instance = instanceId
-          ? await getCapacityInstance(client, deployedModel, instanceId, controller.signal)
-          : undefined;
-        checkDeadline();
-        const deployment = await getDeployment(client, deployedModel, controller.signal);
+        const [instance, deployment] = await Promise.all([
+          instanceId
+            ? getCapacityInstance(client, deployedModel, instanceId, controller.signal)
+            : undefined,
+          getDeployment(client, deployedModel, controller.signal),
+        ]);
         checkDeadline();
         return { ...response, instance, deployment };
       }

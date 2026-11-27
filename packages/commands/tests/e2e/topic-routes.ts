@@ -16,6 +16,11 @@ export const UPDATE_ROUTES: E2eRouteExports = {
 
 export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 
+export const TEXT_TRANSLATE_ROUTES: E2eRouteExports = {
+  "text translate": "textTranslate",
+  "text chat": "textChat",
+};
+
 export const BATCH_ROUTES: E2eRouteExports = {
   "batch convert": "batchConvert",
   "batch create": "batchCreate",
@@ -117,6 +122,12 @@ export const KNOWLEDGE_CHAT_ROUTES: E2eRouteExports = {
 export const IMAGE_ROUTES: E2eRouteExports = {
   "image generate": "imageGenerate",
   "image edit": "imageEdit",
+  "image translate": "imageTranslate",
+};
+
+export const IMAGE_TRANSLATE_ROUTES: E2eRouteExports = {
+  "image translate": "imageTranslate",
+  "video task get": "videoTaskGet",
 };
 
 export const VIDEO_ROUTES: E2eRouteExports = {
@@ -124,9 +135,23 @@ export const VIDEO_ROUTES: E2eRouteExports = {
   "video generate": "videoGenerate",
   "video edit": "videoEdit",
   "video ref": "videoRef",
+  "video retalk": "videoRetalk",
+  "video style": "videoStyle",
   "video task get": "videoTaskGet",
   "video download": "videoDownload",
   "speech synthesize": "speechSynthesize",
+};
+
+export const VIDEO_RETALK_ROUTES: E2eRouteExports = {
+  "video retalk": "videoRetalk",
+  "video task get": "videoTaskGet",
+  "video download": "videoDownload",
+};
+
+export const VIDEO_STYLE_ROUTES: E2eRouteExports = {
+  "video style": "videoStyle",
+  "video task get": "videoTaskGet",
+  "video download": "videoDownload",
 };
 
 export const VISION_ROUTES: E2eRouteExports = {
@@ -136,11 +161,36 @@ export const VISION_ROUTES: E2eRouteExports = {
 export const SPEECH_ROUTES: E2eRouteExports = {
   "speech synthesize": "speechSynthesize",
   "speech recognize": "speechRecognize",
+  "speech generate": "speechGenerate",
   "speech vocabulary create": "speechVocabularyCreate",
   "speech vocabulary list": "speechVocabularyList",
   "speech vocabulary get": "speechVocabularyGet",
   "speech vocabulary update": "speechVocabularyUpdate",
   "speech vocabulary delete": "speechVocabularyDelete",
+  "speech voice clone": "speechVoiceClone",
+  "speech voice design": "speechVoiceDesign",
+  "speech voice list": "speechVoiceList",
+  "speech voice get": "speechVoiceGet",
+  "speech voice update": "speechVoiceUpdate",
+  "speech voice delete": "speechVoiceDelete",
+  "speech voice preview": "speechVoicePreview",
+};
+
+export const SPEECH_VOICE_ROUTES: E2eRouteExports = {
+  "speech voice clone": "speechVoiceClone",
+  "speech voice design": "speechVoiceDesign",
+  "speech voice list": "speechVoiceList",
+  "speech voice get": "speechVoiceGet",
+  "speech voice update": "speechVoiceUpdate",
+  "speech voice delete": "speechVoiceDelete",
+  "speech voice preview": "speechVoicePreview",
+  "speech synthesize": "speechSynthesize",
+  // Live Omni clone → same-model audio: `omni --model <target> --voice <id>`
+  omni: "textOmni",
+};
+
+export const SPEECH_GENERATE_ROUTES: E2eRouteExports = {
+  "speech generate": "speechGenerate",
 };
 
 export const MCP_ROUTES: E2eRouteExports = {
@@ -174,7 +224,14 @@ export const PIPELINE_ROUTES: E2eRouteExports = {
 
 export const OMNI_ROUTES: E2eRouteExports = {
   omni: "textOmni",
+  "omni translate": "omniTranslate",
   "speech synthesize": "speechSynthesize",
+};
+
+export const OMNI_TRANSLATE_ROUTES: E2eRouteExports = {
+  omni: "textOmni",
+  "omni translate": "omniTranslate",
+  "video task get": "videoTaskGet",
 };
 
 export const FILE_UPLOAD_ROUTES: E2eRouteExports = {
@@ -305,6 +362,8 @@ export const DEPLOY_ROUTES: E2eRouteExports = {
   "deploy capacity create": "deployCapacityCreate",
   "deploy capacity scale": "deployCapacityScale",
   "deploy capacity renew": "deployCapacityRenew",
+  "deploy capacity auto-renew enable": "deployCapacityAutoRenewEnable",
+  "deploy capacity auto-renew disable": "deployCapacityAutoRenewDisable",
   "deploy capacity delete": "deployCapacityDelete",
   "deploy capacity unsubscribe": "deployCapacityUnsubscribe",
   "deploy overflow": "deployOverflow",
@@ -316,12 +375,23 @@ export const DEPLOY_ROUTES: E2eRouteExports = {
   "deploy delete": "deployDelete",
 };
 
+export const DEPLOY_ROUTER_ROUTES: E2eRouteExports = {
+  "deploy router versions": "deployRouterVersions",
+  "deploy router create": "deployRouterCreate",
+  "deploy router list": "deployRouterList",
+  "deploy router get": "deployRouterGet",
+  "deploy router update": "deployRouterUpdate",
+  "deploy router delete": "deployRouterDelete",
+};
+
 export const DATASET_ROUTES: E2eRouteExports = {
   "dataset upload": "datasetUpload",
   "dataset list": "datasetList",
   "dataset get": "datasetGet",
   "dataset delete": "datasetDelete",
   "dataset validate": "datasetValidate",
+  "dataset split": "datasetSplit",
+  "dataset generate": "datasetGenerate",
 };
 
 export const FINETUNE_ROUTES: E2eRouteExports = {
@@ -329,6 +399,7 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune audio create": "finetuneAudioCreate",
   "finetune image create": "finetuneImageCreate",
   "finetune video create": "finetuneVideoCreate",
+  "finetune decision create": "finetuneDecisionCreate",
   "finetune list": "finetuneList",
   "finetune get": "finetuneGet",
   "finetune cancel": "finetuneCancel",
@@ -339,6 +410,8 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune watch": "finetuneWatch",
   "finetune capability": "finetuneCapability",
   "finetune params": "finetuneParams",
+  "finetune train-options": "finetuneTrainOptions",
+  "finetune preset-datasets": "finetunePresetDatasets",
   "finetune metrics": "finetuneMetrics",
   "finetune compress templates": "finetuneCompressTemplates",
   "finetune compress create": "finetuneCompressCreate",
@@ -348,6 +421,25 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune compress logs": "finetuneCompressLogs",
   "finetune compress cancel": "finetuneCompressCancel",
   "finetune compress delete": "finetuneCompressDelete",
+  "finetune rl authorize": "finetuneRlAuthorize",
+  "finetune rl run": "finetuneRlRun",
+  "finetune rl get": "finetuneRlGet",
+  "finetune rl list": "finetuneRlList",
+  "finetune rl watch": "finetuneRlWatch",
+  "finetune rl logs": "finetuneRlLogs",
+  "finetune rl cancel": "finetuneRlCancel",
+  "finetune rl delete": "finetuneRlDelete",
+  "finetune opd authorize": "finetuneOpdAuthorize",
+  "finetune opd run": "finetuneOpdRun",
+  "finetune opd params": "finetuneOpdParams",
+  "finetune opd get": "finetuneOpdGet",
+  "finetune opd watch": "finetuneOpdWatch",
+  "finetune opd logs": "finetuneOpdLogs",
+  "finetune opd cancel": "finetuneOpdCancel",
+  "finetune opd delete": "finetuneOpdDelete",
+  "finetune runtime prepare": "finetuneRuntimePrepare",
+  "finetune runtime doctor": "finetuneRuntimeDoctor",
+  "finetune runtime clean": "finetuneRuntimeClean",
 };
 
 export const CONSOLE_FLAGS_DRY_RUN_ROUTES: E2eRouteExports = {

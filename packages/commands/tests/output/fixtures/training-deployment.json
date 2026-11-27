@@ -744,7 +744,7 @@
     "requests": []
   },
   "text training create preview": {
-    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"qwen2.5-7b-instruct\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"batch_size\": 4\n    }\n  }\n}\n",
+    "stdout": "{\n  \"action\": \"finetune.create\",\n  \"body\": {\n    \"model\": \"qwen2.5-7b-instruct\",\n    \"training_file_ids\": [\n      \"file-fixture\"\n    ],\n    \"training_type\": \"efficient_sft\",\n    \"hyper_parameters\": {\n      \"batch_size\": 4,\n      \"n_epochs\": 3\n    }\n  }\n}\n",
     "data": {
       "action": "finetune.create",
       "body": {
@@ -752,7 +752,8 @@
         "training_file_ids": ["file-fixture"],
         "training_type": "efficient_sft",
         "hyper_parameters": {
-          "batch_size": 4
+          "batch_size": 4,
+          "n_epochs": 3
         }
       }
     },
@@ -853,5 +854,93 @@
         "body": null
       }
     ]
+  },
+  "finetune opd get": {
+    "data": {
+      "request_id": "request-fixture",
+      "output": {
+        "job_id": "ft-opd-fixture",
+        "job_name": "opd-fixture",
+        "model": "qwen3.5-9b",
+        "status": "SUCCEEDED",
+        "training_type": "pg_opd",
+        "teacher_model": "qwen3.8-flash",
+        "training_datasets": [
+          {
+            "type": "training",
+            "data_source_type": "file_id",
+            "file_id": "file-train"
+          }
+        ],
+        "validation_datasets": [
+          {
+            "type": "validation",
+            "data_source_type": "file_id",
+            "file_id": "file-val"
+          }
+        ],
+        "mtu_spec_code": "MTU4",
+        "mtu_capacity": 16,
+        "hyper_parameters": {
+          "n_epochs": 1
+        },
+        "usage": 0
+      }
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-opd-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ],
+    "stdout": "{\n  \"request_id\": \"request-fixture\",\n  \"output\": {\n    \"job_id\": \"ft-opd-fixture\",\n    \"job_name\": \"opd-fixture\",\n    \"model\": \"qwen3.5-9b\",\n    \"status\": \"SUCCEEDED\",\n    \"training_type\": \"pg_opd\",\n    \"teacher_model\": \"qwen3.8-flash\",\n    \"training_datasets\": [\n      {\n        \"type\": \"training\",\n        \"data_source_type\": \"file_id\",\n        \"file_id\": \"file-train\"\n      }\n    ],\n    \"validation_datasets\": [\n      {\n        \"type\": \"validation\",\n        \"data_source_type\": \"file_id\",\n        \"file_id\": \"file-val\"\n      }\n    ],\n    \"mtu_spec_code\": \"MTU4\",\n    \"mtu_capacity\": 16,\n    \"hyper_parameters\": {\n      \"n_epochs\": 1\n    },\n    \"usage\": 0\n  }\n}\n"
+  },
+  "finetune get opd projection": {
+    "data": {
+      "job_id": "ft-opd-fixture",
+      "job_name": "opd-fixture",
+      "priority": "",
+      "hyper_parameters": {
+        "n_epochs": 1
+      },
+      "max_output_cnt": null,
+      "base_model": "qwen3.5-9b",
+      "status": "SUCCEEDED",
+      "training_type": "pg_opd",
+      "hyper_params": "n_epochs=1",
+      "output_model": "",
+      "model_name": "",
+      "created_at": "",
+      "updated_at": "",
+      "usage_tokens": 0,
+      "charge_type": "",
+      "teacher_model": "qwen3.8-flash",
+      "training_datasets": [
+        {
+          "type": "training",
+          "data_source_type": "file_id",
+          "file_id": "file-train"
+        }
+      ],
+      "validation_datasets": [
+        {
+          "type": "validation",
+          "data_source_type": "file_id",
+          "file_id": "file-val"
+        }
+      ],
+      "mtu_spec_code": "MTU4",
+      "mtu_capacity": 16,
+      "request_id": "request-fixture"
+    },
+    "requests": [
+      {
+        "url": "https://fixture.invalid/api/v1/fine-tunes/ft-opd-fixture",
+        "method": "GET",
+        "body": null
+      }
+    ],
+    "stdout": "{\n  \"job_id\": \"ft-opd-fixture\",\n  \"job_name\": \"opd-fixture\",\n  \"priority\": \"\",\n  \"hyper_parameters\": {\n    \"n_epochs\": 1\n  },\n  \"max_output_cnt\": null,\n  \"base_model\": \"qwen3.5-9b\",\n  \"status\": \"SUCCEEDED\",\n  \"training_type\": \"pg_opd\",\n  \"hyper_params\": \"n_epochs=1\",\n  \"output_model\": \"\",\n  \"model_name\": \"\",\n  \"created_at\": \"\",\n  \"updated_at\": \"\",\n  \"usage_tokens\": 0,\n  \"charge_type\": \"\",\n  \"teacher_model\": \"qwen3.8-flash\",\n  \"training_datasets\": [\n    {\n      \"type\": \"training\",\n      \"data_source_type\": \"file_id\",\n      \"file_id\": \"file-train\"\n    }\n  ],\n  \"validation_datasets\": [\n    {\n      \"type\": \"validation\",\n      \"data_source_type\": \"file_id\",\n      \"file_id\": \"file-val\"\n    }\n  ],\n  \"mtu_spec_code\": \"MTU4\",\n  \"mtu_capacity\": 16,\n  \"request_id\": \"request-fixture\"\n}\n"
   }
 }

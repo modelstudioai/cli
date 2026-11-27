@@ -22,3 +22,9 @@ export {
   releaseAssetUrl,
 } from "./cdn.ts";
 export { extractZipEntryToFile } from "./unzip-asset.ts";
+export {
+  INSTALL_RECORD_FILE,
+  installAttributionFromUnknown,
+  readInstallAttribution,
+  type InstallAttribution,
+} from "./record.ts";

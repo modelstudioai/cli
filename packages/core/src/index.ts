@@ -16,6 +16,8 @@ export * from "./batch/index.ts";
 export * from "./decision/index.ts";
 export * from "./parsex/index.ts";
 export * from "./finetune/index.ts";
+export * from "./isolation/index.ts";
+export * from "./rl-runtime/index.ts";
 export * from "./deploy/index.ts";
 export * from "./model-import/index.ts";
 export * from "./speech/index.ts";
